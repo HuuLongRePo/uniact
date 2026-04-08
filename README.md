@@ -353,3 +353,4 @@ Danh sach các tính năng planned cho phiên bản tiếp theo:
 **Phiên bản:** 1.0.0  
 **Ngày cập nhật:** 2026-03-24  
 **Người bảo trì:** Nguyễn Hữu Long
+# uniact
