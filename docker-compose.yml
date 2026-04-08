@@ -1,0 +1,220 @@
+version: '3.9'
+
+services:
+  # ═══════════════════════════════════════════════════════════════
+  # Main Application: Next.js UniAct
+  # ═══════════════════════════════════════════════════════════════
+  uniact:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: uniact-app
+    ports:
+      - "3000:3000"
+    environment:
+      # ─────────────────────────────────────────────────────────
+      # Required Environment Variables
+      # ─────────────────────────────────────────────────────────
+      NODE_ENV: production
+      PORT: 3000
+      HOST: 0.0.0.0
+
+      # ─────────────────────────────────────────────────────────
+      # Security: JWT & Authentication
+      # IMPORTANT: Change JWT_SECRET to strong random string!
+      # Generate: openssl rand -base64 32
+      # ─────────────────────────────────────────────────────────
+      JWT_SECRET: ${JWT_SECRET:-uniact-dev-only-key-change-for-production}
+      
+      # Cookie configuration
+      COOKIE_SECURE: 'true'           # HTTPS only
+      COOKIE_SAME_SITE: 'Strict'      # CSRF protection
+      COOKIE_HTTP_ONLY: 'true'        # No JS access
+
+      # ─────────────────────────────────────────────────────────
+      # Database Configuration
+      # ─────────────────────────────────────────────────────────
+      # SQLite database path (inside container)
+      DATABASE_URL: /app/uniact.db
+      
+      # SQLite pragmas (from db-pragma-optimization.ts)
+      DB_JOURNAL_MODE: WAL             # Write-Ahead Logging
+      DB_SYNCHRONOUS: NORMAL           # Balanced performance
+      DB_CACHE_SIZE: 10000             # 40 MB cache
+      DB_BUSY_TIMEOUT: 5000            # 5 second retry on lock
+
+      # ─────────────────────────────────────────────────────────
+      # Logging & Monitoring
+      # ─────────────────────────────────────────────────────────
+      LOG_LEVEL: info                  # error, warn, info, debug
+      NEXT_TELEMETRY_DISABLED: 'true'  # Disable Next.js telemetry
+      
+      # ─────────────────────────────────────────────────────────
+      # Optional: Email Notifications (if implemented)
+      # ─────────────────────────────────────────────────────────
+      # SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
+      # SMTP_PORT: ${SMTP_PORT:-587}
+      # SMTP_USER: ${SMTP_USER:-your-email@gmail.com}
+      # SMTP_PASS: ${SMTP_PASS:-your-app-password}
+      # SENDER_EMAIL: ${SENDER_EMAIL:-uniact@domain.edu}
+
+      # ─────────────────────────────────────────────────────────
+      # Optional: Redis Cache (for Phase 4)
+      # ─────────────────────────────────────────────────────────
+      # REDIS_URL: redis://redis:6379/0
+      # REDIS_CACHE_TTL: 300  # 5 minutes
+
+      # ─────────────────────────────────────────────────────────
+      # QR Code & Biometric Settings
+      # ─────────────────────────────────────────────────────────
+      QR_SESSION_TIMEOUT: 1800        # 30 minutes
+      QR_SINGLE_USE: 'true'           # Each QR scans once
+      QR_LIVENESS_CHECK: 'true'       # Face liveness detection
+
+    # Volume mounts (persist database between restarts)
+    volumes:
+      - ./uniact.db:/app/uniact.db    # SQLite database
+      - ./logs:/app/logs              # Application logs
+    
+    # Health check (important for orchestration)
+    healthcheck:
+      test: ['CMD', 'wget', '--quiet', '--tries=1', '--spider', 'http://localhost:3000/api/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+    # Auto-restart policy
+    restart: unless-stopped
+
+    # Resource limits (prevent runaway)
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 1024M
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+    # Network
+    networks:
+      - uniact-network
+    
+    # Logging
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '10m'
+        max-file: '3'
+
+    # Depends on other services (none currently, but framework ready)
+    depends_on:
+      - backup
+
+  # ═══════════════════════════════════════════════════════════════
+  # Database Backup Service (Daily backup)
+  # ═══════════════════════════════════════════════════════════════
+  backup:
+    image: alpine:latest
+    container_name: uniact-backup
+    volumes:
+      - ./uniact.db:/data/uniact.db:ro  # Read-only access to DB
+      - ./backups:/backups              # Backup output directory
+    command: |
+      sh -c "
+      echo '🗄️ Starting daily backup service...'
+      while true; do
+        cp /data/uniact.db /backups/uniact.db.backup.\$(date +%s)
+        find /backups -name 'uniact.db.backup.*' -mtime +7 -delete
+        echo '✅ Backup completed at' \$(date)
+        sleep 86400
+      done
+      "
+    restart: unless-stopped
+    networks:
+      - uniact-network
+
+  # ═══════════════════════════════════════════════════════════════
+  # Optional: Redis Cache (for Phase 4 optimization)
+  # Uncomment when ready to implement caching layer
+  # ═══════════════════════════════════════════════════════════════
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: uniact-redis
+  #   ports:
+  #     - "6379:6379"
+  #   command: redis-server --appendonly yes
+  #   volumes:
+  #     - redis-data:/data
+  #   networks:
+  #     - uniact-network
+  #   restart: unless-stopped
+
+  # ═══════════════════════════════════════════════════════════════
+  # Optional: PostgreSQL (for future multi-tenant migration)
+  # Uncomment when ready to scale beyond SQLite limits
+  # ═══════════════════════════════════════════════════════════════
+  # postgres:
+  #   image: postgres:15-alpine
+  #   container_name: uniact-postgres
+  #   environment:
+  #     POSTGRES_DB: uniact
+  #     POSTGRES_USER: uniact_user
+  #     POSTGRES_PASSWORD: ${DB_PASSWORD:-change_me_in_production}
+  #   ports:
+  #     - "5432:5432"
+  #   volumes:
+  #     - postgres-data:/var/lib/postgresql/data
+  #   networks:
+  #     - uniact-network
+  #   restart: unless-stopped
+
+# ═══════════════════════════════════════════════════════════════
+# Volumes (persist data across container restarts)
+# ═══════════════════════════════════════════════════════════════
+volumes:
+  # redis-data:
+  # postgres-data:
+
+# ═══════════════════════════════════════════════════════════════
+# Networks (allow services to communicate)
+# ═══════════════════════════════════════════════════════════════
+networks:
+  uniact-network:
+    driver: bridge
+
+# ═══════════════════════════════════════════════════════════════
+# USAGE INSTRUCTIONS
+# ═══════════════════════════════════════════════════════════════
+# 
+# 1. Development:
+#    docker-compose up
+# 
+# 2. Production:
+#    docker-compose up -d
+#    docker-compose logs -f uniact
+# 
+# 3. Set secrets before deploy:
+#    export JWT_SECRET="$(openssl rand -base64 32)"
+#    docker-compose up -d
+# 
+# 4. Stop all containers:
+#    docker-compose down
+# 
+# 5. Remove volumes (reset data):
+#    docker-compose down -v
+# 
+# ═══════════════════════════════════════════════════════════════
+# PRODUCTION SECURITY CHECKLIST
+# ═══════════════════════════════════════════════════════════════
+# 
+# □ Change JWT_SECRET to strong random value
+# □ Use HTTPS (nginx reverse proxy recommended)
+# □ Set COOKIE_SECURE=true (requires HTTPS)
+# □ Enable database automated backups (backup service included)
+# □ Configure log aggregation (e.g., ELK stack)
+# □ Setup monitoring/alerts (e.g., Prometheus)
+# □ Use managed secrets (e.g., AWS SecretsManager, HashiCorp Vault)
+# □ Enable container resource limits (already configured)
+# □ Regular security updates (docker images)

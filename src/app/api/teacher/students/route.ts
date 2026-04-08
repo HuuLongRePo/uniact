@@ -1,0 +1,118 @@
+import { NextRequest } from 'next/server';
+import { getUserFromSession } from '@/lib/auth';
+import { dbAll } from '@/lib/database';
+import { ApiError, successResponse, errorResponse } from '@/lib/api-response';
+
+/**
+ * GET /api/teacher/students
+ * Lấy danh sách học viên của giảng viên
+ * Query params:
+ *   - class_id: number (optional) - Filter theo lớp
+ *   - search: string (optional) - Tìm theo tên/email
+ */
+export async function GET(request: NextRequest) {
+  try {
+    const user = await getUserFromSession();
+    if (!user || user.role !== 'teacher') {
+      return errorResponse(ApiError.forbidden('Chỉ giảng viên mới có thể truy cập'));
+    }
+
+    const { searchParams } = new URL(request.url);
+    const classId = searchParams.get('class_id');
+    const search = searchParams.get('search') || '';
+
+    // Lấy danh sách các lớp của giảng viên (qua class_teachers hoặc classes.teacher_id)
+    const teacherClasses = await dbAll(
+      `
+      SELECT DISTINCT c.id as class_id
+      FROM classes c
+      LEFT JOIN class_teachers ct ON ct.class_id = c.id
+      WHERE c.teacher_id = ? OR ct.teacher_id = ?
+      `,
+      [user.id, user.id]
+    );
+
+    if (teacherClasses.length === 0) {
+      return successResponse(
+        {
+          students: [],
+          classes: [],
+          total: 0,
+        },
+        'Giảng viên chưa được phân công lớp nào'
+      );
+    }
+
+    const classIds = teacherClasses.map((c) => c.class_id);
+
+    // Build WHERE clause
+    let whereClause = `u.class_id IN (${classIds.join(',')})`;
+    const params: any[] = [];
+
+    if (classId) {
+      whereClause += ' AND u.class_id = ?';
+      params.push(Number(classId));
+    }
+
+    if (search.trim()) {
+      whereClause += ` AND (u.name LIKE ? OR u.email LIKE ?)`;
+      const searchPattern = `%${search.trim()}%`;
+      params.push(searchPattern, searchPattern);
+    }
+
+    // Query students with scores
+    const students = (await dbAll(
+      `
+      SELECT 
+        u.id,
+        u.email,
+        u.name,
+        u.avatar_url,
+        u.class_id,
+        c.name as class_name,
+        COALESCE(SUM(ss.points), 0) as total_points,
+        COUNT(DISTINCT p.id) as activities_count
+      FROM users u
+      LEFT JOIN classes c ON c.id = u.class_id
+      LEFT JOIN participations p ON p.student_id = u.id 
+        AND p.attendance_status IN ('attended', 'registered')
+      LEFT JOIN student_scores ss ON ss.student_id = u.id
+      WHERE u.role = 'student'
+        AND ${whereClause}
+      GROUP BY u.id, u.email, u.name, u.avatar_url, u.class_id, c.name
+      ORDER BY total_points DESC, u.name ASC
+      `,
+      params
+    )) as Array<{
+      id: number;
+      email: string;
+      name: string;
+      avatar_url?: string;
+      class_id: number;
+      class_name: string;
+      total_points: number;
+      activities_count: number;
+    }>;
+
+    // Lấy danh sách classes để làm filter dropdown
+    const classes = (await dbAll(
+      `
+      SELECT c.id, c.name, c.grade
+      FROM classes c
+      WHERE c.id IN (${classIds.join(',')})
+      ORDER BY c.grade ASC, c.name ASC
+      `
+    )) as Array<{ id: number; name: string; grade: string }>;
+
+    return successResponse({
+      students,
+      classes,
+      total: students.length,
+    });
+  } catch (error: any) {
+    console.error('Lỗi lấy danh sách học viên của giảng viên:', error);
+    return errorResponse(
+      ApiError.internalError('Không thể lấy danh sách học viên', { details: error?.message })
+    );
+  }
+}
