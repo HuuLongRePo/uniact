@@ -17,7 +17,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         h.status,
         h.notes,
         h.changed_by,
-        COALESCE(u.name, u.full_name, CAST(h.changed_by AS TEXT)) as changed_by_name,
+        COALESCE(u.name, u.username, CAST(h.changed_by AS TEXT)) as changed_by_name,
         h.changed_at
       FROM activity_approval_history h
       LEFT JOIN users u ON h.changed_by = u.id

@@ -35,15 +35,17 @@ async function createAndApproveActivity(browser: any) {
 
   const unique = Date.now()
   const title = `UAT Register ${unique}`
+  const minute = String(unique % 60).padStart(2, '0')
   const createRes = await teacherPage.request.post('http://127.0.0.1:3000/api/activities', {
     headers: { 'Content-Type': 'application/json' },
     data: {
       title,
       description: 'Published by UAT for student registration',
-      date_time: '2026-12-31T09:00',
+      date_time: `2026-12-31T09:${minute}`,
       location: 'Room REG-201',
       max_participants: 30,
-      class_ids: [classId],
+      class_ids: [],
+      voluntary_class_ids: [classId],
       activity_type_id: activityTypeId,
       organization_level_id: organizationLevelId,
       files: [],
@@ -92,11 +94,36 @@ test.describe('Student - Discovery and registration backbone', () => {
     await expect(studentPage.locator('body')).toContainText(/Hoạt động|Activities/i)
     await expect(studentPage.locator('body')).toContainText(title)
 
-    const registerRes = await studentPage.request.post(`http://127.0.0.1:3000/api/activities/${activityId}/register`, {
+    let registerRes = await studentPage.request.post(`http://127.0.0.1:3000/api/activities/${activityId}/register`, {
       headers: { 'Content-Type': 'application/json' },
       data: {},
     })
-    expect(registerRes.ok()).toBeTruthy()
+
+    if (!registerRes.ok()) {
+      const registerBody = await registerRes.text()
+      const alreadyRegistered =
+        registerRes.status() === 400 && /đã đăng ký hoạt động này rồi|da dang ky hoat dong nay roi/i.test(registerBody)
+
+      let canOverrideConflict = false
+      try {
+        const parsed = JSON.parse(registerBody)
+        canOverrideConflict = Boolean(parsed?.details?.can_override || parsed?.data?.can_override)
+      } catch {
+        canOverrideConflict = /can_override/i.test(registerBody)
+      }
+
+      if (!alreadyRegistered && registerRes.status() === 409 && canOverrideConflict) {
+        registerRes = await studentPage.request.post(`http://127.0.0.1:3000/api/activities/${activityId}/register`, {
+          headers: { 'Content-Type': 'application/json' },
+          data: { force_register: true },
+        })
+      }
+
+      if (!registerRes.ok()) {
+        const retryBody = await registerRes.text()
+        throw new Error(`Student register failed: ${registerRes.status()} ${retryBody}`)
+      }
+    }
 
     const activityRes = await studentPage.request.get(`http://127.0.0.1:3000/api/activities/${activityId}`)
     expect(activityRes.ok()).toBeTruthy()

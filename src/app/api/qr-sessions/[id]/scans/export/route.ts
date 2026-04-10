@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { dbAll, dbGet, dbHelpers } from '@/lib/database';
 import { requireApiRole } from '@/lib/guards';
 import { ApiError, errorResponse } from '@/lib/api-response';
+import { teacherCanAccessActivity } from '@/lib/activity-access';
 
 /**
  * Helper function to escape CSV values properly
@@ -33,13 +34,14 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       return errorResponse(ApiError.validation('ID phiên QR không hợp lệ'));
     }
 
-    // 2. FETCH SESSION WITH OWNERSHIP CHECK
+    // 2. FETCH SESSION WITH ACTIVITY CONTEXT
     const session = (await dbGet(
-      `SELECT id, creator_id FROM qr_sessions WHERE id = ?`,
+      `SELECT id, activity_id, creator_id FROM qr_sessions WHERE id = ?`,
       [sessionId]
     )) as
       | {
           id: number;
+          activity_id: number;
           creator_id: number;
         }
       | undefined;
@@ -48,8 +50,11 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       return errorResponse(ApiError.notFound('Không tìm thấy phiên QR'));
     }
 
-    // 3. PERMISSION CHECK: Teacher can only access their own sessions
-    if (user.role === 'teacher' && session.creator_id !== user.id) {
+    // 3. PERMISSION CHECK: Teacher can access sessions from related activities
+    if (
+      user.role === 'teacher' &&
+      !(await teacherCanAccessActivity(Number(user.id), Number(session.activity_id)))
+    ) {
       return errorResponse(
         ApiError.forbidden('Bạn chỉ có thể xuất dữ liệu phiên QR do mình tạo')
       );
@@ -61,7 +66,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         ar.id as attendance_id,
         ar.student_id,
         COALESCE(u.student_code, u.code, u.username, CAST(u.id AS TEXT)) as student_code,
-        COALESCE(u.full_name, u.name) as student_name,
+        COALESCE(u.name, u.username, CAST(u.id AS TEXT)) as student_name,
         c.name as class_name,
         ar.recorded_at as scanned_at
       FROM attendance_records ar

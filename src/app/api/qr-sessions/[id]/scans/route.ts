@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { dbAll, dbGet } from '@/lib/database';
 import { requireApiRole } from '@/lib/guards';
 import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
+import { teacherCanAccessActivity } from '@/lib/activity-access';
 
 /**
  * GET /api/qr-sessions/[id]/scans
@@ -9,7 +10,7 @@ import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
  * Returns deduplicated attendance scans for a QR session.
  * Access policy:
  * - Admin: can view all sessions
- * - Teacher: only sessions created by self
+ * - Teacher: any session from an activity they can operate on
  */
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -39,7 +40,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     if (!session) return errorResponse(ApiError.notFound('Không tìm thấy phiên QR'));
 
-    if (user.role === 'teacher' && session.creator_id !== user.id) {
+    if (
+      user.role === 'teacher' &&
+      !(await teacherCanAccessActivity(Number(user.id), Number(session.activity_id)))
+    ) {
       return errorResponse(ApiError.forbidden('Bạn chỉ có thể xem dữ liệu phiên QR do mình tạo'));
     }
 
@@ -47,7 +51,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       `SELECT 
         ar.id as attendance_id,
         ar.student_id,
-        COALESCE(u.full_name, u.name) as student_name,
+        COALESCE(u.name, u.username, CAST(u.id AS TEXT)) as student_name,
         COALESCE(u.student_code, u.code, u.username, CAST(u.id AS TEXT)) as student_code,
         c.name as class_name,
         ar.recorded_at as scanned_at

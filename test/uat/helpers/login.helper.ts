@@ -20,17 +20,20 @@ async function applyAuthCookie(page: Page, token: string) {
   ])
 }
 
+let loginRequestCounter = 0
+
 function getTestForwardedFor(role: 'admin' | 'teacher' | 'student') {
-  switch (role) {
-    case 'admin':
-      return '127.0.0.11'
-    case 'teacher':
-      return '127.0.0.12'
-    case 'student':
-      return '127.0.0.13'
-    default:
-      return '127.0.0.10'
-  }
+  loginRequestCounter += 1
+
+  const roleBase =
+    role === 'admin'
+      ? 11
+      : role === 'teacher'
+        ? 12
+        : 13
+
+  const hostPart = (loginRequestCounter % 200) + 1
+  return `127.0.${roleBase}.${hostPart}`
 }
 
 export async function loginAs(page: Page, role: 'admin' | 'teacher' | 'student') {

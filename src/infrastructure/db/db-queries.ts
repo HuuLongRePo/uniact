@@ -15,6 +15,130 @@ import {
 } from '@/types/database';
 import { cache, CACHE_TTL } from '../../lib/cache';
 import { dbRun, dbGet, dbAll, withTransaction } from './db-core';
+import { ensureActivityClassParticipationMode } from './activity-class-schema';
+import { ensureParticipationColumns } from './participation-schema';
+
+type ActivityClassParticipationMode = 'mandatory' | 'voluntary';
+
+type ActivityClassAssignment = {
+  class_id: number;
+  participation_mode: ActivityClassParticipationMode;
+};
+
+function uniquePositiveIds(values: unknown): number[] {
+  if (!Array.isArray(values)) return [];
+  return Array.from(
+    new Set(
+      values
+        .map((value) => Number(value))
+        .filter((value) => Number.isInteger(value) && value > 0)
+    )
+  );
+}
+
+function buildActivityClassAssignments(activityData: any): ActivityClassAssignment[] {
+  const hasExplicitScope =
+    activityData?.mandatory_class_ids !== undefined || activityData?.voluntary_class_ids !== undefined;
+
+  const mandatoryClassIds = hasExplicitScope
+    ? uniquePositiveIds(activityData?.mandatory_class_ids)
+    : uniquePositiveIds(activityData?.class_ids);
+  const mandatorySet = new Set(mandatoryClassIds);
+  const voluntaryClassIds = uniquePositiveIds(activityData?.voluntary_class_ids).filter(
+    (classId) => !mandatorySet.has(classId)
+  );
+
+  return [
+    ...mandatoryClassIds.map((class_id) => ({
+      class_id,
+      participation_mode: 'mandatory' as const,
+    })),
+    ...voluntaryClassIds.map((class_id) => ({
+      class_id,
+      participation_mode: 'voluntary' as const,
+    })),
+  ];
+}
+
+async function materializeMandatoryParticipationsForActivity(
+  activityId: number
+): Promise<{ created: number; upgraded: number }> {
+  await ensureParticipationColumns();
+  await ensureActivityClassParticipationMode();
+
+  const classRows = (await dbAll(
+    `SELECT class_id
+     FROM activity_classes
+     WHERE activity_id = ?
+       AND COALESCE(participation_mode, 'mandatory') = 'mandatory'`,
+    [activityId]
+  )) as Array<{ class_id: number }>;
+
+  const classIds = Array.from(
+    new Set(
+      (classRows || [])
+        .map((row) => Number(row?.class_id))
+        .filter((classId) => Number.isFinite(classId))
+    )
+  );
+
+  if (classIds.length === 0) {
+    return { created: 0, upgraded: 0 };
+  }
+
+  const placeholders = classIds.map(() => '?').join(', ');
+  const students = (await dbAll(
+    `SELECT id
+     FROM users
+     WHERE role = 'student'
+       AND COALESCE(is_active, 1) = 1
+       AND class_id IN (${placeholders})
+     ORDER BY id`,
+    classIds
+  )) as Array<{ id: number }>;
+
+  let created = 0;
+  let upgraded = 0;
+
+  for (const student of students || []) {
+    const studentId = Number(student?.id);
+    if (!Number.isFinite(studentId)) {
+      continue;
+    }
+
+    const insertResult = await dbRun(
+      `INSERT OR IGNORE INTO participations (
+         activity_id,
+         student_id,
+         attendance_status,
+         participation_source
+       )
+       VALUES (?, ?, 'registered', 'assigned')`,
+      [activityId, studentId]
+    );
+
+    if (Number(insertResult?.changes || 0) > 0) {
+      created += Number(insertResult?.changes || 0);
+      continue;
+    }
+
+    const upgradeResult = await dbRun(
+      `UPDATE participations
+       SET participation_source = 'assigned',
+           updated_at = CURRENT_TIMESTAMP
+       WHERE activity_id = ?
+         AND student_id = ?
+         AND COALESCE(participation_source, 'voluntary') <> 'assigned'`,
+      [activityId, studentId]
+    );
+
+    if (Number(upgradeResult?.changes || 0) > 0) {
+      upgraded += Number(upgradeResult?.changes || 0);
+    }
+  }
+
+  return { created, upgraded };
+}
 
 /**
  * ===== USER QUERIES =====
@@ -190,6 +314,37 @@ export const dbHelpers = {
   },
 
   /**
+   * Get activities a teacher can operate on through ownership or related classes
+   * Includes participation and attendance counts
+   * @param teacherId - Teacher user ID
+   * @returns Array of accessible activities for attendance/QR/evaluation operations
+   */
+  getOperationalActivitiesByTeacher: async (teacherId: number) => {
+    return await dbAll(
+      `
+      SELECT a.*,
+             u.name as teacher_name,
+             u.name as teacher_full_name,
+             (SELECT COUNT(*) FROM participations WHERE activity_id = a.id AND attendance_status IN ('registered', 'attended')) as participant_count,
+             (SELECT COUNT(*) FROM participations WHERE activity_id = a.id AND attendance_status = 'attended') as attended_count
+      FROM activities a
+      LEFT JOIN users u ON a.teacher_id = u.id
+      WHERE a.teacher_id = ?
+         OR EXISTS (
+           SELECT 1
+           FROM activity_classes ac
+           JOIN classes c ON c.id = ac.class_id
+           LEFT JOIN class_teachers ct ON ct.class_id = c.id
+           WHERE ac.activity_id = a.id
+             AND (c.teacher_id = ? OR ct.teacher_id = ?)
+         )
+      ORDER BY a.date_time DESC
+    `,
+      [teacherId, teacherId, teacherId]
+    );
+  },
+
+  /**
    * Get activity by ID with all fields
    * @param activityId - Activity ID
    * @returns Activity record or undefined if not found
@@ -207,6 +362,8 @@ export const dbHelpers = {
    * @returns Object with lastID (new activity ID) and changes count
    */
   createActivity: async (activityData: any) => {
+    await ensureActivityClassParticipationMode();
+
     const result = await dbRun(
       `INSERT INTO activities (
         title, description, date_time, location, teacher_id, max_participants,
@@ -228,6 +385,18 @@ export const dbHelpers = {
     );
 
     // Insert class relationships into activity_classes junction table
+    for (const assignment of buildActivityClassAssignments(activityData)) {
+      try {
+        await dbRun(
+          `INSERT OR IGNORE INTO activity_classes (activity_id, class_id, participation_mode)
+           VALUES (?, ?, ?)`,
+          [result.lastID, assignment.class_id, assignment.participation_mode]
+        );
+      } catch (err) {
+        console.warn(`âš ï¸  Failed to insert activity-class mapping: ${err}`);
+      }
+    }
+
     if (activityData.class_ids && Array.isArray(activityData.class_ids)) {
       for (const classId of activityData.class_ids) {
         try {
@@ -269,6 +438,8 @@ export const dbHelpers = {
    * @returns Object with changes count
    */
   updateActivity: async (activityId: number, activityData: any) => {
+    await ensureActivityClassParticipationMode();
+
     const updates: string[] = [];
     const values: any[] = [];
     let classMappingsUpdated = false;
@@ -305,8 +476,27 @@ export const dbHelpers = {
       updates.push('organization_level_id = ?');
       values.push(activityData.organization_level_id);
     }
+    const hasExtendedClassScope =
+      activityData.mandatory_class_ids !== undefined || activityData.voluntary_class_ids !== undefined;
+    if (hasExtendedClassScope) {
+      try {
+        await dbRun('DELETE FROM activity_classes WHERE activity_id = ?', [activityId]);
+
+        for (const assignment of buildActivityClassAssignments(activityData)) {
+          await dbRun(
+            `INSERT OR IGNORE INTO activity_classes (activity_id, class_id, participation_mode)
+             VALUES (?, ?, ?)`,
+            [activityId, assignment.class_id, assignment.participation_mode]
+          );
+        }
+
+        classMappingsUpdated = true;
+      } catch (err) {
+        console.warn(`âš ï¸  Failed to update activity-class mappings: ${err}`);
+      }
+    }
     // Update junction table relationships when class_ids provided
-    if (activityData.class_ids !== undefined) {
+    if (!hasExtendedClassScope && activityData.class_ids !== undefined) {
       try {
         // Delete old relationships
         await dbRun('DELETE FROM activity_classes WHERE activity_id = ?', [activityId]);
@@ -360,6 +550,9 @@ export const dbHelpers = {
    * @returns Array of available activities for student
    */
   getActivitiesForStudent: async (studentId: number, classId?: number | null) => {
+    await ensureParticipationColumns();
+    await ensureActivityClassParticipationMode();
+
     let query = `
       SELECT 
         a.*,
@@ -374,7 +567,76 @@ export const dbHelpers = {
             WHERE activity_id = a.id AND student_id = ?
           ) THEN 1
           ELSE 0
-        END as is_registered
+        END as is_registered,
+        (
+          SELECT p.attendance_status
+          FROM participations p
+          WHERE p.activity_id = a.id AND p.student_id = ?
+          LIMIT 1
+        ) as registration_status,
+        (
+          SELECT p.participation_source
+          FROM participations p
+          WHERE p.activity_id = a.id AND p.student_id = ?
+          LIMIT 1
+        ) as participation_source,
+        CASE
+          WHEN EXISTS (
+            SELECT 1 FROM participations p
+            WHERE p.activity_id = a.id
+              AND p.student_id = ?
+              AND p.participation_source = 'assigned'
+          ) THEN 1
+          WHEN ? IS NOT NULL AND EXISTS (
+            SELECT 1 FROM activity_classes
+            WHERE activity_id = a.id
+              AND class_id = ?
+              AND COALESCE(participation_mode, 'mandatory') = 'mandatory'
+          ) THEN 1
+          ELSE 0
+        END as is_mandatory,
+        CASE
+          WHEN EXISTS (
+            SELECT 1 FROM participations p
+            WHERE p.activity_id = a.id
+              AND p.student_id = ?
+              AND p.participation_source = 'assigned'
+          ) THEN 1
+          WHEN NOT EXISTS (
+            SELECT 1 FROM activity_classes
+            WHERE activity_id = a.id
+          ) THEN 1
+          WHEN ? IS NOT NULL AND EXISTS (
+            SELECT 1 FROM activity_classes
+            WHERE activity_id = a.id AND class_id = ?
+          ) THEN 1
+          ELSE 0
+        END as applies_to_student,
+        CASE
+          WHEN EXISTS (
+            SELECT 1 FROM participations p
+            WHERE p.activity_id = a.id
+              AND p.student_id = ?
+              AND p.participation_source = 'assigned'
+          ) THEN 'mandatory_class_scope'
+          WHEN NOT EXISTS (
+            SELECT 1 FROM activity_classes
+            WHERE activity_id = a.id
+          ) THEN 'open_scope'
+          WHEN ? IS NOT NULL AND EXISTS (
+            SELECT 1 FROM activity_classes
+            WHERE activity_id = a.id
+              AND class_id = ?
+              AND COALESCE(participation_mode, 'mandatory') = 'mandatory'
+          ) THEN 'mandatory_class_scope'
+          WHEN ? IS NOT NULL AND EXISTS (
+            SELECT 1 FROM activity_classes
+            WHERE activity_id = a.id
+              AND class_id = ?
+              AND COALESCE(participation_mode, 'mandatory') = 'voluntary'
+          ) THEN 'voluntary_class_scope'
+          ELSE 'class_scope_mismatch'
+        END as applicability_scope
       FROM activities a
       LEFT JOIN users u ON a.teacher_id = u.id
       LEFT JOIN activity_types at ON at.id = a.activity_type_id
@@ -382,16 +644,24 @@ export const dbHelpers = {
       WHERE a.status = 'published'
     `;
 
-    const params: any[] = [studentId];
-
-    if (classId) {
-      // Use junction table for filtering by class
-      query += ` AND (
-        NOT EXISTS (SELECT 1 FROM activity_classes WHERE activity_id = a.id)
-        OR EXISTS (SELECT 1 FROM activity_classes WHERE activity_id = a.id AND class_id = ?)
-      )`;
-      params.push(classId);
-    }
+    const normalizedClassId =
+      typeof classId === 'number' && Number.isFinite(classId) ? Number(classId) : null;
+    const params: any[] = [
+      studentId,
+      studentId,
+      studentId,
+      studentId,
+      normalizedClassId,
+      normalizedClassId,
+      studentId,
+      normalizedClassId,
+      normalizedClassId,
+      studentId,
+      normalizedClassId,
+      normalizedClassId,
+      normalizedClassId,
+      normalizedClassId,
+    ];
 
     query += ' ORDER BY a.date_time DESC';
     return await dbAll(query, params);
@@ -404,6 +674,8 @@ export const dbHelpers = {
    * @returns Participation record or undefined if student not registered
    */
   getParticipationByActivityStudent: async (activityId: number, studentId: number) => {
+    await ensureParticipationColumns();
+
     return await dbGet('SELECT * FROM participations WHERE activity_id = ? AND student_id = ?', [
       activityId,
       studentId,
@@ -1108,6 +1380,8 @@ export const dbHelpers = {
     note?: string | null
   ) => {
     return await withTransaction(async () => {
+      let participationMaterialization = { created: 0, upgraded: 0 };
+
       const row = (await dbGet(
         `SELECT aa.activity_id, aa.status as approval_record_status,
                 a.title as activity_title, a.teacher_id
@@ -1152,6 +1426,10 @@ export const dbHelpers = {
                updated_at = CURRENT_TIMESTAMP
            WHERE id = ?`,
           [note || null, approver_id, row.activity_id]
+        );
+
+        participationMaterialization = await materializeMandatoryParticipationsForActivity(
+          Number(row.activity_id)
         );
       } else {
         await dbRun(
@@ -1224,6 +1502,10 @@ export const dbHelpers = {
         teacher_id: row.teacher_id || null,
         new_status: status === 'approved' ? 'published' : 'draft',
         approval_status: status,
+        mandatory_participations_created:
+          status === 'approved' ? Number(participationMaterialization?.created || 0) : 0,
+        mandatory_participations_upgraded:
+          status === 'approved' ? Number(participationMaterialization?.upgraded || 0) : 0,
       };
     });
   },
