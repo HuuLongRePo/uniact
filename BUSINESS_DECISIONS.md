@@ -1306,27 +1306,139 @@ Chọn **C**.
 - thay đổi scoring / evaluation nếu ảnh hưởng tới student đó
 
 ---
+## D90. Published activities do not support direct edits, even for “light fields”, in the current model
+
+### Decision
+Chọn **A**.
+
+### Rule
+Với activity đã publish:
+- không cho chỉnh trực tiếp bất kỳ nhóm field nào theo luồng sửa nhẹ
+- mọi thay đổi vẫn phải đi qua cơ chế thay đổi đã chốt trước đó thay vì sửa thẳng
+
+---
+
+## D91. Participation preview export is available only to admin/teacher in CSV/Excel form
+
+### Decision
+Chọn **B**.
+
+### Rule
+Preview participation cuối cùng:
+- không mở export cho student
+- chỉ admin/teacher có quyền phù hợp mới được export
+- định dạng chuẩn giai đoạn này là CSV/Excel
+
+---
+
+## D92. Teacher proposes, admin makes the final exemption/approved-absence decision
+
+### Decision
+Chọn **C**.
+
+### Rule
+Với exemption / approved absence:
+- teacher phụ trách có thể xem xét và đề xuất hướng xử lý
+- admin là người chốt quyết định cuối cùng
+
+---
+
+## D93. Default attendance mode is mixed
+
+### Decision
+Chọn **C**.
+
+### Rule
+Attendance mode mặc định theo loại activity ở giai đoạn hiện tại là:
+- **mixed**
+- tức là thiết kế mặc định phải mở cho việc kết hợp manual/QR và các fallback liên quan
+
+---
+
+## D94. Initial penalty implementation priority is unauthorized mandatory absence plus attendance fraud first, then repeated no-show
+
+### Decision
+Chọn **D**.
+
+### Rule
+Thứ tự ưu tiên triển khai rule vi phạm / penalty ban đầu là:
+1. vắng không phép ở activity bắt buộc
+2. gian lận attendance
+3. sau đó mới tới repeated `no-show`
+
+---
+
+## D95. Early improvement workflow centers on make-up participation activities
+
+### Decision
+Chọn **B**.
+
+### Rule
+Ở giai đoạn đầu:
+- improvement workflow nên tập trung vào **activity bù / make-up participation**
+- chưa ưu tiên các hình thức giải trình hình thức là trục chính
+
+---
+
+## D96. Student-facing rule transparency includes result, relevant rule/threshold, and direct consequences
+
+### Decision
+Chọn **C**.
+
+### Rule
+Student-facing rule transparency nên hiển thị:
+- kết quả áp dụng lên student
+- rule / threshold liên quan trực tiếp
+- hệ quả trực tiếp mà student cần biết
+
+---
+
+## D97. Student UI clearly distinguishes soft warning, hard warning, and disciplinary status
+
+### Decision
+Chọn **C**.
+
+### Rule
+Trên giao diện student cần phân biệt rõ 3 mức trạng thái:
+- soft warning
+- hard warning
+- disciplinary status
+
+---
+
+## D98. No-show does not affect future registration priority by default
+
+### Decision
+Chọn **A**.
+
+### Rule
+`no-show` không làm thay đổi ưu tiên đăng ký activity tương lai như một rule mặc định.
+Các hệ quả chính vẫn đi theo các rule đã chốt khác như transparency / scoring / threshold nếu có.
+
+---
+
+## D99. Initial recovery/improvement points use both attendance consistency and better completion/evaluation signals
+
+### Decision
+Chọn **C**.
+
+### Rule
+Input đầu tiên cho improvement / recovery points nên lấy từ cả hai nhóm tín hiệu:
+- attendance consistency tốt hơn
+- activity completion / evaluation improvement tốt hơn
+
+---
 # B. OPEN QUESTIONS (to continue next session)
 
 Các câu hỏi dưới đây **chưa chốt** hoặc cần đào sâu thêm ở phiên sau:
 
-1. Với activity đã publish, nhóm trường nào là “trường nhẹ” có thể chỉnh trực tiếp nếu sau này cần nới rule?
-2. Với activity bắt buộc, preview danh sách cuối cùng nên hỗ trợ export / download ở mức nào?
-3. Với exemption / approved absence, ai có quyền ra quyết định cuối cùng trong từng scope (teacher vs admin vs delegated approver)?
-4. Với attendance mode (`qr`, `manual`, `face`, `mixed`), mode mặc định theo loại activity nên là gì?
-5. QR attendance nếu có nguy cơ quá tải thì **ngưỡng kỹ thuật cụ thể** nào sẽ kích hoạt fallback sang manual/mixed?
-6. Vi phạm / penalty rule đầu tiên nên được triển khai theo tiêu chí nào trước: vắng không phép, gian lận, hay hành vi khác?
-7. Improvement workflow ở giai đoạn đầu nên gồm những loại nhiệm vụ xây dựng nào?
-8. Với student-facing rule transparency, phạm vi chi tiết nào nên hiển thị cho student, phạm vi nào chỉ admin/teacher thấy?
-9. Có cần phân biệt soft warning / hard warning / disciplinary status ở giao diện student không?
-10. Với voluntary activity, `no-show` status nên ảnh hưởng cụ thể ra sao tới ưu tiên đăng ký activity tương lai ngoài rule phạt điểm đã chốt?
-11. Với improvement/recovery points, những tín hiệu tích cực nào sẽ là input đầu tiên của hệ thống?
-12. Với notification bắt buộc phải được đọc, SLA/escalation sau bao lâu thì teacher/admin phải can thiệp?
-13. Với retry/fallback notification bắt buộc, thứ tự kênh, số lần retry, và điều kiện coi là fail cuối cùng nên được cấu hình thế nào?
-14. Với QR token cố định trong suốt phiên, cơ chế chống chia sẻ/gian lận nên bổ sung ở mức nào?
-15. Trong mô hình dashboard MVP cân bằng cho cả 3 vai trò, widget nào là nhóm bắt buộc phải làm trước?
-16. Trong policy action nhạy cảm, action nào bắt buộc nhập reason và action nào chỉ cần confirm là đủ?
-17. “Thay đổi ảnh hưởng trực tiếp tới student” trong changelog activity nên map thành các field/event cụ thể nào trong hệ thống?
+1. Với QR attendance nếu có nguy cơ quá tải thì **ngưỡng kỹ thuật cụ thể** nào sẽ kích hoạt fallback sang manual/mixed?
+2. Với notification bắt buộc phải được đọc, SLA/escalation sau bao lâu thì teacher/admin phải can thiệp?
+3. Với retry/fallback notification bắt buộc, thứ tự kênh, số lần retry, và điều kiện coi là fail cuối cùng nên được cấu hình thế nào?
+4. Với QR token cố định trong suốt phiên, cơ chế chống chia sẻ/gian lận nên bổ sung ở mức nào?
+5. Trong mô hình dashboard MVP cân bằng cho cả 3 vai trò, widget nào là nhóm bắt buộc phải làm trước?
+6. Trong policy action nhạy cảm, action nào bắt buộc nhập reason và action nào chỉ cần confirm là đủ?
+7. “Thay đổi ảnh hưởng trực tiếp tới student” trong changelog activity nên map thành các field/event cụ thể nào trong hệ thống?
 
 ---
 
@@ -1350,6 +1462,8 @@ Các câu hỏi dưới đây **chưa chốt** hoặc cần đào sâu thêm ở
    - not applicable
 7. Prepare violation / improvement model as separate record/workflow lines.
 8. Ensure all important actions are audit-logged.
+
+
 
 
 

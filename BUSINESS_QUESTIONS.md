@@ -428,22 +428,17 @@ Ví dụ:
 Các câu hỏi dưới đây vẫn còn mở hoặc cần đào sâu thêm ở các phiên sau.
 Mục tiêu là chỉ giữ lại **follow-up thật sự chưa chốt**, tránh hỏi lặp lại những gì đã quyết rồi.
 
-### Nhóm follow-up từ Q31-Q45
-- voluntary activity absence request sau khi đã đăng ký nên có các trạng thái/phê duyệt nào trong UI?
-- `no-show` nên hiển thị cho student dưới tên/nhãn nào để vừa rõ trách nhiệm vừa không quá tiêu cực?
-- ngoài rule 3 lần hoặc 2 lần liên tiếp, có cần thêm rule theo kỳ/năm cho `no-show` không?
-- bộ đếm `no-show` reset theo kỳ, năm, hay cấu hình hỗn hợp nào là hợp lý nhất cho phiên bản đầu?
-- phần hiển thị `no-show` / ngưỡng phạt nên nằm ở dashboard, profile, hay statistics page của student?
-- improvement / recovery signals đầu tiên nên lấy từ nguồn nào: attendance consistency, activity completion, evaluation improvement, hay nhiệm vụ cải thiện riêng?
-- danh mục rule nào sẽ thuộc 3 nhóm: auto-apply, suggest-only, require-approval?
-- bảng cấu hình rule automation nên có các trường nào ngoài `effective_from`, `scope`, `version`, `policy_type`?
-- vì đã chốt không hồi tố và không cần recalculate dữ liệu cũ như chức năng chuẩn, cần làm rõ quy tắc hiển thị rule version nào cho dữ liệu lịch sử.
-- cần lập checklist mapping decision -> code/test/UI/config để bảo đảm mọi quyết định đã chốt đều được phản ánh vào hệ thống.
-
-### Nhóm follow-up mới sau Q81-Q89
+### Nhóm follow-up còn mở sau Q90-Q99
+- với QR attendance nếu có nguy cơ quá tải thì **ngưỡng kỹ thuật cụ thể** nào sẽ kích hoạt fallback sang manual/mixed?
 - với notification bắt buộc phải được đọc, SLA/escalation sau bao lâu thì teacher/admin phải can thiệp?
 - với retry/fallback notification bắt buộc, thứ tự kênh, số lần retry, và điều kiện coi là fail cuối cùng nên được cấu hình thế nào?
 - với QR token cố định trong suốt phiên, cơ chế chống chia sẻ/gian lận nên bổ sung ở mức nào?
 - trong mô hình dashboard MVP cân bằng cho cả 3 vai trò, widget nào là nhóm bắt buộc phải làm trước?
 - trong policy action nhạy cảm, action nào bắt buộc nhập reason và action nào chỉ cần confirm là đủ?
 - “thay đổi ảnh hưởng trực tiếp tới student” trong changelog activity nên map thành các field/event cụ thể nào trong hệ thống?
+
+### Nhóm follow-up dài hạn vẫn còn hữu ích
+- cần lập checklist mapping decision -> code/test/UI/config để bảo đảm mọi quyết định đã chốt đều được phản ánh vào hệ thống.
+- vì đã chốt không hồi tố và không cần recalculate dữ liệu cũ như chức năng chuẩn, cần làm rõ quy tắc hiển thị rule version nào cho dữ liệu lịch sử.
+- danh mục rule nào sẽ thuộc 3 nhóm: auto-apply, suggest-only, require-approval?
+- bảng cấu hình rule automation nên có các trường nào ngoài `effective_from`, `scope`, `version`, `policy_type`?
