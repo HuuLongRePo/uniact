@@ -1220,7 +1220,11 @@ Nếu student chưa mở/xem notification bắt buộc:
 ### Decision
 Chọn **C**.
 
-### Rule
+### Historical note
+Decision này là hướng chốt ở vòng trước, nhưng **đã được refine/supersede bởi D102**.
+Source-of-truth hiện tại cho mô hình retry/fallback notification bắt buộc là **D102**.
+
+### Original rule
 Khi notification bắt buộc bị fail ở tầng gửi:
 - phải retry tự động
 - nếu có thì fallback sang kênh nội bộ khác
@@ -1452,6 +1456,19 @@ Với notification thuộc nhóm bắt buộc phải được đọc:
 
 ---
 
+## D102. Mandatory-notification failures now prefer manual alert over extensive retry/fallback
+
+### Decision
+Chọn **C (override)**.
+
+### Rule
+Với notification bắt buộc bị fail ở tầng gửi:
+- **không đi theo mô hình retry nhiều tầng như mặc định ban đầu**
+- ưu tiên tạo **alert/cảnh báo để con người xử lý thủ công**
+- current source-of-truth cho nhánh này là decision này, thay cho hướng rộng hơn ở D83
+
+---
+
 ## D103. Fixed QR tokens require duplicate/rate/context controls to reduce sharing and fraud
 
 ### Decision
@@ -1512,8 +1529,8 @@ Chọn **C**.
 Các câu hỏi dưới đây **chưa chốt** hoặc cần đào sâu thêm ở phiên sau:
 
 1. Với QR attendance nếu có nguy cơ quá tải thì **ngưỡng kỹ thuật cụ thể** nào sẽ kích hoạt fallback sang manual/mixed?
-2. Với notification bắt buộc phải được đọc, SLA/escalation sau bao lâu thì teacher/admin phải can thiệp?
-3. Với retry/fallback notification bắt buộc, thứ tự kênh, số lần retry, và điều kiện coi là fail cuối cùng nên được cấu hình thế nào?
+2. Với notification bắt buộc phải được đọc, sau 5 phút escalation sẽ đi qua kênh/cơ chế can thiệp nào của teacher/admin?
+3. Với mô hình alert thủ công cho notification bắt buộc bị fail, có cho phép retry tối thiểu hay hoàn toàn bỏ retry tự động?
 4. Với QR token cố định trong suốt phiên, cơ chế chống chia sẻ/gian lận nên bổ sung ở mức nào?
 5. Trong mô hình dashboard MVP cân bằng cho cả 3 vai trò, widget nào là nhóm bắt buộc phải làm trước?
 6. Trong policy action nhạy cảm, action nào bắt buộc nhập reason và action nào chỉ cần confirm là đủ?
@@ -1541,6 +1558,7 @@ Các câu hỏi dưới đây **chưa chốt** hoặc cần đào sâu thêm ở
    - not applicable
 7. Prepare violation / improvement model as separate record/workflow lines.
 8. Ensure all important actions are audit-logged.
+
 
 
 

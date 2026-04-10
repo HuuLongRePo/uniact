@@ -429,8 +429,8 @@ Các câu hỏi dưới đây vẫn còn mở hoặc cần đào sâu thêm ở 
 Mục tiêu là chỉ giữ lại **follow-up thật sự chưa chốt**, tránh hỏi lặp lại những gì đã quyết rồi.
 
 ### Nhóm follow-up còn mở sau Q100-Q106
-- với retry/fallback notification bắt buộc, mô hình nào sẽ là chuẩn cuối cùng? (Lưu ý: câu trả lời mới nhất đang có khả năng xung đột với decision D83 đã chốt trước đó.)
 - với notification bắt buộc phải được đọc, escalation sau 5 phút sẽ đi qua kênh/cơ chế can thiệp nào của teacher/admin?
+- với mô hình alert thủ công cho notification bắt buộc bị fail, có cho phép retry tối thiểu hay hoàn toàn bỏ retry tự động?
 - với QR threshold fallback, ngưỡng số cụ thể cho response time / queue / scan fail nên đặt thế nào ở bản đầu?
 - với QR token cố định trong suốt phiên, ràng buộc session/device/context nên bắt buộc ở mức nào theo từng loại activity?
 
@@ -439,3 +439,4 @@ Mục tiêu là chỉ giữ lại **follow-up thật sự chưa chốt**, tránh
 - vì đã chốt không hồi tố và không cần recalculate dữ liệu cũ như chức năng chuẩn, cần làm rõ quy tắc hiển thị rule version nào cho dữ liệu lịch sử.
 - danh mục rule nào sẽ thuộc 3 nhóm: auto-apply, suggest-only, require-approval?
 - bảng cấu hình rule automation nên có các trường nào ngoài `effective_from`, `scope`, `version`, `policy_type`?
+
