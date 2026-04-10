@@ -1428,6 +1428,85 @@ Input đầu tiên cho improvement / recovery points nên lấy từ cả hai nh
 - activity completion / evaluation improvement tốt hơn
 
 ---
+## D100. QR overload fallback is triggered by configured technical thresholds
+
+### Decision
+Chọn **C**.
+
+### Rule
+Nếu QR attendance có nguy cơ quá tải:
+- fallback sang manual/mixed được kích hoạt khi các chỉ số kỹ thuật vượt ngưỡng cấu hình
+- ví dụ: response time, queue backlog, hoặc tỷ lệ scan fail
+
+---
+
+## D101. Mandatory unread-notification escalation happens after 5 minutes
+
+### Decision
+Chọn **A**.
+
+### Rule
+Với notification thuộc nhóm bắt buộc phải được đọc:
+- nếu sau **5 phút** student vẫn chưa mở/xem
+- hệ thống phải chuyển sang trạng thái cần escalation cho teacher/admin can thiệp
+
+---
+
+## D103. Fixed QR tokens require duplicate/rate/context controls to reduce sharing and fraud
+
+### Decision
+Chọn **C**.
+
+### Rule
+Với QR token cố định trong suốt phiên:
+- không chỉ dựa vào token thuần
+- cần kết hợp duplicate guard / rate limit
+- và có thể ràng buộc thêm session/device/context khi cần để giảm chia sẻ/gian lận
+
+---
+
+## D104. MVP dashboards must include the combined critical widget groups across roles
+
+### Decision
+Chọn **D**.
+
+### Rule
+Trong dashboard MVP cân bằng cho cả 3 vai trò, nhóm widget bắt buộc trước là tổ hợp:
+- approvals / pending actions / attendance issues
+- notifications / alerts / failures
+- participation processing / sync warnings
+
+---
+
+## D105. Sensitive actions must require reasons for the broadest critical group set
+
+### Decision
+Chọn **D**.
+
+### Rule
+Các action sau phải thuộc nhóm bắt buộc nhập reason:
+- rule change
+- override quan trọng
+- remove / restore participation
+- exemption decisions
+- manual attendance override ở mức nhạy cảm
+
+---
+
+## D106. Student-facing direct-impact changelog maps to schedule, eligibility, attendance, cutoff, and scoring/evaluation impact fields
+
+### Decision
+Chọn **C**.
+
+### Rule
+“Thay đổi ảnh hưởng trực tiếp tới student” phải map ít nhất tới các nhóm field/event sau:
+- time / location
+- participation eligibility
+- attendance rules
+- cutoff liên quan
+- scoring / evaluation impacts nếu ảnh hưởng tới student đó
+
+---
 # B. OPEN QUESTIONS (to continue next session)
 
 Các câu hỏi dưới đây **chưa chốt** hoặc cần đào sâu thêm ở phiên sau:
@@ -1462,6 +1541,7 @@ Các câu hỏi dưới đây **chưa chốt** hoặc cần đào sâu thêm ở
    - not applicable
 7. Prepare violation / improvement model as separate record/workflow lines.
 8. Ensure all important actions are audit-logged.
+
 
 
 

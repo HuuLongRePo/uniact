@@ -428,14 +428,11 @@ Ví dụ:
 Các câu hỏi dưới đây vẫn còn mở hoặc cần đào sâu thêm ở các phiên sau.
 Mục tiêu là chỉ giữ lại **follow-up thật sự chưa chốt**, tránh hỏi lặp lại những gì đã quyết rồi.
 
-### Nhóm follow-up còn mở sau Q90-Q99
-- với QR attendance nếu có nguy cơ quá tải thì **ngưỡng kỹ thuật cụ thể** nào sẽ kích hoạt fallback sang manual/mixed?
-- với notification bắt buộc phải được đọc, SLA/escalation sau bao lâu thì teacher/admin phải can thiệp?
-- với retry/fallback notification bắt buộc, thứ tự kênh, số lần retry, và điều kiện coi là fail cuối cùng nên được cấu hình thế nào?
-- với QR token cố định trong suốt phiên, cơ chế chống chia sẻ/gian lận nên bổ sung ở mức nào?
-- trong mô hình dashboard MVP cân bằng cho cả 3 vai trò, widget nào là nhóm bắt buộc phải làm trước?
-- trong policy action nhạy cảm, action nào bắt buộc nhập reason và action nào chỉ cần confirm là đủ?
-- “thay đổi ảnh hưởng trực tiếp tới student” trong changelog activity nên map thành các field/event cụ thể nào trong hệ thống?
+### Nhóm follow-up còn mở sau Q100-Q106
+- với retry/fallback notification bắt buộc, mô hình nào sẽ là chuẩn cuối cùng? (Lưu ý: câu trả lời mới nhất đang có khả năng xung đột với decision D83 đã chốt trước đó.)
+- với notification bắt buộc phải được đọc, escalation sau 5 phút sẽ đi qua kênh/cơ chế can thiệp nào của teacher/admin?
+- với QR threshold fallback, ngưỡng số cụ thể cho response time / queue / scan fail nên đặt thế nào ở bản đầu?
+- với QR token cố định trong suốt phiên, ràng buộc session/device/context nên bắt buộc ở mức nào theo từng loại activity?
 
 ### Nhóm follow-up dài hạn vẫn còn hữu ích
 - cần lập checklist mapping decision -> code/test/UI/config để bảo đảm mọi quyết định đã chốt đều được phản ánh vào hệ thống.
