@@ -440,12 +440,10 @@ Mục tiêu là chỉ giữ lại **follow-up thật sự chưa chốt**, tránh
 - vì đã chốt không hồi tố và không cần recalculate dữ liệu cũ như chức năng chuẩn, cần làm rõ quy tắc hiển thị rule version nào cho dữ liệu lịch sử.
 - cần lập checklist mapping decision -> code/test/UI/config để bảo đảm mọi quyết định đã chốt đều được phản ánh vào hệ thống.
 
-### Nhóm follow-up mới sau Q62-Q80
-- notification “buộc phải nhận ngay” sẽ được coi là thành công theo tiêu chí nào: in-app, push, SMS/email nội bộ, hay ít nhất một kênh?
-- khi notification bắt buộc bị fail, cơ chế retry/fallback nội bộ nào được coi là đủ để flow đạt trạng thái hoàn tất?
-- với mô hình QR chỉ một phiên mỗi activity, policy refresh/rotate QR token trong cùng phiên nên được thiết kế ra sao?
-- các ngưỡng/rule nào sẽ kích hoạt fallback từ QR sang manual/mixed trên thực tế?
-- trong student/teacher/admin dashboard đầy đủ, bản MVP nên ưu tiên widget nào trước để phục vụ backbone flows?
-- với production rule editing trên UI, ranh giới giữa admin nghiệp vụ và admin kỹ thuật có cần làm rõ thêm không?
-- action nào bắt buộc phải nhập reason, action nào chỉ cần confirm?
-- “thay đổi ảnh hưởng trực tiếp tới student” trong changelog activity nên được định nghĩa chi tiết đến mức nào?
+### Nhóm follow-up mới sau Q81-Q89
+- với notification bắt buộc phải được đọc, SLA/escalation sau bao lâu thì teacher/admin phải can thiệp?
+- với retry/fallback notification bắt buộc, thứ tự kênh, số lần retry, và điều kiện coi là fail cuối cùng nên được cấu hình thế nào?
+- với QR token cố định trong suốt phiên, cơ chế chống chia sẻ/gian lận nên bổ sung ở mức nào?
+- trong mô hình dashboard MVP cân bằng cho cả 3 vai trò, widget nào là nhóm bắt buộc phải làm trước?
+- trong policy action nhạy cảm, action nào bắt buộc nhập reason và action nào chỉ cần confirm là đủ?
+- “thay đổi ảnh hưởng trực tiếp tới student” trong changelog activity nên map thành các field/event cụ thể nào trong hệ thống?

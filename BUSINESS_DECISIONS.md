@@ -1188,6 +1188,124 @@ Mức ưu tiên triển khai gần nhất là:
 - sau đó mới tiếp tục hoàn thiện participation model sâu hơn, config nghiệp vụ và rule engine
 
 ---
+## D81. A mandatory notification is only successful when the student actually reads it
+
+### Decision
+Chọn **C**.
+
+### Rule
+Với notification thuộc nhóm **buộc phải nhận ngay**:
+- chỉ tạo notification record là chưa đủ
+- chỉ gửi thành công tới một kênh cũng chưa đủ
+- chỉ được coi là thành công khi **student thực sự mở/xem notification**
+
+---
+
+## D82. Unread mandatory notifications remain pending and must escalate if needed
+
+### Decision
+Chọn **D**.
+
+### Rule
+Nếu student chưa mở/xem notification bắt buộc:
+- hệ thống đánh dấu `pending_notification_read`
+- cho phép resend / remind
+- flow vẫn chưa được coi là hoàn tất
+- sau một thời hạn phù hợp phải escalate cho teacher/admin can thiệp
+
+---
+
+## D83. Mandatory-notification delivery failures require retry, fallback, and escalation
+
+### Decision
+Chọn **C**.
+
+### Rule
+Khi notification bắt buộc bị fail ở tầng gửi:
+- phải retry tự động
+- nếu có thì fallback sang kênh nội bộ khác
+- nếu vẫn fail thì tạo cảnh báo bắt buộc cho teacher/admin xử lý
+
+---
+
+## D84. Single QR session uses one fixed token for the whole session
+
+### Decision
+Chọn **A**.
+
+### Rule
+Với mô hình mỗi activity chỉ có một QR session:
+- QR token của phiên được giữ **cố định từ đầu đến cuối phiên**
+- không rotate theo chu kỳ trong mô hình chuẩn hiện tại
+
+---
+
+## D85. QR fallback can be triggered both manually and by technical thresholds
+
+### Decision
+Chọn **C**.
+
+### Rule
+Fallback từ QR sang manual/mixed có thể được kích hoạt bởi cả hai hướng:
+- teacher chủ động bấm chuyển khi vận hành thực tế cần
+- hệ thống vượt ngưỡng lỗi / quá tải kỹ thuật đã xác định trước
+
+---
+
+## D86. MVP dashboards should be balanced across all three roles
+
+### Decision
+Chọn **D**.
+
+### Rule
+Ở giai đoạn MVP dashboard:
+- cần làm đủ cho cả 3 vai trò student / teacher / admin
+- không dồn hẳn về một phía duy nhất
+- nhưng vẫn nên ưu tiên các widget phục vụ backbone flows trong từng vai trò
+
+---
+
+## D87. No need to separate business-admin and technical-admin roles for rule editing at this stage
+
+### Decision
+Chọn **A**.
+
+### Rule
+Ở giai đoạn hiện tại:
+- chưa cần tách riêng admin nghiệp vụ và admin kỹ thuật khi chỉnh rule trên UI
+- nhóm admin được xem như một lớp quản trị chung cho nhu cầu này
+
+---
+
+## D88. Sensitive actions use a policy-based model, with mandatory reasons for several critical groups
+
+### Decision
+Chọn **C + D**.
+
+### Rule
+Hệ thống cần có policy phân loại action theo độ nhạy.
+Trong đó, các nhóm action quan trọng như sau nên bắt buộc nhập reason:
+- rule change
+- override quan trọng
+- remove / restore participation
+- exemption approve / reject
+- manual attendance override ở mức nhạy cảm
+
+---
+
+## D89. Student-facing changelog includes any change that directly impacts participation rights, schedule, attendance, or scoring
+
+### Decision
+Chọn **C**.
+
+### Rule
+“Thay đổi ảnh hưởng trực tiếp tới student” bao gồm:
+- thay đổi quyền tham gia
+- thay đổi lịch / thời gian / địa điểm khi làm ảnh hưởng việc tham gia
+- thay đổi attendance / cutoff / yêu cầu bắt buộc
+- thay đổi scoring / evaluation nếu ảnh hưởng tới student đó
+
+---
 # B. OPEN QUESTIONS (to continue next session)
 
 Các câu hỏi dưới đây **chưa chốt** hoặc cần đào sâu thêm ở phiên sau:
@@ -1196,20 +1314,19 @@ Các câu hỏi dưới đây **chưa chốt** hoặc cần đào sâu thêm ở
 2. Với activity bắt buộc, preview danh sách cuối cùng nên hỗ trợ export / download ở mức nào?
 3. Với exemption / approved absence, ai có quyền ra quyết định cuối cùng trong từng scope (teacher vs admin vs delegated approver)?
 4. Với attendance mode (`qr`, `manual`, `face`, `mixed`), mode mặc định theo loại activity nên là gì?
-5. QR attendance nếu có nguy cơ quá tải thì **ngưỡng/rule kích hoạt fallback** sang manual/mixed/face được xác định thế nào?
+5. QR attendance nếu có nguy cơ quá tải thì **ngưỡng kỹ thuật cụ thể** nào sẽ kích hoạt fallback sang manual/mixed?
 6. Vi phạm / penalty rule đầu tiên nên được triển khai theo tiêu chí nào trước: vắng không phép, gian lận, hay hành vi khác?
 7. Improvement workflow ở giai đoạn đầu nên gồm những loại nhiệm vụ xây dựng nào?
 8. Với student-facing rule transparency, phạm vi chi tiết nào nên hiển thị cho student, phạm vi nào chỉ admin/teacher thấy?
 9. Có cần phân biệt soft warning / hard warning / disciplinary status ở giao diện student không?
 10. Với voluntary activity, `no-show` status nên ảnh hưởng cụ thể ra sao tới ưu tiên đăng ký activity tương lai ngoài rule phạt điểm đã chốt?
 11. Với improvement/recovery points, những tín hiệu tích cực nào sẽ là input đầu tiên của hệ thống?
-12. Notification “buộc phải nhận ngay” sẽ được coi là thành công theo tiêu chí nào: in-app, push, SMS/email nội bộ, hay ít nhất một kênh?
-13. Khi notification bắt buộc bị fail, cơ chế retry/fallback nội bộ nào được coi là đủ để flow đạt trạng thái hoàn tất?
-14. Với mô hình QR chỉ một phiên mỗi activity, policy refresh/rotate QR token trong cùng phiên nên được thiết kế ra sao?
-15. Trong student/teacher/admin dashboard đầy đủ, bản MVP nên ưu tiên widget nào trước để phục vụ backbone flows?
-16. Với production rule editing trên UI, ranh giới giữa admin nghiệp vụ và admin kỹ thuật có cần làm rõ thêm không?
-17. Action nào bắt buộc phải nhập reason, action nào chỉ cần confirm?
-18. “Thay đổi ảnh hưởng trực tiếp tới student” trong changelog activity nên được định nghĩa chi tiết đến mức nào?
+12. Với notification bắt buộc phải được đọc, SLA/escalation sau bao lâu thì teacher/admin phải can thiệp?
+13. Với retry/fallback notification bắt buộc, thứ tự kênh, số lần retry, và điều kiện coi là fail cuối cùng nên được cấu hình thế nào?
+14. Với QR token cố định trong suốt phiên, cơ chế chống chia sẻ/gian lận nên bổ sung ở mức nào?
+15. Trong mô hình dashboard MVP cân bằng cho cả 3 vai trò, widget nào là nhóm bắt buộc phải làm trước?
+16. Trong policy action nhạy cảm, action nào bắt buộc nhập reason và action nào chỉ cần confirm là đủ?
+17. “Thay đổi ảnh hưởng trực tiếp tới student” trong changelog activity nên map thành các field/event cụ thể nào trong hệ thống?
 
 ---
 
@@ -1233,4 +1350,6 @@ Các câu hỏi dưới đây **chưa chốt** hoặc cần đào sâu thêm ở
    - not applicable
 7. Prepare violation / improvement model as separate record/workflow lines.
 8. Ensure all important actions are audit-logged.
+
+
 
