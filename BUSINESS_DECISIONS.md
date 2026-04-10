@@ -1,4 +1,4 @@
-# UniAct Business Decisions
+﻿# UniAct Business Decisions
 
 _Status: working source-of-truth for confirmed business decisions_
 
@@ -535,6 +535,659 @@ Chọn **D**.
 
 ---
 
+## D31. Voluntary activity absence request after registration
+
+### Decision
+Chọn **B (refined)**.
+
+### Rule
+Với activity tự nguyện:
+- nếu student đã đăng ký và muốn xin vắng có lý do
+- thì phải **gửi yêu cầu để phê duyệt**
+- và yêu cầu này phải được gửi **trước cutoff**
+
+### Exception
+Sau cutoff:
+- student không còn tự xử lý theo luồng thường
+- chỉ admin hoặc người có quyền mới có thể can thiệp cập nhật ngoại lệ
+
+---
+
+## D32. No-show behavior for voluntary activities
+
+### Decision
+Chọn **C**.
+
+### Rule
+Nếu student đã đăng ký activity tự nguyện nhưng:
+- không tham gia
+- và không có yêu cầu vắng được duyệt trước cutoff
+
+thì được ghi nhận là **`no-show`**:
+- ảnh hưởng tới uy tín / lịch sử tham gia / thống kê hành vi
+- nhưng chưa tự động là vi phạm kỷ luật
+
+---
+
+## D33. Penalty threshold for repeated no-show
+
+### Decision
+Chọn **C**.
+
+### Rule
+Nếu student:
+- `no-show` **3 lần**
+- hoặc `no-show` **2 lần liên tiếp**
+
+thì bị **1 lần phạt trừ điểm**.
+
+---
+
+## D34. No-show counter reset policy
+
+### Decision
+Chọn **D**.
+
+### Rule
+Việc xử lý bộ đếm `no-show` sau khi đã áp phạt:
+- phụ thuộc rule theo kỳ / năm / cấu hình hệ thống
+
+---
+
+## D35. Visibility of no-show count and thresholds
+
+### Decision
+Chọn **C**.
+
+### Rule
+Hệ thống minh bạch hiển thị cho học viên:
+- số lần `no-show` hiện tại
+- ngưỡng dẫn tới xử phạt
+- họ còn cách ngưỡng bao xa
+
+---
+
+## D36. Positive recovery after negative history
+
+### Decision
+Chọn **D**.
+
+### Rule
+- không xóa lịch sử `no-show` / tín hiệu xấu cũ
+- nhưng nếu học viên có hành vi tích cực sau đó, hệ thống phải ghi nhận cải thiện
+- có thể cộng điểm tích cực / phục hồi theo rule
+
+---
+
+## D37. Improvement/recovery points model
+
+### Decision
+Chọn **C + D**.
+
+### Rule
+- trước mắt: điểm cải thiện / phục hồi có thể được cộng vào tổng điểm chung
+- nhưng phải ghi rõ là **điểm cải thiện / phục hồi**
+- về lâu dài: kiến trúc mở để tách thành thành phần điểm riêng nếu cần
+
+---
+
+## D38. Generation of improvement/recovery points
+
+### Decision
+Chọn **B + C**.
+
+### Rule
+- hệ thống có khả năng tự động tính / gợi ý điểm cải thiện
+- admin/teacher vẫn có lớp xác nhận hoặc điều chỉnh khi cần
+
+---
+
+## D39. Automation policy for system-generated suggestions and rules
+
+### Decision
+Chọn **B + C + D**.
+
+### Rule
+Tùy theo từng loại rule / quyết định:
+- có loại chỉ là gợi ý
+- có loại có thể có hiệu lực ngay
+- có loại cần con người xác nhận
+
+=> hệ thống phải có policy theo từng loại rule, không áp một cơ chế chung cho tất cả.
+
+---
+
+## D40. Rule automation configuration model
+
+### Decision
+Chọn **C + D**.
+
+### Rule
+- về đích: hệ thống nên có bảng/cấu hình mức tự động hóa theo từng loại rule
+- trước mắt: có thể hard-code một phần để đi nhanh
+- nhưng phải thiết kế dễ chuyển sang cấu hình nghiệp vụ chuẩn
+
+---
+
+## D41. Audit/versioning of business rule configuration changes
+
+### Decision
+Chọn **D**.
+
+### Rule
+Khi thay đổi rule/cấu hình nghiệp vụ, hệ thống phải lưu:
+- ai thay đổi
+- lúc nào
+- từ giá trị nào → sang giá trị nào
+- phạm vi áp dụng
+- versioning / rollback nếu cần
+
+---
+
+## D42. Effective date model for rules/configuration
+
+### Decision
+Chọn **D**.
+
+### Rule
+Tùy theo loại rule:
+- có thể áp ngay
+- có thể áp từ thời điểm xác định
+- có thể áp từ mốc tương lai
+
+---
+
+## D43. Rule changes are not retroactive
+
+### Decision
+Chọn **B**.
+
+### Rule
+Khi rule mới có hiệu lực:
+- **không hồi tố**
+- chỉ áp cho dữ liệu phát sinh sau thời điểm hiệu lực
+
+---
+
+## D44. Recalculation of old data under new rules
+
+### Decision
+Chọn **A**.
+
+### Rule
+- hệ thống **không cần** có cơ chế recalculate dữ liệu cũ theo rule mới như một chức năng chuẩn
+
+---
+
+## D45. Decision propagation to implementation
+
+### Decision
+Chọn **C + D**.
+
+### Rule
+Các business decisions đã chốt phải được phản ánh vào:
+- tài liệu
+- code
+- test
+- UI text / help text
+- và cấu hình quản trị nếu phù hợp
+
+---
+
+## D46. Multiple mandatory participation reasons are all visible
+
+### Decision
+Chọn **B + C**.
+
+### Rule
+Nếu một học viên thuộc nhiều nguồn bắt buộc cùng lúc:
+- hệ thống phải **hiển thị tất cả các lý do**
+- mỗi lý do được trình bày thành **một mục riêng / một dòng riêng**
+- không gộp mơ hồ thành một nhãn chung
+
+---
+
+## D47. Display model for mandatory participation reasons
+
+### Decision
+Chọn **D**.
+
+### Rule
+Cách hiển thị lý do tham gia bắt buộc phụ thuộc vào ngữ cảnh UI:
+- ở card/list ngắn → hiển thị gọn
+- ở trang chi tiết / phần mở rộng → hiển thị đầy đủ hơn
+
+---
+
+## D48. Student-facing visibility of who directly assigned them
+
+### Decision
+Chọn **A**.
+
+### Rule
+Nếu học viên được chọn đích danh vào activity bắt buộc:
+- student chỉ cần thấy mình **được chỉ định tham gia**
+- không cần hiển thị ai là người chỉ định
+- thông tin người chỉ định vẫn có thể được lưu ở audit/internal log
+
+---
+
+## D49. Default eligibility of class-based mandatory participants
+
+### Decision
+Chọn **B + C + D**, refined.
+
+### Rule
+Với activity bắt buộc áp dụng theo lớp:
+- mặc định chỉ sinh participation cho học viên **active / hợp lệ**
+- hệ thống vẫn phải nhận diện được các học viên không hợp lệ để phục vụ vận hành
+- kiến trúc cần mở để có thể cấu hình theo loại trạng thái hoặc loại activity về sau
+
+---
+
+## D50. Operational visibility of excluded non-active students
+
+### Decision
+Chọn **D**, refined by later decisions.
+
+### Rule
+Các học viên không active bị loại khỏi participation bắt buộc:
+- phải được hiển thị trong preview / cảnh báo cho người có quyền
+- không bị im lặng bỏ qua ở lớp vận hành
+- nhưng không được coi là participant thật của activity
+
+---
+
+## D51. Non-active students are not participants
+
+### Decision
+Refined from earlier options.
+
+### Rule
+Nếu học viên không active thì:
+- không tham gia activity
+- không cần tạo participation record
+- không cần tạo exception chỉ để đưa vào flow tham gia bình thường
+
+---
+
+## D52. Snapshot model for class-based mandatory participation
+
+### Decision
+Chọn **D1**.
+
+### Rule
+Với activity áp dụng theo lớp:
+- danh sách participation được chốt theo **snapshot tại thời điểm activity được duyệt**
+- hệ thống không tự động đồng bộ theo biến động lớp về sau
+- admin/teacher có thể chủ động bấm **đồng bộ lại danh sách từ lớp** khi cần
+
+---
+
+## D53. Manual re-sync behavior for class roster changes
+
+### Decision
+Chọn **C + D**.
+
+### Rule
+Khi admin/teacher đồng bộ lại danh sách từ lớp:
+- hệ thống cho phép chọn kiểu đồng bộ
+- nhưng mặc định an toàn là **chỉ thêm người mới**
+- không tự động xóa người cũ nếu người vận hành chưa chọn chế độ mạnh hơn
+
+---
+
+## D54. Do not remove participants who already have activity data
+
+### Decision
+Chọn **B**.
+
+### Rule
+Nếu một học viên không còn thuộc lớp nhưng đã có dữ liệu phát sinh trong activity như:
+- attendance
+- evaluation
+- hoặc lịch sử nghiệp vụ liên quan
+
+thì **không cho xóa khỏi participation**.
+
+---
+
+## D55. Remove participants with no activity data after re-sync
+
+### Decision
+Chọn **B**.
+
+### Rule
+Nếu học viên không còn thuộc lớp và **chưa có dữ liệu phát sinh gì** trong activity:
+- có thể loại bỏ khỏi participation khi sync lại danh sách lớp
+
+---
+
+## D56. Removal must be soft-delete with history
+
+### Decision
+Chọn **D**.
+
+### Rule
+Khi participation bị loại bỏ do sync lớp trong trường hợp hợp lệ:
+- không xóa hẳn hoàn toàn
+- phải **soft delete / đánh dấu removed**
+- đồng thời lưu lịch sử thay đổi và lý do bị loại
+
+---
+
+## D57. Only admin may bring back a removed participant
+
+### Decision
+Chọn **C**.
+
+### Rule
+Khi một participation đã bị removed do sync lớp:
+- chỉ **admin** mới có quyền khôi phục / đưa học viên quay lại flow tham gia
+
+---
+
+## D58. Bringing a removed student back creates a new participation
+
+### Decision
+Refined from discussion.
+
+### Rule
+Nếu sau này cần đưa học viên quay lại activity:
+- không coi là restore participation cũ
+- participation cũ chỉ còn giá trị lịch sử / audit
+- hệ thống phải xử lý như **một lần thêm mới**
+
+---
+
+## D59. New participation may keep an internal audit link to the old removed one
+
+### Decision
+Chọn **B**.
+
+### Rule
+Participation mới sau khi học viên quay lại:
+- về nghiệp vụ là một participation mới
+- nhưng có thể giữ liên kết kỹ thuật nội bộ tới participation cũ đã removed để phục vụ audit
+
+---
+
+## D60. Voluntary participation canceled when scope change makes it inapplicable
+
+### Decision
+Chọn **B**.
+
+### Rule
+Với activity tự nguyện, nếu student đã đăng ký nhưng activity không còn áp dụng cho họ do thay đổi scope hợp lệ:
+- hệ thống tự động hủy participation
+- và phải gửi thông báo cho student
+
+---
+
+## D61. Cancellation notice must include reason and guidance
+
+### Decision
+Chọn **C**.
+
+### Rule
+Thông báo hủy participation do thay đổi scope phải có:
+- việc participation đã bị hủy
+- lý do cụ thể
+- hướng xử lý / bước tiếp theo nếu có
+
+---
+
+## D62. No replacement or priority compensation for scope-removed voluntary participants
+
+### Decision
+Chọn **A**.
+
+### Rule
+Nếu participation của student ở activity tự nguyện bị hủy do thay đổi scope hợp lệ:
+- student chỉ cần nhận thông báo
+- không cần cơ chế đề xuất activity thay thế hay ưu tiên đăng ký activity khác như một quyền mặc định
+
+---
+
+## D63. Mandatory participation flow is not complete until students receive notification
+
+### Decision
+Refined from user answer.
+
+### Rule
+Với participation bắt buộc được sinh tự động:
+- học viên **buộc phải nhận được thông báo ngay**
+- nếu notification cho nhóm bắt buộc chưa hoàn tất thì flow này chưa được coi là hoàn tất trọn vẹn
+
+---
+
+## D64. Notification reliability is part of the required business flow
+
+### Decision
+Chọn **A**.
+
+### Rule
+Trong các luồng nghiệp vụ phụ thuộc vào notification:
+- notification failure không được xem là side-effect phụ vô hại
+- nếu thông báo chưa thông suốt thì flow chưa đạt yêu cầu hoàn chỉnh
+
+---
+
+## D65. QR attendance allows only one session per activity
+
+### Decision
+Chọn **A**.
+
+### Rule
+Một activity chỉ có **một phiên QR attendance duy nhất** trong mô hình chuẩn hiện tại.
+
+---
+
+## D66. Repeated QR scans keep the first accepted scan
+
+### Decision
+Chọn **A**.
+
+### Rule
+Nếu cùng một học viên quét QR lặp nhiều lần:
+- chỉ giữ lần đầu hợp lệ
+- các lần sau bị bỏ qua theo rule chuẩn
+
+---
+
+## D67. Face attendance roadmap runs in parallel with QR first
+
+### Decision
+Chọn **D**.
+
+### Rule
+Face attendance nên được triển khai theo lộ trình:
+- chạy song song với QR trước
+- sau đó có thể thay QR ở một số context nếu đủ ổn định
+
+---
+
+## D68. Low-confidence face attendance falls back to teacher confirmation and manual methods
+
+### Decision
+Chọn **D**.
+
+### Rule
+Nếu face attendance không đủ chắc chắn:
+- teacher có thể xác nhận thủ công
+- và/hoặc fallback sang chọn tên / manual attendance
+
+---
+
+## D69. Face-attendance evidence is configurable but must fit an offline-first environment
+
+### Decision
+Chọn **D**.
+
+### Rule
+Hệ thống có thể lưu bộ dữ liệu face-attendance khá đầy đủ theo policy phù hợp, ví dụ:
+- timestamp
+- device context
+- confidence score
+- snapshot/ảnh xác minh nếu policy cho phép
+
+### Constraint
+Thiết kế phải phù hợp với bối cảnh:
+- hệ thống **không kết nối Internet**
+- ưu tiên local/offline-first hoặc local-network-first
+
+---
+
+## D70. Significant published-activity changes require notify + re-choice / reconfirmation mechanisms
+
+### Decision
+Chọn **B + C**.
+
+### Rule
+Nếu activity thay đổi sau publish và ảnh hưởng đáng kể tới người đã đăng ký:
+- hệ thống phải notify người bị ảnh hưởng
+- nếu activity không bắt buộc và thay đổi làm lệch kỳ vọng ban đầu, có thể cho phép hủy ngoài cutoff
+- khi thay đổi đủ lớn, hệ thống có thể yêu cầu xác nhận lại việc tham gia
+
+---
+
+## D71. Admin may edit business rules directly in production UI
+
+### Decision
+Chọn **A**.
+
+### Rule
+Admin có thể chỉnh trực tiếp rule/cấu hình nghiệp vụ trên production UI.
+
+### Governance
+Việc này vẫn phải tuân theo các decision đã chốt trước đó về:
+- audit log
+- versioning
+- lịch sử thay đổi
+- effective date nếu có
+
+---
+
+## D72. Sensitive rule changes require a second confirmation step
+
+### Decision
+Chọn **B**.
+
+### Rule
+Với các rule nhạy cảm như điểm, penalty, threshold, override policy:
+- khi thay đổi phải có **bước xác nhận lần 2** trước khi lưu có hiệu lực
+
+---
+
+## D73. Student dashboard should expose the full participation/rule-awareness area
+
+### Decision
+Chọn **C**.
+
+### Rule
+Student-facing dashboard nên có khu vực riêng hiển thị đầy đủ các nội dung như:
+- nghĩa vụ bắt buộc
+- no-show hiện tại
+- warning/rule đang áp
+- cơ hội cải thiện
+- điểm cải thiện đã được ghi nhận
+
+---
+
+## D74. Teacher dashboard should expose the full operational overview
+
+### Decision
+Chọn **C**.
+
+### Rule
+Teacher-facing dashboard nên có khu vực riêng hiển thị đầy đủ:
+- activity pending approval
+- participation processing
+- pending exemption requests
+- pending change requests
+- warning về sync class / removed participants
+- attendance issues
+
+---
+
+## D75. Admin dashboard should expose the full operational overview
+
+### Decision
+Chọn **C**.
+
+### Rule
+Admin-facing dashboard nên có khu vực theo dõi đầy đủ:
+- approvals
+- change requests
+- participation generation jobs
+- rule changes
+- penalty/improvement trends
+- notification failures
+- attendance mode health
+
+---
+
+## D76. Sensitive actions require confirm/reason based on action type
+
+### Decision
+Chọn **D**.
+
+### Rule
+Các action quan trọng phải được phân loại theo độ nhạy:
+- action thường có thể chỉ cần confirm
+- action nhạy cảm phải có confirm
+- và những action đủ nhạy cảm phải bắt buộc nhập reason
+
+---
+
+## D77. Authorized users can see excluded non-active students with their statuses in preview
+
+### Decision
+Chọn **D**.
+
+### Rule
+Với activity bắt buộc, khi có học viên không active bị loại khỏi participation:
+- người có quyền phù hợp có thể xem trong preview
+- theo dạng danh sách tên kèm trạng thái học viên
+
+---
+
+## D78. Students see only changes that directly affect them
+
+### Decision
+Chọn **C**.
+
+### Rule
+Trong lịch sử thay đổi activity sau publish:
+- student không cần thấy changelog đầy đủ
+- chỉ cần thấy các thay đổi ảnh hưởng trực tiếp tới quyền/lịch/việc tham gia của mình
+
+---
+
+## D79. QR overload fallback supports manual switch, policy-driven mixed/manual fallback, and face roadmap
+
+### Decision
+Chọn **D**.
+
+### Rule
+Nếu QR attendance có nguy cơ quá tải:
+- teacher có thể chuyển sang manual ngay tại chỗ
+- activity có thể được chuyển sang mixed/manual theo rule
+- và lộ trình face attendance vẫn được chuẩn bị song song
+
+---
+
+## D80. Implementation priority is backbone flows first, deeper participation/config later
+
+### Decision
+Chọn **D**.
+
+### Rule
+Mức ưu tiên triển khai gần nhất là:
+- khóa backbone flows trước
+- sau đó mới tiếp tục hoàn thiện participation model sâu hơn, config nghiệp vụ và rule engine
+
+---
 # B. OPEN QUESTIONS (to continue next session)
 
 Các câu hỏi dưới đây **chưa chốt** hoặc cần đào sâu thêm ở phiên sau:
@@ -543,12 +1196,20 @@ Các câu hỏi dưới đây **chưa chốt** hoặc cần đào sâu thêm ở
 2. Với activity bắt buộc, preview danh sách cuối cùng nên hỗ trợ export / download ở mức nào?
 3. Với exemption / approved absence, ai có quyền ra quyết định cuối cùng trong từng scope (teacher vs admin vs delegated approver)?
 4. Với attendance mode (`qr`, `manual`, `face`, `mixed`), mode mặc định theo loại activity nên là gì?
-5. QR attendance nếu có nguy cơ quá tải thì policy chuyển fallback sang manual/face sẽ được kích hoạt theo rule nào?
-6. Face attendance roadmap: song song QR hay có thể thay QR ở một số loại activity?
-7. Vi phạm / penalty rule đầu tiên nên được triển khai theo tiêu chí nào trước: vắng không phép, gian lận, hay hành vi khác?
-8. Improvement workflow ở giai đoạn đầu nên gồm những loại nhiệm vụ xây dựng nào?
-9. Với student-facing rule transparency, phạm vi chi tiết nào nên hiển thị cho student, phạm vi nào chỉ admin/teacher thấy?
-10. Có cần phân biệt soft warning / hard warning / disciplinary status ở giao diện student không?
+5. QR attendance nếu có nguy cơ quá tải thì **ngưỡng/rule kích hoạt fallback** sang manual/mixed/face được xác định thế nào?
+6. Vi phạm / penalty rule đầu tiên nên được triển khai theo tiêu chí nào trước: vắng không phép, gian lận, hay hành vi khác?
+7. Improvement workflow ở giai đoạn đầu nên gồm những loại nhiệm vụ xây dựng nào?
+8. Với student-facing rule transparency, phạm vi chi tiết nào nên hiển thị cho student, phạm vi nào chỉ admin/teacher thấy?
+9. Có cần phân biệt soft warning / hard warning / disciplinary status ở giao diện student không?
+10. Với voluntary activity, `no-show` status nên ảnh hưởng cụ thể ra sao tới ưu tiên đăng ký activity tương lai ngoài rule phạt điểm đã chốt?
+11. Với improvement/recovery points, những tín hiệu tích cực nào sẽ là input đầu tiên của hệ thống?
+12. Notification “buộc phải nhận ngay” sẽ được coi là thành công theo tiêu chí nào: in-app, push, SMS/email nội bộ, hay ít nhất một kênh?
+13. Khi notification bắt buộc bị fail, cơ chế retry/fallback nội bộ nào được coi là đủ để flow đạt trạng thái hoàn tất?
+14. Với mô hình QR chỉ một phiên mỗi activity, policy refresh/rotate QR token trong cùng phiên nên được thiết kế ra sao?
+15. Trong student/teacher/admin dashboard đầy đủ, bản MVP nên ưu tiên widget nào trước để phục vụ backbone flows?
+16. Với production rule editing trên UI, ranh giới giữa admin nghiệp vụ và admin kỹ thuật có cần làm rõ thêm không?
+17. Action nào bắt buộc phải nhập reason, action nào chỉ cần confirm?
+18. “Thay đổi ảnh hưởng trực tiếp tới student” trong changelog activity nên được định nghĩa chi tiết đến mức nào?
 
 ---
 
@@ -572,3 +1233,4 @@ Các câu hỏi dưới đây **chưa chốt** hoặc cần đào sâu thêm ở
    - not applicable
 7. Prepare violation / improvement model as separate record/workflow lines.
 8. Ensure all important actions are audit-logged.
+

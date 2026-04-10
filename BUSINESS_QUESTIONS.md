@@ -1,4 +1,4 @@
-# UniAct Business Questions
+﻿# UniAct Business Questions
 
 _Status: v1 - backbone-focused decision list_
 
@@ -420,3 +420,32 @@ Ví dụ:
 - Decision: conflict cùng ngày chỉ cảnh báo, không chặn cứng nếu khác time slot
 - Scope affected: register API, student UI, UAT registration, system config
 - Follow-up: thêm time-slot rule + confirm modal + regression test override
+
+---
+
+## 10. Follow-up questions discovered in later sessions
+
+Các câu hỏi dưới đây vẫn còn mở hoặc cần đào sâu thêm ở các phiên sau.
+Mục tiêu là chỉ giữ lại **follow-up thật sự chưa chốt**, tránh hỏi lặp lại những gì đã quyết rồi.
+
+### Nhóm follow-up từ Q31-Q45
+- voluntary activity absence request sau khi đã đăng ký nên có các trạng thái/phê duyệt nào trong UI?
+- `no-show` nên hiển thị cho student dưới tên/nhãn nào để vừa rõ trách nhiệm vừa không quá tiêu cực?
+- ngoài rule 3 lần hoặc 2 lần liên tiếp, có cần thêm rule theo kỳ/năm cho `no-show` không?
+- bộ đếm `no-show` reset theo kỳ, năm, hay cấu hình hỗn hợp nào là hợp lý nhất cho phiên bản đầu?
+- phần hiển thị `no-show` / ngưỡng phạt nên nằm ở dashboard, profile, hay statistics page của student?
+- improvement / recovery signals đầu tiên nên lấy từ nguồn nào: attendance consistency, activity completion, evaluation improvement, hay nhiệm vụ cải thiện riêng?
+- danh mục rule nào sẽ thuộc 3 nhóm: auto-apply, suggest-only, require-approval?
+- bảng cấu hình rule automation nên có các trường nào ngoài `effective_from`, `scope`, `version`, `policy_type`?
+- vì đã chốt không hồi tố và không cần recalculate dữ liệu cũ như chức năng chuẩn, cần làm rõ quy tắc hiển thị rule version nào cho dữ liệu lịch sử.
+- cần lập checklist mapping decision -> code/test/UI/config để bảo đảm mọi quyết định đã chốt đều được phản ánh vào hệ thống.
+
+### Nhóm follow-up mới sau Q62-Q80
+- notification “buộc phải nhận ngay” sẽ được coi là thành công theo tiêu chí nào: in-app, push, SMS/email nội bộ, hay ít nhất một kênh?
+- khi notification bắt buộc bị fail, cơ chế retry/fallback nội bộ nào được coi là đủ để flow đạt trạng thái hoàn tất?
+- với mô hình QR chỉ một phiên mỗi activity, policy refresh/rotate QR token trong cùng phiên nên được thiết kế ra sao?
+- các ngưỡng/rule nào sẽ kích hoạt fallback từ QR sang manual/mixed trên thực tế?
+- trong student/teacher/admin dashboard đầy đủ, bản MVP nên ưu tiên widget nào trước để phục vụ backbone flows?
+- với production rule editing trên UI, ranh giới giữa admin nghiệp vụ và admin kỹ thuật có cần làm rõ thêm không?
+- action nào bắt buộc phải nhập reason, action nào chỉ cần confirm?
+- “thay đổi ảnh hưởng trực tiếp tới student” trong changelog activity nên được định nghĩa chi tiết đến mức nào?
