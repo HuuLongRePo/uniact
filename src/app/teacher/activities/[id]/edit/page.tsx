@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Save, Send, AlertCircle, ArrowLeft, Lock } from 'lucide-react';
+import { AlertCircle, ArrowLeft, Lock, Save, Send } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface ActivityType {
@@ -20,33 +20,75 @@ interface Class {
   name: string;
 }
 
+interface ParticipationPreviewStudent {
+  id: number;
+  name: string;
+  email: string | null;
+  participation_mode?: 'mandatory' | 'voluntary';
+  resolved_mode?: 'mandatory' | 'voluntary';
+  was_conflicted?: boolean;
+}
+
+interface ParticipationPreviewGroup {
+  class_id: number;
+  class_name: string;
+  participation_mode?: 'mandatory' | 'voluntary';
+  mandatory_count: number;
+  voluntary_count: number;
+  conflict_count: number;
+  students: ParticipationPreviewStudent[];
+}
+
+interface ParticipationPreview {
+  total_classes: number;
+  mandatory_participants: number;
+  voluntary_participants: number;
+  conflict_count: number;
+  groups: ParticipationPreviewGroup[];
+}
+
 interface Activity {
   id: number;
   title: string;
   description: string;
   date_time: string;
   location: string;
-  status: 'draft' | 'pending_approval' | 'approved' | 'rejected';
+  status: 'draft' | 'published' | 'completed' | 'cancelled';
+  approval_status: 'draft' | 'requested' | 'approved' | 'rejected';
+  rejected_reason?: string | null;
   max_participants: number | null;
   activity_type_id: number | null;
   organization_level_id: number | null;
-  classes: Class[];
+  class_ids?: number[];
+  mandatory_class_ids?: number[];
+  voluntary_class_ids?: number[];
+  classes?: Array<Class & { participation_mode?: 'mandatory' | 'voluntary' }>;
 }
 
-interface UploadedFile {
-  id: number;
-  name: string;
-  size: number;
+function extractActivity(payload: any): Activity {
+  return payload?.activity || payload?.data?.activity || payload?.data || payload;
 }
 
-export default function EditActivityPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = React.use(params);
+function canEditActivity(activity: Activity): boolean {
+  return activity.status === 'draft' && ['draft', 'rejected'].includes(activity.approval_status);
+}
+
+function getErrorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error ? error.message : fallback;
+}
+
+export default function EditActivityPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const resolvedParams = React.use(params);
+  const { id } = resolvedParams;
   const router = useRouter();
   const [activity, setActivity] = useState<Activity | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [submitMode, setSubmitMode] = useState<'draft' | 'submit'>('draft');
-  // Form state
+
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [date, setDate] = useState('');
@@ -55,138 +97,238 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
   const [maxParticipants, setMaxParticipants] = useState<number | ''>('');
   const [activityTypeId, setActivityTypeId] = useState<number | ''>('');
   const [organizationLevelId, setOrganizationLevelId] = useState<number | ''>('');
-  const [selectedClasses, setSelectedClasses] = useState<number[]>([]);
+  const [mandatoryClassIds, setMandatoryClassIds] = useState<number[]>([]);
+  const [voluntaryClassIds, setVoluntaryClassIds] = useState<number[]>([]);
 
-  // Options
   const [classes, setClasses] = useState<Class[]>([]);
   const [activityTypes, setActivityTypes] = useState<ActivityType[]>([]);
   const [organizationLevels, setOrganizationLevels] = useState<OrganizationLevel[]>([]);
+  const [showParticipationPreview, setShowParticipationPreview] = useState(false);
+  const [participationPreview, setParticipationPreview] = useState<ParticipationPreview | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const selectedClasses = Array.from(new Set([...mandatoryClassIds, ...voluntaryClassIds]));
 
   useEffect(() => {
-    fetchAllData();
+    void fetchAllData();
   }, [id]);
+
+  useEffect(() => {
+    if (!showParticipationPreview) return;
+
+    if (selectedClasses.length === 0) {
+      setParticipationPreview(null);
+      setPreviewError(null);
+      return;
+    }
+
+    let active = true;
+
+    const loadPreview = async () => {
+      try {
+        setPreviewLoading(true);
+        setPreviewError(null);
+
+        const response = await fetch('/api/activities/participation-preview', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            class_ids: selectedClasses,
+            mandatory_class_ids: mandatoryClassIds,
+            voluntary_class_ids: voluntaryClassIds,
+          }),
+        });
+        const data = await response.json().catch(() => null);
+
+        if (!response.ok) {
+          throw new Error(data?.error || 'Khong the tai preview tham gia');
+        }
+
+        if (!active) return;
+        setParticipationPreview(data?.preview || null);
+      } catch (error) {
+        if (!active) return;
+        setParticipationPreview(null);
+        setPreviewError(getErrorMessage(error, 'Khong the tai preview tham gia'));
+      } finally {
+        if (active) {
+          setPreviewLoading(false);
+        }
+      }
+    };
+
+    void loadPreview();
+
+    return () => {
+      active = false;
+    };
+  }, [showParticipationPreview, selectedClasses, mandatoryClassIds, voluntaryClassIds]);
 
   const fetchAllData = async () => {
     try {
       setLoading(true);
-      const [actRes, classesRes, typesRes, levelsRes] = await Promise.all([
+
+      const [activityRes, classesRes, typesRes, levelsRes] = await Promise.all([
         fetch(`/api/activities/${id}`),
         fetch('/api/classes?mine=1'),
         fetch('/api/activity-types'),
         fetch('/api/organization-levels'),
       ]);
 
-      if (!actRes.ok) throw new Error('Không thể tải hoạt động');
+      if (!activityRes.ok) {
+        throw new Error('Khong the tai hoat dong');
+      }
 
-      const actData = await actRes.json();
-      const activity = actData.activity || actData;
-
-      // Check if editable
-      if (activity.status !== 'draft' && activity.status !== 'rejected') {
-        toast.error('Chỉ có thể chỉnh sửa hoạt động nháp hoặc bị từ chối');
+      const nextActivity = extractActivity(await activityRes.json());
+      if (!canEditActivity(nextActivity)) {
+        toast.error('Chi co the chinh sua hoat dong nhap hoac bi tu choi');
         router.push('/teacher/activities');
         return;
       }
 
-      setActivity(activity);
-      setTitle(activity.title);
-      setDescription(activity.description);
+      setActivity(nextActivity);
+      setTitle(nextActivity.title || '');
+      setDescription(nextActivity.description || '');
 
-      const [dateOnly, timeOnly] = activity.date_time.split('T');
-      setDate(dateOnly);
-      setTime(timeOnly?.substring(0, 5) || '00:00');
+      const [dateOnly, timeOnly = '00:00'] = String(nextActivity.date_time || '').split('T');
+      setDate(dateOnly || '');
+      setTime(timeOnly.slice(0, 5) || '00:00');
 
-      setLocation(activity.location);
-      setMaxParticipants(activity.max_participants || '');
-      setActivityTypeId(activity.activity_type_id || '');
-      setOrganizationLevelId(activity.organization_level_id || '');
-      setSelectedClasses(activity.classes.map((c: Class) => c.id));
+      setLocation(nextActivity.location || '');
+      setMaxParticipants(nextActivity.max_participants || '');
+      setActivityTypeId(nextActivity.activity_type_id || '');
+      setOrganizationLevelId(nextActivity.organization_level_id || '');
+      const fetchedMandatoryClassIds =
+        nextActivity.mandatory_class_ids ||
+        nextActivity.classes
+          ?.filter((item) => (item.participation_mode || 'mandatory') === 'mandatory')
+          .map((item) => item.id) ||
+        nextActivity.class_ids ||
+        [];
+      const fetchedVoluntaryClassIds =
+        nextActivity.voluntary_class_ids ||
+        nextActivity.classes
+          ?.filter((item) => (item.participation_mode || 'mandatory') === 'voluntary')
+          .map((item) => item.id) ||
+        [];
+      setMandatoryClassIds(fetchedMandatoryClassIds);
+      setVoluntaryClassIds(fetchedVoluntaryClassIds);
 
       if (classesRes.ok) {
-        const classData = await classesRes.json();
-        setClasses(classData.classes || []);
+        const classesData = await classesRes.json();
+        setClasses(classesData.classes || []);
       }
 
       if (typesRes.ok) {
         const typesData = await typesRes.json();
-        setActivityTypes(typesData.activity_types || []);
+        setActivityTypes(typesData.activity_types || typesData.activityTypes || typesData.types || []);
       }
 
       if (levelsRes.ok) {
         const levelsData = await levelsRes.json();
-        setOrganizationLevels(levelsData.organization_levels || []);
+        setOrganizationLevels(
+          levelsData.organization_levels || levelsData.organizationLevels || levelsData.levels || []
+        );
       }
     } catch (error) {
       console.error(error);
-      toast.error('Không thể tải dữ liệu');
+      toast.error('Khong the tai du lieu');
       router.push('/teacher/activities');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent, mode: 'draft' | 'submit') => {
-    e.preventDefault();
-
+  const submitActivity = async (mode: 'draft' | 'submit') => {
     if (!title.trim()) {
-      toast.error('Vui lòng nhập tên hoạt động');
+      toast.error('Vui long nhap ten hoat dong');
       return;
     }
+
     if (!description.trim()) {
-      toast.error('Vui lòng nhập mô tả');
+      toast.error('Vui long nhap mo ta');
       return;
     }
+
     if (!date) {
-      toast.error('Vui lòng chọn ngày');
+      toast.error('Vui long chon ngay');
       return;
     }
+
+    if (!location.trim()) {
+      toast.error('Vui long nhap dia diem');
+      return;
+    }
+
     if (selectedClasses.length === 0) {
-      toast.error('Vui lòng chọn ít nhất một lớp');
+      toast.error('Vui long chon it nhat mot lop');
       return;
     }
 
     try {
       setSubmitting(true);
-      const dateTime = time ? `${date}T${time}` : `${date}T00:00`;
 
-      const response = await fetch(`/api/activities/${id}`, {
+      const updatePayload = {
+        title: title.trim(),
+        description: description.trim(),
+        date_time: time ? `${date}T${time}` : `${date}T00:00`,
+        location: location.trim(),
+        max_participants: maxParticipants ? parseInt(String(maxParticipants), 10) : 30,
+        class_ids: selectedClasses,
+        ...(activityTypeId ? { activity_type_id: Number(activityTypeId) } : {}),
+        ...(organizationLevelId ? { organization_level_id: Number(organizationLevelId) } : {}),
+      };
+
+      const updateRes = await fetch(`/api/activities/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title,
-          description,
-          date_time: dateTime,
-          location,
-          max_participants: maxParticipants ? parseInt(String(maxParticipants)) : null,
-          activity_type_id: activityTypeId ? parseInt(String(activityTypeId)) : null,
-          organization_level_id: organizationLevelId ? parseInt(String(organizationLevelId)) : null,
-          class_ids: selectedClasses,
-          status: mode === 'draft' ? 'draft' : 'pending_approval',
-        }),
+        body: JSON.stringify(updatePayload),
       });
+      const updateData = await updateRes.json().catch(() => null);
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Không thể cập nhật hoạt động');
+      if (!updateRes.ok) {
+        throw new Error(
+          updateData?.message || updateData?.error || 'Khong the cap nhat hoat dong'
+        );
       }
 
-      toast.success(mode === 'draft' ? 'Lưu nháp thành công' : 'Gửi duyệt thành công');
+      if (mode === 'submit') {
+        const submitRes = await fetch(`/api/activities/${id}/submit-approval`, {
+          method: 'POST',
+        });
+        const submitData = await submitRes.json().catch(() => null);
+
+        if (!submitRes.ok) {
+          throw new Error(
+            submitData?.message ||
+              submitData?.error ||
+              'Hoat dong da cap nhat nhung gui duyet that bai'
+          );
+        }
+      }
+
+      toast.success(mode === 'draft' ? 'Luu nhap thanh cong' : 'Gui duyet thanh cong');
       router.push('/teacher/activities');
-    } catch (error: any) {
+    } catch (error) {
       console.error(error);
-      toast.error(error.message || 'Không thể cập nhật hoạt động');
+      toast.error(getErrorMessage(error, 'Khong the cap nhat hoat dong'));
     } finally {
       setSubmitting(false);
     }
   };
 
+  const handleFormSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    void submitActivity('draft');
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 py-8">
-        <div className="max-w-4xl mx-auto">
-          <div className="bg-white rounded-lg shadow p-12 text-center">
-            <div className="animate-spin inline-block w-8 h-8 border-4 border-gray-200 border-t-blue-600 rounded-full"></div>
-            <p className="mt-4 text-gray-600">Đang tải...</p>
+        <div className="mx-auto max-w-4xl">
+          <div className="rounded-lg bg-white p-12 text-center shadow">
+            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-blue-600" />
+            <p className="mt-4 text-gray-600">Dang tai...</p>
           </div>
         </div>
       </div>
@@ -196,147 +338,145 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
   if (!activity) {
     return (
       <div className="min-h-screen bg-gray-50 py-8">
-        <div className="max-w-4xl mx-auto">
-          <div className="bg-white rounded-lg shadow p-12 text-center border border-gray-200">
-            <p className="text-gray-600">Không tìm thấy hoạt động</p>
+        <div className="mx-auto max-w-4xl">
+          <div className="rounded-lg border border-gray-200 bg-white p-12 text-center shadow">
+            <p className="text-gray-600">Khong tim thay hoat dong</p>
           </div>
         </div>
       </div>
     );
   }
 
-  const isRejected = activity.status === 'rejected';
-  const isDraft = activity.status === 'draft';
-  const canEdit = isDraft || isRejected;
+  const isRejected = activity.approval_status === 'rejected';
+  const canEdit = canEditActivity(activity);
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-4xl mx-auto px-4">
-        {/* Header */}
+      <div className="mx-auto max-w-4xl px-4">
         <div className="mb-6 flex items-center justify-between">
           <button
             onClick={() => router.push('/teacher/activities')}
-            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition"
+            className="flex items-center gap-2 text-gray-600 transition hover:text-gray-900"
           >
-            <ArrowLeft className="w-5 h-5" />
-            Quay lại
+            <ArrowLeft className="h-5 w-5" />
+            Quay lai
           </button>
+
           {!canEdit && (
-            <div className="flex items-center gap-2 px-4 py-2 bg-red-50 border border-red-200 rounded-lg text-red-700">
-              <Lock className="w-5 h-5" />
-              <span className="font-medium">Không thể chỉnh sửa hoạt động này</span>
+            <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-red-700">
+              <Lock className="h-5 w-5" />
+              <span className="font-medium">Khong the chinh sua hoat dong nay</span>
             </div>
           )}
         </div>
 
-        {/* Status Info */}
         {isRejected && (
-          <div className="mb-6 p-4 bg-orange-50 border border-orange-200 rounded-lg flex gap-3">
-            <AlertCircle className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
+          <div className="mb-6 flex gap-3 rounded-lg border border-orange-200 bg-orange-50 p-4">
+            <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-orange-600" />
             <div>
-              <p className="font-medium text-orange-900">Hoạt động bị từ chối</p>
-              <p className="text-sm text-orange-700 mt-1">
-                Vui lòng xem lý do từ chối và cập nhật hoạt động để gửi lại duyệt.
+              <p className="font-medium text-orange-900">Hoat dong bi tu choi</p>
+              <p className="mt-1 text-sm text-orange-700">
+                Vui long cap nhat hoat dong va gui lai de duyet.
               </p>
+              {activity.rejected_reason && (
+                <p className="mt-2 text-sm text-orange-800">
+                  Ly do: {activity.rejected_reason}
+                </p>
+              )}
             </div>
           </div>
         )}
 
-        <form onSubmit={(e) => handleSubmit(e, submitMode)} className="space-y-6">
-          {/* Title & Description */}
-          <div className="bg-white rounded-lg shadow p-6 border border-gray-200 space-y-4">
-            <h2 className="text-lg font-bold text-gray-900">Thông tin hoạt động</h2>
+        <form onSubmit={handleFormSubmit} className="space-y-6">
+          <div className="space-y-4 rounded-lg border border-gray-200 bg-white p-6 shadow">
+            <h2 className="text-lg font-bold text-gray-900">Thong tin hoat dong</h2>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Tên hoạt động *
-              </label>
+              <label className="mb-2 block text-sm font-medium text-gray-700">Ten hoat dong *</label>
               <input
                 type="text"
                 value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Nhập tên hoạt động"
+                onChange={(event) => setTitle(event.target.value)}
+                placeholder="Nhap ten hoat dong"
+                required
                 disabled={!canEdit}
-                className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                className="w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Mô tả *</label>
+              <label className="mb-2 block text-sm font-medium text-gray-700">Mo ta *</label>
               <textarea
                 value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Nhập mô tả chi tiết"
+                onChange={(event) => setDescription(event.target.value)}
+                placeholder="Nhap mo ta chi tiet"
                 rows={4}
+                required
                 disabled={!canEdit}
-                className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                className="w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
               />
             </div>
           </div>
 
-          {/* Date, Time, Location */}
-          <div className="bg-white rounded-lg shadow p-6 border border-gray-200 space-y-4">
-            <h2 className="text-lg font-bold text-gray-900">Thời gian và địa điểm</h2>
+          <div className="space-y-4 rounded-lg border border-gray-200 bg-white p-6 shadow">
+            <h2 className="text-lg font-bold text-gray-900">Thoi gian va dia diem</h2>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Ngày *</label>
+                <label className="mb-2 block text-sm font-medium text-gray-700">Ngay *</label>
                 <input
                   type="date"
                   value={date}
-                  onChange={(e) => setDate(e.target.value)}
+                  onChange={(event) => setDate(event.target.value)}
+                  required
                   disabled={!canEdit}
-                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                  className="w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Giờ (tùy chọn)
-                </label>
+                <label className="mb-2 block text-sm font-medium text-gray-700">Gio</label>
                 <input
                   type="time"
                   value={time}
-                  onChange={(e) => setTime(e.target.value)}
+                  onChange={(event) => setTime(event.target.value)}
                   disabled={!canEdit}
-                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                  className="w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Địa điểm (tùy chọn)
-                </label>
+                <label className="mb-2 block text-sm font-medium text-gray-700">Dia diem *</label>
                 <input
                   type="text"
                   value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  placeholder="Nhập địa điểm"
+                  onChange={(event) => setLocation(event.target.value)}
+                  placeholder="Nhap dia diem"
+                  required
                   disabled={!canEdit}
-                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                  className="w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
                 />
               </div>
             </div>
           </div>
 
-          {/* Type, Level, Capacity */}
-          <div className="bg-white rounded-lg shadow p-6 border border-gray-200 space-y-4">
-            <h2 className="text-lg font-bold text-gray-900">Loại và dung lượng</h2>
+          <div className="space-y-4 rounded-lg border border-gray-200 bg-white p-6 shadow">
+            <h2 className="text-lg font-bold text-gray-900">Loai va dung luong</h2>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Loại hoạt động (tùy chọn)
+                <label className="mb-2 block text-sm font-medium text-gray-700">
+                  Loai hoat dong
                 </label>
                 <select
                   value={activityTypeId}
-                  onChange={(e) =>
-                    setActivityTypeId(e.target.value ? parseInt(e.target.value) : '')
+                  onChange={(event) =>
+                    setActivityTypeId(event.target.value ? parseInt(event.target.value, 10) : '')
                   }
                   disabled={!canEdit}
-                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                  className="w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
                 >
-                  <option value="">-- Chọn loại --</option>
+                  <option value="">-- Chon loai --</option>
                   {activityTypes.map((type) => (
                     <option key={type.id} value={type.id}>
                       {type.name}
@@ -346,18 +486,20 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Cấp tổ chức (tùy chọn)
+                <label className="mb-2 block text-sm font-medium text-gray-700">
+                  Cap to chuc
                 </label>
                 <select
                   value={organizationLevelId}
-                  onChange={(e) =>
-                    setOrganizationLevelId(e.target.value ? parseInt(e.target.value) : '')
+                  onChange={(event) =>
+                    setOrganizationLevelId(
+                      event.target.value ? parseInt(event.target.value, 10) : ''
+                    )
                   }
                   disabled={!canEdit}
-                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                  className="w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
                 >
-                  <option value="">-- Chọn cấp --</option>
+                  <option value="">-- Chon cap --</option>
                   {organizationLevels.map((level) => (
                     <option key={level.id} value={level.id}>
                       {level.name}
@@ -367,76 +509,157 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Số lượng tối đa (tùy chọn)
+                <label className="mb-2 block text-sm font-medium text-gray-700">
+                  So luong toi da
                 </label>
                 <input
                   type="number"
                   value={maxParticipants}
-                  onChange={(e) =>
-                    setMaxParticipants(e.target.value ? parseInt(e.target.value) : '')
+                  onChange={(event) =>
+                    setMaxParticipants(event.target.value ? parseInt(event.target.value, 10) : '')
                   }
-                  placeholder="Số lượng"
+                  placeholder="So luong"
                   disabled={!canEdit}
                   min="0"
-                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                  className="w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
                 />
+                <p className="mt-1 text-xs text-gray-500">De trong se dung mac dinh 30.</p>
               </div>
             </div>
           </div>
 
-          {/* Classes */}
-          <div className="bg-white rounded-lg shadow p-6 border border-gray-200 space-y-4">
-            <h2 className="text-lg font-bold text-gray-900">Lớp học *</h2>
+          <div className="space-y-4 rounded-lg border border-gray-200 bg-white p-6 shadow">
+            <div className="flex items-center justify-between gap-4">
+              <h2 className="text-lg font-bold text-gray-900">Lop hoc *</h2>
+              <button
+                type="button"
+                onClick={() => setShowParticipationPreview((current) => !current)}
+                disabled={!canEdit}
+                className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {showParticipationPreview ? 'An preview tham gia' : 'Xem preview tham gia'}
+              </button>
+            </div>
             <div className="space-y-2">
               {classes.length === 0 ? (
-                <p className="text-gray-600">Không có lớp nào</p>
+                <p className="text-gray-600">Khong co lop nao</p>
               ) : (
-                classes.map((c) => (
+                classes.map((item) => (
                   <label
-                    key={c.id}
-                    className="flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer"
+                    key={item.id}
+                    className="flex cursor-pointer items-center gap-3 rounded-lg border p-3 hover:bg-gray-50"
                   >
                     <input
                       type="checkbox"
-                      checked={selectedClasses.includes(c.id)}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setSelectedClasses([...selectedClasses, c.id]);
+                      checked={selectedClasses.includes(item.id)}
+                      onChange={(event) => {
+                        if (event.target.checked) {
+                          setMandatoryClassIds((current) =>
+                            current.includes(item.id) ? current : [...current, item.id]
+                          );
+                          setVoluntaryClassIds((current) =>
+                            current.filter((classId) => classId !== item.id)
+                          );
                         } else {
-                          setSelectedClasses(selectedClasses.filter((id) => id !== c.id));
+                          setMandatoryClassIds((current) =>
+                            current.filter((classId) => classId !== item.id)
+                          );
+                          setVoluntaryClassIds((current) =>
+                            current.filter((classId) => classId !== item.id)
+                          );
                         }
                       }}
                       disabled={!canEdit}
-                      className="w-4 h-4 rounded border-gray-300"
+                      className="h-4 w-4 rounded border-gray-300"
                     />
-                    <span className="text-gray-700">{c.name}</span>
+                    <span className="text-gray-700">{item.name}</span>
                   </label>
                 ))
               )}
             </div>
+            {showParticipationPreview && (
+              <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+                <div className="mb-2 text-sm font-semibold text-blue-900">
+                  Preview participation hien tai
+                </div>
+                {selectedClasses.length === 0 ? (
+                  <p className="text-sm text-gray-600">
+                    Chon it nhat mot lop de xem danh sach tham gia bat buoc.
+                  </p>
+                ) : previewLoading ? (
+                  <div className="flex items-center gap-2 text-sm text-blue-700">
+                    <div className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-blue-200 border-t-blue-600" />
+                    Dang tai preview...
+                  </div>
+                ) : previewError ? (
+                  <p className="text-sm text-red-600">{previewError}</p>
+                ) : participationPreview ? (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div className="rounded-lg bg-white p-3">
+                        <div className="text-gray-500">So lop</div>
+                        <div className="text-lg font-bold text-gray-900">
+                          {participationPreview.total_classes}
+                        </div>
+                      </div>
+                      <div className="rounded-lg bg-white p-3">
+                        <div className="text-gray-500">Bat buoc</div>
+                        <div className="text-lg font-bold text-orange-700">
+                          {participationPreview.mandatory_participants}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-xs text-gray-600">
+                      Preview hien tai dang nhom theo lop. Backbone se mo rong them voluntary va
+                      conflict preview o batch sau.
+                    </div>
+                    <div className="space-y-2">
+                      {participationPreview.groups.map((group) => (
+                        <details
+                          key={group.class_id}
+                          className="rounded-lg border border-blue-200 bg-white p-3"
+                        >
+                          <summary className="cursor-pointer list-none font-medium text-gray-800">
+                            {group.class_name} • {group.mandatory_count} hoc vien bat buoc
+                          </summary>
+                          <div className="mt-2 space-y-1 text-sm text-gray-600">
+                            {group.students.map((student) => (
+                              <div key={student.id} className="flex justify-between gap-3">
+                                <span>{student.name}</span>
+                                <span className="text-xs text-gray-500">
+                                  {student.email || `ID ${student.id}`}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </details>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            )}
           </div>
 
-          {/* Submit Buttons */}
           {canEdit && (
             <div className="flex gap-3">
               <button
-                type="submit"
-                onClick={() => setSubmitMode('draft')}
+                type="button"
+                onClick={() => void submitActivity('draft')}
                 disabled={submitting}
-                className="flex-1 px-6 py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold rounded-lg transition disabled:opacity-50 flex items-center justify-center gap-2"
+                className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-gray-200 px-6 py-3 font-bold text-gray-700 transition hover:bg-gray-300 disabled:opacity-50"
               >
-                <Save className="w-5 h-5" />
-                Lưu nháp
+                <Save className="h-5 w-5" />
+                Luu nhap
               </button>
               <button
-                type="submit"
-                onClick={() => setSubmitMode('submit')}
+                type="button"
+                onClick={() => void submitActivity('submit')}
                 disabled={submitting}
-                className="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition disabled:opacity-50 flex items-center justify-center gap-2"
+                className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-blue-600 px-6 py-3 font-bold text-white transition hover:bg-blue-700 disabled:opacity-50"
               >
-                <Send className="w-5 h-5" />
-                Gửi duyệt
+                <Send className="h-5 w-5" />
+                Gui duyet
               </button>
             </div>
           )}

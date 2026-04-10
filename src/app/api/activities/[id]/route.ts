@@ -1,10 +1,18 @@
 import { NextRequest } from 'next/server';
 import { requireApiAuth, requireApiRole } from '@/lib/guards';
 import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
-import { dbHelpers, dbRun, dbAll, dbGet } from '@/lib/database';
+import {
+  dbHelpers,
+  dbRun,
+  dbAll,
+  dbGet,
+  ensureParticipationColumns,
+  ensureActivityClassParticipationMode,
+} from '@/lib/database';
 import { cache } from '@/lib/cache';
 import { validateUpdateActivityBody } from '@/lib/activity-validation';
 import { validateTransition, type ActivityStatus } from '@/lib/activity-workflow';
+import { teacherCanAccessActivity } from '@/lib/activity-access';
 
 type ActivityDetailRecord = {
   id: number;
@@ -29,6 +37,17 @@ type ActivityDetailRecord = {
   available_slots: number | string | null;
   is_registered: number | string | boolean | null;
   registration_status: string | null;
+  participation_source?: string | null;
+  is_mandatory?: number | string | boolean | null;
+  applies_to_student?: boolean;
+  applicability_scope?: string | null;
+  applicability_reason?: string | null;
+};
+
+type ActivityClassRow = {
+  class_id: number;
+  name?: string | null;
+  participation_mode?: string | null;
 };
 
 function normalizeActivityDetail(activity: ActivityDetailRecord) {
@@ -50,6 +69,10 @@ function normalizeActivityDetail(activity: ActivityDetailRecord) {
   const isRegistrationClosed =
     deadlineTime !== null && !Number.isNaN(deadlineTime) ? now >= deadlineTime : false;
   const isFull = maxParticipants !== null && participantCount >= maxParticipants;
+  const appliesToStudent = activity.applies_to_student !== false;
+  const participationSource = activity.participation_source || null;
+  const isMandatory =
+    participationSource === 'assigned' || Boolean(Number(activity.is_mandatory || 0));
 
   return {
     ...activity,
@@ -69,16 +92,23 @@ function normalizeActivityDetail(activity: ActivityDetailRecord) {
         : Math.max(0, Number(activity.available_slots ?? fallbackSlots ?? 0)),
     is_registered: isRegistered,
     registration_status: activity.registration_status || null,
+    participation_source: participationSource,
+    is_mandatory: isMandatory,
+    applies_to_student: appliesToStudent,
+    applicability_scope: activity.applicability_scope || 'open_scope',
+    applicability_reason: activity.applicability_reason || 'Hoat dong mo cho tat ca hoc vien.',
     registration_deadline: activity.registration_deadline,
     qr_enabled: Boolean(activity.qr_enabled),
     can_register:
       !isRegistered &&
+      appliesToStudent &&
       activity.status === 'published' &&
       !isStarted &&
       !isRegistrationClosed &&
       !isFull,
     can_cancel:
       isRegistered &&
+      !isMandatory &&
       activity.registration_status === 'registered' &&
       !Number.isNaN(startTime) &&
       (startTime - now) / (1000 * 60 * 60) >= 24,
@@ -164,12 +194,18 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       updatePayload.status = statusValue;
     }
 
-    if (Array.isArray(updatePayload.class_ids) && updatePayload.class_ids.length > 0) {
+    const scopedClassIds = Array.from(
+      new Set([
+        ...(Array.isArray(updatePayload.class_ids) ? updatePayload.class_ids : []),
+        ...(Array.isArray(updatePayload.mandatory_class_ids) ? updatePayload.mandatory_class_ids : []),
+        ...(Array.isArray(updatePayload.voluntary_class_ids) ? updatePayload.voluntary_class_ids : []),
+      ])
+    );
+
+    if (scopedClassIds.length > 0) {
       const classes = (await dbHelpers.getAllClasses()) as Array<{ id: number }>;
       const validClassIds = new Set((classes || []).map((item) => Number(item.id)));
-      const invalidClassIds = updatePayload.class_ids.filter(
-        (classId) => !validClassIds.has(Number(classId))
-      );
+      const invalidClassIds = scopedClassIds.filter((classId) => !validClassIds.has(Number(classId)));
 
       if (invalidClassIds.length > 0) {
         return errorResponse(
@@ -266,6 +302,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     const studentId = user.role === 'student' ? Number(user.id) : -1;
+    await ensureParticipationColumns();
+    await ensureActivityClassParticipationMode();
     const activity = (await dbGet(
       `SELECT
          a.*,
@@ -290,7 +328,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
            WHEN p.id IS NOT NULL THEN 1
            ELSE 0
          END as is_registered,
-         p.attendance_status as registration_status
+         p.attendance_status as registration_status,
+         p.participation_source as participation_source
        FROM activities a
        LEFT JOIN users u ON u.id = a.teacher_id
        LEFT JOIN activity_types at ON at.id = a.activity_type_id
@@ -305,27 +344,84 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     const classRows = (await dbAll(
-      `SELECT ac.class_id, c.name
+      `SELECT ac.class_id, c.name, ac.participation_mode
        FROM activity_classes ac
        LEFT JOIN classes c ON c.id = ac.class_id
        WHERE ac.activity_id = ?`,
       [activityId]
-    )) as Array<{ class_id: number; name?: string | null }>;
+    )) as ActivityClassRow[];
 
     const normalizedActivity = normalizeActivityDetail(activity) as ActivityDetailRecord & {
+      can_register?: boolean;
+      can_cancel?: boolean;
       class_ids?: number[];
+      mandatory_class_ids?: number[];
+      voluntary_class_ids?: number[];
       class_names?: string[];
-      classes?: Array<{ id: number; name: string | null }>;
+      classes?: Array<{ id: number; name: string | null; participation_mode: string }>;
     };
 
+    const mandatoryClassRows = classRows.filter(
+      (row) => (row.participation_mode || 'mandatory') === 'mandatory'
+    );
+    const voluntaryClassRows = classRows.filter(
+      (row) => (row.participation_mode || 'mandatory') === 'voluntary'
+    );
+
     normalizedActivity.class_ids = classRows.map((row) => row.class_id);
+    normalizedActivity.mandatory_class_ids = mandatoryClassRows.map((row) => row.class_id);
+    normalizedActivity.voluntary_class_ids = voluntaryClassRows.map((row) => row.class_id);
     normalizedActivity.class_names = classRows.map((row) => row.name).filter(Boolean) as string[];
     normalizedActivity.classes = classRows.map((row) => ({
       id: row.class_id,
       name: row.name || null,
+      participation_mode: row.participation_mode || 'mandatory',
     }));
 
-    if (user.role === 'teacher' && Number(normalizedActivity.teacher_id) !== Number(user.id)) {
+    if (user.role === 'student') {
+      const studentClassId =
+        typeof user.class_id === 'number' && Number.isFinite(user.class_id) ? Number(user.class_id) : null;
+      const hasClassScope = classRows.length > 0;
+      const mandatoryClassMatch =
+        studentClassId !== null &&
+        mandatoryClassRows.some((row) => Number(row.class_id) === studentClassId);
+      const voluntaryClassMatch =
+        studentClassId !== null &&
+        voluntaryClassRows.some((row) => Number(row.class_id) === studentClassId);
+      const appliesToStudent =
+        normalizedActivity.is_mandatory === true ||
+        !hasClassScope ||
+        mandatoryClassMatch ||
+        voluntaryClassMatch;
+      normalizedActivity.is_mandatory =
+        normalizedActivity.is_mandatory === true || mandatoryClassMatch;
+
+      normalizedActivity.applies_to_student = appliesToStudent;
+      normalizedActivity.applicability_scope = normalizedActivity.is_mandatory === true
+        ? 'mandatory_class_scope'
+        : !hasClassScope
+        ? 'open_scope'
+        : mandatoryClassMatch
+          ? 'mandatory_class_scope'
+          : voluntaryClassMatch
+            ? 'voluntary_class_scope'
+          : 'class_scope_mismatch';
+      normalizedActivity.applicability_reason =
+        normalizedActivity.applicability_scope === 'mandatory_class_scope'
+          ? 'Ap dung vi lop cua ban nam trong nhom bat buoc cua hoat dong.'
+          : normalizedActivity.applicability_scope === 'voluntary_class_scope'
+            ? 'Ban co the tu dang ky vi lop cua ban nam trong nhom duoc mo dang ky.'
+            : normalizedActivity.applicability_scope === 'open_scope'
+              ? 'Hoat dong mo cho tat ca hoc vien.'
+              : 'Khong thuoc pham vi cua ban vi hoat dong dang danh rieng cho lop khac.';
+      normalizedActivity.can_register =
+        normalizedActivity.can_register && appliesToStudent && !mandatoryClassMatch;
+    }
+
+    if (
+      user.role === 'teacher' &&
+      !(await teacherCanAccessActivity(Number(user.id), Number(normalizedActivity.id)))
+    ) {
       return errorResponse(ApiError.forbidden('Bạn chỉ được xem hoạt động do mình tạo'));
     }
 
