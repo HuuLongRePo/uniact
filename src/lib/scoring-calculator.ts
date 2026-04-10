@@ -3,6 +3,7 @@
  */
 
 import { dbRun, dbGet, dbAll } from './database';
+import { cache } from './cache';
 import { CalculationInput, CalculationResult } from './scoring-types';
 
 export class ScoringCalculator {
@@ -109,67 +110,114 @@ export class ScoringCalculator {
    */
   static async saveCalculation(participationId: number, result: CalculationResult): Promise<void> {
     const { totalPoints, breakdown, formula } = result;
+    const subtotal = breakdown.base * breakdown.type * breakdown.level * breakdown.achievement;
 
-    await dbRun(
-      `
-      INSERT INTO point_calculations (
-        participation_id,
-        base_points,
-        type_multiplier,
-        level_multiplier,
-        achievement_multiplier,
-        bonus_points,
-        penalty_points,
-        total_points,
-        formula,
-        calculated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-      ON CONFLICT(participation_id) DO UPDATE SET
-        base_points = excluded.base_points,
-        type_multiplier = excluded.type_multiplier,
-        level_multiplier = excluded.level_multiplier,
-        achievement_multiplier = excluded.achievement_multiplier,
-        bonus_points = excluded.bonus_points,
-        penalty_points = excluded.penalty_points,
-        total_points = excluded.total_points,
-        formula = excluded.formula,
-        calculated_at = CURRENT_TIMESTAMP
-    `,
-      [
-        participationId,
-        breakdown.base,
-        breakdown.type,
-        breakdown.level,
-        breakdown.achievement,
-        breakdown.bonus,
-        breakdown.penalty,
-        totalPoints,
-        formula,
-      ]
+    const existingCalculation = await dbGet(
+      'SELECT id FROM point_calculations WHERE participation_id = ? ORDER BY calculated_at DESC, id DESC LIMIT 1',
+      [participationId]
     );
+
+    if (existingCalculation?.id) {
+      await dbRun(
+        `
+        UPDATE point_calculations
+        SET base_points = ?,
+            type_multiplier = ?,
+            level_multiplier = ?,
+            achievement_multiplier = ?,
+            subtotal = ?,
+            bonus_points = ?,
+            penalty_points = ?,
+            total_points = ?,
+            formula = ?,
+            calculated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `,
+        [
+          breakdown.base,
+          breakdown.type,
+          breakdown.level,
+          breakdown.achievement,
+          subtotal,
+          breakdown.bonus,
+          breakdown.penalty,
+          totalPoints,
+          formula,
+          existingCalculation.id,
+        ]
+      );
+    } else {
+      await dbRun(
+        `
+        INSERT INTO point_calculations (
+          participation_id,
+          base_points,
+          type_multiplier,
+          level_multiplier,
+          achievement_multiplier,
+          subtotal,
+          bonus_points,
+          penalty_points,
+          total_points,
+          formula,
+          calculated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+      `,
+        [
+          participationId,
+          breakdown.base,
+          breakdown.type,
+          breakdown.level,
+          breakdown.achievement,
+          subtotal,
+          breakdown.bonus,
+          breakdown.penalty,
+          totalPoints,
+          formula,
+        ]
+      );
+    }
 
     const participation = await dbGet(
       'SELECT student_id, activity_id FROM participations WHERE id = ?',
       [participationId]
     );
 
-    await dbRun(
-      `
-      INSERT INTO student_scores (
-        student_id,
-        activity_id,
-        participation_id,
-        points,
-        category,
-        source,
-        calculated_at
-      ) VALUES (?, ?, ?, ?, 'activity', ?, CURRENT_TIMESTAMP)
-      ON CONFLICT(participation_id) DO UPDATE SET
-        points = excluded.points,
-        calculated_at = CURRENT_TIMESTAMP
-    `,
-      [participation.student_id, participation.activity_id, participationId, totalPoints, formula]
+    if (!participation) {
+      throw new Error(`Participation ${participationId} not found`);
+    }
+
+    const existingScore = await dbGet(
+      'SELECT id FROM student_scores WHERE student_id = ? AND activity_id = ? AND source = ?',
+      [participation.student_id, participation.activity_id, 'evaluation']
     );
+
+    if (existingScore?.id) {
+      await dbRun(
+        `
+        UPDATE student_scores
+        SET points = ?,
+            calculated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `,
+        [totalPoints, existingScore.id]
+      );
+    } else {
+      await dbRun(
+        `
+        INSERT INTO student_scores (
+          student_id,
+          activity_id,
+          points,
+          source,
+          calculated_at
+        ) VALUES (?, ?, ?, 'evaluation', CURRENT_TIMESTAMP)
+      `,
+        [participation.student_id, participation.activity_id, totalPoints]
+      );
+    }
+
+    cache.invalidate(`scores:${participation.student_id}`);
   }
 
   /**

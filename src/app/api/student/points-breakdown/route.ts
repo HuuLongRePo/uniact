@@ -58,7 +58,7 @@ export async function GET(_request: NextRequest) {
         at.name as activity_type,
         ol.name as organization_level,
         p.achievement_level,
-        p.award_type,
+        NULL as award_type,
         pc.base_points,
         pc.type_multiplier,
         pc.level_multiplier,
@@ -84,7 +84,7 @@ export async function GET(_request: NextRequest) {
       `
       SELECT 
         at.name as type_name,
-        at.multiplier as type_multiplier,
+        COALESCE(MAX(pc.type_multiplier), 1) as type_multiplier,
         COUNT(DISTINCT p.id) as activity_count,
         COALESCE(SUM(pc.total_points), 0) as total_points,
         COALESCE(AVG(pc.total_points), 0) as avg_points

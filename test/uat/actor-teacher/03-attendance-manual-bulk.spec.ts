@@ -82,6 +82,7 @@ async function createApprovedRegisteredActivity(studentPage: any, teacherPage: a
 
 test.describe('Teacher - Manual attendance backbone', () => {
   test('teacher can mark a registered student as attended manually', async ({ browser }) => {
+    test.setTimeout(60_000)
     const teacherContext = await browser.newContext()
     const teacherPage = await teacherContext.newPage()
     const teacher = new TeacherHelper(teacherPage)

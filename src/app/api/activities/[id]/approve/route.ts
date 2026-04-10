@@ -11,7 +11,15 @@ import { canDecideApproval } from '@/lib/activity-workflow';
  */
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const user = await requireApiRole(request, ['admin']);
+    let user;
+    try {
+      user = await requireApiRole(request, ['admin']);
+    } catch (error: any) {
+      if (error instanceof ApiError) {
+        return errorResponse(error);
+      }
+      throw error;
+    }
 
     const { id } = await params;
     const activityId = Number(id);

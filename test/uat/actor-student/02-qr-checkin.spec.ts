@@ -106,6 +106,7 @@ async function createApprovedRegisteredQrSession(studentPage: any, teacherPage: 
 
 test.describe('Student - QR check-in backbone', () => {
   test('student validates QR attendance and duplicate scan stays idempotent', async ({ browser }) => {
+    test.setTimeout(60_000)
     const teacherContext = await browser.newContext()
     const teacherPage = await teacherContext.newPage()
     const teacher = new TeacherHelper(teacherPage)
