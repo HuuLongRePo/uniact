@@ -3,23 +3,12 @@ import { TeacherHelper } from '../helpers/teacher.helper'
 import { AdminHelper } from '../helpers/admin.helper'
 import { StudentHelper } from '../helpers/student.helper'
 
-async function createApprovedRegisteredActivity(browser: any) {
-  const studentContext = await browser.newContext()
-  const studentPage = await studentContext.newPage()
-  const student = new StudentHelper(studentPage)
-  await student.login()
-
+async function createApprovedRegisteredActivity(studentPage: any, teacherPage: any, adminPage: any) {
   const studentClassesRes = await studentPage.request.get('http://127.0.0.1:3000/api/classes')
   expect(studentClassesRes.ok()).toBeTruthy()
   const studentClassesData = await studentClassesRes.json()
   const classId = studentClassesData?.data?.classes?.[0]?.id ?? studentClassesData?.classes?.[0]?.id
   expect(classId).toBeTruthy()
-  await studentContext.close()
-
-  const teacherContext = await browser.newContext()
-  const teacherPage = await teacherContext.newPage()
-  const teacher = new TeacherHelper(teacherPage)
-  await teacher.login()
 
   const typesRes = await teacherPage.request.get('http://127.0.0.1:3000/api/activity-types')
   expect(typesRes.ok()).toBeTruthy()
@@ -35,15 +24,17 @@ async function createApprovedRegisteredActivity(browser: any) {
 
   const unique = Date.now()
   const title = `UAT Attendance ${unique}`
+  const minute = String(unique % 60).padStart(2, '0')
   const createRes = await teacherPage.request.post('http://127.0.0.1:3000/api/activities', {
     headers: { 'Content-Type': 'application/json' },
     data: {
       title,
       description: 'Published by UAT for manual attendance',
-      date_time: '2027-01-02T09:00',
+      date_time: `2027-01-02T09:${minute}`,
       location: 'Room ATT-301',
       max_participants: 30,
-      class_ids: [classId],
+      class_ids: [],
+      voluntary_class_ids: [classId],
       activity_type_id: activityTypeId,
       organization_level_id: organizationLevelId,
       files: [],
@@ -61,52 +52,52 @@ async function createApprovedRegisteredActivity(browser: any) {
   })
   expect(submitRes.ok()).toBeTruthy()
 
-  const adminContext = await browser.newContext()
-  const adminPage = await adminContext.newPage()
-  const admin = new AdminHelper(adminPage)
-  await admin.login()
-
   const approveRes = await adminPage.request.post(`http://127.0.0.1:3000/api/activities/${activityId}/approve`, {
     headers: { 'Content-Type': 'application/json' },
     data: { notes: 'Approved for manual attendance UAT' },
   })
   expect(approveRes.ok()).toBeTruthy()
-  await adminContext.close()
 
-  const studentRegisterContext = await browser.newContext()
-  const studentRegisterPage = await studentRegisterContext.newPage()
-  const studentRegister = new StudentHelper(studentRegisterPage)
-  await studentRegister.login()
-
-  const registerRes = await studentRegisterPage.request.post(`http://127.0.0.1:3000/api/activities/${activityId}/register`, {
+  const registerRes = await studentPage.request.post(`http://127.0.0.1:3000/api/activities/${activityId}/register`, {
     headers: { 'Content-Type': 'application/json' },
     data: {},
   })
   if (!registerRes.ok()) {
     const registerBody = await registerRes.text()
-    throw new Error(`Student register failed: ${registerRes.status()} ${registerBody}`)
+    const alreadyRegistered =
+      registerRes.status() === 400 && /đã đăng ký hoạt động này rồi|da dang ky hoat dong nay roi/i.test(registerBody)
+    if (!alreadyRegistered) {
+      throw new Error(`Student register failed: ${registerRes.status()} ${registerBody}`)
+    }
   }
 
-  const meRes = await studentRegisterPage.request.get('http://127.0.0.1:3000/api/auth/me')
+  const meRes = await studentPage.request.get('http://127.0.0.1:3000/api/auth/me')
   expect(meRes.ok()).toBeTruthy()
   const meData = await meRes.json()
   const studentId = meData?.data?.user?.id ?? meData?.user?.id
   expect(studentId).toBeTruthy()
-
-  await studentRegisterContext.close()
-  await teacherContext.close()
 
   return { activityId, title, studentId }
 }
 
 test.describe('Teacher - Manual attendance backbone', () => {
   test('teacher can mark a registered student as attended manually', async ({ browser }) => {
-    const { activityId, studentId } = await createApprovedRegisteredActivity(browser)
-
     const teacherContext = await browser.newContext()
     const teacherPage = await teacherContext.newPage()
     const teacher = new TeacherHelper(teacherPage)
     await teacher.login()
+
+    const adminContext = await browser.newContext()
+    const adminPage = await adminContext.newPage()
+    const admin = new AdminHelper(adminPage)
+    await admin.login()
+
+    const studentContext = await browser.newContext()
+    const studentPage = await studentContext.newPage()
+    const student = new StudentHelper(studentPage)
+    await student.login()
+
+    const { activityId, studentId } = await createApprovedRegisteredActivity(studentPage, teacherPage, adminPage)
 
     const getListRes = await teacherPage.request.get(`http://127.0.0.1:3000/api/attendance/manual?activity_id=${activityId}`)
     expect(getListRes.ok()).toBeTruthy()
@@ -136,6 +127,8 @@ test.describe('Teacher - Manual attendance backbone', () => {
     expect(matched?.attendance_status).toBe('attended')
     expect(matched?.achievement_level).toBe('participated')
 
+    await studentContext.close()
+    await adminContext.close()
     await teacherContext.close()
   })
 })

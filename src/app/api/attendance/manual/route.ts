@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { dbRun, dbGet, dbAll } from '@/lib/database';
 import { requireApiRole } from '@/lib/guards';
 import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
+import { teacherCanAccessActivity } from '@/lib/activity-access';
 
 // POST /api/attendance/manual - Điểm danh thủ công (không qua QR)
 export async function POST(request: NextRequest) {
@@ -33,7 +34,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Kiểm tra quyền: teacher chỉ điểm danh cho hoạt động của mình
-    if (user.role === 'teacher' && activity.teacher_id !== user.id) {
+    if (
+      user.role === 'teacher' &&
+      !(await teacherCanAccessActivity(Number(user.id), Number(activity_id)))
+    ) {
       return errorResponse(
         ApiError.forbidden('Bạn chỉ có thể điểm danh cho hoạt động của mình')
       );
@@ -76,8 +80,8 @@ export async function POST(request: NextRequest) {
         // Thêm bản ghi attendance_records nếu chưa có (schema chuẩn: recorded_by/method/recorded_at...)
         if (!existingRecord) {
           await dbRun(
-            `INSERT INTO attendance_records (qr_session_id, activity_id, student_id, recorded_by, method, note)
-             VALUES (NULL, ?, ?, ?, 'manual', NULL)`,
+            `INSERT INTO attendance_records (qr_session_id, activity_id, student_id, recorded_by, method, note, status)
+             VALUES (NULL, ?, ?, ?, 'manual', NULL, 'recorded')`,
             [activity_id, studentId, user.id]
           );
           successCount++;
@@ -91,30 +95,23 @@ export async function POST(request: NextRequest) {
           });
         }
 
-        // Auto-trigger scoring nếu có achievement level
-        if (achievementLevel) {
-          try {
-            const { PointCalculationService } = await import('@/lib/scoring');
-            await PointCalculationService.autoCalculateAfterEvaluation(participation.id);
-            console.warn(`✅ Auto-calculated points for participation ${participation.id}`);
-          } catch (error) {
-            console.error(
-              `❌ Failed to auto-calculate for participation ${participation.id}:`,
-              error
-            );
-          }
-        }
+        // Theo business rule backbone hiện tại: attendance xác nhận tham gia,
+        // scoring chính thức được chốt ở evaluation flow, không tính inline tại manual attendance.
 
-        // Tạo thông báo
-        await dbRun(
-          `INSERT INTO notifications (user_id, type, title, message, related_table, related_id)
-           VALUES (?, 'success', 'Điểm danh thành công', ?, 'activities', ?)`,
-          [
-            studentId,
-            `Bạn đã được điểm danh cho hoạt động "${activity.title}" (Điểm danh thủ công)`,
-            activity_id,
-          ]
-        );
+        // Tạo thông báo (best-effort, không làm hỏng backbone attendance nếu notification lỗi cục bộ)
+        try {
+          await dbRun(
+            `INSERT INTO notifications (user_id, type, title, message, related_table, related_id)
+             VALUES (?, 'success', 'Điểm danh thành công', ?, 'activities', ?)`,
+            [
+              studentId,
+              `Bạn đã được điểm danh cho hoạt động "${activity.title}" (Điểm danh thủ công)`,
+              activity_id,
+            ]
+          );
+        } catch (notificationError) {
+          console.error(`Failed to create notification for student ${studentId}:`, notificationError);
+        }
       } catch (e) {
         console.error(`Failed to mark attendance for student ${studentId}:`, e);
         results.push({ studentId, status: 'error', message: 'Lỗi khi điểm danh' });
@@ -165,7 +162,10 @@ export async function GET(request: NextRequest) {
       return errorResponse(ApiError.notFound('Hoạt động không tồn tại'));
     }
 
-    if (user.role === 'teacher' && activity.teacher_id !== user.id) {
+    if (
+      user.role === 'teacher' &&
+      !(await teacherCanAccessActivity(Number(user.id), Number(activityId)))
+    ) {
       return errorResponse(
         ApiError.forbidden('Bạn chỉ có thể xem danh sách điểm danh của hoạt động do mình phụ trách')
       );

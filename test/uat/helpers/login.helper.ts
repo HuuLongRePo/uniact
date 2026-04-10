@@ -1,16 +1,63 @@
-import { Page, expect } from '@playwright/test'
+import { Page } from '@playwright/test'
 import { TEST_ACCOUNTS, BASE_URL } from './test-accounts'
+
+const rolePathMap = {
+  admin: '/admin/dashboard',
+  teacher: '/teacher/dashboard',
+  student: '/student/dashboard'
+} as const
+
+async function applyAuthCookie(page: Page, token: string) {
+  await page.context().clearCookies()
+  await page.context().addCookies([
+    {
+      name: 'token',
+      value: token,
+      url: BASE_URL,
+      httpOnly: true,
+      sameSite: 'Lax'
+    }
+  ])
+}
+
+function getTestForwardedFor(role: 'admin' | 'teacher' | 'student') {
+  switch (role) {
+    case 'admin':
+      return '127.0.0.11'
+    case 'teacher':
+      return '127.0.0.12'
+    case 'student':
+      return '127.0.0.13'
+    default:
+      return '127.0.0.10'
+  }
+}
 
 export async function loginAs(page: Page, role: 'admin' | 'teacher' | 'student') {
   const account = TEST_ACCOUNTS[role]
 
-  const maxRetries = 3
+  // Reuse valid session if page/context is already authenticated.
+  try {
+    const meRes = await page.request.get(`${BASE_URL}/api/auth/me`)
+    if (meRes.ok()) {
+      const meData = await meRes.json()
+      const currentRole = meData?.data?.user?.role ?? meData?.user?.role
+      if (currentRole === role) {
+        await page.goto(`${BASE_URL}${rolePathMap[role]}`)
+        await page.waitForLoadState('domcontentloaded')
+        return account
+      }
+    }
+  } catch {}
+
+  const maxRetries = 2
   let lastError: any
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       const response = await page.request.post(`${BASE_URL}/api/auth/login`, {
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'x-forwarded-for': getTestForwardedFor(role)
         },
         data: {
           email: account.email,
@@ -18,51 +65,34 @@ export async function loginAs(page: Page, role: 'admin' | 'teacher' | 'student')
         }
       })
 
-      const data = await response.json()
+      const data = await response.json().catch(() => ({}))
 
       if (!response.ok()) {
         throw new Error(`Login failed: ${data?.error || response.status()}`)
       }
 
       const setCookieHeader = response.headers()['set-cookie']
+      let token: string | undefined
       if (setCookieHeader) {
         const tokenMatch = setCookieHeader.match(/token=([^;]+)/)
-        if (tokenMatch?.[1]) {
-          await page.context().addCookies([
-            {
-              name: 'token',
-              value: tokenMatch[1],
-              url: BASE_URL,
-              httpOnly: true,
-              sameSite: 'Lax'
-            }
-          ])
-        }
-      } else if (data?.data?.token || data?.token) {
-        const token = data?.data?.token || data?.token
-        await page.context().addCookies([
-          {
-            name: 'token',
-            value: token,
-            url: BASE_URL,
-            httpOnly: true,
-            sameSite: 'Lax'
-          }
-        ])
+        token = tokenMatch?.[1]
+      }
+      if (!token) {
+        token = data?.data?.token || data?.token
+      }
+      if (!token) {
+        throw new Error('Login succeeded but no auth token/cookie was returned')
       }
 
-      const rolePathMap = {
-        admin: '/admin/dashboard',
-        teacher: '/teacher/dashboard',
-        student: '/student'
-      }
-      const targetPath = rolePathMap[role]
-      await page.goto(`${BASE_URL}${targetPath}`)
-      await page.waitForLoadState('networkidle')
+      await applyAuthCookie(page, token)
+      await page.goto(`${BASE_URL}${rolePathMap[role]}`)
+      await page.waitForLoadState('domcontentloaded')
       return account
     } catch (err) {
       lastError = err
-      await page.waitForTimeout(300 * attempt)
+      if (!page.isClosed()) {
+        await page.waitForTimeout(250 * attempt)
+      }
     }
   }
   console.error('Login failed after retries:', lastError)
