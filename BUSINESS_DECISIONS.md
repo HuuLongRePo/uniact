@@ -1524,6 +1524,84 @@ Chọn **C**.
 - scoring / evaluation impacts nếu ảnh hưởng tới student đó
 
 ---
+## D107. QR is a temporary bridge; roadmap should prioritize face attendance
+
+### Decision
+Refined from user instruction.
+
+### Rule
+Ở giai đoạn hiện tại:
+- QR attendance được xem là **giải pháp tạm thời / transitional**
+- roadmap ưu tiên dài hơn là **nhận diện khuôn mặt**
+- vì vậy không nên đầu tư quá sâu vào mở rộng độ phức tạp của QR nếu không thật sự cần cho backbone flow
+
+---
+
+## D108. After 5 minutes, unread mandatory notifications escalate via dashboard only
+
+### Decision
+Chọn **A**.
+
+### Rule
+Nếu notification bắt buộc chưa được student mở/xem sau 5 phút:
+- escalation được đẩy lên **dashboard teacher/admin**
+- chưa mở thêm bắt buộc sang các kênh can thiệp khác ở quyết định này
+
+---
+
+## D109. Mandatory-notification send failures allow one light retry, then manual alert
+
+### Decision
+Chọn **B**.
+
+### Rule
+Với notification bắt buộc bị fail ở tầng gửi:
+- cho phép **1 lần retry nhẹ**
+- nếu vẫn không thành công thì chuyển sang **alert/cảnh báo để con người xử lý thủ công**
+
+### Refinement note
+Decision này là lớp chi tiết mới hơn cho nhánh retry/fallback notification bắt buộc.
+
+---
+
+## D110. Fixed QR tokens require duplicate/rate/session controls, with stricter context for sensitive activities
+
+### Decision
+Chọn **C**.
+
+### Rule
+Với QR token cố định trong suốt phiên:
+- phải có duplicate guard và rate limit
+- phải có session context phù hợp
+- và với activity nhạy cảm có thể bổ sung device/context nghiêm ngặt hơn
+
+---
+
+## D111. First mandatory MVP widgets by role are student mandatory/warnings, teacher approvals/attendance issues, and admin approvals/notification failures
+
+### Decision
+Chọn **A**.
+
+### Rule
+Trong dashboard MVP cân bằng cho 3 vai trò, nhóm widget bắt buộc đầu tiên theo vai trò là:
+- **Student**: mandatory / warnings
+- **Teacher**: approvals / attendance issues
+- **Admin**: approvals / notification failures
+
+---
+
+## D112. Require-reason policy defaults to destructive/override/rule-change actions, but remains policy-driven
+
+### Decision
+Chọn **B + D**.
+
+### Rule
+Theo mặc định:
+- các action destructive / override / rule-change phải **require reason**
+- các action approve thông thường có thể chỉ cần **confirm**
+- đồng thời hệ thống vẫn nên giữ mô hình **policy-driven** để có thể cấu hình chi tiết hơn theo từng nhóm action
+
+---
 # B. OPEN QUESTIONS (to continue next session)
 
 Các câu hỏi dưới đây **chưa chốt** hoặc cần đào sâu thêm ở phiên sau:
@@ -1558,6 +1636,7 @@ Các câu hỏi dưới đây **chưa chốt** hoặc cần đào sâu thêm ở
    - not applicable
 7. Prepare violation / improvement model as separate record/workflow lines.
 8. Ensure all important actions are audit-logged.
+
 
 
 

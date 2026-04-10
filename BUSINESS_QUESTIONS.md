@@ -428,15 +428,14 @@ Ví dụ:
 Các câu hỏi dưới đây vẫn còn mở hoặc cần đào sâu thêm ở các phiên sau.
 Mục tiêu là chỉ giữ lại **follow-up thật sự chưa chốt**, tránh hỏi lặp lại những gì đã quyết rồi.
 
-### Nhóm follow-up còn mở sau Q100-Q106
-- với notification bắt buộc phải được đọc, escalation sau 5 phút sẽ đi qua kênh/cơ chế can thiệp nào của teacher/admin?
-- với mô hình alert thủ công cho notification bắt buộc bị fail, có cho phép retry tối thiểu hay hoàn toàn bỏ retry tự động?
-- với QR threshold fallback, ngưỡng số cụ thể cho response time / queue / scan fail nên đặt thế nào ở bản đầu?
-- với QR token cố định trong suốt phiên, ràng buộc session/device/context nên bắt buộc ở mức nào theo từng loại activity?
+### Nhóm follow-up còn mở sau Q107-Q112
+- với QR threshold fallback, **ngưỡng số cụ thể** cho response time / queue / scan fail nên đặt thế nào ở bản đầu?
+- nếu QR chỉ là giải pháp tạm và roadmap ưu tiên face attendance, những loại activity nào nên được chuyển ưu tiên sang face trước?
+- dashboard escalation-only cho unread mandatory notifications có cần thêm cơ chế acknowledge / assigned-owner không?
+- trong mô hình alert thủ công sau 1 lần retry nhẹ, SLA xử lý của teacher/admin nên là bao lâu?
 
 ### Nhóm follow-up dài hạn vẫn còn hữu ích
 - cần lập checklist mapping decision -> code/test/UI/config để bảo đảm mọi quyết định đã chốt đều được phản ánh vào hệ thống.
 - vì đã chốt không hồi tố và không cần recalculate dữ liệu cũ như chức năng chuẩn, cần làm rõ quy tắc hiển thị rule version nào cho dữ liệu lịch sử.
 - danh mục rule nào sẽ thuộc 3 nhóm: auto-apply, suggest-only, require-approval?
 - bảng cấu hình rule automation nên có các trường nào ngoài `effective_from`, `scope`, `version`, `policy_type`?
-
