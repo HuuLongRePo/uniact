@@ -1602,18 +1602,70 @@ Theo mặc định:
 - đồng thời hệ thống vẫn nên giữ mô hình **policy-driven** để có thể cấu hình chi tiết hơn theo từng nhóm action
 
 ---
+
+## D113. QR fallback uses preset technical thresholds with manual teacher override
+
+### Decision
+Chọn **C**.
+
+### Rule
+Với QR fallback ở bản đầu:
+- hệ thống có **preset cấu hình** theo quy mô / loại activity
+- teacher vẫn được quyền chủ động chuyển tay khi cần
+- không khóa cứng hoàn toàn theo auto-threshold thuần túy
+
+---
+
+## D114. Face-attendance priority should start with selected pilot activities, especially mandatory/high-volume/high-identity ones
+
+### Decision
+Chọn **A + D**.
+
+### Rule
+Nếu roadmap ưu tiên face attendance hơn QR:
+- không rollout đại trà ngay cho mọi activity
+- nên triển khai theo **pilot trên một số nhóm activity được chọn trước**
+- ưu tiên các activity:
+  - bắt buộc
+  - đông người
+  - cần xác thực danh tính cao
+
+---
+
+## D115. Dashboard escalation for unread mandatory notifications needs both acknowledge and assigned owner
+
+### Decision
+Chọn **D**.
+
+### Rule
+Với dashboard escalation cho unread mandatory notification:
+- không chỉ hiển thị alert đơn thuần
+- cần có cả:
+  - **acknowledge**
+  - **assigned owner**
+
+---
+
+## D116. Manual alert handling SLA after one light retry is 5 minutes
+
+### Decision
+Chọn **A**.
+
+### Rule
+Sau 1 lần retry nhẹ mà notification bắt buộc vẫn fail:
+- SLA xử lý alert thủ công của teacher/admin là **5 phút**
+
+---
 # B. OPEN QUESTIONS (to continue next session)
 
 Các câu hỏi dưới đây **chưa chốt** hoặc cần đào sâu thêm ở phiên sau:
 
-1. Với QR threshold fallback, **ngưỡng số cụ thể** cho response time / queue / scan fail nên đặt thế nào ở bản đầu?
-2. Nếu QR chỉ là giải pháp tạm và roadmap ưu tiên face attendance, những loại activity nào nên được chuyển ưu tiên sang face trước?
-3. Dashboard escalation-only cho unread mandatory notifications có cần thêm cơ chế acknowledge / assigned-owner không?
-4. Trong mô hình alert thủ công sau 1 lần retry nhẹ, SLA xử lý của teacher/admin nên là bao lâu?
-5. Cần lập checklist mapping decision -> code/test/UI/config để bảo đảm mọi quyết định đã chốt đều được phản ánh vào hệ thống.
-6. Vì đã chốt không hồi tố và không cần recalculate dữ liệu cũ như chức năng chuẩn, cần làm rõ quy tắc hiển thị rule version nào cho dữ liệu lịch sử.
-7. Danh mục rule nào sẽ thuộc 3 nhóm: auto-apply, suggest-only, require-approval?
-8. Bảng cấu hình rule automation nên có các trường nào ngoài effective_from, scope, ersion, policy_type?
+1. Với preset QR fallback, các **ngưỡng số cụ thể** cho response time / queue / scan fail nên đặt thế nào ở bản đầu?
+2. Với pilot face attendance, nên chọn **những activity cụ thể nào** của trường/lớp để triển khai đợt đầu?
+3. Cần lập checklist mapping decision -> code/test/UI/config để bảo đảm mọi quyết định đã chốt đều được phản ánh vào hệ thống.
+4. Vì đã chốt không hồi tố và không cần recalculate dữ liệu cũ như chức năng chuẩn, cần làm rõ quy tắc hiển thị rule version nào cho dữ liệu lịch sử.
+5. Danh mục rule nào sẽ thuộc 3 nhóm: auto-apply, suggest-only, require-approval?
+6. Bảng cấu hình rule automation nên có các trường nào ngoài `effective_from`, `scope`, `version`, `policy_type`?
 
 ---
 # C. IMPLEMENTATION NOTES

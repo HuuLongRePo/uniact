@@ -428,11 +428,9 @@ Ví dụ:
 Các câu hỏi dưới đây vẫn còn mở hoặc cần đào sâu thêm ở các phiên sau.
 Mục tiêu là chỉ giữ lại **follow-up thật sự chưa chốt**, tránh hỏi lặp lại những gì đã quyết rồi.
 
-### Nhóm follow-up còn mở sau Q107-Q112
-- với QR threshold fallback, **ngưỡng số cụ thể** cho response time / queue / scan fail nên đặt thế nào ở bản đầu?
-- nếu QR chỉ là giải pháp tạm và roadmap ưu tiên face attendance, những loại activity nào nên được chuyển ưu tiên sang face trước?
-- dashboard escalation-only cho unread mandatory notifications có cần thêm cơ chế acknowledge / assigned-owner không?
-- trong mô hình alert thủ công sau 1 lần retry nhẹ, SLA xử lý của teacher/admin nên là bao lâu?
+### Nhóm follow-up còn mở sau Q113-Q116
+- với preset QR fallback, các **ngưỡng số cụ thể** cho response time / queue / scan fail nên đặt thế nào ở bản đầu?
+- với pilot face attendance, nên chọn **những activity cụ thể nào** của trường/lớp để triển khai đợt đầu?
 
 ### Nhóm follow-up dài hạn vẫn còn hữu ích
 - cần lập checklist mapping decision -> code/test/UI/config để bảo đảm mọi quyết định đã chốt đều được phản ánh vào hệ thống.
