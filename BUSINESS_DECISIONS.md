@@ -1606,16 +1606,16 @@ Theo mặc định:
 
 Các câu hỏi dưới đây **chưa chốt** hoặc cần đào sâu thêm ở phiên sau:
 
-1. Với QR attendance nếu có nguy cơ quá tải thì **ngưỡng kỹ thuật cụ thể** nào sẽ kích hoạt fallback sang manual/mixed?
-2. Với notification bắt buộc phải được đọc, sau 5 phút escalation sẽ đi qua kênh/cơ chế can thiệp nào của teacher/admin?
-3. Với mô hình alert thủ công cho notification bắt buộc bị fail, có cho phép retry tối thiểu hay hoàn toàn bỏ retry tự động?
-4. Với QR token cố định trong suốt phiên, cơ chế chống chia sẻ/gian lận nên bổ sung ở mức nào?
-5. Trong mô hình dashboard MVP cân bằng cho cả 3 vai trò, widget nào là nhóm bắt buộc phải làm trước?
-6. Trong policy action nhạy cảm, action nào bắt buộc nhập reason và action nào chỉ cần confirm là đủ?
-7. “Thay đổi ảnh hưởng trực tiếp tới student” trong changelog activity nên map thành các field/event cụ thể nào trong hệ thống?
+1. Với QR threshold fallback, **ngưỡng số cụ thể** cho response time / queue / scan fail nên đặt thế nào ở bản đầu?
+2. Nếu QR chỉ là giải pháp tạm và roadmap ưu tiên face attendance, những loại activity nào nên được chuyển ưu tiên sang face trước?
+3. Dashboard escalation-only cho unread mandatory notifications có cần thêm cơ chế acknowledge / assigned-owner không?
+4. Trong mô hình alert thủ công sau 1 lần retry nhẹ, SLA xử lý của teacher/admin nên là bao lâu?
+5. Cần lập checklist mapping decision -> code/test/UI/config để bảo đảm mọi quyết định đã chốt đều được phản ánh vào hệ thống.
+6. Vì đã chốt không hồi tố và không cần recalculate dữ liệu cũ như chức năng chuẩn, cần làm rõ quy tắc hiển thị rule version nào cho dữ liệu lịch sử.
+7. Danh mục rule nào sẽ thuộc 3 nhóm: auto-apply, suggest-only, require-approval?
+8. Bảng cấu hình rule automation nên có các trường nào ngoài effective_from, scope, ersion, policy_type?
 
 ---
-
 # C. IMPLEMENTATION NOTES
 
 ## Near-term implementation priorities affected by these decisions
@@ -1636,6 +1636,7 @@ Các câu hỏi dưới đây **chưa chốt** hoặc cần đào sâu thêm ở
    - not applicable
 7. Prepare violation / improvement model as separate record/workflow lines.
 8. Ensure all important actions are audit-logged.
+
 
 
 
