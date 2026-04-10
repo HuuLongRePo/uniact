@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useEffectEvent, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useEffectEventCompat } from '@/lib/useEffectEventCompat';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import LoadingSpinner from '@/components/LoadingSpinner';
@@ -43,7 +44,7 @@ export default function AdminStudentScoresPage() {
 
   const [classes, setClasses] = useState<ClassOption[]>([]);
 
-  const filterScores = useEffectEvent(() => {
+  const filterScores = useEffectEventCompat(() => {
     let filtered = [...scores];
 
     if (searchTerm) {

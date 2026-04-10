@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useEffectEvent } from 'react';
+import { useState, useEffect } from 'react';
+import { useEffectEventCompat } from '@/lib/useEffectEventCompat';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Trash2, Send, Award, CheckCircle, Clock, X } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -54,7 +55,7 @@ export default function AwardSuggestionsPage() {
     return 'Đã xảy ra lỗi không xác định';
   };
 
-  const fetchData = useEffectEvent(async () => {
+  const fetchData = useEffectEventCompat(async () => {
     try {
       setLoading(true);
       const [suggestionsRes, studentsRes] = await Promise.all([

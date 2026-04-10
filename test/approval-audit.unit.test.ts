@@ -5,7 +5,7 @@ type DbGetMock = ReturnType<typeof vi.fn>
 type DbAllMock = ReturnType<typeof vi.fn>
 
 async function loadDbHelpers(dbRun: DbRunMock, dbGet: DbGetMock, dbAll?: DbAllMock) {
-  vi.doMock('../src/lib/db-core', () => ({
+  vi.doMock('../src/infrastructure/db/db-core', () => ({
     dbRun,
     dbGet,
     dbAll: dbAll || vi.fn(async () => []),
@@ -23,7 +23,11 @@ async function loadDbHelpers(dbRun: DbRunMock, dbGet: DbGetMock, dbAll?: DbAllMo
     },
   }))
 
-  const mod = await import('../src/lib/db-queries')
+  vi.doMock('../src/infrastructure/db/participation-schema', () => ({
+    ensureParticipationColumns: async () => undefined,
+  }))
+
+  const mod = await import('../src/infrastructure/db/db-queries')
   return mod.dbHelpers
 }
 
@@ -67,6 +71,12 @@ describe('Approval audit trail helpers', () => {
       700,
       JSON.stringify({ activity_id: 10, note: 'need approval' }),
     ])
+
+    const approvalHistoryCalls = dbRun.mock.calls.filter(([sql]) =>
+      String(sql).includes('INSERT INTO activity_approval_history')
+    )
+    expect(approvalHistoryCalls).toHaveLength(1)
+    expect(String(approvalHistoryCalls[0]?.[0] || '')).toContain("VALUES (?, 'pending_approval', ?, ?)")
   })
 
   it('notifyAdminsOfApprovalSubmission is best-effort and keeps related activity fields', async () => {
@@ -134,6 +144,68 @@ describe('Approval audit trail helpers', () => {
     expect(notificationCalls).toHaveLength(1)
     expect(notificationCalls[0]?.[1]?.[0]).toBe(12)
     expect(notificationCalls[0]?.[1]?.[1]).toBe('success')
+  })
+
+  it('decideApproval(approved) materializes mandatory participations for scoped classes', async () => {
+    const dbRun = vi.fn(async (sql: string, params?: any[]) => {
+      if (sql.includes('UPDATE activity_approvals')) {
+        return { changes: 1 }
+      }
+
+      if (sql.includes('INSERT OR IGNORE INTO participations')) {
+        return params?.[1] === 101 ? { changes: 1 } : { changes: 0 }
+      }
+
+      if (sql.includes('UPDATE participations')) {
+        return params?.[1] === 102 ? { changes: 1 } : { changes: 0 }
+      }
+
+      return { changes: 1 }
+    })
+    const dbGet = vi.fn(async () => ({
+      activity_id: 22,
+      approval_record_status: 'requested',
+      activity_title: 'Scoped Event',
+      teacher_id: 15,
+    }))
+    const dbAll = vi.fn(async (sql: string) => {
+      if (sql.includes('FROM activity_classes')) {
+        return [{ class_id: 7 }]
+      }
+
+      if (sql.includes('FROM users')) {
+        return [{ id: 101 }, { id: 102 }]
+      }
+
+      return []
+    })
+
+    const dbHelpers = await loadDbHelpers(dbRun, dbGet, dbAll)
+    const result = await dbHelpers.decideApproval(901, 4, 'approved', 'ship it')
+
+    expect(result).toMatchObject({
+      success: true,
+      activity_id: 22,
+      new_status: 'published',
+      mandatory_participations_created: 1,
+      mandatory_participations_upgraded: 1,
+    })
+
+    expect(
+      dbRun.mock.calls.some(([sql, params]) =>
+        String(sql).includes('INSERT OR IGNORE INTO participations') &&
+        params?.[0] === 22 &&
+        params?.[1] === 101
+      )
+    ).toBe(true)
+
+    expect(
+      dbRun.mock.calls.some(([sql, params]) =>
+        String(sql).includes('UPDATE participations') &&
+        params?.[0] === 22 &&
+        params?.[1] === 102
+      )
+    ).toBe(true)
   })
 
   it('decideApproval(rejected) writes one audit log and one rejection notification', async () => {

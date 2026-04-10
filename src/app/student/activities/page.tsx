@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import ActivitySkeleton from '@/components/ActivitySkeleton';
@@ -9,6 +9,7 @@ import ConfirmationModal from '@/components/ConfirmationModal';
 import toast from 'react-hot-toast';
 import { AlertTriangle } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
+import { resolveClientFetchUrl } from '@/lib/client-fetch-url';
 
 interface ActivitySummary {
   id: number;
@@ -21,8 +22,28 @@ interface ActivitySummary {
   max_participants: number | null;
   status: string;
   is_registered: boolean;
+  registration_status?: string | null;
+  participation_source?: string | null;
+  is_mandatory?: boolean;
+  can_cancel?: boolean;
+  applies_to_student?: boolean;
+  applicability_scope?: string | null;
+  applicability_reason?: string | null;
   activity_type: string | null;
   organization_level: string | null;
+}
+
+interface RegistrationConflictItem {
+  id: number;
+  title: string;
+  date_time: string;
+  location: string;
+}
+
+interface RegistrationConflictState {
+  activityId: number;
+  activityTitle: string;
+  conflicts: RegistrationConflictItem[];
 }
 
 interface ActivityTypeOption {
@@ -39,11 +60,13 @@ export default function StudentActivitiesPage() {
   const [filter, setFilter] = useState<'upcoming' | 'all'>('upcoming');
   const [registering, setRegistering] = useState<number | null>(null);
   const [cancelModalActivity, setCancelModalActivity] = useState<ActivitySummary | null>(null);
+  const [registerConflict, setRegisterConflict] = useState<RegistrationConflictState | null>(null);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [activityTypes, setActivityTypes] = useState<ActivityTypeOption[]>([]);
   const [selectedType, setSelectedType] = useState<string>('all');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
+  const [visibilityTab, setVisibilityTab] = useState<'applicable' | 'not_applicable'>('applicable');
 
   useEffect(() => {
     if (!authLoading && (!user || user.role !== 'student')) {
@@ -59,7 +82,7 @@ export default function StudentActivitiesPage() {
 
   const fetchActivityTypes = async () => {
     try {
-      const response = await fetch('/api/activity-types');
+      const response = await fetch(resolveClientFetchUrl('/api/activity-types'));
       const data = await response.json();
 
       if (response.ok) {
@@ -74,7 +97,7 @@ export default function StudentActivitiesPage() {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/activities');
+      const response = await fetch(resolveClientFetchUrl('/api/activities'));
       const data = await response.json();
 
       if (response.ok) {
@@ -90,18 +113,34 @@ export default function StudentActivitiesPage() {
     }
   };
 
-  const handleRegister = async (activityId: number) => {
+  const handleRegister = async (activityId: number, forceRegister: boolean = false) => {
     setRegistering(activityId);
 
     try {
-      const response = await fetch(`/api/activities/${activityId}/register`, {
+      const selectedActivity = activities.find((activity) => activity.id === activityId);
+      const response = await fetch(resolveClientFetchUrl(`/api/activities/${activityId}/register`), {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ force_register: forceRegister }),
       });
       const data = await response.json();
 
       if (response.ok) {
+        setRegisterConflict(null);
         toast.success('Đăng ký thành công!');
         await fetchActivities();
+      } else if (
+        data?.code === 'CONFLICT' &&
+        data?.details?.can_override === true &&
+        Array.isArray(data?.details?.conflicts)
+      ) {
+        setRegisterConflict({
+          activityId,
+          activityTitle: selectedActivity?.title || 'Hoạt động bạn chọn',
+          conflicts: data.details.conflicts,
+        });
       } else {
         toast.error(data.error || 'Đăng ký thất bại');
       }
@@ -117,7 +156,7 @@ export default function StudentActivitiesPage() {
     setRegistering(activityId);
 
     try {
-      const response = await fetch(`/api/activities/${activityId}/register`, {
+      const response = await fetch(resolveClientFetchUrl(`/api/activities/${activityId}/register`), {
         method: 'DELETE',
       });
       const data = await response.json();
@@ -147,6 +186,16 @@ export default function StudentActivitiesPage() {
   const now = new Date();
   const filteredActivities = [...activities]
     .filter((activity) => {
+      const appliesToStudent = activity.applies_to_student !== false;
+
+      if (visibilityTab === 'applicable' && !appliesToStudent) {
+        return false;
+      }
+
+      if (visibilityTab === 'not_applicable' && appliesToStudent) {
+        return false;
+      }
+
       if (filter === 'upcoming' && new Date(activity.date_time) <= now) {
         return false;
       }
@@ -183,7 +232,7 @@ export default function StudentActivitiesPage() {
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-6">
         <h1 data-testid="activities-heading" className="text-3xl font-bold">
-          📅 Hoạt động có thể đăng ký
+          📅 Khám phá hoạt động
         </h1>
         <div className="flex gap-2">
           <button
@@ -199,6 +248,29 @@ export default function StudentActivitiesPage() {
             Tất cả
           </button>
         </div>
+      </div>
+
+      <div className="mb-6 flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => setVisibilityTab('applicable')}
+          className={`rounded-full px-4 py-2 text-sm font-medium ${
+            visibilityTab === 'applicable' ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-700'
+          }`}
+        >
+          Áp dụng với tôi
+        </button>
+        <button
+          type="button"
+          onClick={() => setVisibilityTab('not_applicable')}
+          className={`rounded-full px-4 py-2 text-sm font-medium ${
+            visibilityTab === 'not_applicable'
+              ? 'bg-amber-600 text-white'
+              : 'bg-gray-200 text-gray-700'
+          }`}
+        >
+          Không thuộc phạm vi của bạn
+        </button>
       </div>
 
       <div className="mb-6 bg-white rounded-lg shadow p-4">
@@ -256,11 +328,17 @@ export default function StudentActivitiesPage() {
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {filteredActivities.map((activity) => {
-            const activityDate = new Date(activity.date_time);
-            const canCancel = (activityDate.getTime() - Date.now()) / (1000 * 60 * 60) >= 24;
             const isFull =
               activity.max_participants !== null &&
               activity.participant_count >= activity.max_participants;
+            const appliesToStudent = activity.applies_to_student !== false;
+            const isMandatory = activity.is_mandatory === true;
+            const canCancel = activity.can_cancel === true;
+            const applicabilityReason =
+              activity.applicability_reason ||
+              (appliesToStudent
+                ? 'Hoạt động này đang áp dụng cho bạn.'
+                : 'Hoạt động này hiện không áp dụng cho bạn.');
 
             return (
               <div
@@ -289,6 +367,20 @@ export default function StudentActivitiesPage() {
                       {activity.organization_level}
                     </span>
                   )}
+                  <span
+                    className={`text-xs px-2 py-1 rounded ${
+                      appliesToStudent
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-amber-100 text-amber-800'
+                    }`}
+                  >
+                    {appliesToStudent ? 'Áp dụng với bạn' : 'Không thuộc phạm vi của bạn'}
+                  </span>
+                  {isMandatory && (
+                    <span className="bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded">
+                      Bắt buộc với bạn
+                    </span>
+                  )}
                 </div>
 
                 <div className="text-sm text-gray-600 mb-4 space-y-2">
@@ -314,6 +406,15 @@ export default function StudentActivitiesPage() {
                 </div>
 
                 <p className="text-gray-700 mb-4 line-clamp-3">{activity.description}</p>
+                <div
+                  className={`mb-4 rounded-lg border px-3 py-2 text-sm ${
+                    appliesToStudent
+                      ? 'border-green-200 bg-green-50 text-green-700'
+                      : 'border-amber-200 bg-amber-50 text-amber-800'
+                  }`}
+                >
+                  {applicabilityReason}
+                </div>
 
                 <div className="flex gap-2 mb-4">
                   <button
@@ -326,10 +427,20 @@ export default function StudentActivitiesPage() {
 
                 {activity.is_registered ? (
                   <div className="space-y-2">
-                    <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-2 rounded text-center">
-                      ✅ Đã đăng ký
+                    <div
+                      className={`border px-4 py-2 rounded text-center ${
+                        isMandatory
+                          ? 'bg-orange-50 border-orange-200 text-orange-800'
+                          : 'bg-green-50 border-green-200 text-green-700'
+                      }`}
+                    >
+                      {isMandatory ? 'Bắt buộc với bạn' : '✅ Đã đăng ký'}
                     </div>
-                    {canCancel && (
+                    {isMandatory ? (
+                      <p className="text-xs text-gray-500 text-center">
+                        Bạn đã được xếp vào danh sách tham gia bắt buộc nên không thể tự hủy đăng ký
+                      </p>
+                    ) : canCancel ? (
                       <button
                         onClick={() => setCancelModalActivity(activity)}
                         disabled={registering === activity.id}
@@ -337,14 +448,13 @@ export default function StudentActivitiesPage() {
                       >
                         {registering === activity.id ? 'Đang hủy...' : 'Hủy đăng ký'}
                       </button>
-                    )}
-                    {!canCancel && (
+                    ) : (
                       <p className="text-xs text-gray-500 text-center">
                         Không thể hủy trong vòng 24 giờ trước hoạt động
                       </p>
                     )}
                   </div>
-                ) : (
+                ) : appliesToStudent ? (
                   <button
                     onClick={() => handleRegister(activity.id)}
                     disabled={registering === activity.id || isFull}
@@ -356,6 +466,10 @@ export default function StudentActivitiesPage() {
                         ? 'Hết chỗ'
                         : 'Đăng ký ngay'}
                   </button>
+                ) : (
+                  <div className="rounded bg-gray-100 px-4 py-2 text-center text-gray-600">
+                    Không thể đăng ký vì hoạt động này không áp dụng cho bạn
+                  </div>
                 )}
               </div>
             );
@@ -408,6 +522,47 @@ export default function StudentActivitiesPage() {
                 <span className="font-medium text-gray-900">
                   {cancelModalActivity.teacher_name}
                 </span>
+              </div>
+            </div>
+          )
+        }
+      />
+
+      <ConfirmationModal
+        isOpen={!!registerConflict}
+        onClose={() => setRegisterConflict(null)}
+        onConfirm={() => {
+          if (registerConflict) {
+            handleRegister(registerConflict.activityId, true);
+          }
+        }}
+        title="Xung đột giờ bắt đầu"
+        message="Bạn đang có hoạt động khác trùng giờ bắt đầu. Nếu vẫn tiếp tục, hệ thống sẽ gửi đăng ký với xác nhận override."
+        confirmText="Vẫn đăng ký"
+        cancelText="Xem lại"
+        confirmButtonClass="bg-amber-600 hover:bg-amber-700"
+        icon={
+          <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center">
+            <AlertTriangle className="w-8 h-8 text-amber-600" />
+          </div>
+        }
+        details={
+          registerConflict && (
+            <div className="space-y-3 text-sm">
+              <div className="font-semibold text-gray-900">
+                Hoạt động đang đăng ký: {registerConflict.activityTitle}
+              </div>
+              <div className="text-gray-600">Các hoạt động đang trùng giờ bắt đầu:</div>
+              <div className="space-y-2">
+                {registerConflict.conflicts.map((conflict) => (
+                  <div key={conflict.id} className="rounded border border-amber-200 bg-amber-50 p-3">
+                    <div className="font-medium text-gray-900">{conflict.title}</div>
+                    <div className="text-gray-600">
+                      {new Date(conflict.date_time).toLocaleString('vi-VN')}
+                    </div>
+                    <div className="text-gray-600">{conflict.location}</div>
+                  </div>
+                ))}
               </div>
             </div>
           )

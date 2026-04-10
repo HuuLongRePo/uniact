@@ -87,6 +87,7 @@ describe('Bonus Engine - Rules Evaluation', () => {
           evidence_url TEXT,
           apply_to TEXT DEFAULT 'hoc_tap',
           source_provenance TEXT,
+          term TEXT,
           created_at TEXT DEFAULT CURRENT_TIMESTAMP,
           updated_at TEXT
         )

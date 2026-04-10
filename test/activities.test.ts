@@ -18,10 +18,10 @@ const teacherUser = { id: 1, role: 'teacher', class_id: 1 };
 const existingActivity = {
   id: 1,
   title: 'Test Activity',
-  description: 'Mô tả hoạt động',
+  description: 'Mo ta hoat dong',
   date_time: '2026-04-10T08:00:00.000Z',
   end_time: '2026-04-10T10:00:00.000Z',
-  location: 'Hội trường A',
+  location: 'Hoi truong A',
   teacher_id: 1,
   max_participants: 30,
   status: 'draft',
@@ -37,14 +37,15 @@ const activityDetail = {
   ...existingActivity,
   status: 'published',
   approval_status: 'approved',
-  teacher_name: 'Giáo viên A',
-  activity_type: 'Tình nguyện',
-  organization_level: 'Cấp trường',
+  teacher_name: 'Giao vien A',
+  activity_type: 'Tinh nguyen',
+  organization_level: 'Cap truong',
   activity_type_base_points: 10,
   participant_count: 5,
   available_slots: 25,
   is_registered: 0,
   registration_status: null,
+  participation_source: null,
 };
 
 vi.mock('@/lib/guards', () => ({
@@ -53,6 +54,8 @@ vi.mock('@/lib/guards', () => ({
 }));
 
 vi.mock('@/lib/database', () => ({
+  ensureParticipationColumns: vi.fn(async () => undefined),
+  ensureActivityClassParticipationMode: vi.fn(async () => undefined),
   dbHelpers: {
     getActivityById: mocks.mockGetActivityById,
     updateActivity: mocks.mockUpdateActivity,
@@ -120,7 +123,7 @@ beforeEach(() => {
 });
 
 describe('Activities API (unit)', () => {
-  it('PUT cập nhật hoạt động thành công', async () => {
+  it('PUT cap nhat hoat dong thanh cong', async () => {
     const res = await activitiesRoute.PUT(makePutReq({ title: 'Updated Title' }), {
       params: Promise.resolve({ id: '1' }),
     });
@@ -134,7 +137,7 @@ describe('Activities API (unit)', () => {
     expect(mocks.mockUpdateActivity).toHaveBeenCalledWith(1, { title: 'Updated Title' });
   });
 
-  it('PUT trả về 404 nếu hoạt động không tồn tại', async () => {
+  it('PUT returns 404 when the activity does not exist', async () => {
     const res = await activitiesRoute.PUT(makePutReq({ title: 'Updated Title' }), {
       params: Promise.resolve({ id: '999' }),
     });
@@ -142,7 +145,7 @@ describe('Activities API (unit)', () => {
     expect(res.status).toBe(404);
   });
 
-  it('GET trả về chi tiết hoạt động thành công', async () => {
+  it('GET returns activity detail successfully', async () => {
     const res = await activitiesRoute.GET(makeGetReq(), {
       params: Promise.resolve({ id: '1' }),
     });
@@ -154,18 +157,75 @@ describe('Activities API (unit)', () => {
     expect(body.activity).toMatchObject({
       id: 1,
       title: 'Test Activity',
-      teacher_name: 'Giáo viên A',
-      activity_type: 'Tình nguyện',
-      organization_level: 'Cấp trường',
+      teacher_name: 'Giao vien A',
+      activity_type: 'Tinh nguyen',
+      organization_level: 'Cap truong',
     });
     expect(mocks.mockRequireApiAuth).toHaveBeenCalled();
   });
 
-  it('GET trả về 404 nếu hoạt động không tồn tại', async () => {
+  it('GET returns 404 when the activity does not exist', async () => {
     const res = await activitiesRoute.GET(makeGetReq(), {
       params: Promise.resolve({ id: '999' }),
     });
 
     expect(res.status).toBe(404);
+  });
+
+  it('GET exposes class-scope mismatch to student viewers and disables self-registration', async () => {
+    mocks.mockRequireApiAuth.mockResolvedValue({ id: 9, role: 'student', class_id: 99 });
+    mocks.mockDbAll.mockImplementation(async (sql: string) => {
+      if (sql.includes('FROM activity_classes')) {
+        return [{ class_id: 2, name: 'Class 2A' }];
+      }
+
+      if (sql.includes('FROM participations')) {
+        return [{ count: 0 }];
+      }
+
+      return [];
+    });
+
+    const res = await activitiesRoute.GET(makeGetReq(), {
+      params: Promise.resolve({ id: '1' }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.activity).toMatchObject({
+      applies_to_student: false,
+      applicability_scope: 'class_scope_mismatch',
+      can_register: false,
+    });
+    expect(body.activity.applicability_reason).toContain('Khong thuoc pham vi');
+  });
+
+  it('GET exposes mandatory participation and disables self-cancel', async () => {
+    mocks.mockRequireApiAuth.mockResolvedValue({ id: 9, role: 'student', class_id: 1 });
+    mocks.mockDbGet.mockImplementation(async (_sql: string, params: unknown[]) => {
+      const activityId = Number(params?.[1] ?? params?.[0]);
+      if (activityId === 1) {
+        return {
+          ...activityDetail,
+          is_registered: 1,
+          registration_status: 'registered',
+          participation_source: 'assigned',
+        };
+      }
+      return undefined;
+    });
+
+    const res = await activitiesRoute.GET(makeGetReq(), {
+      params: Promise.resolve({ id: '1' }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.activity).toMatchObject({
+      is_registered: true,
+      participation_source: 'assigned',
+      is_mandatory: true,
+      can_cancel: false,
+    });
   });
 });

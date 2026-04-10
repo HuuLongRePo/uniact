@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useEffectEvent, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useEffectEventCompat } from '@/lib/useEffectEventCompat';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import LoadingSpinner from '@/components/LoadingSpinner';
@@ -46,7 +47,7 @@ export default function BackupRestorePage() {
     last_backup: null as string | null,
   });
 
-  const fetchDbStats = useEffectEvent(async () => {
+  const fetchDbStats = useEffectEventCompat(async () => {
     try {
       const response = await fetch('/api/admin/database/stats');
       const data = await response.json();
@@ -58,7 +59,7 @@ export default function BackupRestorePage() {
     }
   });
 
-  const fetchBackups = useEffectEvent(async () => {
+  const fetchBackups = useEffectEventCompat(async () => {
     try {
       setLoading(true);
       const response = await fetch('/api/admin/database/backups');

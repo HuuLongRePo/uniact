@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { POST as requestReset } from '@/app/api/auth/request-password-reset/route'
 import { POST as confirmReset } from '@/app/api/auth/confirm-password-reset/route'
-import { dbReady, dbRun, dbGet } from '@/lib/database'
+import { dbReady, dbRun, dbGet, ensureDatabase } from '@/lib/database'
 import bcrypt from 'bcryptjs'
 import { loginUser } from '@/lib/auth'
 
@@ -16,7 +16,20 @@ async function createTestUser(email: string, password: string, name: string) {
 describe('Password Reset Flow', () => {
   it('should request and confirm password reset successfully', async () => {
     await dbReady()
+    await ensureDatabase()
     
+    await dbRun(`
+      CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        email TEXT UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        name TEXT NOT NULL,
+        role TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `)
+
     // Ensure password_reset_requests table exists
     await dbRun(`
       CREATE TABLE IF NOT EXISTS password_reset_requests (
@@ -30,7 +43,8 @@ describe('Password Reset Flow', () => {
       )
     `)
     
-    const user = await createTestUser('reset.user@example.com', 'oldpass123', 'Reset User')
+    const uniqueEmail = `reset.user.${Date.now()}@example.com`
+    const user = await createTestUser(uniqueEmail, 'oldpass123', 'Reset User')
 
     // Request reset
     const req = new Request('http://localhost/api/auth/request-password-reset', {

@@ -24,6 +24,10 @@ vi.mock('@/lib/database', () => ({
   }
 }))
 
+vi.mock('@/lib/guards', () => ({
+  requireApiAuth: async () => ({ id: 1, role: 'admin' }),
+}))
+
 import * as scoresRoute from '../src/app/api/charts/scores-over-time/route'
 import * as distRoute from '../src/app/api/charts/participation-distribution/route'
 import * as classRoute from '../src/app/api/charts/class-comparison/route'

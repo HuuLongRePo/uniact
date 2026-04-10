@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useEffectEvent } from 'react';
+import { useState, useEffect } from 'react';
+import { useEffectEventCompat } from '@/lib/useEffectEventCompat';
 import { useAuth } from '@/contexts/AuthContext';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
@@ -40,7 +41,7 @@ export default function StudentNotifications() {
     reminder_days: 1,
   });
 
-  const fetchNotifications = useEffectEvent(async () => {
+  const fetchNotifications = useEffectEventCompat(async () => {
     try {
       setLoading(true);
       const query = filter === 'unread' ? '?unread=1' : '';
@@ -58,7 +59,7 @@ export default function StudentNotifications() {
     }
   });
 
-  const fetchSettings = useEffectEvent(async () => {
+  const fetchSettings = useEffectEventCompat(async () => {
     try {
       const res = await fetch('/api/notifications/settings');
       const data = await res.json();

@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useEffectEvent, useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useEffectEventCompat } from '@/lib/useEffectEventCompat';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import LoadingSpinner from '@/components/LoadingSpinner';
@@ -9,6 +10,7 @@ import ConfirmationModal from '@/components/ConfirmationModal';
 import { toast } from '@/lib/toast';
 import { AlertTriangle } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
+import { resolveClientFetchUrl } from '@/lib/client-fetch-url';
 
 interface ActivityDetail {
   id: number;
@@ -32,8 +34,20 @@ interface ActivityDetail {
   registration_status?: string | null;
   can_cancel: boolean;
   can_register: boolean;
+  participation_source?: string | null;
+  is_mandatory?: boolean;
+  applies_to_student?: boolean;
+  applicability_scope?: string | null;
+  applicability_reason?: string | null;
   base_points: number;
   registration_deadline: string | null;
+}
+
+interface RegistrationConflictItem {
+  id: number;
+  title: string;
+  date_time: string;
+  location: string;
 }
 
 export default function StudentActivityDetailPage() {
@@ -44,15 +58,16 @@ export default function StudentActivityDetailPage() {
   const [loading, setLoading] = useState(true);
   const [registering, setRegistering] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [registerConflict, setRegisterConflict] = useState<RegistrationConflictItem[]>([]);
 
   const activityId = Array.isArray(params.id) ? params.id[0] : params.id;
 
-  const fetchActivity = useEffectEvent(async () => {
+  const fetchActivity = useEffectEventCompat(async () => {
     if (!activityId) return;
 
     try {
       setLoading(true);
-      const res = await fetch(`/api/activities/${activityId}`);
+      const res = await fetch(resolveClientFetchUrl(`/api/activities/${activityId}`));
       const data = await res.json();
 
       if (res.ok) {
@@ -81,19 +96,30 @@ export default function StudentActivityDetailPage() {
     }
   }, [user, authLoading, router, activityId, fetchActivity]);
 
-  const handleRegister = async () => {
+  const handleRegister = async (forceRegister: boolean = false) => {
     if (!activity) return;
 
     setRegistering(true);
     try {
-      const res = await fetch(`/api/activities/${activity.id}/register`, {
+      const res = await fetch(resolveClientFetchUrl(`/api/activities/${activity.id}/register`), {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ force_register: forceRegister }),
       });
       const data = await res.json();
 
       if (res.ok) {
+        setRegisterConflict([]);
         toast.success('Đăng ký thành công!');
         await fetchActivity();
+      } else if (
+        data?.code === 'CONFLICT' &&
+        data?.details?.can_override === true &&
+        Array.isArray(data?.details?.conflicts)
+      ) {
+        setRegisterConflict(data.details.conflicts);
       } else {
         toast.error(data.error || 'Đăng ký thất bại');
       }
@@ -110,7 +136,7 @@ export default function StudentActivityDetailPage() {
 
     setRegistering(true);
     try {
-      const res = await fetch(`/api/activities/${activity.id}/register`, {
+      const res = await fetch(resolveClientFetchUrl(`/api/activities/${activity.id}/register`), {
         method: 'DELETE',
       });
       const data = await res.json();
@@ -174,11 +200,22 @@ export default function StudentActivityDetailPage() {
           ? 'text-red-600'
           : 'text-blue-600';
   const participationLabel =
-    activity.registration_status === 'attended' ? 'Đã điểm danh' : 'Đã đăng ký';
+    activity.registration_status === 'attended'
+      ? 'Đã điểm danh'
+      : activity.is_mandatory
+        ? 'Bắt buộc với bạn'
+        : 'Đã đăng ký';
   const remainingSlotsLabel =
     activity.max_participants === null
       ? 'Không giới hạn'
       : String(Math.max(0, activity.max_participants - activity.participant_count));
+
+  const appliesToStudent = activity.applies_to_student !== false;
+  const applicabilityReason =
+    activity.applicability_reason ||
+    (appliesToStudent
+      ? 'Hoat dong nay dang ap dung cho ban.'
+      : 'Hoat dong nay hien khong ap dung cho ban.');
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -207,9 +244,14 @@ export default function StudentActivityDetailPage() {
               <span className="bg-white/20 px-3 py-1 rounded-full text-sm">
                 ⭐ {activity.base_points} điểm
               </span>
-              {activity.qr_enabled && (
+                {activity.qr_enabled && (
+                  <span className="bg-white/20 px-3 py-1 rounded-full text-sm">
+                    📱 Điểm danh QR
+                  </span>
+                )}
+              {activity.is_mandatory && (
                 <span className="bg-white/20 px-3 py-1 rounded-full text-sm">
-                  📱 Điểm danh QR
+                  Bắt buộc với bạn
                 </span>
               )}
             </div>
@@ -220,6 +262,21 @@ export default function StudentActivityDetailPage() {
               ✓ {participationLabel}
             </div>
           )}
+
+          <div
+            className={`rounded-lg border p-6 ${
+              appliesToStudent
+                ? 'border-green-200 bg-green-50'
+                : 'border-amber-200 bg-amber-50'
+            }`}
+          >
+            <h2 className="mb-2 text-xl font-bold">
+              {appliesToStudent ? 'Pham vi ap dung' : 'Khong thuoc pham vi cua ban'}
+            </h2>
+            <p className={appliesToStudent ? 'text-green-700' : 'text-amber-800'}>
+              {applicabilityReason}
+            </p>
+          </div>
         </div>
       </div>
 
@@ -300,7 +357,7 @@ export default function StudentActivityDetailPage() {
         </div>
 
         <div className="space-y-6">
-          {!isPast && !activity.is_registered && !isRegistrationClosed && (
+          {!isPast && !activity.is_registered && !isRegistrationClosed && appliesToStudent && (
             <Countdown targetDate={countdownTarget} label="Thời gian còn lại để đăng ký" />
           )}
 
@@ -313,10 +370,20 @@ export default function StudentActivityDetailPage() {
               </div>
             ) : activity.is_registered ? (
               <div className="space-y-3">
-                <div className="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded text-center font-medium">
-                  ✓ Bạn đã đăng ký
+                <div
+                  className={`border px-4 py-3 rounded text-center font-medium ${
+                    activity.is_mandatory
+                      ? 'bg-orange-50 border-orange-200 text-orange-800'
+                      : 'bg-green-50 border-green-200 text-green-800'
+                  }`}
+                >
+                  {activity.is_mandatory ? 'Ban nam trong danh sach tham gia bat buoc' : '✓ Bạn đã đăng ký'}
                 </div>
-                {activity.can_cancel ? (
+                {activity.is_mandatory ? (
+                  <p className="text-xs text-gray-600 text-center">
+                    Hoạt động này đang áp dụng bắt buộc với bạn nên bạn không thể tự hủy đăng ký
+                  </p>
+                ) : activity.can_cancel ? (
                   <>
                     <p className="text-xs text-gray-600 text-center">
                       Bạn có thể hủy đăng ký trước 24 giờ
@@ -335,6 +402,10 @@ export default function StudentActivityDetailPage() {
                   </p>
                 )}
               </div>
+            ) : !appliesToStudent ? (
+              <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded text-center">
+                Hoat dong nay hien khong ap dung cho ban nen ban khong the tu dang ky
+              </div>
             ) : isRegistrationClosed ? (
               <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded text-center">
                 ⏳ Đã hết hạn đăng ký
@@ -346,7 +417,9 @@ export default function StudentActivityDetailPage() {
             ) : activity.can_register ? (
               <>
                 <button
-                  onClick={handleRegister}
+                  onClick={() => {
+                    void handleRegister();
+                  }}
                   disabled={registering}
                   className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-4 py-3 rounded font-semibold transition mb-3"
                 >
@@ -422,6 +495,43 @@ export default function StudentActivityDetailPage() {
               <span className="font-medium text-yellow-600">+{activity.base_points} điểm</span>
             </div>
           </div>
+        }
+      />
+
+      <ConfirmationModal
+        isOpen={registerConflict.length > 0}
+        onClose={() => setRegisterConflict([])}
+        onConfirm={() => {
+          void handleRegister(true);
+        }}
+        title="Xung đột giờ bắt đầu"
+        message="Bạn đang có hoạt động khác trùng giờ bắt đầu. Nếu vẫn tiếp tục, hệ thống sẽ gửi đăng ký với xác nhận override."
+        confirmText="Vẫn đăng ký"
+        cancelText="Xem lại"
+        confirmButtonClass="bg-amber-600 hover:bg-amber-700"
+        icon={
+          <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center">
+            <AlertTriangle className="w-8 h-8 text-amber-600" />
+          </div>
+        }
+        details={
+          activity && registerConflict.length > 0 ? (
+            <div className="space-y-3 text-sm">
+              <div className="font-semibold text-gray-900">Hoạt động đang đăng ký: {activity.title}</div>
+              <div className="text-gray-600">Các hoạt động đang trùng giờ bắt đầu:</div>
+              <div className="space-y-2">
+                {registerConflict.map((conflict) => (
+                  <div key={conflict.id} className="rounded border border-amber-200 bg-amber-50 p-3">
+                    <div className="font-medium text-gray-900">{conflict.title}</div>
+                    <div className="text-gray-600">
+                      {new Date(conflict.date_time).toLocaleString('vi-VN')}
+                    </div>
+                    <div className="text-gray-600">{conflict.location}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null
         }
       />
     </div>

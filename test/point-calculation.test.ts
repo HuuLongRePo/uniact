@@ -53,11 +53,12 @@ beforeAll(async () => {
       CREATE TABLE award_bonuses (award_type TEXT PRIMARY KEY, bonus_points INTEGER);
       CREATE TABLE point_calculations (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        participation_id INTEGER UNIQUE,
+        participation_id INTEGER,
         base_points REAL,
         type_multiplier REAL,
         level_multiplier REAL,
         achievement_multiplier REAL,
+        subtotal REAL,
         bonus_points REAL,
         penalty_points REAL,
         total_points REAL,
@@ -68,9 +69,7 @@ beforeAll(async () => {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         student_id INTEGER,
         activity_id INTEGER,
-        participation_id INTEGER UNIQUE,
         points REAL,
-        category TEXT,
         source TEXT,
         calculated_at DATETIME
       );
@@ -200,15 +199,15 @@ describe('PointCalculationService - Lưu kết quả', () => {
     await PointCalculationService.saveCalculation(1, result)
     
     const score = await (dbMod as any).dbGet(
-      'SELECT * FROM student_scores WHERE participation_id = ?', 
-      [1]
+      "SELECT * FROM student_scores WHERE student_id = ? AND activity_id = ? AND source = 'evaluation'",
+      [101, 1]
     )
     
     expect(score).toBeDefined()
     expect(score.student_id).toBe(101)
     expect(score.activity_id).toBe(1)
     expect(score.points).toBeCloseTo(result.totalPoints, 1)
-    expect(score.category).toBe('activity')
+    expect(score.source).toBe('evaluation')
   })
 
   it('Cập nhật calculation khi gọi lại (ON CONFLICT)', async () => {

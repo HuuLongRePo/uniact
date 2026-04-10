@@ -83,6 +83,8 @@ describe('activity-validation helpers', () => {
     expect(result.data).toEqual({
       title: 'Tiêu đề mới',
       class_ids: [],
+      mandatory_class_ids: [],
+      voluntary_class_ids: [],
       registration_deadline: null,
       activity_type_id: null,
     })

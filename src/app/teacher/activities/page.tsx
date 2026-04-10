@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useEffectEvent, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useEffectEventCompat } from '@/lib/useEffectEventCompat';
 import Link from 'next/link';
 import { toast } from '@/lib/toast';
 import ActivityDialog from '@/components/ActivityDialog';
@@ -64,7 +65,7 @@ export default function TeacherActivitiesPage() {
   const getErrorMessage = (error: unknown, fallback: string) =>
     error instanceof Error ? error.message : fallback;
 
-  const fetchActivities = useEffectEvent(async () => {
+  const fetchActivities = useEffectEventCompat(async () => {
     try {
       setLoading(true);
       const params = new URLSearchParams({

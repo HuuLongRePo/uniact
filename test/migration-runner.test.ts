@@ -12,8 +12,8 @@ describe('Migration Runner', () => {
     })
     const versions = rows.map((r: any) => r.version)
     
-    // Current runner uses a consolidated baseline + incremental migrations.
-    expect(versions).toEqual(['000', '023', '024', '025', '026', '027'])
+    // Current runner uses the consolidated baseline migration.
+    expect(versions).toEqual(['000'])
     expect(rows[0].name).toBe('base_schema')
   })
 })
