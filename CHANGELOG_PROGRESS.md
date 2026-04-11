@@ -1,5 +1,57 @@
 # CHANGELOG PROGRESS
 
+## 2026-04-11 - Deepen admin activity analytics / attendance operations reporting
+
+### Đã làm
+
+- Mở rộng `src/app/api/admin/reports/activity-statistics/route.ts` để trả thêm attendance operations analytics cho từng activity:
+  - `registered_only`
+  - `manual_attendance_count`
+  - `qr_attendance_count`
+  - `face_attendance_count`
+- Mở rộng statistics tổng hợp của admin activity report:
+  - `total_registered_only`
+  - `total_manual_attendance`
+  - `total_qr_attendance`
+  - `total_face_attendance`
+  - `face_adoption_rate`
+- Bổ sung `insights.top_not_participated_activities` để lôi các activity có backlog `đăng ký nhưng chưa tham gia` cao nhất lên surface quản trị.
+- Cập nhật CSV export của admin activity statistics với các cột analytics mới.
+- Viết lại `src/app/admin/reports/activity-statistics/page.tsx` để hiển thị:
+  - card `Chưa tham gia`
+  - method mix cards cho `QR`, `Manual`, `Face`
+  - face adoption card
+  - hotspot section cho top not-participated activities
+  - method mix cell trong bảng chi tiết activity
+- Tách helper thuần sang `src/features/reports/admin-activity-statistics-helpers.ts` để page normalization logic test được mà không vướng page/harness noise.
+- Bổ sung / cập nhật regression:
+  - `test/admin-report-routes.test.ts`
+  - `test/activity-statistics-report-page.test.tsx` (helper-focused)
+
+### Kiểm thử
+
+- Chạy focused Vitest:
+  - `npm.cmd test -- test/admin-report-routes.test.ts test/activity-statistics-report-page.test.tsx`
+  - Kết quả: `2` files pass, `8` tests pass
+- Chạy full Vitest suite sau batch:
+  - `npm.cmd test`
+  - Kết quả: pass
+- Chạy production build sau batch:
+  - `npm.cmd run build`
+  - Kết quả: build pass
+
+### Kết quả
+
+- Admin reporting không còn chỉ là activity overview cơ bản; giờ đã có operational visibility cho attendance method mix và hotspots `chưa tham gia`.
+- Analytics mới bám dữ liệu thật từ activity + participation + attendance records, không phải dashboard giả.
+- Batch này mở rộng tốt wave admin analytics đã được ưu tiên sau teacher reporting.
+
+### Còn lại
+
+- Chưa có admin UAT riêng cho page report này.
+- Nếu tiếp tục wave reporting, bước tiếp theo tự nhiên là notification analytics / escalation visibility hoặc improvement-penalty analytics.
+
+
 ## 2026-04-11 - Khôi phục notification history flow và thêm escalation visibility
 
 ### Đã làm

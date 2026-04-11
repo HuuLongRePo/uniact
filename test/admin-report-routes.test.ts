@@ -111,7 +111,7 @@ describe('Admin report routes', () => {
     ]);
   });
 
-  it('activity statistics route returns filtered stats and normalized data', async () => {
+  it('activity statistics route returns filtered stats, method mix, and hotspots', async () => {
     mocks.mockDbAll.mockResolvedValue([
       {
         id: 11,
@@ -128,6 +128,28 @@ describe('Admin report routes', () => {
         excellent_count: '2',
         good_count: '1',
         avg_points_per_student: '8.5',
+        manual_attendance_count: '1',
+        qr_attendance_count: '2',
+        face_attendance_count: '1',
+      },
+      {
+        id: 12,
+        title: 'Tech Talk',
+        date_time: '2026-04-11T08:00:00.000Z',
+        location: 'Hall B',
+        organizer_name: 'IT Office',
+        activity_type: 'Academic',
+        organization_level: 'Faculty',
+        max_participants: '80',
+        total_participants: '10',
+        attended_count: '6',
+        registered_only: '4',
+        excellent_count: '1',
+        good_count: '3',
+        avg_points_per_student: '7.2',
+        manual_attendance_count: '2',
+        qr_attendance_count: '3',
+        face_attendance_count: '1',
       },
     ]);
 
@@ -144,6 +166,9 @@ describe('Admin report routes', () => {
 
     expect(query).toContain("date(a.date_time) >= date(?)");
     expect(query).toContain("date(a.date_time) <= date(?)");
+    expect(query).toContain('manual_attendance_count');
+    expect(query).toContain('qr_attendance_count');
+    expect(query).toContain('face_attendance_count');
     expect(params).toEqual(['2026-04-01', '2026-04-30']);
     expect(body.success).toBe(true);
     expect(body.data[0]).toMatchObject({
@@ -152,18 +177,32 @@ describe('Admin report routes', () => {
       max_participants: 50,
       total_participants: 5,
       attended_count: 4,
+      registered_only: 1,
+      manual_attendance_count: 1,
+      qr_attendance_count: 2,
+      face_attendance_count: 1,
       avg_points_per_student: 8.5,
     });
     expect(body.statistics).toMatchObject({
-      total_activities: 1,
-      total_participants: 5,
-      total_attended: 4,
-      avg_participants_per_activity: 5,
-      attendance_rate: 80,
+      total_activities: 2,
+      total_participants: 15,
+      total_attended: 10,
+      total_registered_only: 5,
+      total_manual_attendance: 3,
+      total_qr_attendance: 5,
+      total_face_attendance: 2,
+      avg_participants_per_activity: 7.5,
+      attendance_rate: 66.66666666666666,
+      face_adoption_rate: 20,
+    });
+    expect(body.insights.top_not_participated_activities[0]).toMatchObject({
+      id: 12,
+      title: 'Tech Talk',
+      registered_only: 4,
     });
   });
 
-  it('activity statistics route exports UTF-8 CSV with BOM', async () => {
+  it('activity statistics route exports UTF-8 CSV with BOM and analytics columns', async () => {
     mocks.mockDbAll.mockResolvedValue([
       {
         id: 11,
@@ -180,6 +219,9 @@ describe('Admin report routes', () => {
         excellent_count: 2,
         good_count: 1,
         avg_points_per_student: 8.5,
+        manual_attendance_count: 1,
+        qr_attendance_count: 2,
+        face_attendance_count: 1,
       },
     ]);
 
@@ -196,6 +238,8 @@ describe('Admin report routes', () => {
     expect(Array.from(bytes.slice(0, 3))).toEqual([239, 187, 191]);
     expect(csv).toContain('Citizen Orientation');
     expect(csv).toContain('School');
+    expect(csv).toContain('Chưa tham gia');
+    expect(csv).toContain('Face');
   });
 
   it('student points legacy route returns 410 with replacement guidance', async () => {

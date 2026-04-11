@@ -975,3 +975,28 @@ Quy ước trạng thái: TODO / DOING / BLOCKED / DONE
 - Rủi ro: thấp-trung bình
 - Cách kiểm thử: focused export/history regression + full Vitest + build
 - Tiêu chí hoàn thành: export CSV hoạt động, page có low-read section, repo vẫn xanh
+
+### T-173 - Deepen admin activity analytics với attendance operations insight
+
+- Trạng thái: DONE
+- Mục tiêu: mở rộng admin activity statistics để nhìn thấy method mix điểm danh, backlog chưa tham gia và hotspot vận hành theo activity
+- Phạm vi file:
+  - `src/app/api/admin/reports/activity-statistics/route.ts`
+  - `src/app/admin/reports/activity-statistics/page.tsx`
+  - `src/features/reports/admin-activity-statistics-helpers.ts`
+- Lý do cần làm: sau teacher reporting wave, admin-level analytics vẫn còn quá nông và chưa lôi được attendance operations insight lên bề mặt quản trị
+- Rủi ro: thấp-trung bình
+- Cách kiểm thử: focused admin report regression + full Vitest + build
+- Tiêu chí hoàn thành: admin report có method mix, not-participated hotspots, summary/export đồng bộ semantics mới
+
+### T-174 - Tách admin activity statistics helper khỏi page/harness noise
+
+- Trạng thái: DONE
+- Mục tiêu: tách normalization helper để test analytics logic ổn định hơn và tránh phụ thuộc UI render harness cho các assertion dữ liệu
+- Phạm vi file:
+  - `src/features/reports/admin-activity-statistics-helpers.ts`
+  - `test/activity-statistics-report-page.test.tsx`
+- Lý do cần làm: page-level test ban đầu không đủ ổn định để khóa batch analytics mới, nhưng logic normalization/insight vẫn cần coverage rõ ràng
+- Rủi ro: thấp
+- Cách kiểm thử: helper-focused tests + full Vitest + build
+- Tiêu chí hoàn thành: helper test pass, build pass, analytics batch được khóa regression ổn định

@@ -1,50 +1,32 @@
 'use client';
 
-import React from 'react';
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
-import { BarChart3, Calendar, Download, RefreshCw, TrendingUp } from 'lucide-react';
+import {
+  BarChart3,
+  Calendar,
+  Download,
+  QrCode,
+  RefreshCw,
+  ScanFace,
+  SquarePen,
+  TrendingUp,
+  Users,
+} from 'lucide-react';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { useAuth } from '@/contexts/AuthContext';
-
-interface ActivityStatistics {
-  id: number;
-  title: string;
-  date_time: string;
-  location: string;
-  organizer_name: string;
-  activity_type: string;
-  organization_level: string;
-  max_participants: number;
-  total_participants: number;
-  attended_count: number;
-  registered_only: number;
-  excellent_count: number;
-  good_count: number;
-  avg_points_per_student: number;
-}
-
-interface Statistics {
-  total_activities: number;
-  total_participants: number;
-  total_attended: number;
-  avg_participants_per_activity: number;
-  attendance_rate: number;
-}
-
-const EMPTY_STATS: Statistics = {
-  total_activities: 0,
-  total_participants: 0,
-  total_attended: 0,
-  avg_participants_per_activity: 0,
-  attendance_rate: 0,
-};
-
-function toNumber(value: unknown): number {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : 0;
-}
+import {
+  buildActivityStatisticsUrl,
+  EMPTY_ACTIVITY_INSIGHTS,
+  EMPTY_ACTIVITY_STATS,
+  normalizeActivity,
+  normalizeInsights,
+  normalizeStatistics,
+  type ActivityStatistics,
+  type ActivityStatisticsInsights,
+  type Statistics,
+} from '@/features/reports/admin-activity-statistics-helpers';
 
 function getErrorMessage(error: unknown, fallback: string): string {
   if (error instanceof Error) {
@@ -52,63 +34,6 @@ function getErrorMessage(error: unknown, fallback: string): string {
   }
 
   return fallback;
-}
-
-function normalizeStatistics(payload: unknown): Statistics {
-  if (!payload || typeof payload !== 'object') {
-    return EMPTY_STATS;
-  }
-
-  const record = payload as Partial<Statistics>;
-
-  return {
-    total_activities: toNumber(record.total_activities),
-    total_participants: toNumber(record.total_participants),
-    total_attended: toNumber(record.total_attended),
-    avg_participants_per_activity: toNumber(record.avg_participants_per_activity),
-    attendance_rate: toNumber(record.attendance_rate),
-  };
-}
-
-function normalizeActivity(payload: unknown): ActivityStatistics | null {
-  if (!payload || typeof payload !== 'object') {
-    return null;
-  }
-
-  const record = payload as Record<string, unknown>;
-
-  return {
-    id: toNumber(record.id),
-    title: typeof record.title === 'string' ? record.title : 'Chưa đặt tên',
-    date_time: typeof record.date_time === 'string' ? record.date_time : '',
-    location: typeof record.location === 'string' ? record.location : '',
-    organizer_name: typeof record.organizer_name === 'string' ? record.organizer_name : '',
-    activity_type: typeof record.activity_type === 'string' ? record.activity_type : '',
-    organization_level:
-      typeof record.organization_level === 'string' ? record.organization_level : '',
-    max_participants: toNumber(record.max_participants),
-    total_participants: toNumber(record.total_participants),
-    attended_count: toNumber(record.attended_count),
-    registered_only: toNumber(record.registered_only),
-    excellent_count: toNumber(record.excellent_count),
-    good_count: toNumber(record.good_count),
-    avg_points_per_student: toNumber(record.avg_points_per_student),
-  };
-}
-
-function buildActivityStatisticsUrl(startDate: string, endDate: string): string {
-  const params = new URLSearchParams();
-  if (startDate) params.append('start_date', startDate);
-  if (endDate) params.append('end_date', endDate);
-
-  const query = params.toString();
-  const path = `/api/admin/reports/activity-statistics${query ? `?${query}` : ''}`;
-
-  if (typeof window !== 'undefined' && window.location?.origin) {
-    return new URL(path, window.location.origin).toString();
-  }
-
-  return path;
 }
 
 async function requestActivityStatistics(startDate: string, endDate: string) {
@@ -128,6 +53,7 @@ async function requestActivityStatistics(startDate: string, endDate: string) {
   return {
     activities,
     statistics: normalizeStatistics(data?.statistics),
+    insights: normalizeInsights(data?.insights),
   };
 }
 
@@ -135,7 +61,8 @@ export default function ActivityStatisticsPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [activities, setActivities] = useState<ActivityStatistics[]>([]);
-  const [stats, setStats] = useState<Statistics>(EMPTY_STATS);
+  const [stats, setStats] = useState<Statistics>(EMPTY_ACTIVITY_STATS);
+  const [insights, setInsights] = useState<ActivityStatisticsInsights>(EMPTY_ACTIVITY_INSIGHTS);
   const [loading, setLoading] = useState(true);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -146,6 +73,7 @@ export default function ActivityStatisticsPage() {
       const data = await requestActivityStatistics(nextStartDate, nextEndDate);
       setActivities(data.activities);
       setStats(data.statistics);
+      setInsights(data.insights);
     } catch (error) {
       console.error('Fetch activity statistics error:', error);
       toast.error(getErrorMessage(error, 'Lỗi khi tải báo cáo thống kê.'));
@@ -161,19 +89,7 @@ export default function ActivityStatisticsPage() {
     }
 
     if (user) {
-      void (async () => {
-        try {
-          setLoading(true);
-          const data = await requestActivityStatistics('', '');
-          setActivities(data.activities);
-          setStats(data.statistics);
-        } catch (error) {
-          console.error('Initial activity statistics fetch error:', error);
-          toast.error(getErrorMessage(error, 'Lỗi khi tải báo cáo thống kê.'));
-        } finally {
-          setLoading(false);
-        }
-      })();
+      void fetchData('', '');
     }
   }, [authLoading, router, user]);
 
@@ -202,7 +118,7 @@ export default function ActivityStatisticsPage() {
       <div className="mb-6">
         <h1 className="mb-2 text-3xl font-bold">Thống kê hoạt động</h1>
         <p className="text-gray-600">
-          Báo cáo chi tiết về hiệu quả tổ chức và mức độ tham gia của từng hoạt động.
+          Theo dõi độ phủ tham gia, method mix điểm danh và các hotspot vận hành theo từng hoạt động.
         </p>
       </div>
 
@@ -266,7 +182,7 @@ export default function ActivityStatisticsPage() {
         </div>
       </div>
 
-      <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-5">
+      <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
         <div className="rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 p-6 text-white shadow">
           <div className="flex items-center justify-between">
             <div>
@@ -283,7 +199,7 @@ export default function ActivityStatisticsPage() {
               <div className="text-sm opacity-90">Tổng đăng ký</div>
               <div className="mt-1 text-3xl font-bold">{stats.total_participants}</div>
             </div>
-            <TrendingUp className="h-10 w-10 opacity-80" />
+            <Users className="h-10 w-10 opacity-80" />
           </div>
         </div>
 
@@ -297,15 +213,13 @@ export default function ActivityStatisticsPage() {
           </div>
         </div>
 
-        <div className="rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 p-6 text-white shadow">
+        <div className="rounded-lg bg-gradient-to-br from-slate-600 to-slate-700 p-6 text-white shadow" data-testid="admin-not-participated-card">
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-sm opacity-90">TB người/hoạt động</div>
-              <div className="mt-1 text-3xl font-bold">
-                {stats.avg_participants_per_activity.toFixed(1)}
-              </div>
+              <div className="text-sm opacity-90">Chưa tham gia</div>
+              <div className="mt-1 text-3xl font-bold">{stats.total_registered_only}</div>
             </div>
-            <BarChart3 className="h-10 w-10 opacity-80" />
+            <Users className="h-10 w-10 opacity-80" />
           </div>
         </div>
 
@@ -318,6 +232,82 @@ export default function ActivityStatisticsPage() {
             <TrendingUp className="h-10 w-10 opacity-80" />
           </div>
         </div>
+      </div>
+
+      <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="rounded-lg border border-violet-200 bg-violet-50 p-5 shadow-sm" data-testid="admin-method-card-qr">
+          <div className="flex items-center gap-2 text-sm font-medium text-violet-700">
+            <QrCode className="h-4 w-4" />
+            QR attendance
+          </div>
+          <div className="mt-2 text-3xl font-bold text-violet-900">{stats.total_qr_attendance}</div>
+        </div>
+
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-5 shadow-sm" data-testid="admin-method-card-manual">
+          <div className="flex items-center gap-2 text-sm font-medium text-amber-700">
+            <SquarePen className="h-4 w-4" />
+            Manual attendance
+          </div>
+          <div className="mt-2 text-3xl font-bold text-amber-900">{stats.total_manual_attendance}</div>
+        </div>
+
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-5 shadow-sm" data-testid="admin-method-card-face">
+          <div className="flex items-center gap-2 text-sm font-medium text-emerald-700">
+            <ScanFace className="h-4 w-4" />
+            Face attendance
+          </div>
+          <div className="mt-2 text-3xl font-bold text-emerald-900">{stats.total_face_attendance}</div>
+        </div>
+
+        <div className="rounded-lg border border-blue-200 bg-blue-50 p-5 shadow-sm" data-testid="admin-face-adoption-card">
+          <div className="text-sm font-medium text-blue-700">Tỷ lệ face trên lượt đã tham gia</div>
+          <div className="mt-2 text-3xl font-bold text-blue-900">{stats.face_adoption_rate.toFixed(1)}%</div>
+        </div>
+      </div>
+
+      <div className="mb-6 rounded-lg border border-orange-200 bg-orange-50 p-6 shadow-sm" data-testid="admin-attendance-hotspots">
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-orange-900">Hotspots chưa tham gia</h2>
+            <p className="text-sm text-orange-800">
+              Các hoạt động có số lượt đăng ký nhưng chưa điểm danh cao nhất trong phạm vi lọc hiện tại.
+            </p>
+          </div>
+        </div>
+
+        {insights.top_not_participated_activities.length === 0 ? (
+          <div className="rounded-lg bg-white/70 p-4 text-sm text-orange-900">
+            Chưa có hotspot chưa tham gia nổi bật trong khoảng thời gian này.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+            {insights.top_not_participated_activities.map((activity) => (
+              <div key={activity.id} className="rounded-lg bg-white/80 p-4 shadow-sm">
+                <div className="text-sm font-semibold text-gray-900">{activity.title}</div>
+                <div className="mt-3 grid grid-cols-3 gap-2 text-xs text-gray-600">
+                  <div>
+                    <div className="uppercase tracking-wide text-gray-400">Đăng ký</div>
+                    <div className="mt-1 text-base font-semibold text-blue-700">
+                      {activity.total_participants}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="uppercase tracking-wide text-gray-400">Đã tham gia</div>
+                    <div className="mt-1 text-base font-semibold text-green-700">
+                      {activity.attended_count}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="uppercase tracking-wide text-gray-400">Chưa tham gia</div>
+                    <div className="mt-1 text-base font-semibold text-slate-800">
+                      {activity.registered_only}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="overflow-hidden rounded-lg bg-white shadow">
@@ -344,6 +334,12 @@ export default function ActivityStatisticsPage() {
                   Tham gia
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">
+                  Chưa tham gia
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">
+                  QR / Manual / Face
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">
                   Xuất sắc
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">
@@ -357,7 +353,7 @@ export default function ActivityStatisticsPage() {
             <tbody className="divide-y divide-gray-200 bg-white">
               {activities.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan={11} className="px-4 py-8 text-center text-gray-500">
                     Không có dữ liệu.
                   </td>
                 </tr>
@@ -375,9 +371,7 @@ export default function ActivityStatisticsPage() {
                     </td>
                     <td className="px-4 py-3 text-sm">
                       <div className="text-gray-900">{activity.activity_type || '-'}</div>
-                      <div className="text-xs text-gray-500">
-                        {activity.organization_level || '-'}
-                      </div>
+                      <div className="text-xs text-gray-500">{activity.organization_level || '-'}</div>
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-600">
                       {new Date(activity.date_time).toLocaleDateString('vi-VN')}
@@ -396,6 +390,22 @@ export default function ActivityStatisticsPage() {
                         {activity.total_participants > 0
                           ? `${((activity.attended_count / activity.total_participants) * 100).toFixed(0)}%`
                           : '0%'}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-sm font-medium text-slate-700">
+                      {activity.registered_only}
+                    </td>
+                    <td className="px-4 py-3 text-sm" data-testid="admin-method-mix-cell">
+                      <div className="flex flex-wrap gap-2">
+                        <span className="inline-flex items-center rounded-full bg-violet-100 px-2 py-1 text-xs font-medium text-violet-800">
+                          QR {activity.qr_attendance_count}
+                        </span>
+                        <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-1 text-xs font-medium text-amber-800">
+                          Manual {activity.manual_attendance_count}
+                        </span>
+                        <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-800">
+                          Face {activity.face_attendance_count}
+                        </span>
                       </div>
                     </td>
                     <td className="px-4 py-3 text-sm">

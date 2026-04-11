@@ -18,14 +18,32 @@ type ActivityStatisticsRow = {
   excellent_count: number;
   good_count: number;
   avg_points_per_student: number;
+  manual_attendance_count: number;
+  qr_attendance_count: number;
+  face_attendance_count: number;
 };
 
 type ActivityStatisticsSummary = {
   total_activities: number;
   total_participants: number;
   total_attended: number;
+  total_registered_only: number;
+  total_manual_attendance: number;
+  total_qr_attendance: number;
+  total_face_attendance: number;
   avg_participants_per_activity: number;
   attendance_rate: number;
+  face_adoption_rate: number;
+};
+
+type ActivityStatisticsInsights = {
+  top_not_participated_activities: Array<{
+    id: number;
+    title: string;
+    registered_only: number;
+    total_participants: number;
+    attended_count: number;
+  }>;
 };
 
 function toNumber(value: unknown): number {
@@ -65,7 +83,22 @@ export async function GET(request: NextRequest) {
         COUNT(DISTINCT CASE WHEN p.attendance_status = 'registered' THEN p.id END) as registered_only,
         COUNT(DISTINCT CASE WHEN p.achievement_level = 'excellent' THEN p.id END) as excellent_count,
         COUNT(DISTINCT CASE WHEN p.achievement_level = 'good' THEN p.id END) as good_count,
-        COALESCE(AVG(pc.total_points), 0) as avg_points_per_student
+        COALESCE(AVG(pc.total_points), 0) as avg_points_per_student,
+        (
+          SELECT COUNT(DISTINCT ar_manual.student_id)
+          FROM attendance_records ar_manual
+          WHERE ar_manual.activity_id = a.id AND ar_manual.method = 'manual'
+        ) as manual_attendance_count,
+        (
+          SELECT COUNT(DISTINCT ar_qr.student_id)
+          FROM attendance_records ar_qr
+          WHERE ar_qr.activity_id = a.id AND ar_qr.method = 'qr'
+        ) as qr_attendance_count,
+        (
+          SELECT COUNT(DISTINCT ar_face.student_id)
+          FROM attendance_records ar_face
+          WHERE ar_face.activity_id = a.id AND ar_face.method = 'face'
+        ) as face_attendance_count
       FROM activities a
       LEFT JOIN users u ON a.teacher_id = u.id
       LEFT JOIN activity_types at ON a.activity_type_id = at.id
@@ -97,6 +130,9 @@ export async function GET(request: NextRequest) {
       excellent_count: toNumber(activity.excellent_count),
       good_count: toNumber(activity.good_count),
       avg_points_per_student: toNumber(activity.avg_points_per_student),
+      manual_attendance_count: toNumber(activity.manual_attendance_count),
+      qr_attendance_count: toNumber(activity.qr_attendance_count),
+      face_attendance_count: toNumber(activity.face_attendance_count),
     }));
 
     const totalParticipants = activities.reduce(
@@ -104,14 +140,49 @@ export async function GET(request: NextRequest) {
       0
     );
     const totalAttended = activities.reduce((sum, activity) => sum + activity.attended_count, 0);
+    const totalRegisteredOnly = activities.reduce(
+      (sum, activity) => sum + activity.registered_only,
+      0
+    );
+    const totalManualAttendance = activities.reduce(
+      (sum, activity) => sum + activity.manual_attendance_count,
+      0
+    );
+    const totalQrAttendance = activities.reduce(
+      (sum, activity) => sum + activity.qr_attendance_count,
+      0
+    );
+    const totalFaceAttendance = activities.reduce(
+      (sum, activity) => sum + activity.face_attendance_count,
+      0
+    );
 
     const stats: ActivityStatisticsSummary = {
       total_activities: activities.length,
       total_participants: totalParticipants,
       total_attended: totalAttended,
+      total_registered_only: totalRegisteredOnly,
+      total_manual_attendance: totalManualAttendance,
+      total_qr_attendance: totalQrAttendance,
+      total_face_attendance: totalFaceAttendance,
       avg_participants_per_activity:
         activities.length > 0 ? totalParticipants / activities.length : 0,
       attendance_rate: totalParticipants > 0 ? (totalAttended / totalParticipants) * 100 : 0,
+      face_adoption_rate: totalAttended > 0 ? (totalFaceAttendance / totalAttended) * 100 : 0,
+    };
+
+    const insights: ActivityStatisticsInsights = {
+      top_not_participated_activities: activities
+        .filter((activity) => activity.registered_only > 0)
+        .sort((left, right) => right.registered_only - left.registered_only)
+        .slice(0, 5)
+        .map((activity) => ({
+          id: activity.id,
+          title: activity.title,
+          registered_only: activity.registered_only,
+          total_participants: activity.total_participants,
+          attended_count: activity.attended_count,
+        })),
     };
 
     if (format === 'csv') {
@@ -125,6 +196,10 @@ export async function GET(request: NextRequest) {
           'Cấp tổ chức',
           'Số đăng ký',
           'Số đã tham gia',
+          'Chưa tham gia',
+          'Thủ công',
+          'QR',
+          'Face',
           'Số xuất sắc',
           'Số tốt',
           'Điểm trung bình',
@@ -138,6 +213,10 @@ export async function GET(request: NextRequest) {
           activity.organization_level || '',
           activity.total_participants,
           activity.attended_count,
+          activity.registered_only,
+          activity.manual_attendance_count,
+          activity.qr_attendance_count,
+          activity.face_attendance_count,
           activity.excellent_count,
           activity.good_count,
           activity.avg_points_per_student.toFixed(2),
@@ -160,6 +239,7 @@ export async function GET(request: NextRequest) {
       success: true,
       data: activities,
       statistics: stats,
+      insights,
     });
   } catch (error: unknown) {
     console.error('Error generating activity statistics:', error);
