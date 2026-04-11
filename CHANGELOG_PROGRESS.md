@@ -1,5 +1,54 @@
 # CHANGELOG PROGRESS
 
+## 2026-04-11 - Khôi phục notification history flow và thêm escalation visibility
+
+### Đã làm
+
+- Viết lại `src/app/api/teacher/notifications/history/route.ts` để route này không còn trỏ vào schema ma `notification_recipients` không tồn tại.
+- Route history mới dùng dữ liệu thật từ:
+  - `broadcast_notifications`
+  - `notifications`
+  - `users`
+  - `classes`
+- Route giờ trả đồng thời:
+  - `notifications`: broadcast summary cho các màn lịch sử/overview
+  - `records`: recipient-level delivery/read rows cho màn history chi tiết
+  - `summary`: tổng hợp vận hành gồm total recipients, total read/unread, low-read notifications
+- Bổ sung `src/app/api/teacher/notifications/history/export/route.ts` để page export CSV thực sự hoạt động thay vì gọi route không tồn tại.
+- Viết lại `src/app/teacher/notifications/history/page.tsx` để:
+  - parse đúng response mới
+  - parse đúng `/api/classes` response
+  - hiển thị read-rate card
+  - hiển thị section `Broadcast có tỷ lệ đọc thấp`
+  - dùng trạng thái `Không theo dõi` cho device/read-at khi upstream tracking chưa có
+- Batch này cũng gián tiếp fix mismatch cũ giữa:
+  - route trả `notifications` summary
+  - page lại mong `records` chi tiết
+
+### Kiểm thử
+
+- Chạy focused Vitest:
+  - `npm.cmd test -- test/teacher-notification-history-route.test.ts test/teacher-notification-history-export-route.test.ts`
+  - Kết quả: `2` files pass, `3` tests pass
+- Chạy full Vitest suite:
+  - `npm.cmd test`
+  - Kết quả: `81` files pass, `380` tests pass
+- Chạy production build:
+  - `npm.cmd run build`
+  - Kết quả: build pass
+
+### Kết quả
+
+- Teacher notification history flow không còn bị gãy do route/page drift và export route thiếu.
+- Có visibility vận hành tốt hơn cho broadcast health / low-read notifications.
+- Batch notification này đã được kéo về trạng thái xanh ở mức full Vitest + build.
+
+### Còn lại
+
+- Chưa có UAT/smoke riêng cho notification history page.
+- Nếu tiếp tục, wave ROI cao tiếp theo là đào sâu admin-level notification analytics hoặc improvement/penalty reporting.
+
+
 ## 2026-04-11 - Chuẩn hóa attendance reporting semantics và thêm method mix analytics
 
 ### Đã làm

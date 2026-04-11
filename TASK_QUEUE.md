@@ -949,3 +949,29 @@ Quy ước trạng thái: TODO / DOING / BLOCKED / DONE
 - Rủi ro: thấp
 - Cách kiểm thử: focused helper tests + full Vitest + build
 - Tiêu chí hoàn thành: helper test pass, build pass, page không còn vi phạm Next.js page export contract
+
+### T-171 - Khôi phục teacher notification history khỏi schema drift
+
+- Trạng thái: DONE
+- Mục tiêu: sửa route/page mismatch và loại bỏ phụ thuộc vào bảng `notification_recipients` không tồn tại
+- Phạm vi file:
+  - `src/app/api/teacher/notifications/history/route.ts`
+  - `src/app/teacher/notifications/history/page.tsx`
+- Lý do cần làm: notification history flow đang gãy cả ở data contract lẫn schema assumption, dẫn tới visibility notification gần như unusable
+- Rủi ro: trung bình
+- Cách kiểm thử: focused route regression + full Vitest + build
+- Tiêu chí hoàn thành: page có data history thật, route bám schema hiện tại, và không còn drift `notifications` vs `records`
+
+### T-172 - Bổ sung export + low-read visibility cho notification history
+
+- Trạng thái: DONE
+- Mục tiêu: biến notification history thành flow vận hành dùng được thật bằng cách thêm export và low-read escalation visibility
+- Phạm vi file:
+  - `src/app/api/teacher/notifications/history/export/route.ts`
+  - `src/app/teacher/notifications/history/page.tsx`
+  - `test/teacher-notification-history-route.test.ts`
+  - `test/teacher-notification-history-export-route.test.ts`
+- Lý do cần làm: page history gọi route export không tồn tại và chưa lôi được low-read risk lên UI
+- Rủi ro: thấp-trung bình
+- Cách kiểm thử: focused export/history regression + full Vitest + build
+- Tiêu chí hoàn thành: export CSV hoạt động, page có low-read section, repo vẫn xanh

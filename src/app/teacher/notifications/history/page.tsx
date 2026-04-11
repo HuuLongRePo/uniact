@@ -1,11 +1,22 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { toast } from 'react-hot-toast';
-import { ArrowLeft, History, Search, Filter, Download, CheckCircle2, Clock } from 'lucide-react';
+import {
+  AlertTriangle,
+  ArrowLeft,
+  CheckCircle2,
+  Clock,
+  Download,
+  Filter,
+  History,
+  Search,
+} from 'lucide-react';
+
+type ReadDevice = 'web' | 'mobile' | 'email' | 'sms' | 'unknown';
 
 interface NotificationRecord {
   id: number;
@@ -15,9 +26,86 @@ interface NotificationRecord {
   student_name: string;
   class_name: string;
   sent_at: string;
-  read_at?: string;
+  read_at?: string | null;
   is_read: boolean;
-  read_on_device: 'web' | 'mobile' | 'email' | 'sms';
+  read_on_device: ReadDevice;
+}
+
+interface NotificationSummaryItem {
+  id: number;
+  title: string;
+  message: string;
+  target_type: string;
+  target_names?: string | null;
+  recipient_count: number;
+  delivered_count: number;
+  read_count: number;
+  unread_count: number;
+  read_rate: number;
+  sent_at?: string | null;
+  created_at: string;
+}
+
+interface NotificationHistorySummary {
+  total_notifications: number;
+  total_recipients: number;
+  total_read: number;
+  total_unread: number;
+  low_read_notifications: NotificationSummaryItem[];
+}
+
+function getClasses(payload: unknown): Array<{ id: number; name: string }> {
+  if (!payload || typeof payload !== 'object') return [];
+  const record = payload as {
+    data?: { classes?: Array<{ id: number; name: string }> };
+    classes?: Array<{ id: number; name: string }>;
+  };
+  return record.data?.classes ?? record.classes ?? [];
+}
+
+function getHistoryPayload(payload: unknown): {
+  records: NotificationRecord[];
+  notifications: NotificationSummaryItem[];
+  summary: NotificationHistorySummary;
+} {
+  if (!payload || typeof payload !== 'object') {
+    return {
+      records: [],
+      notifications: [],
+      summary: {
+        total_notifications: 0,
+        total_recipients: 0,
+        total_read: 0,
+        total_unread: 0,
+        low_read_notifications: [],
+      },
+    };
+  }
+
+  const record = payload as {
+    data?: {
+      records?: NotificationRecord[];
+      notifications?: NotificationSummaryItem[];
+      summary?: NotificationHistorySummary;
+    };
+    records?: NotificationRecord[];
+    notifications?: NotificationSummaryItem[];
+    summary?: NotificationHistorySummary;
+  };
+
+  return {
+    records: record.data?.records ?? record.records ?? [],
+    notifications: record.data?.notifications ?? record.notifications ?? [],
+    summary:
+      record.data?.summary ??
+      record.summary ?? {
+        total_notifications: 0,
+        total_recipients: 0,
+        total_read: 0,
+        total_unread: 0,
+        low_read_notifications: [],
+      },
+  };
 }
 
 export default function NotificationHistoryPage() {
@@ -26,9 +114,16 @@ export default function NotificationHistoryPage() {
 
   const [loading, setLoading] = useState(true);
   const [records, setRecords] = useState<NotificationRecord[]>([]);
+  const [broadcasts, setBroadcasts] = useState<NotificationSummaryItem[]>([]);
+  const [summary, setSummary] = useState<NotificationHistorySummary>({
+    total_notifications: 0,
+    total_recipients: 0,
+    total_read: 0,
+    total_unread: 0,
+    low_read_notifications: [],
+  });
   const [filteredRecords, setFilteredRecords] = useState<NotificationRecord[]>([]);
 
-  // Filters
   const [filters, setFilters] = useState({
     readStatus: '',
     classId: '',
@@ -36,9 +131,8 @@ export default function NotificationHistoryPage() {
     dateEnd: '',
   });
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortBy, setSortBy] = useState('sent_at');
+  const [sortBy, setSortBy] = useState<'sent_at' | 'student' | 'read_at'>('sent_at');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-
   const [classes, setClasses] = useState<Array<{ id: number; name: string }>>([]);
 
   useEffect(() => {
@@ -54,93 +148,98 @@ export default function NotificationHistoryPage() {
     }
 
     if (user) {
-      fetchData();
+      void fetchData();
     }
-  }, [user, authLoading]);
+  }, [authLoading, router, user]);
 
   const fetchData = async () => {
     try {
       setLoading(true);
 
-      const [classesRes, recordsRes] = await Promise.all([
+      const [classesRes, historyRes] = await Promise.all([
         fetch('/api/classes'),
         fetch('/api/teacher/notifications/history'),
       ]);
 
       if (classesRes.ok) {
         const classesData = await classesRes.json();
-        setClasses(classesData);
+        setClasses(getClasses(classesData));
       }
 
-      if (recordsRes.ok) {
-        const recordsData = await recordsRes.json();
-        setRecords(recordsData.records || []);
-        setFilteredRecords(recordsData.records || []);
+      if (historyRes.ok) {
+        const historyData = await historyRes.json();
+        const normalized = getHistoryPayload(historyData);
+        setRecords(normalized.records);
+        setFilteredRecords(normalized.records);
+        setBroadcasts(normalized.notifications);
+        setSummary(normalized.summary);
       }
-    } catch (error: any) {
-      console.error('Error fetching data:', error);
+    } catch (error) {
+      console.error('Error fetching notification history:', error);
       toast.error('Không thể tải lịch sử thông báo');
     } finally {
       setLoading(false);
     }
   };
 
-  const applyFilters = () => {
-    let filtered = records;
+  useEffect(() => {
+    let filtered = [...records];
 
     if (filters.readStatus === 'read') {
-      filtered = filtered.filter((r) => r.is_read);
+      filtered = filtered.filter((record) => record.is_read);
     } else if (filters.readStatus === 'unread') {
-      filtered = filtered.filter((r) => !r.is_read);
+      filtered = filtered.filter((record) => !record.is_read);
     }
 
     if (filters.classId) {
-      filtered = filtered.filter((r) => r.class_name === filters.classId);
+      filtered = filtered.filter((record) => record.class_name === filters.classId);
     }
 
     if (filters.dateStart) {
-      filtered = filtered.filter((r) => new Date(r.sent_at) >= new Date(filters.dateStart));
-    }
-    if (filters.dateEnd) {
-      filtered = filtered.filter((r) => new Date(r.sent_at) <= new Date(filters.dateEnd));
-    }
-
-    if (searchTerm) {
       filtered = filtered.filter(
-        (r) =>
-          r.student_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          r.notification_title.toLowerCase().includes(searchTerm.toLowerCase())
+        (record) => new Date(record.sent_at) >= new Date(filters.dateStart)
       );
     }
 
-    // Apply sorting
-    filtered.sort((a, b) => {
-      let aVal: any, bVal: any;
+    if (filters.dateEnd) {
+      filtered = filtered.filter(
+        (record) => new Date(record.sent_at) <= new Date(filters.dateEnd)
+      );
+    }
+
+    if (searchTerm) {
+      const normalizedSearch = searchTerm.toLowerCase();
+      filtered = filtered.filter(
+        (record) =>
+          record.student_name.toLowerCase().includes(normalizedSearch) ||
+          record.notification_title.toLowerCase().includes(normalizedSearch)
+      );
+    }
+
+    filtered.sort((left, right) => {
+      let leftValue: string | number = '';
+      let rightValue: string | number = '';
 
       if (sortBy === 'sent_at') {
-        aVal = new Date(a.sent_at).getTime();
-        bVal = new Date(b.sent_at).getTime();
+        leftValue = new Date(left.sent_at).getTime();
+        rightValue = new Date(right.sent_at).getTime();
       } else if (sortBy === 'student') {
-        aVal = a.student_name;
-        bVal = b.student_name;
-      } else if (sortBy === 'read_at') {
-        aVal = a.read_at ? new Date(a.read_at).getTime() : 0;
-        bVal = b.read_at ? new Date(b.read_at).getTime() : 0;
+        leftValue = left.student_name;
+        rightValue = right.student_name;
+      } else {
+        leftValue = left.read_at ? new Date(left.read_at).getTime() : 0;
+        rightValue = right.read_at ? new Date(right.read_at).getTime() : 0;
       }
 
       if (sortOrder === 'asc') {
-        return aVal > bVal ? 1 : aVal < bVal ? -1 : 0;
-      } else {
-        return aVal < bVal ? 1 : aVal > bVal ? -1 : 0;
+        return leftValue > rightValue ? 1 : leftValue < rightValue ? -1 : 0;
       }
+
+      return leftValue < rightValue ? 1 : leftValue > rightValue ? -1 : 0;
     });
 
     setFilteredRecords(filtered);
-  };
-
-  useEffect(() => {
-    applyFilters();
-  }, [filters, searchTerm, sortBy, sortOrder, records]);
+  }, [filters, records, searchTerm, sortBy, sortOrder]);
 
   const handleExport = async () => {
     try {
@@ -154,195 +253,250 @@ export default function NotificationHistoryPage() {
 
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `notification-history-${Date.now()}.csv`;
-      a.click();
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `notification-history-${Date.now()}.csv`;
+      anchor.click();
       toast.success('Đã xuất lịch sử thông báo');
     } catch (error) {
-      console.error('Error exporting:', error);
+      console.error('Error exporting history:', error);
       toast.error('Không thể xuất lịch sử');
     }
   };
+
+  const readRate = useMemo(() => {
+    return summary.total_recipients > 0
+      ? (summary.total_read / summary.total_recipients) * 100
+      : 0;
+  }, [summary.total_read, summary.total_recipients]);
 
   if (authLoading || loading) {
     return <LoadingSpinner />;
   }
 
-  const stats = {
-    total: records.length,
-    read: records.filter((r) => r.is_read).length,
-    unread: records.filter((r) => !r.is_read).length,
-  };
-
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="mb-6">
           <button
             onClick={() => router.back()}
-            className="flex items-center text-blue-600 hover:text-blue-700 mb-4"
+            className="mb-4 flex items-center text-blue-600 hover:text-blue-700"
           >
-            <ArrowLeft className="w-4 h-4 mr-2" />
+            <ArrowLeft className="mr-2 h-4 w-4" />
             Quay lại
           </button>
 
-          <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-            <div className="flex items-center justify-between">
+          <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+            <div className="flex items-center justify-between gap-4">
               <div>
-                <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                  <History className="w-6 h-6 text-blue-600" />
+                <h1 className="flex items-center gap-2 text-2xl font-bold text-gray-900">
+                  <History className="h-6 w-6 text-blue-600" />
                   Lịch sử thông báo
                 </h1>
-                <p className="text-gray-600 mt-2">
-                  Theo dõi trạng thái đọc và gửi thông báo đến từng học viên
+                <p className="mt-2 text-gray-600">
+                  Theo dõi độ phủ gửi, tỷ lệ đọc và những broadcast có nguy cơ đọc thấp.
                 </p>
               </div>
               <button
                 onClick={handleExport}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
               >
-                <Download className="w-4 h-4" />
+                <Download className="h-4 w-4" />
                 Xuất CSV
               </button>
             </div>
           </div>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
-            <div className="text-sm text-gray-600 mb-1">Tổng cộng</div>
-            <div className="text-3xl font-bold text-blue-600">{stats.total}</div>
+        <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+            <div className="mb-1 text-sm text-gray-600">Broadcast đã gửi</div>
+            <div className="text-3xl font-bold text-blue-600">{summary.total_notifications}</div>
           </div>
-          <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
-            <div className="text-sm text-gray-600 mb-1">Đã đọc</div>
-            <div className="text-3xl font-bold text-green-600">{stats.read}</div>
-            <div className="text-xs text-gray-500 mt-1">
-              {stats.total > 0 ? ((stats.read / stats.total) * 100).toFixed(1) : 0}%
-            </div>
+          <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+            <div className="mb-1 text-sm text-gray-600">Tổng lượt nhận</div>
+            <div className="text-3xl font-bold text-indigo-600">{summary.total_recipients}</div>
           </div>
-          <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
-            <div className="text-sm text-gray-600 mb-1">Chưa đọc</div>
-            <div className="text-3xl font-bold text-yellow-600">{stats.unread}</div>
-            <div className="text-xs text-gray-500 mt-1">
-              {stats.total > 0 ? ((stats.unread / stats.total) * 100).toFixed(1) : 0}%
-            </div>
+          <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+            <div className="mb-1 text-sm text-gray-600">Đã đọc</div>
+            <div className="text-3xl font-bold text-green-600">{summary.total_read}</div>
+          </div>
+          <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm" data-testid="notification-read-rate-card">
+            <div className="mb-1 text-sm text-gray-600">Tỷ lệ đọc</div>
+            <div className="text-3xl font-bold text-amber-600">{readRate.toFixed(1)}%</div>
           </div>
         </div>
 
-        {/* Filters */}
-        <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="mb-6 rounded-lg border border-orange-200 bg-orange-50 p-6 shadow-sm" data-testid="notification-low-read-section">
+          <div className="mb-4 flex items-start gap-3">
+            <AlertTriangle className="mt-0.5 h-5 w-5 text-orange-600" />
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <Search className="inline w-4 h-4 mr-1" />
+              <h2 className="text-lg font-semibold text-orange-900">Broadcast có tỷ lệ đọc thấp</h2>
+              <p className="text-sm text-orange-800">
+                Những thông báo có read-rate thấp nhất để bạn biết cần nhắc lại, đổi kênh hoặc follow-up.
+              </p>
+            </div>
+          </div>
+
+          {summary.low_read_notifications.length === 0 ? (
+            <div className="rounded-lg bg-white/80 p-4 text-sm text-orange-900">
+              Chưa có broadcast nào đủ dữ liệu để đánh giá read-rate.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+              {summary.low_read_notifications.map((item) => (
+                <div key={item.id} className="rounded-lg bg-white/80 p-4 shadow-sm">
+                  <div className="text-sm font-semibold text-gray-900">{item.title}</div>
+                  <div className="mt-2 text-xs text-gray-500">
+                    {item.target_names || 'Tất cả đối tượng phù hợp'}
+                  </div>
+                  <div className="mt-3 grid grid-cols-3 gap-2 text-sm">
+                    <div>
+                      <div className="text-xs uppercase tracking-wide text-gray-400">Nhận</div>
+                      <div className="mt-1 font-semibold text-blue-700">{item.delivered_count}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs uppercase tracking-wide text-gray-400">Đã đọc</div>
+                      <div className="mt-1 font-semibold text-green-700">{item.read_count}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs uppercase tracking-wide text-gray-400">Unread</div>
+                      <div className="mt-1 font-semibold text-orange-800">{item.unread_count}</div>
+                    </div>
+                  </div>
+                  <div className="mt-3 text-sm text-orange-900">
+                    Read rate: <span className="font-semibold">{item.read_rate.toFixed(1)}%</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="mb-6 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+            <div>
+              <label className="mb-2 block text-sm font-medium text-gray-700">
+                <Search className="mr-1 inline h-4 w-4" />
                 Tìm kiếm
               </label>
               <input
                 type="text"
-                placeholder="Tên học viên hoặc tiêu đề..."
+                placeholder="Tên học viên hoặc thông báo..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                onChange={(event) => setSearchTerm(event.target.value)}
+                className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <Filter className="inline w-4 h-4 mr-1" />
-                Trạng thái đọc
+              <label className="mb-2 block text-sm font-medium text-gray-700">
+                <Filter className="mr-1 inline h-4 w-4" />
+                Lớp
               </label>
               <select
+                value={filters.classId}
+                onChange={(event) => setFilters({ ...filters, classId: event.target.value })}
+                className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">-- Tất cả lớp --</option>
+                {classes.map((classItem) => (
+                  <option key={classItem.id} value={classItem.name}>
+                    {classItem.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="mb-2 block text-sm font-medium text-gray-700">Trạng thái đọc</label>
+              <select
                 value={filters.readStatus}
-                onChange={(e) => setFilters({ ...filters, readStatus: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                onChange={(event) => setFilters({ ...filters, readStatus: event.target.value })}
+                className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">-- Tất cả --</option>
                 <option value="read">Đã đọc</option>
                 <option value="unread">Chưa đọc</option>
               </select>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Lớp</label>
-              <select
-                value={filters.classId}
-                onChange={(e) => setFilters({ ...filters, classId: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">-- Tất cả lớp --</option>
-                {classes.map((cls) => (
-                  <option key={cls.id} value={cls.name}>
-                    {cls.name}
-                  </option>
-                ))}
-              </select>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-700">Từ ngày</label>
+                <input
+                  type="date"
+                  value={filters.dateStart}
+                  onChange={(event) =>
+                    setFilters({ ...filters, dateStart: event.target.value })
+                  }
+                  className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-700">Đến ngày</label>
+                <input
+                  type="date"
+                  value={filters.dateEnd}
+                  onChange={(event) => setFilters({ ...filters, dateEnd: event.target.value })}
+                  className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Từ ngày</label>
-              <input
-                type="date"
-                value={filters.dateStart}
-                onChange={(e) => setFilters({ ...filters, dateStart: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-          </div>
-          <div className="mt-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Đến ngày</label>
-            <input
-              type="date"
-              value={filters.dateEnd}
-              onChange={(e) => setFilters({ ...filters, dateEnd: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
           </div>
         </div>
 
-        {/* History Table */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
+              <thead className="border-b border-gray-200 bg-gray-50">
                 <tr>
                   <th
-                    onClick={() => setSortBy('student')}
-                    className="px-4 py-3 text-left text-sm font-semibold text-gray-900 cursor-pointer hover:bg-gray-100"
+                    onClick={() => {
+                      setSortBy('student');
+                      setSortOrder((current) =>
+                        sortBy === 'student' && current === 'asc' ? 'desc' : 'asc'
+                      );
+                    }}
+                    className="cursor-pointer px-4 py-3 text-left text-sm font-semibold text-gray-900 hover:bg-gray-100"
                   >
                     Học viên {sortBy === 'student' && (sortOrder === 'asc' ? '↑' : '↓')}
                   </th>
                   <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Lớp</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
-                    Thông báo
-                  </th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Thông báo</th>
                   <th
-                    onClick={() => setSortBy('sent_at')}
-                    className="px-4 py-3 text-left text-sm font-semibold text-gray-900 cursor-pointer hover:bg-gray-100"
+                    onClick={() => {
+                      setSortBy('sent_at');
+                      setSortOrder((current) =>
+                        sortBy === 'sent_at' && current === 'asc' ? 'desc' : 'asc'
+                      );
+                    }}
+                    className="cursor-pointer px-4 py-3 text-left text-sm font-semibold text-gray-900 hover:bg-gray-100"
                   >
                     Gửi lúc {sortBy === 'sent_at' && (sortOrder === 'asc' ? '↑' : '↓')}
                   </th>
                   <th
-                    onClick={() => setSortBy('read_at')}
-                    className="px-4 py-3 text-left text-sm font-semibold text-gray-900 cursor-pointer hover:bg-gray-100"
+                    onClick={() => {
+                      setSortBy('read_at');
+                      setSortOrder((current) =>
+                        sortBy === 'read_at' && current === 'asc' ? 'desc' : 'asc'
+                      );
+                    }}
+                    className="cursor-pointer px-4 py-3 text-left text-sm font-semibold text-gray-900 hover:bg-gray-100"
                   >
                     Đọc lúc {sortBy === 'read_at' && (sortOrder === 'asc' ? '↑' : '↓')}
                   </th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
-                    Trạng thái
-                  </th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
-                    Thiết bị
-                  </th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Trạng thái</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Thiết bị</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
                 {filteredRecords.map((record) => (
-                  <tr key={record.id} className="hover:bg-gray-50 transition-colors">
+                  <tr key={record.id} className="transition-colors hover:bg-gray-50">
                     <td className="px-4 py-4 text-sm font-medium text-gray-900">
                       {record.student_name}
                     </td>
                     <td className="px-4 py-4 text-sm text-gray-600">{record.class_name}</td>
-                    <td className="px-4 py-4 text-sm text-blue-600">{record.notification_title}</td>
+                    <td className="px-4 py-4 text-sm text-blue-600">
+                      {record.notification_title}
+                    </td>
                     <td className="px-4 py-4 text-sm text-gray-600">
                       {new Date(record.sent_at).toLocaleString('vi-VN')}
                     </td>
@@ -351,25 +505,19 @@ export default function NotificationHistoryPage() {
                     </td>
                     <td className="px-4 py-4">
                       {record.is_read ? (
-                        <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
-                          <CheckCircle2 className="w-3 h-3" />
+                        <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-800">
+                          <CheckCircle2 className="h-3 w-3" />
                           Đã đọc
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-medium">
-                          <Clock className="w-3 h-3" />
+                        <span className="inline-flex items-center gap-1 rounded-full bg-yellow-100 px-3 py-1 text-xs font-medium text-yellow-800">
+                          <Clock className="h-3 w-3" />
                           Chưa đọc
                         </span>
                       )}
                     </td>
                     <td className="px-4 py-4 text-sm text-gray-600">
-                      {record.read_on_device === 'web'
-                        ? '🌐 Web'
-                        : record.read_on_device === 'mobile'
-                          ? '📱 Mobile'
-                          : record.read_on_device === 'email'
-                            ? '📧 Email'
-                            : '💬 SMS'}
+                      {record.read_on_device === 'unknown' ? 'Không theo dõi' : record.read_on_device}
                     </td>
                   </tr>
                 ))}
@@ -379,11 +527,17 @@ export default function NotificationHistoryPage() {
 
           {filteredRecords.length === 0 && (
             <div className="p-12 text-center">
-              <History className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-600 text-lg">Không có lịch sử thông báo nào</p>
+              <History className="mx-auto mb-4 h-16 w-16 text-gray-400" />
+              <p className="text-lg text-gray-600">Không có lịch sử thông báo nào</p>
             </div>
           )}
         </div>
+
+        {broadcasts.length > 0 && (
+          <div className="mt-4 text-right text-sm text-gray-500">
+            Theo dõi {broadcasts.length} broadcast gần nhất.
+          </div>
+        )}
       </div>
     </div>
   );
