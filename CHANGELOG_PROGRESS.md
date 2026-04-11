@@ -1,5 +1,54 @@
 # CHANGELOG PROGRESS
 
+## 2026-04-11 - Khôi phục alerts runtime khỏi schema drift và thêm escalation summary
+
+### Đã làm
+
+- Sửa `src/app/api/alerts/route.ts` để route này không còn phụ thuộc mù vào cột `is_read` khi schema cũ của bảng `alerts` chưa có cột này.
+- Thêm `ensureAlertsReadColumn()` dựa trên `PRAGMA table_info(alerts)` và `ALTER TABLE ... ADD COLUMN is_read` để tự chữa drift trên DB hiện có.
+- Route `GET /api/alerts` giờ trả thêm `summary` gồm:
+  - `total_alerts`
+  - `unread_alerts`
+  - `unresolved_alerts`
+  - `critical_alerts`
+  - `warning_alerts`
+  - `info_alerts`
+  - `escalation_hotspots`
+- Route `PUT /api/alerts` được làm chặt hơn:
+  - validate `alertId`
+  - `read` chỉ mark read trong scope current user/global alert
+  - `resolve` đồng thời mark `resolved`, `resolved_at`, `is_read`
+- Cập nhật `migrations/000_base_schema.ts` để fresh DB mới tạo ra không lặp lại lỗi thiếu cột `is_read` và chấp nhận thêm level `critical`.
+- Viết lại `test/alerts.test.ts` để khóa:
+  - auto-fix thiếu cột `is_read`
+  - summary/hotspots
+  - read action
+  - resolve permission guard
+
+### Kiểm thử
+
+- Chạy focused Vitest:
+  - `npm.cmd test -- test/alerts.test.ts`
+  - Kết quả: pass
+- Chạy full Vitest suite sau batch:
+  - `npm.cmd test`
+  - Kết quả: pass
+- Chạy production build sau batch:
+  - `npm.cmd run build`
+  - Kết quả: build pass
+
+### Kết quả
+
+- Alerts runtime không còn gãy ngầm vì schema drift `is_read`.
+- API alerts giờ có signal escalation summary thực sự để admin/teacher pages có thể nhìn thấy trạng thái vận hành tốt hơn.
+- Fresh DB và existing DB đều được kéo gần hơn về cùng một contract thực tế.
+
+### Còn lại
+
+- Chưa có page-level UAT/smoke cho alerts.
+- Nếu tiếp tục, wave ROI cao kế tiếp là hardening/cleanup dài đuôi hoặc mở rộng alerts visibility lên UI summary cards cụ thể hơn.
+
+
 ## 2026-04-11 - Deepen admin score governance / bonus-penalty visibility
 
 ### Đã làm

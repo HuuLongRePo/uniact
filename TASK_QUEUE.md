@@ -1002,6 +1002,19 @@ Quy ước trạng thái: TODO / DOING / BLOCKED / DONE
 - Cách kiểm thử: focused scores route regression + full Vitest + build
 - Tiêu chí hoàn thành: admin thấy được bonus/penalty totals, hotspot sinh viên bị trừ điểm, recent adjustments, export đồng bộ cột mới
 
+### T-176 - Khôi phục alerts runtime khỏi schema drift `is_read`
+
+- Trạng thái: DONE
+- Mục tiêu: loại bỏ lỗi runtime ngầm do API alerts dùng `is_read` trong khi base schema cũ của bảng `alerts` chưa có cột này
+- Phạm vi file:
+  - `src/app/api/alerts/route.ts`
+  - `migrations/000_base_schema.ts`
+  - `test/alerts.test.ts`
+- Lý do cần làm: alerts/escalation visibility là wave còn lại có ROI tốt, nhưng nền route hiện tại bị schema drift nên rất dễ gãy ngoài runtime thật
+- Rủi ro: thấp-trung bình
+- Cách kiểm thử: focused alerts regression + full Vitest + build
+- Tiêu chí hoàn thành: route tự chữa drift trên existing DB, fresh schema mới có `is_read`, và alerts API còn trả summary usable
+
 ### T-174 - Tách admin activity statistics helper khỏi page/harness noise
 
 - Trạng thái: DONE

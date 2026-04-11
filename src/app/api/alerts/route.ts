@@ -1,89 +1,164 @@
 import { NextRequest } from 'next/server';
-import { getUserFromRequest } from '@/lib/guards';
-import { dbAll, dbGet, dbRun } from '@/lib/database';
-import { apiHandler, ApiError, successResponse } from '@/lib/api-response';
+import { getUserFromSession } from '@/lib/auth';
+import { dbAll, dbRun } from '@/lib/database';
+import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
 
-// GET /api/alerts?page=1&per_page=20&unread=1
-export const GET = apiHandler(async (request: NextRequest) => {
-  const user = await getUserFromRequest(request);
-  if (!user) throw ApiError.unauthorized('Unauthorized');
+type AlertLevel = 'critical' | 'warning' | 'info';
 
-  const params = request.nextUrl?.searchParams;
-  const unreadOnly = params?.get('unread') === '1';
-  const page = Math.max(Number(params?.get('page') || '1'), 1);
-  const per_page = Math.min(Math.max(Number(params?.get('per_page') || '20'), 1), 100);
-  const offset = (page - 1) * per_page;
+type AlertRow = {
+  id: number;
+  user_id: number | null;
+  level: AlertLevel;
+  message: string;
+  is_read: number | null;
+  resolved: number | null;
+  resolved_at: string | null;
+  related_table: string | null;
+  related_id: number | null;
+  created_at: string;
+};
 
-  // build where clauses depending on role
-  const whereClauses: string[] = [];
-  const bindings: any[] = [];
+async function ensureAlertsReadColumn() {
+  const columns = (await dbAll(`PRAGMA table_info(alerts)`)) as Array<{ name?: string }>;
+  const hasIsRead = columns.some((column) => column.name === 'is_read');
 
-  if (unreadOnly) {
-    whereClauses.push('is_read = 0');
+  if (!hasIsRead) {
+    await dbRun(`ALTER TABLE alerts ADD COLUMN is_read INTEGER DEFAULT 0`);
   }
+}
 
-  if (user.role === 'teacher') {
-    // only show general alerts (not tied to activities) OR alerts tied to this teacher's activities
-    // We'll use a subquery to include alerts for activities owned by this teacher
-    whereClauses.push(
-      "(related_table IS NULL OR related_table != 'activities' OR (related_table = 'activities' AND related_id IN (SELECT id FROM activities WHERE teacher_id = ?)))"
-    );
-    bindings.push(user.id);
-  }
+function toNumber(value: unknown): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
 
-  const whereSQL = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+function normalizeBooleanFlag(value: unknown): boolean {
+  return toNumber(value) > 0 || value === true;
+}
 
-  const totalRow = (await dbGet(`SELECT COUNT(*) as total FROM alerts ${whereSQL}`, bindings)) as
-    | { total?: number }
-    | undefined;
-  const total = totalRow?.total || 0;
+// GET /api/alerts - Get alerts for current user
+export async function GET(_request: NextRequest) {
+  try {
+    const user = await getUserFromSession();
 
-  const unreadRow = (await dbGet(
-    `SELECT COUNT(*) as unread FROM alerts ${whereSQL}${whereSQL ? ' AND' : 'WHERE'} is_read = 0`,
-    bindings
-  )) as { unread?: number } | undefined;
-  const total_unread = unreadRow?.unread || 0;
-
-  const alerts = await dbAll(
-    `SELECT * FROM alerts ${whereSQL} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
-    [...bindings, per_page, offset]
-  );
-
-  return successResponse({ alerts, meta: { total, total_unread, page, per_page } });
-});
-
-// POST /api/alerts  body: { id } or { ids: [..] }
-export const POST = apiHandler(async (request: NextRequest) => {
-  const user = await getUserFromRequest(request);
-  if (!user) throw ApiError.unauthorized('Unauthorized');
-
-  const body = await request.json();
-  const ids: number[] = [];
-  if (Array.isArray(body?.ids)) {
-    for (const v of body.ids) ids.push(Number(v));
-  } else if (body?.id) {
-    ids.push(Number(body.id));
-  }
-  if (ids.length === 0) throw ApiError.badRequest('Missing id(s)');
-
-  // For security: ensure teacher cannot mark alerts that do not belong to them as read
-  if (user.role === 'teacher') {
-    // fetch alerts and ensure each is either general or belongs to their activities
-    const placeholders = ids.map(() => '?').join(',');
-    const alerts = await dbAll(`SELECT * FROM alerts WHERE id IN (${placeholders})`, ids);
-    for (const a of alerts) {
-      if (a.related_table === 'activities') {
-        const activity = await dbGet('SELECT teacher_id FROM activities WHERE id = ?', [
-          a.related_id,
-        ]);
-        if (!activity || Number(activity.teacher_id) !== Number(user.id)) {
-          throw ApiError.forbidden('Forbidden');
-        }
-      }
+    if (!user) {
+      return errorResponse(ApiError.unauthorized('Unauthorized'));
     }
-  }
 
-  const placeholders = ids.map(() => '?').join(',');
-  await dbRun(`UPDATE alerts SET is_read = 1 WHERE id IN (${placeholders})`, ids);
-  return successResponse({ marked: ids.length });
-});
+    await ensureAlertsReadColumn();
+
+    let query = `
+      SELECT id, user_id, level, message, is_read, resolved, resolved_at, related_table, related_id, created_at
+      FROM alerts
+      WHERE (user_id = ? OR user_id IS NULL)
+    `;
+    const params: unknown[] = [user.id];
+
+    if (user.role === 'student') {
+      query += ` AND (resolved = 0 OR resolved IS NULL)`;
+    }
+
+    query += ` ORDER BY created_at DESC LIMIT 100`;
+
+    const rows = (await dbAll(query, params)) as AlertRow[];
+
+    const alerts = rows.map((row) => ({
+      id: toNumber(row.id),
+      user_id: row.user_id !== null ? toNumber(row.user_id) : null,
+      level: (row.level || 'info') as AlertLevel,
+      message: String(row.message || ''),
+      is_read: normalizeBooleanFlag(row.is_read),
+      resolved: normalizeBooleanFlag(row.resolved),
+      resolved_at: row.resolved_at ? String(row.resolved_at) : null,
+      related_table: row.related_table ? String(row.related_table) : null,
+      related_id: row.related_id !== null ? toNumber(row.related_id) : null,
+      created_at: String(row.created_at || ''),
+    }));
+
+    const summary = {
+      total_alerts: alerts.length,
+      unread_alerts: alerts.filter((alert) => !alert.is_read).length,
+      unresolved_alerts: alerts.filter((alert) => !alert.resolved).length,
+      critical_alerts: alerts.filter((alert) => alert.level === 'critical').length,
+      warning_alerts: alerts.filter((alert) => alert.level === 'warning').length,
+      info_alerts: alerts.filter((alert) => alert.level === 'info').length,
+      escalation_hotspots: alerts
+        .filter((alert) => !alert.resolved)
+        .sort((left, right) => {
+          const severityWeight: Record<AlertLevel, number> = {
+            critical: 3,
+            warning: 2,
+            info: 1,
+          };
+          const weightDiff = severityWeight[right.level] - severityWeight[left.level];
+          if (weightDiff !== 0) return weightDiff;
+          return new Date(right.created_at).getTime() - new Date(left.created_at).getTime();
+        })
+        .slice(0, 5),
+    };
+
+    return successResponse({ alerts, summary });
+  } catch (error: unknown) {
+    console.error('Get alerts error:', error);
+    return errorResponse(
+      ApiError.internalError(
+        error instanceof Error ? error.message : 'Internal server error'
+      )
+    );
+  }
+}
+
+// PUT /api/alerts - Mark alert as read/resolved
+export async function PUT(request: NextRequest) {
+  try {
+    const user = await getUserFromSession();
+
+    if (!user) {
+      return errorResponse(ApiError.unauthorized('Unauthorized'));
+    }
+
+    await ensureAlertsReadColumn();
+
+    const { alertId, action } = await request.json();
+
+    if (!alertId) {
+      return errorResponse(ApiError.badRequest('Alert ID is required'));
+    }
+
+    const numericAlertId = Number(alertId);
+    if (!Number.isInteger(numericAlertId) || numericAlertId <= 0) {
+      return errorResponse(ApiError.badRequest('Alert ID không hợp lệ'));
+    }
+
+    if (action === 'read') {
+      await dbRun(
+        `UPDATE alerts
+         SET is_read = 1
+         WHERE id = ? AND (user_id = ? OR user_id IS NULL)`,
+        [numericAlertId, user.id]
+      );
+    } else if (action === 'resolve') {
+      if (user.role !== 'admin' && user.role !== 'teacher') {
+        return errorResponse(ApiError.forbidden('Forbidden'));
+      }
+
+      await dbRun(
+        `UPDATE alerts
+         SET resolved = 1, resolved_at = CURRENT_TIMESTAMP, is_read = 1
+         WHERE id = ?`,
+        [numericAlertId]
+      );
+    } else {
+      return errorResponse(ApiError.badRequest('Invalid action'));
+    }
+
+    return successResponse({ success: true, message: 'Alert updated successfully' });
+  } catch (error: unknown) {
+    console.error('Update alert error:', error);
+    return errorResponse(
+      ApiError.internalError(
+        error instanceof Error ? error.message : 'Internal server error'
+      )
+    );
+  }
+}
