@@ -885,3 +885,15 @@ Quy ước trạng thái: TODO / DOING / BLOCKED / DONE
 - Rủi ro: thấp
 - Cách kiểm thử: build + focused admin UAT + rerun bundle admin/teacher attendance liên quan
 - Tiêu chí hoàn thành: admin mở được page từ sidebar, xem được policy fields thật, không làm gãy teacher attendance backbone
+
+### T-166 - Thêm attendance policy rollout visibility vào admin dashboard
+
+- Trạng thái: DONE
+- Mục tiêu: đưa tín hiệu vận hành về attendance policy lên admin dashboard để config mới không bị “ẩn” khỏi góc nhìn quản trị
+- Phạm vi file:
+  - `src/features/dashboard/DashboardAdminPage.tsx`
+  - `test/uat/actor-admin/03-attendance-policy-config.spec.ts`
+- Lý do cần làm: sau khi đã config hóa policy và thêm trang admin riêng, bước tiếp theo có ROI tốt là làm cho dashboard quản trị nhìn thấy trạng thái rollout hiện tại
+- Rủi ro: thấp
+- Cách kiểm thử: build + focused admin UAT
+- Tiêu chí hoàn thành: admin dashboard hiển thị overview policy runtime và còn đường vào nhanh tới màn cấu hình

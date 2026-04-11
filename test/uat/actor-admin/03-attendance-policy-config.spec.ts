@@ -6,8 +6,9 @@ test.describe('Admin - attendance policy config', () => {
     const admin = new AdminHelper(page)
     await admin.login()
 
-    await page.goto('/admin/dashboard')
+    await page.goto('/admin/dashboard', { waitUntil: 'domcontentloaded' })
     await expect(page.locator('[data-testid="dashboard-heading"]')).toBeVisible()
+    await expect(page.locator('[data-testid="admin-attendance-policy-overview"]')).toBeVisible()
 
     const policyLink = page.locator('a[href="/admin/system-config/attendance-policy"]').first()
     await expect(policyLink).toBeVisible()

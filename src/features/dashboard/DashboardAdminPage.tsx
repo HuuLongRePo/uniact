@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import ActivitySkeleton from '@/components/ActivitySkeleton';
 import EmptyState from '@/components/EmptyState';
@@ -96,9 +97,20 @@ interface DashboardReportData {
   popular_activities?: PopularActivity[];
 }
 
+interface AttendancePolicyOverview {
+  version: string;
+  selectionMode: string;
+  qrFallbackPreset: string;
+  configuredPilotActivities: number;
+  eligiblePilotActivities: number;
+  totalScannedActivities: number;
+}
+
 export default function DashboardAdminPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
+  const [attendancePolicyOverview, setAttendancePolicyOverview] =
+    useState<AttendancePolicyOverview | null>(null);
 
   const { data, loading: statsLoading, refetch: refetchStats } = useAdminStats();
   const {
@@ -112,6 +124,69 @@ export default function DashboardAdminPage() {
       router.push('/login');
     }
   }, [user, authLoading, router]);
+
+  useEffect(() => {
+    if (!user || user.role !== 'admin') return;
+
+    let cancelled = false;
+
+    const loadAttendancePolicyOverview = async () => {
+      try {
+        const [configRes, activitiesRes] = await Promise.all([
+          fetch('/api/system-config?category=attendance'),
+          fetch('/api/teacher/attendance/pilot-activities'),
+        ]);
+
+        if (!configRes.ok || !activitiesRes.ok) {
+          return;
+        }
+
+        const configBody = await configRes.json();
+        const configRows = configBody?.configs || configBody?.data?.configs || [];
+        const configMap = new Map<string, string>(
+          configRows.map((row: any) => [String(row?.config_key || ''), String(row?.config_value || '')])
+        );
+
+        let configuredPilotActivities = 0;
+        try {
+          const selectedIds = JSON.parse(
+            configMap.get('attendance_face_pilot_activity_ids') || '[]'
+          );
+          if (Array.isArray(selectedIds)) {
+            configuredPilotActivities = selectedIds.filter((id) => Number.isInteger(Number(id))).length;
+          }
+        } catch {
+          configuredPilotActivities = 0;
+        }
+
+        const activitiesBody = await activitiesRes.json();
+        const activities = activitiesBody?.data?.activities || activitiesBody?.activities || [];
+        const eligiblePilotActivities = activities.filter(
+          (item: any) => item?.policy_summary?.eligible
+        ).length;
+
+        if (!cancelled) {
+          setAttendancePolicyOverview({
+            version: configMap.get('attendance_policy_version') || 'pilot-v1',
+            selectionMode:
+              configMap.get('attendance_face_pilot_selection_mode') || 'selected_or_heuristic',
+            qrFallbackPreset: configMap.get('attendance_qr_fallback_preset') || 'pilot-default',
+            configuredPilotActivities,
+            eligiblePilotActivities,
+            totalScannedActivities: activities.length,
+          });
+        }
+      } catch (error) {
+        console.error('Load attendance policy overview error:', error);
+      }
+    };
+
+    void loadAttendancePolicyOverview();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
 
   const loading = authLoading || statsLoading || dashLoading;
   const healthData = data as HealthData | null;
@@ -258,6 +333,50 @@ export default function DashboardAdminPage() {
               </p>
             </div>
           </div>
+
+          {attendancePolicyOverview && (
+            <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-6 shadow" data-testid="admin-attendance-policy-overview">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                  <h2 className="text-xl font-bold text-blue-900">🎛️ Attendance policy rollout</h2>
+                  <p className="mt-1 text-sm text-blue-800">
+                    Theo dõi preset đang chạy cho QR fallback / face pilot và mở nhanh màn cấu hình vận hành.
+                  </p>
+                </div>
+                <Link
+                  href="/admin/system-config/attendance-policy"
+                  className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                >
+                  Mở chính sách điểm danh
+                </Link>
+              </div>
+
+              <div className="mt-4 grid gap-4 md:grid-cols-4">
+                <div className="rounded-lg bg-white/80 p-4">
+                  <div className="text-xs uppercase tracking-wide text-blue-600">policy version</div>
+                  <div className="mt-1 text-lg font-semibold text-blue-950">{attendancePolicyOverview.version}</div>
+                </div>
+                <div className="rounded-lg bg-white/80 p-4">
+                  <div className="text-xs uppercase tracking-wide text-blue-600">selection mode</div>
+                  <div className="mt-1 text-lg font-semibold text-blue-950">{attendancePolicyOverview.selectionMode}</div>
+                </div>
+                <div className="rounded-lg bg-white/80 p-4">
+                  <div className="text-xs uppercase tracking-wide text-blue-600">configured pilot activities</div>
+                  <div className="mt-1 text-lg font-semibold text-blue-950">{attendancePolicyOverview.configuredPilotActivities}</div>
+                </div>
+                <div className="rounded-lg bg-white/80 p-4">
+                  <div className="text-xs uppercase tracking-wide text-blue-600">eligible / scanned activities</div>
+                  <div className="mt-1 text-lg font-semibold text-blue-950">
+                    {attendancePolicyOverview.eligiblePilotActivities}/{attendancePolicyOverview.totalScannedActivities}
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-3 text-sm text-blue-800">
+                QR fallback preset hiện tại: <span className="font-semibold">{attendancePolicyOverview.qrFallbackPreset}</span>
+              </div>
+            </div>
+          )}
 
           <div className="mb-6 rounded-lg bg-white p-6 shadow">
             <h2 className="mb-4 text-xl font-bold">📈 Phân bổ trạng thái tham gia</h2>

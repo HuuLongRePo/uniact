@@ -1,5 +1,38 @@
 # CHANGELOG PROGRESS
 
+## 2026-04-11 - Thêm attendance policy visibility vào admin dashboard
+
+### Đã làm
+
+- Mở rộng `src/features/dashboard/DashboardAdminPage.tsx` để nạp overview runtime của attendance policy từ:
+  - `/api/system-config?category=attendance`
+  - `/api/teacher/attendance/pilot-activities`
+- Thêm card `Attendance policy rollout` trên admin dashboard, hiển thị:
+  - policy version
+  - selection mode
+  - configured pilot activities
+  - eligible/scanned activities
+  - QR fallback preset
+- Giữ đường vào nhanh từ dashboard sang `\/admin\/system-config\/attendance-policy`.
+- Cập nhật admin UAT `test/uat/actor-admin/03-attendance-policy-config.spec.ts` để xác nhận widget overview hiển thị được trước khi đi vào trang cấu hình.
+
+### Kiểm thử
+
+- Chạy `npm.cmd run build`
+- Kết quả: build pass
+- Chạy `npx playwright test test/uat/actor-admin/03-attendance-policy-config.spec.ts --reporter=line`
+- Kết quả: `1` test pass
+
+### Kết quả
+
+- Admin có visibility vận hành tốt hơn cho attendance policy rollout ngay trên dashboard.
+- Attendance policy không còn là config “ẩn”; giờ có cả config surface lẫn dashboard signal.
+
+### Còn lại
+
+- Reporting chiều sâu hơn cho attendance method mix / notification escalation / improvement-penalty vẫn là wave tiếp theo nếu tiếp tục mở rộng beyond attendance policy core.
+
+
 ## 2026-04-11 - Config hóa attendance policy / face-pilot và thêm admin surface
 
 ### Đã làm
