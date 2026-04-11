@@ -2,10 +2,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mockDbAll = vi.fn();
 const mockDbGet = vi.fn();
+const mockDbRun = vi.fn();
 
 vi.mock('@/lib/database', () => ({
   dbAll: (...args: any[]) => mockDbAll(...args),
   dbGet: (...args: any[]) => mockDbGet(...args),
+  dbRun: (...args: any[]) => mockDbRun(...args),
 }));
 
 vi.mock('@/lib/guards', () => ({
@@ -17,6 +19,8 @@ describe('teacher attendance pilot activities route', () => {
     vi.resetModules();
     mockDbAll.mockReset();
     mockDbGet.mockReset();
+    mockDbRun.mockReset();
+    mockDbRun.mockResolvedValue({ changes: 0 });
   });
 
   it('returns teacher activities with policy summary', async () => {

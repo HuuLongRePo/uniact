@@ -73,15 +73,17 @@ Patterns already seen and partially fixed:
 **Next step:** continue route-by-route audit for legacy endpoints not yet covered by actor UAT.
 
 ### Cluster C - Policy/config hard-coding
-**Status:** acceptable for handover, not ideal long-term
+**Status:** reduced, still not ideal long-term
 
-Still largely hard-coded or semi-hard-coded:
-- QR fallback thresholds
+Recently reduced:
+- QR fallback thresholds moved into `system_config`
+- face-attendance pilot selection moved into `system_config` with selection modes + explicit activity list support
+
+Still largely hard-coded or semi-hard-coded elsewhere:
 - rule automation categories
-- face-attendance pilot selection
 - sensitive-action reason policy matrix
 
-**Next step:** convert into explicit config/policy tables after delivery hardening.
+**Next step:** continue converting the remaining rule/policy clusters into explicit config surfaces after delivery hardening.
 
 ### Cluster D - Feature depth gaps
 **Status:** backbone done, advanced depth still unfinished
@@ -96,7 +98,7 @@ Examples:
 
 ### 3.1 Attendance stack
 - **Done:** manual attendance backbone, QR backbone
-- **Partial:** QR fallback numeric thresholds not finalized
+- **Done:** QR fallback numeric thresholds + face-pilot selection are now DB-backed via `system_config`
 - **Partial:** face attendance roadmap chosen, but rollout not completed
 
 ### 3.2 Participation model

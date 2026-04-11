@@ -854,3 +854,34 @@ Quy ước trạng thái: TODO / DOING / BLOCKED / DONE
 - Rủi ro: thấp
 - Cách kiểm thử: chạy `npx.cmd eslint test/approval-workflow.test.ts` và nếu cần thì `npm run test:core-flows`
 - Tiêu chí hoàn thành: giảm rõ rệt hoặc loại bỏ cảnh báo `no-explicit-any` trong file test này mà không làm đổi hành vi test
+
+### T-164 - Config hóa attendance policy / face-pilot khỏi hard-code helper
+
+- Trạng thái: DONE
+- Mục tiêu: đưa QR fallback thresholds và face-pilot selection ra `system_config` thay vì giữ cứng trong helper/runtime code
+- Phạm vi file:
+  - `src/lib/attendance-policy.ts`
+  - `src/lib/attendance-policy-config.ts`
+  - `src/app/api/activities/[id]/attendance-policy/route.ts`
+  - `src/app/api/activities/[id]/attendance-policy/fallback/route.ts`
+  - `src/app/api/attendance/face/route.ts`
+  - `src/app/api/teacher/attendance/pilot-activities/route.ts`
+  - `src/app/api/system-config/route.ts`
+  - `src/infrastructure/db/db-setup.ts`
+- Lý do cần làm: wave tiếp theo có ROI cao nhất là giảm hard-code ở attendance cluster để rule/preset có thể điều chỉnh bằng vận hành thay vì sửa code
+- Rủi ro: trung bình
+- Cách kiểm thử: focused Vitest cho policy/config/routes + build + rerun UAT bundle attendance liên quan
+- Tiêu chí hoàn thành: policy runtime đọc config từ DB, có selection mode cho face-pilot, và cluster vẫn xanh
+
+### T-165 - Thêm admin surface + UAT cho attendance policy config
+
+- Trạng thái: DONE
+- Mục tiêu: biến attendance policy config thành flow admin có thể truy cập và quan sát thật từ sidebar thay vì chỉ tồn tại ở DB/API
+- Phạm vi file:
+  - `src/app/admin/system-config/attendance-policy/page.tsx`
+  - `src/components/Sidebar.tsx`
+  - `test/uat/actor-admin/03-attendance-policy-config.spec.ts`
+- Lý do cần làm: sau khi config hóa rule, cần có entrypoint vận hành rõ ràng cho admin để policy không trở thành config “ẩn”
+- Rủi ro: thấp
+- Cách kiểm thử: build + focused admin UAT + rerun bundle admin/teacher attendance liên quan
+- Tiêu chí hoàn thành: admin mở được page từ sidebar, xem được policy fields thật, không làm gãy teacher attendance backbone

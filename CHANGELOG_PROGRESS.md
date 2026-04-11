@@ -1,5 +1,59 @@
 # CHANGELOG PROGRESS
 
+## 2026-04-11 - Config hóa attendance policy / face-pilot và thêm admin surface
+
+### Đã làm
+
+- Tách policy config ra khỏi hard-code bằng `src/lib/attendance-policy-config.ts` với các default DB-backed trong `system_config`.
+- Thêm/seed nhóm config mới cho attendance policy:
+  - `attendance_qr_fallback_*`
+  - `attendance_face_pilot_*`
+  - `attendance_policy_version`
+- Cập nhật `src/lib/attendance-policy.ts` để policy hỗ trợ config runtime thay vì cố định ngưỡng trong helper.
+- Bổ sung support cho face-pilot selection mode:
+  - `heuristic_only`
+  - `selected_only`
+  - `selected_or_heuristic`
+- Cập nhật các route/runtime dùng policy config thật từ DB:
+  - `src/app/api/activities/[id]/attendance-policy/route.ts`
+  - `src/app/api/activities/[id]/attendance-policy/fallback/route.ts`
+  - `src/app/api/attendance/face/route.ts`
+  - `src/app/api/teacher/attendance/pilot-activities/route.ts`
+  - `src/app/api/system-config/route.ts`
+- Seed default config mới vào `src/infrastructure/db/db-setup.ts` để fresh DB có ngay policy surface.
+- Bổ sung trang admin mới `src/app/admin/system-config/attendance-policy/page.tsx` và nối link từ `src/components/Sidebar.tsx`.
+- Mở rộng teacher policy page để hiển thị version, preset, selection mode, selected-by-config và min confidence từ policy runtime.
+- Thêm / cập nhật regression:
+  - `test/attendance-policy.test.ts`
+  - `test/attendance-policy-config.test.ts`
+  - `test/attendance-policy-route.test.ts`
+  - `test/teacher-attendance-pilot-activities-route.test.ts`
+  - `test/face-attendance-route.test.ts`
+- Thêm admin UAT mới `test/uat/actor-admin/03-attendance-policy-config.spec.ts`.
+
+### Kiểm thử
+
+- Chạy `npm.cmd test -- test/attendance-policy.test.ts test/attendance-policy-config.test.ts test/attendance-policy-route.test.ts test/teacher-attendance-pilot-activities-route.test.ts test/face-attendance-route.test.ts`
+- Kết quả: `5` file test pass, `14` test pass, `0` fail
+- Chạy `npm.cmd run build`
+- Kết quả: build pass
+- Chạy `npx playwright test test/uat/actor-admin/03-attendance-policy-config.spec.ts --reporter=line`
+- Kết quả: `1` test pass
+- Chạy `npx playwright test test/uat/actor-admin/03-attendance-policy-config.spec.ts test/uat/actor-teacher/03-attendance-manual-bulk.spec.ts test/uat/actor-teacher/04-qr-refresh-close.spec.ts test/uat/actor-teacher/06-attendance-policy-face-pilot.spec.ts test/uat/actor-teacher/07-face-attendance-route.spec.ts --reporter=line`
+- Kết quả: `5` test pass
+
+### Kết quả
+
+- QR fallback thresholds và face-pilot selection không còn chỉ sống cứng trong helper; hiện đã có config surface thực sự trên `system_config`.
+- Admin có đường vận hành rõ ràng để xem/chỉnh attendance policy mà không phải sửa code.
+- Teacher policy page và các route face/attendance-policy đọc cùng một nguồn policy runtime từ DB.
+- Attendance cluster vẫn xanh ở mức build + focused regression + admin/teacher UAT.
+
+### Còn lại
+
+- Chưa có UAT ghi/lưu config rồi xác minh effect xuyên vai trò ở mức end-to-end; hiện đã được khóa mạnh ở unit/route + admin page UAT + teacher runtime UAT.
+- Các cluster còn lại ngoài attendance policy vẫn là candidate cho wave tiếp theo: dashboard/reporting depth, improvement/penalty depth, cleanup/hardening dài hạn.
+
 ## 2026-04-11 - Nối teacher flow vào attendance policy và thêm UAT face-pilot
 
 ### Đã làm

@@ -1,6 +1,8 @@
 export type AttendanceMode = 'manual' | 'qr' | 'face' | 'mixed';
+export type FacePilotSelectionMode = 'heuristic_only' | 'selected_only' | 'selected_or_heuristic';
 
 export interface AttendancePolicyInput {
+  activityId?: number | null;
   status?: string | null;
   approvalStatus?: string | null;
   maxParticipants?: number | null;
@@ -11,12 +13,30 @@ export interface AttendancePolicyInput {
 }
 
 export interface QrFallbackThresholds {
-  preset: 'pilot-default';
+  preset: string;
   responseTimeP95Ms: number;
   queueBacklog: number;
   scanFailureRate: number;
   minSampleSize: number;
   allowTeacherManualOverride: boolean;
+}
+
+export interface FacePilotPolicyConfig {
+  selectionMode: FacePilotSelectionMode;
+  selectedActivityIds: number[];
+  minParticipationCount: number;
+  minMaxParticipants: number;
+  requireMandatoryScope: boolean;
+  requireApprovedOrPublished: boolean;
+  teacherManualOverride: boolean;
+  minConfidenceScore: number;
+}
+
+export interface AttendancePolicyConfig {
+  version: string;
+  defaultMode: AttendanceMode;
+  qrFallback: QrFallbackThresholds;
+  facePilot: FacePilotPolicyConfig;
 }
 
 export interface FacePilotAssessment {
@@ -26,6 +46,8 @@ export interface FacePilotAssessment {
   reasons: string[];
   teacherManualOverride: boolean;
   minConfidenceScore: number;
+  selectionMode: FacePilotSelectionMode;
+  selectedByConfig: boolean;
 }
 
 export interface QrRuntimeMetrics {
@@ -35,15 +57,33 @@ export interface QrRuntimeMetrics {
   sampleSize?: number | null;
 }
 
-export function getDefaultQrFallbackThresholds(): QrFallbackThresholds {
+export function getDefaultAttendancePolicyConfig(): AttendancePolicyConfig {
   return {
-    preset: 'pilot-default',
-    responseTimeP95Ms: 1500,
-    queueBacklog: 25,
-    scanFailureRate: 0.12,
-    minSampleSize: 20,
-    allowTeacherManualOverride: true,
+    version: 'pilot-v1',
+    defaultMode: 'mixed',
+    qrFallback: {
+      preset: 'pilot-default',
+      responseTimeP95Ms: 1500,
+      queueBacklog: 25,
+      scanFailureRate: 0.12,
+      minSampleSize: 20,
+      allowTeacherManualOverride: true,
+    },
+    facePilot: {
+      selectionMode: 'selected_or_heuristic',
+      selectedActivityIds: [],
+      minParticipationCount: 50,
+      minMaxParticipants: 80,
+      requireMandatoryScope: true,
+      requireApprovedOrPublished: true,
+      teacherManualOverride: true,
+      minConfidenceScore: 0.82,
+    },
   };
+}
+
+export function getDefaultQrFallbackThresholds(): QrFallbackThresholds {
+  return getDefaultAttendancePolicyConfig().qrFallback;
 }
 
 function isApprovedOrPublished(input: AttendancePolicyInput) {
@@ -61,31 +101,72 @@ function hasMandatoryScope(input: AttendancePolicyInput) {
   return Number(input.mandatoryClassCount ?? 0) > 0;
 }
 
-function isHighVolume(input: AttendancePolicyInput) {
+function isHighVolume(input: AttendancePolicyInput, config: AttendancePolicyConfig) {
   const actual = Number(input.participationCount ?? 0);
   const expected = Number(input.maxParticipants ?? 0);
-  return actual >= 50 || expected >= 80;
+  return (
+    actual >= config.facePilot.minParticipationCount ||
+    expected >= config.facePilot.minMaxParticipants
+  );
 }
 
-export function assessFacePilotEligibility(input: AttendancePolicyInput): FacePilotAssessment {
+function isSelectedByConfig(input: AttendancePolicyInput, config: AttendancePolicyConfig) {
+  const activityId = Number(input.activityId ?? 0);
+  if (!Number.isInteger(activityId) || activityId <= 0) {
+    return false;
+  }
+  return config.facePilot.selectedActivityIds.includes(activityId);
+}
+
+function passesSelectionMode(
+  selectedByConfig: boolean,
+  highVolume: boolean,
+  mode: FacePilotSelectionMode
+) {
+  switch (mode) {
+    case 'selected_only':
+      return selectedByConfig;
+    case 'heuristic_only':
+      return highVolume;
+    case 'selected_or_heuristic':
+    default:
+      return selectedByConfig || highVolume;
+  }
+}
+
+export function assessFacePilotEligibility(
+  input: AttendancePolicyInput,
+  config: AttendancePolicyConfig = getDefaultAttendancePolicyConfig()
+): FacePilotAssessment {
   const reasons: string[] = [];
-  const approved = isApprovedOrPublished(input);
-  const mandatory = hasMandatoryScope(input);
-  const highVolume = isHighVolume(input);
+  const approved = config.facePilot.requireApprovedOrPublished
+    ? isApprovedOrPublished(input)
+    : true;
+  const mandatory = config.facePilot.requireMandatoryScope ? hasMandatoryScope(input) : true;
+  const highVolume = isHighVolume(input, config);
+  const selectedByConfig = isSelectedByConfig(input, config);
+  const selectionPass = passesSelectionMode(
+    selectedByConfig,
+    highVolume,
+    config.facePilot.selectionMode
+  );
 
   if (approved) reasons.push('activity đã được duyệt/publish');
   if (mandatory) reasons.push('có scope bắt buộc');
-  if (highVolume) reasons.push('quy mô đủ lớn cho pilot face attendance');
+  if (highVolume) reasons.push('quy mô đủ lớn theo ngưỡng face-pilot hiện tại');
+  if (selectedByConfig) reasons.push('activity nằm trong danh sách pilot face attendance đã chọn');
 
-  const eligible = approved && mandatory && highVolume;
+  const eligible = approved && mandatory && selectionPass;
 
   return {
     eligible,
     recommendedMode: 'mixed',
     preferredPrimaryMethod: eligible ? 'face' : 'qr',
     reasons,
-    teacherManualOverride: true,
-    minConfidenceScore: 0.82,
+    teacherManualOverride: config.facePilot.teacherManualOverride,
+    minConfidenceScore: config.facePilot.minConfidenceScore,
+    selectionMode: config.facePilot.selectionMode,
+    selectedByConfig,
   };
 }
 
@@ -118,14 +199,16 @@ export function shouldTriggerQrFallback(
   };
 }
 
-export function buildAttendancePolicy(input: AttendancePolicyInput) {
-  const qrFallback = getDefaultQrFallbackThresholds();
-  const facePilot = assessFacePilotEligibility(input);
+export function buildAttendancePolicy(
+  input: AttendancePolicyInput,
+  config: AttendancePolicyConfig = getDefaultAttendancePolicyConfig()
+) {
+  const facePilot = assessFacePilotEligibility(input, config);
 
   return {
-    version: 'pilot-v1',
-    defaultMode: 'mixed' as AttendanceMode,
-    qrFallback,
+    version: config.version,
+    defaultMode: config.defaultMode,
+    qrFallback: config.qrFallback,
     facePilot,
   };
 }

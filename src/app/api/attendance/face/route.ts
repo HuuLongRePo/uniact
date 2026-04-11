@@ -3,6 +3,7 @@ import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
 import { requireApiAuth } from '@/lib/guards';
 import { dbAll, dbGet, dbRun } from '@/lib/database';
 import { buildAttendancePolicy } from '@/lib/attendance-policy';
+import { loadAttendancePolicyConfig } from '@/lib/attendance-policy-config';
 
 export async function POST(request: NextRequest) {
   try {
@@ -64,15 +65,21 @@ export async function POST(request: NextRequest) {
       (row) => String(row.participation_mode ?? '').toLowerCase() === 'voluntary'
     ).length;
 
-    const policy = buildAttendancePolicy({
-      status: activity.status,
-      approvalStatus: activity.approval_status,
-      maxParticipants: activity.max_participants,
-      participationCount,
-      mandatoryClassCount,
-      voluntaryClassCount,
-      activityDateTime: activity.date_time,
-    });
+    const config = await loadAttendancePolicyConfig();
+
+    const policy = buildAttendancePolicy(
+      {
+        activityId,
+        status: activity.status,
+        approvalStatus: activity.approval_status,
+        maxParticipants: activity.max_participants,
+        participationCount,
+        mandatoryClassCount,
+        voluntaryClassCount,
+        activityDateTime: activity.date_time,
+      },
+      config
+    );
 
     if (!policy.facePilot.eligible) {
       throw new ApiError(

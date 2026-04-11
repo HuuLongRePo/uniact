@@ -116,7 +116,10 @@ describe('POST /api/attendance/face', () => {
       recommended_fallback: 'manual',
       teacher_manual_override: true,
     });
-    expect(mockDbRun).not.toHaveBeenCalled();
+    const attendanceWriteCalls = mockDbRun.mock.calls.filter((call) =>
+      String(call?.[0] || '').includes('attendance_records')
+    );
+    expect(attendanceWriteCalls).toHaveLength(0);
   });
 
   it('returns already_recorded when attendance record already exists', async () => {

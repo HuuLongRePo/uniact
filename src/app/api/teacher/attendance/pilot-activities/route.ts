@@ -3,6 +3,7 @@ import { dbAll, dbGet } from '@/lib/database';
 import { requireApiRole } from '@/lib/guards';
 import { errorResponse, successResponse } from '@/lib/api-response';
 import { buildAttendancePolicy } from '@/lib/attendance-policy';
+import { loadAttendancePolicyConfig } from '@/lib/attendance-policy-config';
 
 export async function GET(request: NextRequest) {
   try {
@@ -22,6 +23,7 @@ export async function GET(request: NextRequest) {
       user.role === 'admin' ? [] : [user.id]
     );
 
+    const config = await loadAttendancePolicyConfig();
     const rows = [] as any[];
 
     for (const activity of activities) {
@@ -53,15 +55,19 @@ export async function GET(request: NextRequest) {
         (row) => String(row.participation_mode ?? '').toLowerCase() === 'voluntary'
       ).length;
 
-      const policy = buildAttendancePolicy({
-        status: activity.status,
-        approvalStatus: activity.approval_status,
-        maxParticipants: activity.max_participants,
-        participationCount,
-        mandatoryClassCount,
-        voluntaryClassCount,
-        activityDateTime: activity.date_time,
-      });
+      const policy = buildAttendancePolicy(
+        {
+          activityId: activity.id,
+          status: activity.status,
+          approvalStatus: activity.approval_status,
+          maxParticipants: activity.max_participants,
+          participationCount,
+          mandatoryClassCount,
+          voluntaryClassCount,
+          activityDateTime: activity.date_time,
+        },
+        config
+      );
 
       rows.push({
         ...activity,
@@ -72,6 +78,8 @@ export async function GET(request: NextRequest) {
           eligible: policy.facePilot.eligible,
           preferred_primary_method: policy.facePilot.preferredPrimaryMethod,
           recommended_mode: policy.facePilot.recommendedMode,
+          selection_mode: policy.facePilot.selectionMode,
+          selected_by_config: policy.facePilot.selectedByConfig,
         },
       });
     }

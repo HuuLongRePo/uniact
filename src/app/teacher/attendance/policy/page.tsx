@@ -36,6 +36,9 @@ type AttendancePolicyResponse = {
       preferredPrimaryMethod: 'manual' | 'qr' | 'face';
       reasons: string[];
       teacherManualOverride: boolean;
+      minConfidenceScore: number;
+      selectionMode: 'heuristic_only' | 'selected_only' | 'selected_or_heuristic';
+      selectedByConfig: boolean;
     };
   };
 };
@@ -265,7 +268,11 @@ export default function TeacherAttendancePolicyPage() {
 
             {policyData ? (
               <div className="space-y-4">
-                <div className="grid gap-3 md:grid-cols-3">
+                <div className="grid gap-3 md:grid-cols-4">
+                  <div className="rounded-lg bg-gray-50 p-3">
+                    <div className="text-xs uppercase tracking-wide text-gray-500">Policy version</div>
+                    <div className="mt-1 text-base font-semibold text-gray-900">{policyData.policy.version}</div>
+                  </div>
                   <div className="rounded-lg bg-gray-50 p-3">
                     <div className="text-xs uppercase tracking-wide text-gray-500">Default mode</div>
                     <div className="mt-1 text-base font-semibold text-gray-900">{policyData.policy.defaultMode}</div>
@@ -302,6 +309,7 @@ export default function TeacherAttendancePolicyPage() {
                 <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
                   <div className="text-sm font-semibold text-blue-900">QR fallback preset</div>
                   <ul className="mt-2 space-y-1 text-sm text-blue-800">
+                    <li>preset: {policyData.policy.qrFallback.preset}</li>
                     <li>p95 response time: {policyData.policy.qrFallback.responseTimeP95Ms} ms</li>
                     <li>queue backlog: {policyData.policy.qrFallback.queueBacklog}</li>
                     <li>scan failure rate: {(policyData.policy.qrFallback.scanFailureRate * 100).toFixed(0)}%</li>
@@ -312,7 +320,21 @@ export default function TeacherAttendancePolicyPage() {
 
                 <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
                   <div className="text-sm font-semibold text-emerald-900">Face pilot reasons</div>
-                  <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-emerald-800">
+                  <div className="mt-2 grid gap-3 md:grid-cols-3">
+                    <div className="rounded-lg border border-emerald-200 bg-white/70 p-3 text-sm text-emerald-900">
+                      <div className="text-xs uppercase tracking-wide text-emerald-700">selection mode</div>
+                      <div className="mt-1 font-semibold">{policyData.policy.facePilot.selectionMode}</div>
+                    </div>
+                    <div className="rounded-lg border border-emerald-200 bg-white/70 p-3 text-sm text-emerald-900">
+                      <div className="text-xs uppercase tracking-wide text-emerald-700">selected by config</div>
+                      <div className="mt-1 font-semibold">{policyData.policy.facePilot.selectedByConfig ? 'có' : 'không'}</div>
+                    </div>
+                    <div className="rounded-lg border border-emerald-200 bg-white/70 p-3 text-sm text-emerald-900">
+                      <div className="text-xs uppercase tracking-wide text-emerald-700">min confidence</div>
+                      <div className="mt-1 font-semibold">{policyData.policy.facePilot.minConfidenceScore.toFixed(2)}</div>
+                    </div>
+                  </div>
+                  <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-emerald-800">
                     {policyData.policy.facePilot.reasons.length > 0 ? (
                       policyData.policy.facePilot.reasons.map((reason) => <li key={reason}>{reason}</li>)
                     ) : (
