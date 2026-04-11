@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterEach, afterAll, vi } from 'vitest'
 import { dbRun, dbGet, dbAll, dbReady } from '@/lib/db-core'
 import { NextRequest } from 'next/server'
+import { ensureBonusTestSchema } from './bonus-test-schema'
 
 // Mock the auth guard to bypass real auth in tests
 vi.mock('@/lib/guards', () => ({
@@ -68,35 +69,7 @@ describe('Bonus API Endpoints', () => {
 
   beforeAll(async () => {
     await dbReady()
-    // Ensure suggested_bonus_points table exists (from migration)
-    try {
-      const tableCheck = await dbGet("SELECT name FROM sqlite_master WHERE type='table' AND name='suggested_bonus_points'")
-      if (!tableCheck) {
-        // Manually create if missing (fallback for test env)
-        await dbRun(`
-          CREATE TABLE IF NOT EXISTS suggested_bonus_points (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            student_id INTEGER,
-            source_type TEXT,
-            source_id INTEGER,
-            points REAL,
-            reason TEXT,
-            status TEXT,
-            author_id INTEGER,
-            approver_id INTEGER,
-            evidence_url TEXT,
-            apply_to TEXT DEFAULT 'hoc_tap',
-            source_provenance TEXT DEFAULT 'manual',
-            term TEXT,
-            created_at TEXT,
-            updated_at TEXT
-          )
-        `)
-      }
-    } catch (e) {
-      console.warn('Could not verify suggested_bonus_points table:', e)
-    }
-
+    await ensureBonusTestSchema()
     testData = await setupTestData()
   })
 

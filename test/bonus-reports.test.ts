@@ -13,62 +13,19 @@ import {
   generateBonusStatistics,
   generateExportFilename,
 } from '@/lib/bonus-reports'
+import { ensureBonusTestSchema } from './bonus-test-schema'
 
 describe('Bonus Reports Module', () => {
   beforeAll(async () => {
     await dbReady()
-    // Ensure all necessary tables exist
-    try {
-      // Create users table
-      await dbRun(`
-        CREATE TABLE IF NOT EXISTS users (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          email TEXT UNIQUE NOT NULL,
-          name TEXT NOT NULL,
-          role TEXT DEFAULT 'student',
-          password_hash TEXT,
-          class_id INTEGER,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-      `)
-
-      // Create classes table
-      await dbRun(`
-        CREATE TABLE IF NOT EXISTS classes (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          name TEXT UNIQUE NOT NULL,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-      `)
-
-      // Create suggested_bonus_points table
-      await dbRun(`
-        CREATE TABLE IF NOT EXISTS suggested_bonus_points (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          student_id INTEGER NOT NULL,
-          source_type TEXT,
-          source_id INTEGER,
-          points REAL NOT NULL,
-          status TEXT DEFAULT 'pending',
-          author_id INTEGER,
-          approver_id INTEGER,
-          evidence_url TEXT,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          FOREIGN KEY (student_id) REFERENCES users(id),
-          FOREIGN KEY (author_id) REFERENCES users(id),
-          FOREIGN KEY (approver_id) REFERENCES users(id)
-        )
-      `)
-    } catch (e) {
-      console.warn('Table setup warning:', e)
-    }
+    await ensureBonusTestSchema()
 
     // Clear any existing test data
     try {
       await dbRun('DELETE FROM suggested_bonus_points')
       await dbRun("DELETE FROM users WHERE email LIKE ?", ['%test@example.com'])
       await dbRun("DELETE FROM classes WHERE name LIKE ?", ['%Test%'])
+      await dbRun("DELETE FROM classes WHERE name IN (?, ?)", ['Lớp A1', 'Lớp A2'])
     } catch (e) {
       // Tables might not exist yet
     }

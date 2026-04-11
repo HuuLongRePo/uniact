@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterEach, afterAll } from 'vitest'
 import { dbRun, dbGet, dbAll, dbReady } from '@/lib/db-core'
 import { BonusEngine, createDefaultEngine } from '@/lib/bonus-engine'
+import { ensureBonusTestSchema } from './bonus-test-schema'
 
 /**
  * Integration Tests: Full Bonus Workflow
@@ -71,35 +72,7 @@ describe('Bonus Module - Full Integration Tests', () => {
   beforeAll(async () => {
     // Avoid racing with async migration runner in db-core.
     await dbReady()
-
-    // Ensure suggested_bonus_points table exists (fallback for test env)
-    try {
-      const tableCheck = await dbGet("SELECT name FROM sqlite_master WHERE type='table' AND name='suggested_bonus_points'")
-      if (!tableCheck) {
-        await dbRun(`
-          CREATE TABLE IF NOT EXISTS suggested_bonus_points (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            student_id INTEGER,
-            source_type TEXT,
-            source_id INTEGER,
-            points REAL,
-            reason TEXT,
-            status TEXT,
-            author_id INTEGER,
-            approver_id INTEGER,
-            evidence_url TEXT,
-            apply_to TEXT DEFAULT 'hoc_tap',
-            source_provenance TEXT DEFAULT 'manual',
-            term TEXT,
-            created_at TEXT,
-            updated_at TEXT
-          )
-        `)
-      }
-    } catch (e) {
-      console.warn('Could not verify suggested_bonus_points table:', e)
-    }
-
+    await ensureBonusTestSchema()
     context = await setupTestUsers()
   })
 
