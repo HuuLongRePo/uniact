@@ -1,12 +1,21 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useEffectEventCompat } from '@/lib/useEffectEventCompat';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
-import { Trophy, Search, Download, RefreshCw, Edit2, Award } from 'lucide-react';
+import {
+  Award,
+  Download,
+  Edit2,
+  RefreshCw,
+  Search,
+  ShieldAlert,
+  ShieldPlus,
+  Trophy,
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface StudentScore {
@@ -22,12 +31,69 @@ interface StudentScore {
   average_count: number;
   participated_count: number;
   awards_count: number;
+  award_points: number;
+  adjustment_points: number;
+  bonus_adjustment_points: number;
+  penalty_points: number;
   rank: number;
+}
+
+interface ScoresSummary {
+  total_students: number;
+  average_points: number;
+  total_award_points: number;
+  total_bonus_adjustment_points: number;
+  total_penalty_points: number;
+  adjusted_students_count: number;
+  penalized_students_count: number;
+  rewarded_students_count: number;
+}
+
+interface ScoresInsights {
+  top_penalty_students: StudentScore[];
+  top_bonus_students: StudentScore[];
+  recent_adjustments: Array<{
+    id: number;
+    student_id: number;
+    student_name: string;
+    class_name: string | null;
+    points: number;
+    source: string;
+    calculated_at: string;
+    adjustment_type: 'bonus' | 'penalty';
+    reason: string;
+  }>;
 }
 
 interface ClassOption {
   id: number;
   name: string;
+}
+
+const EMPTY_SUMMARY: ScoresSummary = {
+  total_students: 0,
+  average_points: 0,
+  total_award_points: 0,
+  total_bonus_adjustment_points: 0,
+  total_penalty_points: 0,
+  adjusted_students_count: 0,
+  penalized_students_count: 0,
+  rewarded_students_count: 0,
+};
+
+const EMPTY_INSIGHTS: ScoresInsights = {
+  top_penalty_students: [],
+  top_bonus_students: [],
+  recent_adjustments: [],
+};
+
+function getClassesFromResponse(payload: unknown): ClassOption[] {
+  if (!payload || typeof payload !== 'object') return [];
+  const record = payload as {
+    data?: { classes?: ClassOption[] };
+    classes?: ClassOption[];
+  };
+  return record.data?.classes ?? record.classes ?? [];
 }
 
 export default function AdminStudentScoresPage() {
@@ -37,6 +103,8 @@ export default function AdminStudentScoresPage() {
   const [isRecalculateConfirmOpen, setIsRecalculateConfirmOpen] = useState(false);
   const [scores, setScores] = useState<StudentScore[]>([]);
   const [filteredScores, setFilteredScores] = useState<StudentScore[]>([]);
+  const [summary, setSummary] = useState<ScoresSummary>(EMPTY_SUMMARY);
+  const [insights, setInsights] = useState<ScoresInsights>(EMPTY_INSIGHTS);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [classFilter, setClassFilter] = useState<string>('all');
@@ -74,7 +142,7 @@ export default function AdminStudentScoresPage() {
       return;
     }
     if (user) {
-      fetchData();
+      void fetchData();
     }
   }, [user, authLoading, router]);
 
@@ -93,11 +161,13 @@ export default function AdminStudentScoresPage() {
       if (!scoresRes.ok) throw new Error('Failed to fetch scores');
 
       const scoresData = await scoresRes.json();
-      setScores(scoresData.scores || []);
+      setScores(scoresData.scores || scoresData.data?.scores || []);
+      setSummary(scoresData.summary || scoresData.data?.summary || EMPTY_SUMMARY);
+      setInsights(scoresData.insights || scoresData.data?.insights || EMPTY_INSIGHTS);
 
       if (classesRes.ok) {
         const classesData = await classesRes.json();
-        setClasses(classesData.classes || []);
+        setClasses(getClassesFromResponse(classesData));
       }
     } catch (_error) {
       toast.error('Không thể tải dữ liệu điểm');
@@ -116,7 +186,7 @@ export default function AdminStudentScoresPage() {
 
       const data = await res.json();
       toast.success(`Đã tính lại điểm cho ${data.updated} sinh viên`);
-      fetchData();
+      void fetchData();
     } catch (_error) {
       toast.error('Tính lại điểm thất bại');
     }
@@ -131,11 +201,14 @@ export default function AdminStudentScoresPage() {
         'Lớp',
         'Tổng điểm',
         'Hoạt động',
+        'Tham gia',
         'Xuất sắc',
         'Tốt',
         'Trung bình',
-        'Tham gia',
         'Giải thưởng',
+        'Điểm thưởng',
+        'Điều chỉnh cộng',
+        'Điều chỉnh trừ',
       ].join(','),
       ...filteredScores.map((s) =>
         [
@@ -145,11 +218,14 @@ export default function AdminStudentScoresPage() {
           s.class_name || '-',
           s.total_points,
           s.activities_count,
+          s.participated_count,
           s.excellent_count,
           s.good_count,
           s.average_count,
-          s.participated_count,
           s.awards_count,
+          s.award_points,
+          s.bonus_adjustment_points,
+          s.penalty_points,
         ].join(',')
       ),
     ].join('\n');
@@ -164,78 +240,166 @@ export default function AdminStudentScoresPage() {
     toast.success(`Đã export ${filteredScores.length} sinh viên`);
   };
 
+  const filteredStats = useMemo(
+    () => ({
+      averagePoints:
+        filteredScores.length > 0
+          ? filteredScores.reduce((sum, score) => sum + score.total_points, 0) / filteredScores.length
+          : 0,
+      totalBonusAdjustments: filteredScores.reduce(
+        (sum, score) => sum + score.bonus_adjustment_points,
+        0
+      ),
+      totalPenaltyPoints: filteredScores.reduce((sum, score) => sum + score.penalty_points, 0),
+      penalizedStudents: filteredScores.filter((score) => score.penalty_points > 0).length,
+    }),
+    [filteredScores]
+  );
+
   if (authLoading || loading) {
     return <LoadingSpinner />;
   }
 
-  const stats = {
-    totalStudents: scores.length,
-    avgPoints:
-      scores.length > 0
-        ? (scores.reduce((sum, s) => sum + s.total_points, 0) / scores.length).toFixed(1)
-        : 0,
-    excellentCount: scores.filter((s) => s.total_points >= 500).length,
-    awardedCount: scores.filter((s) => s.awards_count > 0).length,
-  };
-
   return (
     <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
+      <div className="mx-auto max-w-7xl">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">📊 Bảng Điểm Sinh Viên</h1>
-          <p className="text-gray-600 mt-2">Quản lý và xem điểm rèn luyện của tất cả sinh viên</p>
+          <p className="mt-2 text-gray-600">
+            Quản lý điểm rèn luyện, theo dõi điều chỉnh thưởng/phạt và phát hiện các hotspot cần can thiệp.
+          </p>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-          <div className="bg-white rounded-lg shadow-lg p-6">
+        <div className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-5">
+          <div className="rounded-lg bg-white p-6 shadow-lg">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Tổng sinh viên</p>
-                <p className="text-3xl font-bold text-blue-600 mt-1">{stats.totalStudents}</p>
+                <p className="mt-1 text-3xl font-bold text-blue-600">{summary.total_students}</p>
               </div>
-              <Trophy className="w-12 h-12 text-blue-600 opacity-20" />
+              <Trophy className="h-12 w-12 text-blue-600 opacity-20" />
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-lg p-6">
+          <div className="rounded-lg bg-white p-6 shadow-lg">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Điểm trung bình</p>
-                <p className="text-3xl font-bold text-green-600 mt-1">{stats.avgPoints}</p>
+                <p className="mt-1 text-3xl font-bold text-green-600">
+                  {filteredStats.averagePoints.toFixed(1)}
+                </p>
               </div>
-              <Award className="w-12 h-12 text-green-600 opacity-20" />
+              <Award className="h-12 w-12 text-green-600 opacity-20" />
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-lg p-6">
+          <div className="rounded-lg bg-white p-6 shadow-lg" data-testid="scores-bonus-card">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Xuất sắc (≥500)</p>
-                <p className="text-3xl font-bold text-purple-600 mt-1">{stats.excellentCount}</p>
+                <p className="text-sm text-gray-600">Điều chỉnh cộng</p>
+                <p className="mt-1 text-3xl font-bold text-emerald-600">
+                  {filteredStats.totalBonusAdjustments}
+                </p>
               </div>
-              <Trophy className="w-12 h-12 text-purple-600 opacity-20" />
+              <ShieldPlus className="h-12 w-12 text-emerald-600 opacity-20" />
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-lg p-6">
+          <div className="rounded-lg bg-white p-6 shadow-lg" data-testid="scores-penalty-card">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Có giải thưởng</p>
-                <p className="text-3xl font-bold text-yellow-600 mt-1">{stats.awardedCount}</p>
+                <p className="text-sm text-gray-600">Điều chỉnh trừ</p>
+                <p className="mt-1 text-3xl font-bold text-red-600">
+                  {filteredStats.totalPenaltyPoints}
+                </p>
               </div>
-              <Award className="w-12 h-12 text-yellow-600 opacity-20" />
+              <ShieldAlert className="h-12 w-12 text-red-600 opacity-20" />
+            </div>
+          </div>
+
+          <div className="rounded-lg bg-white p-6 shadow-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Sinh viên bị trừ điểm</p>
+                <p className="mt-1 text-3xl font-bold text-orange-600">
+                  {filteredStats.penalizedStudents}
+                </p>
+              </div>
+              <ShieldAlert className="h-12 w-12 text-orange-600 opacity-20" />
             </div>
           </div>
         </div>
 
-        {/* Filters & Actions */}
-        <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+        <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <div className="rounded-lg border border-red-200 bg-red-50 p-6 shadow-sm" data-testid="scores-penalty-hotspots">
+            <h2 className="text-lg font-semibold text-red-900">Hotspot bị trừ điểm</h2>
+            <p className="mt-1 text-sm text-red-800">
+              Những sinh viên có tổng điểm bị trừ cao nhất từ adjustment history.
+            </p>
+            <div className="mt-4 space-y-3">
+              {insights.top_penalty_students.length === 0 ? (
+                <div className="rounded-lg bg-white/80 p-4 text-sm text-red-900">
+                  Chưa có sinh viên nào bị trừ điểm trong hệ thống hiện tại.
+                </div>
+              ) : (
+                insights.top_penalty_students.map((student) => (
+                  <div key={student.user_id} className="rounded-lg bg-white/80 p-4">
+                    <div className="font-medium text-gray-900">{student.name}</div>
+                    <div className="mt-1 text-sm text-gray-500">{student.class_name || 'Chưa có lớp'}</div>
+                    <div className="mt-2 text-sm text-red-800">
+                      Tổng điểm trừ: <span className="font-semibold">{student.penalty_points}</span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-6 shadow-sm" data-testid="scores-adjustment-log">
+            <h2 className="text-lg font-semibold text-emerald-900">Điều chỉnh gần đây</h2>
+            <p className="mt-1 text-sm text-emerald-800">
+              Lịch sử cộng/trừ điểm gần nhất để đối chiếu reason và rà động thái bất thường.
+            </p>
+            <div className="mt-4 space-y-3">
+              {insights.recent_adjustments.length === 0 ? (
+                <div className="rounded-lg bg-white/80 p-4 text-sm text-emerald-900">
+                  Chưa có điều chỉnh điểm gần đây.
+                </div>
+              ) : (
+                insights.recent_adjustments.map((adjustment) => (
+                  <div key={adjustment.id} className="rounded-lg bg-white/80 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="font-medium text-gray-900">{adjustment.student_name}</div>
+                        <div className="text-sm text-gray-500">{adjustment.class_name || 'Chưa có lớp'}</div>
+                        <div className="mt-2 text-sm text-gray-700">{adjustment.reason || 'Không ghi lý do'}</div>
+                      </div>
+                      <span
+                        className={`rounded-full px-3 py-1 text-xs font-medium ${
+                          adjustment.adjustment_type === 'bonus'
+                            ? 'bg-emerald-100 text-emerald-800'
+                            : 'bg-red-100 text-red-800'
+                        }`}
+                      >
+                        {adjustment.adjustment_type === 'bonus' ? '+' : '-'}
+                        {Math.abs(adjustment.points)}
+                      </span>
+                    </div>
+                    <div className="mt-2 text-xs text-gray-500">
+                      {new Date(adjustment.calculated_at).toLocaleString('vi-VN')}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="mb-6 rounded-lg bg-white p-6 shadow-lg">
+          <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <Search className="w-4 h-4 inline mr-1" />
+              <label className="mb-2 block text-sm font-medium text-gray-700">
+                <Search className="mr-1 inline h-4 w-4" />
                 Tìm kiếm
               </label>
               <input
@@ -243,16 +407,16 @@ export default function AdminStudentScoresPage() {
                 placeholder="Tên hoặc email..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Lớp</label>
+              <label className="mb-2 block text-sm font-medium text-gray-700">Lớp</label>
               <select
                 value={classFilter}
                 onChange={(e) => setClassFilter(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500"
               >
                 <option value="all">Tất cả lớp</option>
                 {classes.map((c) => (
@@ -264,13 +428,13 @@ export default function AdminStudentScoresPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Điểm tối thiểu</label>
+              <label className="mb-2 block text-sm font-medium text-gray-700">Điểm tối thiểu</label>
               <input
                 type="number"
                 placeholder="0"
                 value={minPoints}
                 onChange={(e) => setMinPoints(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
@@ -281,7 +445,7 @@ export default function AdminStudentScoresPage() {
                   setClassFilter('all');
                   setMinPoints('');
                 }}
-                className="w-full px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                className="w-full rounded-lg border border-gray-300 px-4 py-2 text-gray-700 hover:bg-gray-50"
               >
                 Xóa bộ lọc
               </button>
@@ -291,52 +455,54 @@ export default function AdminStudentScoresPage() {
           <div className="flex gap-2">
             <button
               onClick={() => setIsRecalculateConfirmOpen(true)}
-              className="flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+              className="flex items-center rounded-lg bg-purple-600 px-4 py-2 text-white hover:bg-purple-700"
             >
-              <RefreshCw className="w-4 h-4 mr-2" />
+              <RefreshCw className="mr-2 h-4 w-4" />
               Tính lại điểm
             </button>
             <button
               onClick={handleExport}
-              className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+              className="flex items-center rounded-lg bg-green-600 px-4 py-2 text-white hover:bg-green-700"
             >
-              <Download className="w-4 h-4 mr-2" />
+              <Download className="mr-2 h-4 w-4" />
               Export CSV
             </button>
           </div>
         </div>
 
-        {/* Scores Table */}
-        <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+        <div className="overflow-hidden rounded-lg bg-white shadow-lg">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">
                     Hạng
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">
                     Sinh viên
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">
                     Lớp
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">
                     Tổng điểm
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">
+                    Điểm thưởng
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">
+                    Điều chỉnh cộng
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">
+                    Điều chỉnh trừ
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">
                     Hoạt động
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Xuất sắc
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Tốt
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">
                     Giải thưởng
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">
                     Thao tác
                   </th>
                 </tr>
@@ -344,7 +510,7 @@ export default function AdminStudentScoresPage() {
               <tbody className="divide-y divide-gray-200">
                 {filteredScores.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="px-4 py-8 text-center text-gray-500">
+                    <td colSpan={10} className="px-4 py-8 text-center text-gray-500">
                       Không có dữ liệu
                     </td>
                   </tr>
@@ -353,7 +519,7 @@ export default function AdminStudentScoresPage() {
                     <tr key={score.user_id} className="hover:bg-gray-50">
                       <td className="px-4 py-3">
                         <span
-                          className={`inline-flex items-center justify-center w-8 h-8 rounded-full font-bold ${
+                          className={`inline-flex h-8 w-8 items-center justify-center rounded-full font-bold ${
                             score.rank === 1
                               ? 'bg-yellow-100 text-yellow-700'
                               : score.rank === 2
@@ -372,23 +538,20 @@ export default function AdminStudentScoresPage() {
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-600">{score.class_name || '-'}</td>
                       <td className="px-4 py-3">
-                        <span className="font-bold text-blue-600 text-lg">
-                          {score.total_points}
-                        </span>
+                        <span className="text-lg font-bold text-blue-600">{score.total_points}</span>
+                      </td>
+                      <td className="px-4 py-3 text-sm font-medium text-emerald-700">
+                        {score.award_points}
+                      </td>
+                      <td className="px-4 py-3 text-sm font-medium text-emerald-700">
+                        {score.bonus_adjustment_points}
+                      </td>
+                      <td className="px-4 py-3 text-sm font-medium text-red-700">
+                        {score.penalty_points}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-600">{score.activities_count}</td>
                       <td className="px-4 py-3">
-                        <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full">
-                          {score.excellent_count}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">
-                          {score.good_count}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded-full">
+                        <span className="rounded-full bg-yellow-100 px-2 py-1 text-xs text-yellow-700">
                           {score.awards_count}
                         </span>
                       </td>
@@ -397,7 +560,7 @@ export default function AdminStudentScoresPage() {
                           onClick={() => router.push(`/admin/scores/${score.user_id}/adjust`)}
                           className="flex items-center text-blue-600 hover:text-blue-700"
                         >
-                          <Edit2 className="w-4 h-4 mr-1" />
+                          <Edit2 className="mr-1 h-4 w-4" />
                           Điều chỉnh
                         </button>
                       </td>
@@ -408,7 +571,7 @@ export default function AdminStudentScoresPage() {
             </table>
           </div>
 
-          <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
+          <div className="border-t border-gray-200 bg-gray-50 px-6 py-4">
             <p className="text-sm text-gray-600">
               Hiển thị {filteredScores.length} / {scores.length} sinh viên
             </p>

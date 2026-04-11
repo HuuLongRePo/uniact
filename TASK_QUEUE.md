@@ -989,6 +989,19 @@ Quy ước trạng thái: TODO / DOING / BLOCKED / DONE
 - Cách kiểm thử: focused admin report regression + full Vitest + build
 - Tiêu chí hoàn thành: admin report có method mix, not-participated hotspots, summary/export đồng bộ semantics mới
 
+### T-175 - Deepen admin scores governance với bonus/penalty visibility
+
+- Trạng thái: DONE
+- Mục tiêu: biến admin scores từ leaderboard tổng điểm thành công cụ nhìn thấy reward/penalty governance và adjustment hotspots
+- Phạm vi file:
+  - `src/app/api/admin/scores/route.ts`
+  - `src/app/admin/scores/page.tsx`
+  - `test/admin-scores-route.test.ts`
+- Lý do cần làm: sau wave reporting/admin analytics, scoring depth vẫn còn nông và chưa lộ rõ award/bonus/penalty behavior cho quản trị
+- Rủi ro: thấp-trung bình
+- Cách kiểm thử: focused scores route regression + full Vitest + build
+- Tiêu chí hoàn thành: admin thấy được bonus/penalty totals, hotspot sinh viên bị trừ điểm, recent adjustments, export đồng bộ cột mới
+
 ### T-174 - Tách admin activity statistics helper khỏi page/harness noise
 
 - Trạng thái: DONE

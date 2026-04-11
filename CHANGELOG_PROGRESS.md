@@ -1,5 +1,56 @@
 # CHANGELOG PROGRESS
 
+## 2026-04-11 - Deepen admin score governance / bonus-penalty visibility
+
+### Đã làm
+
+- Mở rộng `src/app/api/admin/scores/route.ts` để trả thêm governance analytics thay vì chỉ total points leaderboard:
+  - `award_points`
+  - `adjustment_points`
+  - `bonus_adjustment_points`
+  - `penalty_points`
+  - `summary` tổng hợp reward/penalty
+  - `insights.top_penalty_students`
+  - `insights.top_bonus_students`
+  - `insights.recent_adjustments`
+- CSV export của admin scores hiện có thêm các cột:
+  - `Điểm thưởng`
+  - `Điều chỉnh cộng`
+  - `Điều chỉnh trừ`
+- Cập nhật `src/app/admin/scores/page.tsx` để admin nhìn thấy rõ hơn bức tranh reward/penalty:
+  - card `Điều chỉnh cộng`
+  - card `Điều chỉnh trừ`
+  - card `Sinh viên bị trừ điểm`
+  - hotspot section cho các sinh viên bị trừ điểm nhiều nhất
+  - recent adjustment log với reason + timestamp
+  - bảng chi tiết có thêm breakdown `award_points`, `bonus_adjustment_points`, `penalty_points`
+- Batch này cũng sửa nhẹ parsing `/api/classes` response trên admin scores page để không còn phụ thuộc vào shape cũ.
+- Bổ sung regression mới `test/admin-scores-route.test.ts` để khóa summary/insights/export mới.
+
+### Kiểm thử
+
+- Chạy focused Vitest:
+  - `npm.cmd test -- test/admin-scores-route.test.ts`
+  - Kết quả: `1` file pass, `2` tests pass
+- Chạy full Vitest suite:
+  - `npm.cmd test`
+  - Kết quả: pass
+- Chạy production build:
+  - `npm.cmd run build`
+  - Kết quả: build pass
+
+### Kết quả
+
+- Admin scores không còn chỉ là bảng xếp hạng tổng điểm; giờ đã có visibility rõ cho bonus/penalty governance và recent adjustments.
+- Reward/penalty depth được kéo gần hơn với business reality mà không mở scope quá rộng sang rule engine mới.
+- Repo vẫn giữ trạng thái xanh sau batch này.
+
+### Còn lại
+
+- Chưa có admin UAT riêng cho scores governance page.
+- Nếu tiếp tục, wave ROI còn lại hợp lý là alerts/escalation analytics sâu hơn hoặc hardening/cleanup dài đuôi.
+
+
 ## 2026-04-11 - Deepen admin activity analytics / attendance operations reporting
 
 ### Đã làm
