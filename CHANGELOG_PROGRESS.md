@@ -1,5 +1,37 @@
 # CHANGELOG PROGRESS
 
+## 2026-04-11 - Ổn định attendance policy / face-pilot slice
+
+### Đã làm
+
+- Audit batch mới xoay quanh `src/lib/attendance-policy.ts`, các route attendance-policy, face attendance và teacher pilot activities.
+- Phát hiện lỗi build-level do các route mới gọi `ApiError` sai thứ tự tham số sau khi helper này đã dùng signature `code, message, status, details`.
+- Sửa `src/app/api/activities/[id]/attendance-policy/route.ts` và `src/app/api/activities/[id]/attendance-policy/fallback/route.ts` để trả lỗi đúng contract.
+- Sửa `src/app/api/attendance/face/route.ts` để toàn bộ nhánh lỗi (`INVALID_ACTIVITY_ID`, `INVALID_STUDENT_ID`, `ACTIVITY_NOT_FOUND`, `FACE_PILOT_NOT_ELIGIBLE`, `FACE_NOT_VERIFIED`, `FACE_LOW_CONFIDENCE`, `PARTICIPATION_NOT_FOUND`) dùng đúng `ApiError` contract.
+- Bổ sung regression mới `test/face-attendance-route.test.ts` để khóa 3 nhánh quan trọng:
+  - ghi nhận face attendance thành công khi đủ điều kiện pilot
+  - fallback khi low confidence
+  - idempotent khi attendance đã được ghi trước đó
+
+### Kiểm thử
+
+- Chạy `npm.cmd test -- test/attendance-policy.test.ts test/attendance-policy-route.test.ts test/teacher-attendance-pilot-activities-route.test.ts test/face-attendance-route.test.ts`
+- Kết quả: `4` file test pass, `10` test pass, `0` fail
+- Chạy `npm.cmd run build`
+- Kết quả: build pass
+
+### Kết quả
+
+- Attendance policy slice không còn gãy ở bước type-check/build.
+- Batch face-pilot hiện đã có cả unit/route regression tối thiểu thay vì chỉ có policy helper tests.
+- Handover state vẫn giữ xanh ở mức build + focused regression cho cluster mới này.
+
+### Còn lại
+
+- Chưa có link điều hướng rõ từ teacher sidebar sang màn `teacher/attendance/policy`.
+- Chưa có UAT/e2e cho face-attendance pilot; hiện mới dừng ở route/policy regression.
+- Chưa chốt danh sách activity pilot thực tế ngoài heuristic mandatory/high-volume/high-identity.
+
 ## 2026-04-06 - Khảo sát sâu và lập kế hoạch
 
 ### Đã làm

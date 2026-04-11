@@ -2,9 +2,9 @@ import { NextRequest } from 'next/server';
 import { dbAll, dbGet } from '@/lib/database';
 import { requireApiAuth } from '@/lib/guards';
 import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
-import { buildAttendancePolicy } from '@/lib/attendance-policy';
+import { buildAttendancePolicy, shouldTriggerQrFallback } from '@/lib/attendance-policy';
 
-export async function GET(
+export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -17,6 +17,14 @@ export async function GET(
     if (!Number.isFinite(activityId)) {
       throw new ApiError('INVALID_ACTIVITY_ID', 'ID hoạt động không hợp lệ', 400);
     }
+
+    const body = await request.json().catch(() => ({}));
+    const metrics = {
+      responseTimeP95Ms: body?.responseTimeP95Ms ?? body?.response_time_p95_ms ?? null,
+      queueBacklog: body?.queueBacklog ?? body?.queue_backlog ?? null,
+      scanFailureRate: body?.scanFailureRate ?? body?.scan_failure_rate ?? null,
+      sampleSize: body?.sampleSize ?? body?.sample_size ?? null,
+    };
 
     const activity = await dbGet(
       `SELECT id, title, status, approval_status, max_participants, date_time
@@ -71,21 +79,20 @@ export async function GET(
       activityDateTime: activity.date_time,
     });
 
+    const fallback = shouldTriggerQrFallback(metrics, policy.qrFallback);
+
     return successResponse({
       activity: {
         id: activity.id,
         title: activity.title,
-        status: activity.status,
-        approval_status: activity.approval_status,
-        max_participants: activity.max_participants,
-        date_time: activity.date_time,
       },
-      counts: {
-        participation_count: participationCount,
-        mandatory_class_count: mandatoryClassCount,
-        voluntary_class_count: voluntaryClassCount,
-      },
+      metrics,
       policy,
+      fallback: {
+        ...fallback,
+        recommended_target_mode: fallback.triggered ? 'mixed' : policy.defaultMode,
+        teacher_manual_override: policy.qrFallback.allowTeacherManualOverride,
+      },
     });
   } catch (error) {
     return errorResponse(error);

@@ -20,6 +20,7 @@ describe('attendance policy', () => {
     expect(result.eligible).toBe(true);
     expect(result.recommendedMode).toBe('mixed');
     expect(result.preferredPrimaryMethod).toBe('face');
+    expect(result.minConfidenceScore).toBeCloseTo(0.82, 2);
     expect(result.reasons.length).toBeGreaterThan(0);
   });
 

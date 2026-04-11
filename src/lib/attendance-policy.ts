@@ -25,6 +25,7 @@ export interface FacePilotAssessment {
   preferredPrimaryMethod: 'manual' | 'qr' | 'face';
   reasons: string[];
   teacherManualOverride: boolean;
+  minConfidenceScore: number;
 }
 
 export interface QrRuntimeMetrics {
@@ -84,6 +85,7 @@ export function assessFacePilotEligibility(input: AttendancePolicyInput): FacePi
     preferredPrimaryMethod: eligible ? 'face' : 'qr',
     reasons,
     teacherManualOverride: true,
+    minConfidenceScore: 0.82,
   };
 }
 
