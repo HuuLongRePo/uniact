@@ -75,7 +75,14 @@ export async function POST(request: NextRequest) {
           WHERE ar2.activity_id = a.id AND ar2.student_id = u.id
           ORDER BY ar2.recorded_at DESC
           LIMIT 1
-        ) as notes
+        ) as notes,
+        (
+          SELECT ar3.method
+          FROM attendance_records ar3
+          WHERE ar3.activity_id = a.id AND ar3.student_id = u.id
+          ORDER BY ar3.recorded_at DESC
+          LIMIT 1
+        ) as attendance_method
       FROM participations p
       JOIN users u ON u.id = p.student_id
       JOIN classes c ON c.id = u.class_id
@@ -88,17 +95,26 @@ export async function POST(request: NextRequest) {
       classIds
     );
 
-    const records = (recordRows as any[]).map((r) => ({
-      student_id: Number(r.student_id),
-      student_name: String(r.student_name || ''),
-      student_code: String(r.student_code || ''),
-      class_name: String(r.class_name || ''),
-      activity_name: String(r.activity_name || ''),
-      activity_date: String(r.activity_date || ''),
-      status: formatAttendanceStatus(r.attendance_status as 'attended' | 'absent' | 'registered' | null),
-      check_in_time: r.check_in_time ? String(r.check_in_time) : '',
-      notes: r.notes ? String(r.notes) : '',
-    }));
+    const records = (recordRows as any[]).map((r) => {
+      const normalizedMethod = String(r.attendance_method || '').toLowerCase();
+      const method =
+        normalizedMethod === 'manual' || normalizedMethod === 'qr' || normalizedMethod === 'face'
+          ? normalizedMethod
+          : 'unknown';
+
+      return {
+        student_id: Number(r.student_id),
+        student_name: String(r.student_name || ''),
+        student_code: String(r.student_code || ''),
+        class_name: String(r.class_name || ''),
+        activity_name: String(r.activity_name || ''),
+        activity_date: String(r.activity_date || ''),
+        status: formatAttendanceStatus(r.attendance_status as 'attended' | 'absent' | 'registered' | null),
+        method,
+        check_in_time: r.check_in_time ? String(r.check_in_time) : '',
+        notes: r.notes ? String(r.notes) : '',
+      };
+    });
 
     const classSummary: any[] = [];
     for (const classId of classIds) {
@@ -127,7 +143,7 @@ export async function POST(request: NextRequest) {
         SELECT
           SUM(CASE WHEN p.attendance_status = 'attended' THEN 1 ELSE 0 END) as present_count,
           SUM(CASE WHEN p.attendance_status = 'absent' THEN 1 ELSE 0 END) as absent_count,
-          SUM(CASE WHEN p.attendance_status = 'registered' THEN 1 ELSE 0 END) as excused_count
+          SUM(CASE WHEN p.attendance_status = 'registered' THEN 1 ELSE 0 END) as not_participated_count
         FROM participations p
         JOIN users u ON u.id = p.student_id
         JOIN activities a ON a.id = p.activity_id
@@ -140,7 +156,7 @@ export async function POST(request: NextRequest) {
 
       const present = Number(counts?.present_count || 0);
       const absent = Number(counts?.absent_count || 0);
-      const excused = Number(counts?.excused_count || 0);
+      const notParticipated = Number(counts?.not_participated_count || 0);
       const late = 0;
 
       const denom = totalStudents * totalActivities;
@@ -155,7 +171,7 @@ export async function POST(request: NextRequest) {
         present_count: present,
         absent_count: absent,
         late_count: late,
-        excused_count: excused,
+        not_participated_count: notParticipated,
         present_rate: presentRate,
         absent_rate: absentRate,
         late_rate: 0,
@@ -188,7 +204,7 @@ export async function POST(request: NextRequest) {
         u.class_id as class_id,
         SUM(CASE WHEN p.attendance_status = 'attended' THEN 1 ELSE 0 END) as present_count,
         SUM(CASE WHEN p.attendance_status = 'absent' THEN 1 ELSE 0 END) as absent_count,
-        SUM(CASE WHEN p.attendance_status = 'registered' THEN 1 ELSE 0 END) as excused_count
+        SUM(CASE WHEN p.attendance_status = 'registered' THEN 1 ELSE 0 END) as not_participated_count
       FROM users u
       JOIN classes c ON c.id = u.class_id
       LEFT JOIN participations p ON p.student_id = u.id
@@ -206,7 +222,7 @@ export async function POST(request: NextRequest) {
       const totalActivities = totalActivitiesByClass.get(classId) || 0;
       const present = Number(r.present_count || 0);
       const absent = Number(r.absent_count || 0);
-      const excused = Number(r.excused_count || 0);
+      const notParticipated = Number(r.not_participated_count || 0);
       const attendanceRate = calculateAttendanceRate(present, totalActivities);
 
       return {
@@ -218,7 +234,7 @@ export async function POST(request: NextRequest) {
         present_count: present,
         absent_count: absent,
         late_count: 0,
-        excused_count: excused,
+        not_participated_count: notParticipated,
         attendance_rate: attendanceRate,
       };
     });

@@ -924,3 +924,28 @@ Quy ước trạng thái: TODO / DOING / BLOCKED / DONE
 - Rủi ro: thấp-trung bình
 - Cách kiểm thử: rerun focused teacher UAT + rerun full Playwright suite + build
 - Tiêu chí hoàn thành: spec teacher pass ổn định cả khi chạy riêng lẫn full suite
+
+### T-169 - Chuẩn hóa teacher attendance reporting semantics
+
+- Trạng thái: DONE
+- Mục tiêu: bỏ sự lẫn lộn giữa `Có phép` và `Chưa tham gia`, đồng thời phản ánh đúng method mix trong attendance reporting teacher-side
+- Phạm vi file:
+  - `src/app/api/teacher/reports/attendance/records/route.ts`
+  - `src/app/api/teacher/reports/attendance/export/route.ts`
+  - `src/app/teacher/reports/attendance/page.tsx`
+- Lý do cần làm: reports attendance đã có backbone nhưng chưa biến dữ liệu method/runtime thành insight vận hành và còn drift semantics ở trạng thái `registered`
+- Rủi ro: thấp-trung bình
+- Cách kiểm thử: focused route/helper regression + full Vitest + build
+- Tiêu chí hoàn thành: page/report/export đều phản ánh `not_participated` rõ ràng và chi tiết report có method mix thật
+
+### T-170 - Tách attendance reporting helper khỏi Next.js page contract
+
+- Trạng thái: DONE
+- Mục tiêu: tránh lỗi build do page export helper trực tiếp, đồng thời làm cho logic normalization/report aggregation có thể test độc lập
+- Phạm vi file:
+  - `src/features/reports/attendance-report-helpers.ts`
+  - `test/teacher-attendance-report-page.test.tsx`
+- Lý do cần làm: Next.js page contract không cho export thêm helper từ page file, nhưng batch report mới vẫn cần regression cho normalization/aggregation logic
+- Rủi ro: thấp
+- Cách kiểm thử: focused helper tests + full Vitest + build
+- Tiêu chí hoàn thành: helper test pass, build pass, page không còn vi phạm Next.js page export contract

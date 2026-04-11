@@ -5,6 +5,7 @@ import { ApiError, successResponse, errorResponse } from '@/lib/api-response';
 import { formatAttendanceStatus } from '@/lib/formatters';
 
 type AttendanceReportStatus = 'present' | 'absent' | 'late' | 'excused' | 'not_participated';
+type AttendanceMethod = 'manual' | 'qr' | 'face' | 'unknown';
 
 async function getAccessibleClassIds(user: { id: number; role: string }): Promise<number[]> {
   if (user.role === 'admin') {
@@ -64,7 +65,14 @@ export async function GET(request: NextRequest) {
           WHERE ar2.activity_id = a.id AND ar2.student_id = u.id
           ORDER BY ar2.recorded_at DESC
           LIMIT 1
-        ) as notes
+        ) as notes,
+        (
+          SELECT ar3.method
+          FROM attendance_records ar3
+          WHERE ar3.activity_id = a.id AND ar3.student_id = u.id
+          ORDER BY ar3.recorded_at DESC
+          LIMIT 1
+        ) as attendance_method
       FROM participations p
       JOIN users u ON u.id = p.student_id
       JOIN classes c ON c.id = u.class_id
@@ -77,17 +85,26 @@ export async function GET(request: NextRequest) {
       classIds
     );
 
-    const records = (rows as any[]).map((r) => ({
-      student_id: Number(r.student_id),
-      student_name: String(r.student_name || ''),
-      student_code: String(r.student_code || ''),
-      class_name: String(r.class_name || ''),
-      activity_name: String(r.activity_name || ''),
-      activity_date: String(r.activity_date || ''),
-      status: formatAttendanceStatus(r.attendance_status as 'attended' | 'absent' | 'registered' | null) as AttendanceReportStatus,
-      check_in_time: r.check_in_time ? String(r.check_in_time) : undefined,
-      notes: r.notes ? String(r.notes) : undefined,
-    }));
+    const records = (rows as any[]).map((r) => {
+      const normalizedMethod = String(r.attendance_method || '').toLowerCase();
+      const method: AttendanceMethod =
+        normalizedMethod === 'manual' || normalizedMethod === 'qr' || normalizedMethod === 'face'
+          ? (normalizedMethod as AttendanceMethod)
+          : 'unknown';
+
+      return {
+        student_id: Number(r.student_id),
+        student_name: String(r.student_name || ''),
+        student_code: String(r.student_code || ''),
+        class_name: String(r.class_name || ''),
+        activity_name: String(r.activity_name || ''),
+        activity_date: String(r.activity_date || ''),
+        status: formatAttendanceStatus(r.attendance_status as 'attended' | 'absent' | 'registered' | null) as AttendanceReportStatus,
+        method,
+        check_in_time: r.check_in_time ? String(r.check_in_time) : undefined,
+        notes: r.notes ? String(r.notes) : undefined,
+      };
+    });
 
     return successResponse({ records });
   } catch (error: any) {

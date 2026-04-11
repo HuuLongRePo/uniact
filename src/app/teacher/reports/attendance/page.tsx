@@ -1,109 +1,70 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
-import { AlertCircle, ArrowLeft, Clock, Download, Filter, Search } from 'lucide-react';
+import {
+  AlertCircle,
+  ArrowLeft,
+  Clock,
+  Download,
+  Filter,
+  QrCode,
+  ScanFace,
+  Search,
+  SquarePen,
+} from 'lucide-react';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { useAuth } from '@/contexts/AuthContext';
+import {
+  buildOverallStats,
+  getClassesFromResponse,
+  getRecordsFromResponse,
+  getSummaryFromResponse,
+  type AttendanceMethod,
+  type AttendanceRecord,
+  type AttendanceSummary,
+  type ClassOption,
+  type StudentAttendanceSummary,
+} from '@/features/reports/attendance-report-helpers';
 
-interface ClassOption {
-  id: number;
-  name: string;
-}
-
-interface AttendanceRecord {
-  student_id: number;
-  student_name: string;
-  student_code: string;
-  class_name: string;
-  activity_name: string;
-  activity_date: string;
-  status: 'present' | 'absent' | 'late' | 'excused' | 'not_participated';
-  check_in_time?: string;
-  notes?: string;
-}
-
-interface AttendanceSummary {
-  class_id: number;
-  class_name: string;
-  total_students: number;
-  total_activities: number;
-  total_attendance: number;
-  present_count: number;
-  absent_count: number;
-  late_count: number;
-  excused_count: number;
-  present_rate: number;
-  absent_rate: number;
-  late_rate: number;
-}
-
-interface StudentAttendanceSummary {
-  student_id: number;
-  student_name: string;
-  student_code: string;
-  class_name: string;
-  total_activities: number;
-  present_count: number;
-  absent_count: number;
-  late_count: number;
-  excused_count: number;
-  attendance_rate: number;
-}
-
-type AttendanceSortKey = 'date' | 'student' | 'status';
+type AttendanceSortKey = 'date' | 'student' | 'status' | 'method';
 type SortDirection = 'asc' | 'desc';
 
 function getErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
 }
 
-function getClassesFromResponse(payload: unknown): ClassOption[] {
-  if (!payload || typeof payload !== 'object') {
-    return [];
+function getMethodBadge(method: AttendanceMethod) {
+  switch (method) {
+    case 'manual':
+      return (
+        <span className="flex w-fit items-center gap-1 rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-800">
+          <SquarePen className="h-3.5 w-3.5" />
+          Thủ công
+        </span>
+      );
+    case 'qr':
+      return (
+        <span className="flex w-fit items-center gap-1 rounded-full bg-violet-100 px-3 py-1 text-xs font-medium text-violet-800">
+          <QrCode className="h-3.5 w-3.5" />
+          QR
+        </span>
+      );
+    case 'face':
+      return (
+        <span className="flex w-fit items-center gap-1 rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-800">
+          <ScanFace className="h-3.5 w-3.5" />
+          Face
+        </span>
+      );
+    default:
+      return (
+        <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700">
+          Chưa ghi nhận
+        </span>
+      );
   }
-
-  const normalized = payload as {
-    data?: { classes?: ClassOption[] };
-    classes?: ClassOption[];
-  };
-
-  if (Array.isArray(normalized.data?.classes)) {
-    return normalized.data.classes;
-  }
-
-  if (Array.isArray(normalized.classes)) {
-    return normalized.classes;
-  }
-
-  return [];
-}
-
-function getSummaryFromResponse<T>(payload: unknown): T[] {
-  if (!payload || typeof payload !== 'object') {
-    return [];
-  }
-
-  const normalized = payload as {
-    data?: { summary?: T[] };
-    summary?: T[];
-  };
-
-  return normalized.data?.summary ?? normalized.summary ?? [];
-}
-
-function getRecordsFromResponse(payload: unknown): AttendanceRecord[] {
-  if (!payload || typeof payload !== 'object') {
-    return [];
-  }
-
-  const normalized = payload as {
-    data?: { records?: AttendanceRecord[] };
-    records?: AttendanceRecord[];
-  };
-
-  return normalized.data?.records ?? normalized.records ?? [];
 }
 
 export default function AttendanceReportsPage() {
@@ -120,6 +81,7 @@ export default function AttendanceReportsPage() {
   const [filters, setFilters] = useState({
     classId: '',
     status: '',
+    method: '',
     dateStart: '',
     dateEnd: '',
   });
@@ -197,6 +159,10 @@ export default function AttendanceReportsPage() {
       filtered = filtered.filter((record) => record.status === filters.status);
     }
 
+    if (filters.method) {
+      filtered = filtered.filter((record) => record.method === filters.method);
+    }
+
     if (filters.dateStart) {
       filtered = filtered.filter(
         (record) => new Date(record.activity_date) >= new Date(filters.dateStart)
@@ -238,6 +204,15 @@ export default function AttendanceReportsPage() {
         };
         leftValue = statusOrder[left.status];
         rightValue = statusOrder[right.status];
+      } else if (sortBy === 'method') {
+        const methodOrder: Record<AttendanceMethod, number> = {
+          face: 0,
+          qr: 1,
+          manual: 2,
+          unknown: 3,
+        };
+        leftValue = methodOrder[left.method];
+        rightValue = methodOrder[right.method];
       }
 
       if (sortOrder === 'asc') {
@@ -328,17 +303,11 @@ export default function AttendanceReportsPage() {
     }
   };
 
+  const overallStats = useMemo(() => buildOverallStats(records), [records]);
+
   if (authLoading || loading) {
     return <LoadingSpinner />;
   }
-
-  const overallStats = {
-    totalRecords: records.length,
-    present: records.filter((record) => record.status === 'present').length,
-    absent: records.filter((record) => record.status === 'absent').length,
-    late: records.filter((record) => record.status === 'late').length,
-    excused: records.filter((record) => record.status === 'excused').length,
-  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -360,7 +329,7 @@ export default function AttendanceReportsPage() {
                   Báo cáo điểm danh
                 </h1>
                 <p className="mt-2 text-gray-600">
-                  Phân tích tỷ lệ có mặt, vắng, đi trễ và các trường hợp có phép theo lớp.
+                  Phân tích tỷ lệ có mặt, vắng, chưa tham gia và phương thức điểm danh thực tế theo lớp.
                 </p>
               </div>
               <button
@@ -374,7 +343,7 @@ export default function AttendanceReportsPage() {
           </div>
         </div>
 
-        <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-5">
+        <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-3 xl:grid-cols-6">
           <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
             <div className="mb-1 text-sm text-gray-600">Tổng lượt điểm danh</div>
             <div className="text-3xl font-bold text-blue-600">{overallStats.totalRecords}</div>
@@ -394,6 +363,34 @@ export default function AttendanceReportsPage() {
           <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
             <div className="mb-1 text-sm text-gray-600">Vắng</div>
             <div className="text-3xl font-bold text-red-600">{overallStats.absent}</div>
+          </div>
+          <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm" data-testid="not-participated-card">
+            <div className="mb-1 text-sm text-gray-600">Chưa tham gia</div>
+            <div className="text-3xl font-bold text-slate-700">{overallStats.notParticipated}</div>
+          </div>
+        </div>
+
+        <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="rounded-lg border border-violet-200 bg-violet-50 p-4 shadow-sm" data-testid="method-card-qr">
+            <div className="flex items-center gap-2 text-sm text-violet-700">
+              <QrCode className="h-4 w-4" />
+              QR
+            </div>
+            <div className="mt-2 text-2xl font-bold text-violet-900">{overallStats.qr}</div>
+          </div>
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 shadow-sm" data-testid="method-card-manual">
+            <div className="flex items-center gap-2 text-sm text-amber-700">
+              <SquarePen className="h-4 w-4" />
+              Thủ công
+            </div>
+            <div className="mt-2 text-2xl font-bold text-amber-900">{overallStats.manual}</div>
+          </div>
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 shadow-sm" data-testid="method-card-face">
+            <div className="flex items-center gap-2 text-sm text-emerald-700">
+              <ScanFace className="h-4 w-4" />
+              Face
+            </div>
+            <div className="mt-2 text-2xl font-bold text-emerald-900">{overallStats.face}</div>
           </div>
         </div>
 
@@ -452,7 +449,7 @@ export default function AttendanceReportsPage() {
                       Đi trễ
                     </th>
                     <th className="px-4 py-3 text-center text-sm font-semibold text-gray-900">
-                      Có phép
+                      Chưa tham gia
                     </th>
                     <th className="px-4 py-3 text-center text-sm font-semibold text-gray-900">
                       Vắng
@@ -480,8 +477,8 @@ export default function AttendanceReportsPage() {
                       <td className="px-4 py-4 text-center text-sm font-medium text-yellow-600">
                         {item.late_count}
                       </td>
-                      <td className="px-4 py-4 text-center text-sm font-medium text-blue-600">
-                        {item.excused_count}
+                      <td className="px-4 py-4 text-center text-sm font-medium text-slate-700">
+                        {item.not_participated_count}
                       </td>
                       <td className="px-4 py-4 text-center text-sm font-medium text-red-600">
                         {item.absent_count}
@@ -528,7 +525,7 @@ export default function AttendanceReportsPage() {
                       Đi trễ
                     </th>
                     <th className="px-4 py-3 text-center text-sm font-semibold text-gray-900">
-                      Có phép
+                      Chưa tham gia
                     </th>
                     <th className="px-4 py-3 text-center text-sm font-semibold text-gray-900">
                       Vắng
@@ -555,8 +552,8 @@ export default function AttendanceReportsPage() {
                       <td className="px-4 py-4 text-center text-sm font-medium text-yellow-600">
                         {item.late_count}
                       </td>
-                      <td className="px-4 py-4 text-center text-sm font-medium text-blue-600">
-                        {item.excused_count}
+                      <td className="px-4 py-4 text-center text-sm font-medium text-slate-700">
+                        {item.not_participated_count}
                       </td>
                       <td className="px-4 py-4 text-center text-sm font-medium text-red-600">
                         {item.absent_count}
@@ -583,7 +580,7 @@ export default function AttendanceReportsPage() {
         ) : (
           <>
             <div className="mb-6 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
                 <div>
                   <label className="mb-2 block text-sm font-medium text-gray-700">
                     <Search className="mr-1 inline h-4 w-4" />
@@ -628,6 +625,20 @@ export default function AttendanceReportsPage() {
                     <option value="excused">Có phép</option>
                     <option value="absent">Vắng</option>
                     <option value="not_participated">Chưa tham gia</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-gray-700">Phương thức</label>
+                  <select
+                    value={filters.method}
+                    onChange={(event) => setFilters({ ...filters, method: event.target.value })}
+                    className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">-- Tất cả --</option>
+                    <option value="qr">QR</option>
+                    <option value="manual">Thủ công</option>
+                    <option value="face">Face</option>
+                    <option value="unknown">Chưa ghi nhận</option>
                   </select>
                 </div>
               </div>
@@ -684,6 +695,12 @@ export default function AttendanceReportsPage() {
                       >
                         Trạng thái {sortBy === 'status' && (sortOrder === 'asc' ? '↑' : '↓')}
                       </th>
+                      <th
+                        onClick={() => handleSort('method')}
+                        className="cursor-pointer px-4 py-3 text-left text-sm font-semibold text-gray-900 hover:bg-gray-100"
+                      >
+                        Phương thức {sortBy === 'method' && (sortOrder === 'asc' ? '↑' : '↓')}
+                      </th>
                       <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
                         Giờ check-in
                       </th>
@@ -709,6 +726,9 @@ export default function AttendanceReportsPage() {
                           {new Date(record.activity_date).toLocaleDateString('vi-VN')}
                         </td>
                         <td className="px-4 py-4">{getStatusBadge(record.status)}</td>
+                        <td className="px-4 py-4" data-testid="attendance-method-cell">
+                          {getMethodBadge(record.method)}
+                        </td>
                         <td className="px-4 py-4 text-sm text-gray-600">
                           {record.check_in_time || '-'}
                         </td>

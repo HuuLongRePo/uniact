@@ -1,5 +1,49 @@
 # CHANGELOG PROGRESS
 
+## 2026-04-11 - Chuẩn hóa attendance reporting semantics và thêm method mix analytics
+
+### Đã làm
+
+- Mở rộng `src/app/api/teacher/reports/attendance/records/route.ts` để trả thêm `method` từ attendance record gần nhất (`manual`, `qr`, `face`, fallback `unknown`).
+- Chuẩn hóa semantics ở teacher attendance reporting:
+  - giữ `registered` -> `not_participated`
+  - hiển thị `Chưa tham gia` rõ ràng thay vì lẫn vào nhãn `Có phép`
+- Nâng cấp `src/app/teacher/reports/attendance/page.tsx`:
+  - thêm card tổng quan `Chưa tham gia`
+  - thêm method mix cards cho `QR`, `Thủ công`, `Face`
+  - thêm filter theo phương thức ở view `Chi tiết`
+  - thêm cột `Phương thức` trong bảng chi tiết
+  - cập nhật bảng `Theo lớp` và `Theo học viên` để dùng `not_participated_count`
+- Cập nhật `src/app/api/teacher/reports/attendance/export/route.ts` để export thống nhất với semantics mới và có kèm attendance method trong detail rows.
+- Tách helper thuần cho attendance reporting sang `src/features/reports/attendance-report-helpers.ts` để tránh page export conflict với Next.js và khóa logic normalization/stats riêng.
+- Bổ sung regression mới:
+  - `test/teacher-attendance-records-route.test.ts`
+  - `test/teacher-attendance-report-page.test.tsx` (helper-focused)
+
+### Kiểm thử
+
+- Chạy focused Vitest:
+  - `npm.cmd test -- test/teacher-attendance-records-route.test.ts test/teacher-attendance-report-page.test.tsx`
+  - Kết quả: `2` files pass, `5` tests pass
+- Chạy full Vitest suite:
+  - `npm.cmd test`
+  - Kết quả: `79` files pass, `377` tests pass
+- Chạy production build:
+  - `npm.cmd run build`
+  - Kết quả: build pass
+
+### Kết quả
+
+- Teacher attendance reports giờ phản ánh đúng hơn operational reality: có method mix thật, có `Chưa tham gia` rõ ràng, và export không còn drift semantics cũ.
+- Logic normalization/report aggregation đã được tách ra thành helper testable, không làm gãy Next.js page contract.
+- Repo giữ trạng thái xanh ở mức full Vitest + build sau batch mới.
+
+### Còn lại
+
+- Chưa có UAT/smoke riêng cho teacher attendance reports page.
+- Nếu tiếp tục, wave reporting tiếp theo hợp lý là mở rộng admin-level analytics / notification escalation visibility / improvement-penalty reporting.
+
+
 ## 2026-04-11 - Ổn định full-suite verification (student discovery + teacher policy)
 
 ### Đã làm
