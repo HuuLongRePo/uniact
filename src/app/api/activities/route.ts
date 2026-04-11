@@ -20,6 +20,11 @@ type StudentActivitySummaryRecord = {
   participant_count: number | string | null;
   available_slots: number | string | null;
   is_registered: number | string | boolean | null;
+  registration_status: string | null;
+  participation_source?: string | null;
+  is_mandatory?: number | string | boolean | null;
+  applies_to_student: number | string | boolean | null;
+  applicability_scope: string | null;
   activity_type: string | null;
   organization_level: string | null;
 };
@@ -29,12 +34,55 @@ type WorkflowAwareActivityRecord = {
   approval_status?: string | null;
 };
 
+function parseStatusFilters(rawStatus: string | null): string[] {
+  if (!rawStatus) return [];
+
+  return Array.from(
+    new Set(
+      rawStatus
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean)
+        .map((item) => (item === 'ongoing' ? 'published' : item))
+    )
+  );
+}
+
 function normalizeStudentActivitySummary(activity: StudentActivitySummaryRecord) {
   const participantCount = Number(activity.participant_count || 0);
   const maxParticipants =
     activity.max_participants === null ? null : Number(activity.max_participants || 0);
   const fallbackSlots =
     maxParticipants === null ? null : Math.max(0, maxParticipants - participantCount);
+  const appliesToStudent = Boolean(Number(activity.applies_to_student ?? 1));
+  const applicabilityScope = activity.applicability_scope || 'open_scope';
+  const participationSource = activity.participation_source || null;
+  const isMandatory =
+    participationSource === 'assigned' || Boolean(Number(activity.is_mandatory || 0));
+  const startTime = new Date(activity.date_time).getTime();
+  const canRegister =
+    !Boolean(Number(activity.is_registered || 0)) &&
+    !isMandatory &&
+    appliesToStudent &&
+    activity.status === 'published' &&
+    !Number.isNaN(startTime) &&
+    startTime > Date.now();
+  const canCancel =
+    Boolean(Number(activity.is_registered || 0)) &&
+    !isMandatory &&
+    activity.registration_status === 'registered' &&
+    !Number.isNaN(startTime) &&
+    (startTime - Date.now()) / (1000 * 60 * 60) >= 24;
+  const applicabilityReason =
+    applicabilityScope === 'mandatory_class_scope'
+      ? 'Ap dung vi lop cua ban nam trong nhom bat buoc cua hoat dong.'
+      : applicabilityScope === 'voluntary_class_scope'
+        ? 'Ban co the tu dang ky vi lop cua ban nam trong nhom duoc mo dang ky.'
+        : applicabilityScope === 'class_scope_match'
+          ? 'Ap dung vi lop cua ban nam trong pham vi hoat dong.'
+      : applicabilityScope === 'class_scope_mismatch'
+        ? 'Khong thuoc pham vi cua ban vi hoat dong dang danh rieng cho lop khac.'
+        : 'Hoat dong mo cho tat ca hoc vien.';
 
   return {
     id: Number(activity.id),
@@ -53,6 +101,14 @@ function normalizeStudentActivitySummary(activity: StudentActivitySummaryRecord)
         ? null
         : Math.max(0, Number(activity.available_slots ?? fallbackSlots ?? 0)),
     is_registered: Boolean(Number(activity.is_registered || 0)),
+    registration_status: activity.registration_status || null,
+    participation_source: participationSource,
+    is_mandatory: isMandatory,
+    can_register: canRegister,
+    can_cancel: canCancel,
+    applies_to_student: appliesToStudent,
+    applicability_scope: applicabilityScope,
+    applicability_reason: applicabilityReason,
     activity_type: activity.activity_type || null,
     organization_level: activity.organization_level || null,
   };
@@ -73,10 +129,12 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '100');
     const status = searchParams.get('status');
+    const statusFilters = parseStatusFilters(status);
+    const scope = searchParams.get('scope') === 'operational' ? 'operational' : 'owned';
     const offset = (page - 1) * limit;
 
     // Cache key với pagination
-    const cacheKey = `activities:${user.role}:${user.id}:page${page}:limit${limit}:status${status || 'all'}`;
+    const cacheKey = `activities:${user.role}:${user.id}:scope${scope}:page${page}:limit${limit}:status${statusFilters.join(',') || 'all'}`;
 
     const result = await cache.get(
       cacheKey,
@@ -89,17 +147,20 @@ export async function GET(request: NextRequest) {
           data = (await dbHelpers.getAllActivitiesWithTeachers()) as any[];
           data = data.map(normalizeWorkflowAwareActivity);
           total = data.length;
-          if (status) {
-            data = data.filter((a: any) => a.status === status);
+          if (statusFilters.length > 0) {
+            data = data.filter((a: any) => statusFilters.includes(a.status));
             total = data.length;
           }
           data = data.slice(offset, offset + limit);
         } else if (user.role === 'teacher') {
-          data = (await dbHelpers.getActivitiesByTeacher(user.id)) as any[];
+          data =
+            scope === 'operational'
+              ? ((await dbHelpers.getOperationalActivitiesByTeacher(user.id)) as any[])
+              : ((await dbHelpers.getActivitiesByTeacher(user.id)) as any[]);
           data = data.map(normalizeWorkflowAwareActivity);
           total = data.length;
-          if (status) {
-            data = data.filter((a: any) => a.status === status);
+          if (statusFilters.length > 0) {
+            data = data.filter((a: any) => statusFilters.includes(a.status));
             total = data.length;
           }
           data = data.slice(offset, offset + limit);
@@ -108,8 +169,8 @@ export async function GET(request: NextRequest) {
           data = (await dbHelpers.getActivitiesForStudent(user.id, user.class_id)) as any[];
           data = data.map(normalizeStudentActivitySummary);
           total = data.length;
-          if (status) {
-            data = data.filter((a: any) => a.status === status);
+          if (statusFilters.length > 0) {
+            data = data.filter((a: any) => statusFilters.includes(a.status));
             total = data.length;
           }
           data = data.slice(offset, offset + limit);
@@ -150,15 +211,25 @@ export async function POST(request: NextRequest) {
       location,
       max_participants,
       class_ids,
+      mandatory_class_ids,
+      voluntary_class_ids,
       registration_deadline,
       activity_type_id,
       organization_level_id,
     } = validation.data;
 
-    if (class_ids.length > 0) {
+    const scopedClassIds = Array.from(
+      new Set([
+        ...class_ids,
+        ...(mandatory_class_ids || []),
+        ...(voluntary_class_ids || []),
+      ])
+    );
+
+    if (scopedClassIds.length > 0) {
       const classes = (await dbHelpers.getAllClasses()) as Array<{ id: number }>;
       const validClassIds = new Set((classes || []).map((item) => Number(item.id)));
-      const invalidClassIds = class_ids.filter((classId) => !validClassIds.has(Number(classId)));
+      const invalidClassIds = scopedClassIds.filter((classId) => !validClassIds.has(Number(classId)));
 
       if (invalidClassIds.length > 0) {
         return errorResponse(
@@ -177,6 +248,8 @@ export async function POST(request: NextRequest) {
       teacher_id: user.id,
       max_participants,
       class_ids,
+      mandatory_class_ids,
+      voluntary_class_ids,
       registration_deadline,
       activity_type_id,
       organization_level_id,

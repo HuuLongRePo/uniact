@@ -5,6 +5,7 @@ import { writeFile, mkdir, readdir, stat } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
 import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
+import { teacherCanAccessActivity } from '@/lib/activity-access';
 
 // POST /api/activities/:id/attachments - Upload attachment
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -33,9 +34,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return errorResponse(ApiError.notFound('Không tìm thấy hoạt động'));
     }
 
-    // Authorization: teacher can only upload to their own activities, admin can upload to any
-    if (user.role === 'teacher' && Number(existingActivity.teacher_id) !== Number(user.id)) {
-      return errorResponse(ApiError.forbidden('Bạn chỉ có thể tải file lên hoạt động của bạn'));
+    if (
+      user.role === 'teacher' &&
+      !(await teacherCanAccessActivity(Number(user.id), activityId))
+    ) {
+      return errorResponse(ApiError.forbidden('Bạn không có quyền tải file lên hoạt động này'));
     }
 
     const formData = await request.formData();
@@ -151,8 +154,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       return errorResponse(ApiError.notFound('Không tìm thấy hoạt động'));
     }
 
-    // Authorization: teacher can only view their own activities, admin can view any
-    if (user.role === 'teacher' && Number(existingActivity.teacher_id) !== Number(user.id)) {
+    if (
+      user.role === 'teacher' &&
+      !(await teacherCanAccessActivity(Number(user.id), activityId))
+    ) {
       return errorResponse(ApiError.forbidden('Không có quyền truy cập'));
     }
 

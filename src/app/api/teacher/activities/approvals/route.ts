@@ -5,10 +5,10 @@ import { ApiError, successResponse, errorResponse } from '@/lib/api-response';
 
 function mapApprovalStatusToUi(
   status: string | null | undefined
-): 'draft' | 'pending_approval' | 'approved' | 'rejected' {
+): 'draft' | 'pending' | 'approved' | 'rejected' {
   switch (status) {
     case 'requested':
-      return 'pending_approval';
+      return 'pending';
     case 'approved':
       return 'approved';
     case 'rejected':
@@ -65,6 +65,13 @@ export async function GET(request: NextRequest) {
         a.created_at,
         a.submitted_at,
         a.approved_at,
+        (
+          SELECT aa.decided_at
+          FROM activity_approvals aa
+          WHERE aa.activity_id = a.id AND aa.status = 'rejected'
+          ORDER BY aa.decided_at DESC
+          LIMIT 1
+        ) as rejected_at,
         a.rejected_reason,
         a.max_participants,
         u.name as teacher_name,
@@ -84,12 +91,13 @@ export async function GET(request: NextRequest) {
       date_time: String(r.date_time || ''),
       location: String(r.location || ''),
       status: mapApprovalStatusToUi(r.approval_status),
+      approval_status: String(r.approval_status || ''),
       teacher_status: String(r.approval_status || ''),
       teacher_name: String(r.teacher_name || ''),
       created_at: String(r.created_at || ''),
       submitted_at: r.submitted_at ? String(r.submitted_at) : null,
       approved_at: r.approved_at ? String(r.approved_at) : null,
-      rejected_at: null,
+      rejected_at: r.rejected_at ? String(r.rejected_at) : null,
       rejection_reason: r.rejected_reason ? String(r.rejected_reason) : null,
       max_participants: r.max_participants ?? null,
       class_count: Number(r.class_count || 0),

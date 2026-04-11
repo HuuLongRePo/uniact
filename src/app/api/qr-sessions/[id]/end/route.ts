@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { dbGet, dbRun, dbHelpers } from '@/lib/database';
 import { requireApiRole } from '@/lib/guards';
 import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
+import { teacherCanAccessActivity } from '@/lib/activity-access';
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -13,12 +14,16 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return errorResponse(ApiError.validation('ID phiên QR không hợp lệ'));
     }
 
-    const session = (await dbGet('SELECT id, creator_id, is_active FROM qr_sessions WHERE id = ?', [
-      sessionId,
-    ])) as any;
+    const session = (await dbGet(
+      'SELECT id, activity_id, creator_id, is_active FROM qr_sessions WHERE id = ?',
+      [sessionId]
+    )) as any;
     if (!session) return errorResponse(ApiError.notFound('Không tìm thấy phiên QR'));
 
-    if (user.role === 'teacher' && session.creator_id !== user.id) {
+    if (
+      user.role === 'teacher' &&
+      !(await teacherCanAccessActivity(Number(user.id), Number(session.activity_id)))
+    ) {
       return errorResponse(ApiError.forbidden('Bạn chỉ có thể kết thúc phiên QR do mình tạo'));
     }
 

@@ -157,7 +157,7 @@ Các use cases từ route/page/build tree:
 
 ### 2.2.1 Teacher dashboard
 
-Use cases từ `src/app/teacher/page.tsx`:
+Use cases từ `src/app/teacher/dashboard/page.tsx`:
 - xem thống kê tổng hoạt động
 - xem chờ duyệt
 - xem tổng học viên
@@ -637,7 +637,7 @@ Nên dọn dẹp hoặc tách rõ source vs generated test outputs.
 - [ ] duplicate registration bị chặn
 - [ ] capacity full bị chặn
 - [ ] registration deadline bị chặn đúng
-- [ ] same-day conflict warning hoạt động
+- [ ] same-start-time conflict warning hoạt động
 - [ ] force register override hoạt động nếu business rule cho phép
 - [ ] cancel registration trước 24h thành công
 - [ ] cancel <24h bị chặn đúng

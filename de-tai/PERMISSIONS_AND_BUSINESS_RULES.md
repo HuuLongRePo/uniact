@@ -412,7 +412,7 @@ export async function checkTeacherSchedule(teacherId: number, dateTime: string) 
    - Invalidate cache
 7. **Response**: "Tạo thành công! Hoạt động đang ở trạng thái nháp."
 8. **Teacher review** → Click "Gửi phê duyệt"
-9. **Status update**: `draft → pending`, `approval_status='draft' → 'pending'`
+9. **Status update**: `status='draft'` giữ nguyên, `approval_status='draft' → 'requested'`
 10. **Notification**: Email/notification gửi cho Admin
 
 ### Scenario 2: Admin Duyệt Hoạt động

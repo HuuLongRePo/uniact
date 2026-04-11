@@ -177,7 +177,7 @@ export class AdminHelper {
    * Database Operations
    */
   async triggerBackup() {
-    await this.page.goto('/admin/database')
+    await this.page.goto('/admin/backup')
     await this.page.click('button:has-text("Sao lưu"), button:has-text("Backup")')
     await expect(this.page.locator('text=/backup.*success|sao lưu.*thành công/i')).toBeVisible({ timeout: 10000 })
   }

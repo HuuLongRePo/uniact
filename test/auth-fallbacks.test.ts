@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest'
 import { dbRun, dbGet, dbAll, dbReady } from '@/lib/database'
+import { ensureCoreTestSchema } from './core-test-schema'
 import { generateQuestions, getQuestionsForUser, verifyAnswers } from '@/lib/security-questions'
 import { createSlots, listSlots, registerForSlot } from '@/lib/time-slots'
 
@@ -11,6 +12,7 @@ describe('Authentication Fallbacks', () => {
   beforeAll(async () => {
     // Wait for all migrations to complete
     await dbReady()
+    await ensureCoreTestSchema()
     
     // Create test class
     const classResult = await dbRun(
@@ -106,7 +108,7 @@ describe('Authentication Fallbacks', () => {
     it('should list available slots', async () => {
       const slots = await listSlots(testActivityId)
       expect(slots.length).toBeGreaterThan(0)
-      expect(slots[0].status).toBe('available')
+      expect(slots[0].status).toBe('active')
     })
 
     it('should register participation to a slot', async () => {

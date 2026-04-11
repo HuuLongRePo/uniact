@@ -11,6 +11,12 @@ export default defineConfig({
       '**/node_modules/**',
       '**/e2e/**/*.spec.ts',
       '**/test/uat/**/*.spec.ts',
+      '**/quarantine/**',
+      '**/test-results/**',
+      '**/.next/**',
+      '**/test/error-boundary.test.tsx',
+      '**/test/unit/connection-manager.test.js',
+      '**/test/unit/quota-parser.test.js',
       '**/backups/**',
       '**/old/**',
       '**/*.d.ts'

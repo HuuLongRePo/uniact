@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { requireRole } from '@/lib/guards';
 import { dbAll, dbGet, dbRun } from '@/lib/database';
 import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
+import { teacherCanAccessActivity } from '@/lib/activity-access';
 import { mkdir, readdir, stat, writeFile } from 'fs/promises';
 import { existsSync } from 'fs';
 import path from 'path';
@@ -60,6 +61,28 @@ async function listFiles(activityId: number) {
   );
 }
 
+function isFormDataFile(value: FormDataEntryValue | null): value is File {
+  return Boolean(
+    value && typeof value !== 'string' && typeof (value as File).arrayBuffer === 'function'
+  );
+}
+
+function getUploadedFiles(formData: FormData): File[] {
+  const singleFile = formData.get('file');
+  const multipleFiles = formData.getAll('files');
+  const candidates = [singleFile, ...multipleFiles].filter(isFormDataFile);
+
+  return candidates.filter(
+    (file, index, files) =>
+      files.findIndex(
+        (candidate) =>
+          candidate.name === file.name &&
+          candidate.size === file.size &&
+          candidate.type === file.type
+      ) === index
+  );
+}
+
 // POST /api/activities/:id/files - Upload file (Teacher/Admin)
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -86,12 +109,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return errorResponse(ApiError.notFound('Không tìm thấy hoạt động'));
     }
 
-    if (user.role === 'teacher' && Number(activity.teacher_id) !== Number(user.id)) {
-      return errorResponse(ApiError.forbidden('Bạn chỉ có thể tải file lên hoạt động của bạn'));
+    if (
+      user.role === 'teacher' &&
+      !(await teacherCanAccessActivity(Number(user.id), activityId))
+    ) {
+      return errorResponse(ApiError.forbidden('Bạn không có quyền tải file lên hoạt động này'));
     }
 
     const formData = await request.formData();
-    const file = formData.get('file') as File | null;
+    const [file, ...additionalFiles] = getUploadedFiles(formData);
     if (!file) {
       return errorResponse(ApiError.validation('Vui lòng chọn file'));
     }
@@ -162,7 +188,66 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       [Number(insert.lastID), activityId]
     );
 
-    return successResponse({ file: created }, 'Tải file thành công', 201);
+    const createdFiles = [created];
+
+    for (const [index, extraFile] of additionalFiles.entries()) {
+      if (extraFile.size > maxSize) {
+        return errorResponse(ApiError.validation('File quá lớn (tối đa 10MB)'));
+      }
+
+      if (!allowedTypes.includes(extraFile.type)) {
+        return errorResponse(ApiError.validation('Định dạng file không được phép'));
+      }
+
+      const extraTimestamp = Date.now();
+      const extraNameSafe = extraFile.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+      const extraStoredFileName = `${extraTimestamp}_${index + 1}_${extraNameSafe}`;
+      const extraFullPath = path.join(uploadDir, extraStoredFileName);
+
+      const extraBytes = await extraFile.arrayBuffer();
+      const extraBuffer = Buffer.from(extraBytes);
+      await writeFile(extraFullPath, extraBuffer);
+
+      const extraFileUrl = `/uploads/activities/${activityId}/${extraStoredFileName}`;
+
+      const extraInsert = await dbRun(
+        `INSERT INTO activity_attachments (activity_id, file_name, file_path, file_size, mime_type, uploaded_by, uploaded_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [
+          activityId,
+          extraFile.name,
+          extraFileUrl,
+          extraFile.size,
+          extraFile.type,
+          user.id,
+          new Date().toISOString(),
+        ]
+      );
+
+      const extraCreated = await dbGet(
+        `SELECT 
+          aa.id,
+          aa.activity_id,
+          aa.file_path,
+          aa.file_name,
+          aa.file_size,
+          aa.mime_type AS file_type,
+          aa.uploaded_at,
+          COALESCE(u.full_name, u.name, u.username, CAST(aa.uploaded_by AS TEXT)) AS uploaded_by
+        FROM activity_attachments aa
+        LEFT JOIN users u ON u.id = aa.uploaded_by
+        WHERE aa.id = ? AND aa.activity_id = ?`,
+        [Number(extraInsert.lastID), activityId]
+      );
+
+      createdFiles.push(extraCreated);
+    }
+
+    return successResponse(
+      { file: createdFiles[0], files: createdFiles },
+      'Tải file thành công',
+      201
+    );
   } catch (error: any) {
     console.error('Upload activity file error:', error);
     return errorResponse(ApiError.internalError('Lỗi máy chủ nội bộ'));
@@ -195,7 +280,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       return errorResponse(ApiError.notFound('Không tìm thấy hoạt động'));
     }
 
-    if (user.role === 'teacher' && Number(activity.teacher_id) !== Number(user.id)) {
+    if (
+      user.role === 'teacher' &&
+      !(await teacherCanAccessActivity(Number(user.id), activityId))
+    ) {
       return errorResponse(ApiError.forbidden('Không có quyền truy cập'));
     }
 

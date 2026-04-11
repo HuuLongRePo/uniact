@@ -172,16 +172,24 @@ test('scoring: excellent achievement x2 multiplier', () => {
 
 **Example test**:
 ```typescript
-test('activity workflow: draft → pending → approved', async () => {
-  const activityId = await dbHelpers.createActivity({ status: 'draft' })
-  
-  await dbHelpers.updateActivityStatus(activityId, 'pending_approval')
+test('activity workflow: draft -> requested -> published', async () => {
+  const teacherId = 12
+  const adminId = 1
+  const activityId = await dbHelpers.createActivity({
+    status: 'draft',
+    approval_status: 'draft',
+    teacher_id: teacherId,
+  })
+
+  await dbHelpers.submitActivityForApproval(activityId, teacherId)
   let activity = await dbHelpers.getActivityById(activityId)
-  expect(activity.status).toBe('pending_approval')
-  
-  await dbHelpers.updateActivityStatus(activityId, 'approved')
+  expect(activity.status).toBe('draft')
+  expect(activity.approval_status).toBe('requested')
+
+  await dbHelpers.decideApproval(activityId, adminId, 'approve')
   activity = await dbHelpers.getActivityById(activityId)
-  expect(activity.status).toBe('approved')
+  expect(activity.status).toBe('published')
+  expect(activity.approval_status).toBe('approved')
 })
 ```
 
@@ -212,7 +220,7 @@ test('activity workflow: draft → pending → approved', async () => {
 - [ ] Create/edit/delete activities
 - [ ] View student scores
 - [ ] Configure scoring formula
-- [ ] Approve pending activities
+- [ ] Approve requested activities
 - [ ] View audit logs
 
 **Teacher Workflow**:
@@ -220,7 +228,7 @@ test('activity workflow: draft → pending → approved', async () => {
 - [ ] View registered students
 - [ ] Mark attendance (QR code)
 - [ ] Input student scores
-- [ ] Submit for approval
+- [ ] Submit for approval (approval_status -> requested)
 
 **Student Workflow**:
 - [ ] Register for activity
@@ -666,7 +674,7 @@ npm test -- --coverage
    - Transfer students between classes
 
 3. **Activity Approval**
-   - View pending activities
+   - View requested approvals
    - Approve/Reject activities
    - View all activities (any teacher)
 
@@ -686,7 +694,7 @@ npm test -- --coverage
 #### 👨‍🏫 Teacher Testing Checklist
 1. **Activity Management**
    - Create draft activity
-   - Submit for approval (draft → pending)
+   - Submit for approval (draft stays draft, approval_status -> requested)
    - Edit/Clone/Cancel activities
    - View only own activities (unless admin)
 
@@ -774,8 +782,8 @@ npm test -- --coverage
 
 **Complete Workflow Test (10 steps)**:
 1. Teacher creates activity (draft)
-2. Teacher submits for approval (pending)
-3. Admin approves (published)
+2. Teacher submits for approval (status stays draft, approval_status=requested)
+3. Admin approves (status=published, approval_status=approved)
 4. Students register (3 students)
 5. QR attendance recorded
 6. Teacher evaluates (excellent/good/average)

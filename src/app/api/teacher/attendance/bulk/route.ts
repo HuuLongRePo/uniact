@@ -4,6 +4,7 @@ import { rateLimit } from '@/lib/rateLimit';
 import { dbRun, dbGet } from '@/lib/database';
 import { PointCalculationService } from '@/lib/scoring';
 import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
+import { teacherCanAccessActivity } from '@/lib/activity-access';
 
 // POST /api/teacher/attendance/bulk - Điểm danh hàng loạt cho học viên
 export async function POST(request: NextRequest) {
@@ -40,7 +41,10 @@ export async function POST(request: NextRequest) {
       return errorResponse(ApiError.notFound('Không tìm thấy hoạt động'));
     }
 
-    if (activity.teacher_id !== user.id) {
+    if (
+      user.role === 'teacher' &&
+      !(await teacherCanAccessActivity(Number(user.id), Number(activity_id)))
+    ) {
       return errorResponse(
         ApiError.forbidden('Bạn chỉ có thể điểm danh cho hoạt động do mình tổ chức')
       );

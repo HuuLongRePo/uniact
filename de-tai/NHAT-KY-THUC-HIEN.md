@@ -67,7 +67,7 @@
 
 ### Đợt 2: Quản lý Hoạt động (11-12/2025) ✅
 - ✅ CRUD operations cho activities
-- ✅ Workflow: draft → pending → published/rejected
+- ✅ Workflow: draft -> requested -> published/rejected
 - ✅ Filter/search by status, date, teacher
 - ✅ Pagination support (page/limit params)
 - ✅ Activity types & organization levels
@@ -382,4 +382,3 @@ Documentation:      2,000+ pages (MD equivalent)
 **GVHD:** [Tên GVHD]  
 **Tiến độ hiện tại:** 98% (Core complete, Testing in progress)  
 **Cập nhật:** 14/01/2026
-

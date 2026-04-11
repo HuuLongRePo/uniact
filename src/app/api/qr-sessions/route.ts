@@ -5,6 +5,7 @@ import { rateLimit } from '@/lib/rateLimit';
 import { User } from '@/types/database';
 import crypto from 'crypto';
 import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
+import { teacherCanAccessActivity } from '@/lib/activity-access';
 
 const MIN_EXPIRES_MINUTES = 1;
 const MAX_EXPIRES_MINUTES = 60;
@@ -94,7 +95,10 @@ export async function POST(request: NextRequest) {
       return errorResponse(ApiError.notFound('Không tìm thấy hoạt động'));
     }
 
-    if ((user as User).role === 'teacher' && Number(activity.teacher_id) !== Number((user as User).id)) {
+    if (
+      (user as User).role === 'teacher' &&
+      !(await teacherCanAccessActivity(Number((user as User).id), activityId))
+    ) {
       return errorResponse(ApiError.forbidden('Bạn chỉ có thể tạo phiên QR cho hoạt động của mình'));
     }
 
@@ -161,7 +165,7 @@ export async function GET(request: NextRequest) {
     // Auth: require teacher OR admin
     const user = await requireApiRole(request, ['teacher', 'admin']);
 
-    // For teachers, get QR sessions they created; for admins, get all
+    // For teachers, include sessions from activities they can operate on.
     const teacherId = (user as User).id;
     const isAdmin = (user as User).role === 'admin';
 
@@ -181,12 +185,26 @@ export async function GET(request: NextRequest) {
       FROM qr_sessions qs
       JOIN activities a ON qs.activity_id = a.id
       LEFT JOIN attendance_records ar ON qs.id = ar.qr_session_id
-      WHERE ${isAdmin ? '1=1' : 'qs.creator_id = ?'}
+      WHERE ${
+        isAdmin
+          ? '1=1'
+          : `(
+              a.teacher_id = ?
+              OR EXISTS (
+                SELECT 1
+                FROM activity_classes ac
+                JOIN classes c ON c.id = ac.class_id
+                LEFT JOIN class_teachers ct ON ct.class_id = c.id
+                WHERE ac.activity_id = a.id
+                  AND (c.teacher_id = ? OR ct.teacher_id = ?)
+              )
+            )`
+      }
       GROUP BY qs.id
       ORDER BY qs.created_at DESC
       LIMIT 50
     `,
-      isAdmin ? [] : [teacherId]
+      isAdmin ? [] : [teacherId, teacherId, teacherId]
     );
 
     const sessionsWithParsedMetadata = (sessions || []).map((s: any) => ({

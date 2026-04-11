@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { dbAll, dbGet } from '@/lib/database';
 import { requireRole } from '@/lib/guards';
 import { ApiError, errorResponse } from '@/lib/api-response';
+import { teacherCanAccessActivity } from '@/lib/activity-access';
 
 function toCsvValue(value: any): string {
   if (value === null || value === undefined) return '';
@@ -37,7 +38,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     ])) as any;
     if (!activity) return errorResponse(ApiError.notFound('Không tìm thấy hoạt động'));
 
-    if (user.role === 'teacher' && activity.teacher_id !== user.id) {
+    if (
+      user.role === 'teacher' &&
+      !(await teacherCanAccessActivity(Number(user.id), Number(activityId)))
+    ) {
       return errorResponse(ApiError.forbidden('Bạn chỉ có thể thao tác trên hoạt động của mình'));
     }
 

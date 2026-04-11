@@ -1,7 +1,8 @@
 import { NextRequest } from 'next/server';
-import { dbGet, dbRun, withTransaction } from '@/lib/database';
+import { dbGet, dbRun, ensureParticipationColumns, withTransaction } from '@/lib/database';
 import { requireRole } from '@/lib/guards';
 import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
+import { teacherCanAccessActivity } from '@/lib/activity-access';
 
 function normalizeToParticipationStatus(status: unknown): 'attended' | 'absent' {
   const s = String(status || '').toLowerCase();
@@ -39,7 +40,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     ])) as any;
     if (!activity) return errorResponse(ApiError.notFound('Không tìm thấy hoạt động'));
 
-    if (user.role === 'teacher' && activity.teacher_id !== user.id) {
+    await ensureParticipationColumns();
+
+    if (
+      user.role === 'teacher' &&
+      !(await teacherCanAccessActivity(Number(user.id), Number(activityId)))
+    ) {
       return errorResponse(ApiError.forbidden('Bạn chỉ có thể điểm danh cho hoạt động của mình'));
     }
 
@@ -69,8 +75,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
         if (!existing) {
           await dbRun(
-            `INSERT OR IGNORE INTO participations (activity_id, student_id, attendance_status, achievement_level)
-             VALUES (?, ?, ?, NULL)`,
+            `INSERT OR IGNORE INTO participations (
+               activity_id,
+               student_id,
+               attendance_status,
+               participation_source,
+               achievement_level
+             )
+             VALUES (?, ?, ?, 'assigned', NULL)`,
             [activityId, studentId, participationStatus]
           );
         } else {

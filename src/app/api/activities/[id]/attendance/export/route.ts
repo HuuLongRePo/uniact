@@ -3,6 +3,7 @@ import { dbAll, dbGet } from '@/lib/database';
 import { requireRole } from '@/lib/guards';
 import { ApiError, errorResponse } from '@/lib/api-response';
 import * as XLSX from 'xlsx';
+import { teacherCanAccessActivity } from '@/lib/activity-access';
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -30,7 +31,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     )) as any;
     if (!activity) return errorResponse(ApiError.notFound('Không tìm thấy hoạt động'));
 
-    if (user.role === 'teacher' && activity.teacher_id !== user.id) {
+    if (
+      user.role === 'teacher' &&
+      !(await teacherCanAccessActivity(Number(user.id), Number(activityId)))
+    ) {
       return errorResponse(
         ApiError.forbidden('Bạn chỉ có thể xuất dữ liệu của hoạt động do mình tổ chức')
       );

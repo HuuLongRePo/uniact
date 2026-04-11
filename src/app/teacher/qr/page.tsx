@@ -39,6 +39,20 @@ interface BulkScanRecord {
   scanned_at: string;
 }
 
+async function loadActivityOption(activityId: number): Promise<Activity | null> {
+  const res = await fetch(`/api/activities/${activityId}`);
+  if (!res.ok) return null;
+
+  const json = await res.json();
+  const activity = json?.activity ?? json?.data?.activity ?? json?.data ?? json;
+  if (!activity?.id || !activity?.title) return null;
+
+  return {
+    id: Number(activity.id),
+    title: String(activity.title),
+  };
+}
+
 export default function TeacherQRPage() {
   const searchParams = useSearchParams();
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -62,7 +76,7 @@ export default function TeacherQRPage() {
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await fetch('/api/activities');
+        const res = await fetch('/api/activities?scope=operational&status=ongoing');
         if (!res.ok) throw new Error('Không thể tải danh sách hoạt động');
         const json = await res.json();
         const list: Activity[] = json.activities || [];
@@ -82,6 +96,18 @@ export default function TeacherQRPage() {
         const requestedId = requestedIdRaw ? Number(requestedIdRaw) : null;
         if (requestedId && !Number.isNaN(requestedId) && list.some((a) => a.id === requestedId)) {
           setSelectedActivity(requestedId);
+        } else if (requestedId && !Number.isNaN(requestedId)) {
+          const requestedActivity = await loadActivityOption(requestedId);
+          if (requestedActivity) {
+            setActivities((prev) =>
+              prev.some((activity) => activity.id === requestedActivity.id)
+                ? prev
+                : [...prev, requestedActivity]
+            );
+            setSelectedActivity(requestedActivity.id);
+          } else if (list.length > 0) {
+            setSelectedActivity(list[0].id);
+          }
         } else if (list.length > 0) {
           setSelectedActivity(list[0].id);
         }

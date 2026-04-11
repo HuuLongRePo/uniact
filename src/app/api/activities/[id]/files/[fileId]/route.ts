@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { requireRole } from '@/lib/guards';
 import { dbGet, dbRun, dbHelpers } from '@/lib/database';
 import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
+import { teacherCanAccessActivity } from '@/lib/activity-access';
 import { unlink } from 'fs/promises';
 import { existsSync } from 'fs';
 import path from 'path';
@@ -82,7 +83,10 @@ export async function DELETE(
       return errorResponse(ApiError.notFound('Không tìm thấy hoạt động'));
     }
 
-    if (user.role === 'teacher' && Number(activity.teacher_id) !== Number(user.id)) {
+    if (
+      user.role === 'teacher' &&
+      !(await teacherCanAccessActivity(Number(user.id), activityId))
+    ) {
       return errorResponse(ApiError.forbidden('Không có quyền truy cập'));
     }
 

@@ -9,7 +9,7 @@ import toast from 'react-hot-toast';
 interface Activity {
   id: number;
   title: string;
-  date: string;
+  date_time: string;
   location: string;
   status: string;
 }
@@ -48,7 +48,7 @@ export default function TeacherManualAttendancePage() {
   const fetchActivities = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/activities?teacher_id=me&status=ongoing,completed');
+      const res = await fetch('/api/activities?scope=operational&status=ongoing,completed');
       const data = await res.json();
       if (res.ok) {
         setActivities(data.activities || []);
@@ -180,20 +180,20 @@ export default function TeacherManualAttendancePage() {
               >
                 <div className="font-medium">{activity.title}</div>
                 <div className="text-sm text-gray-600 mt-1">
-                  📅 {new Date(activity.date).toLocaleDateString('vi-VN')}
+                  📅 {new Date(activity.date_time).toLocaleDateString('vi-VN')}
                 </div>
                 <div className="text-sm text-gray-600">📍 {activity.location}</div>
                 <div className="mt-1">
                   <span
                     className={`text-xs px-2 py-1 rounded ${
-                      activity.status === 'ongoing'
+                      activity.status === 'ongoing' || activity.status === 'published'
                         ? 'bg-green-100 text-green-800'
                         : activity.status === 'completed'
                           ? 'bg-gray-100 text-gray-800'
                           : 'bg-blue-100 text-blue-800'
                     }`}
                   >
-                    {activity.status === 'ongoing'
+                    {activity.status === 'ongoing' || activity.status === 'published'
                       ? 'Đang diễn ra'
                       : activity.status === 'completed'
                         ? 'Đã kết thúc'

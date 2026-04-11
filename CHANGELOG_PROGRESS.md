@@ -399,17 +399,17 @@
 - Viết lại `src/app/api/teacher/dashboard/route.ts` để:
   - bỏ alias `date_time AS start_time`
   - trả trực tiếp `date_time` cho danh sách hoạt động gần đây
-  - trả thêm đúng các field thống kê mà `src/app/teacher/page.tsx` đang dùng như `pending_approval`, `approved_activities`, `pending_notifications`, `this_week_activities`
+  - giữ shape compatibility cho các consumer legacy của `/api/teacher/dashboard` như `pending_approval`, `approved_activities`, `pending_notifications`, `this_week_activities`
   - vẫn giữ `stats`, `classes`, `activities`, `recentAttendance` để tương thích rộng hơn
 - Chuẩn hóa `src/app/api/activities/[id]/qr-sessions/route.ts` sang contract `date_time` cho phiên QR, bỏ phụ thuộc vào `start_time`
 - Viết lại `src/app/teacher/activities/[id]/qr-sessions/page.tsx` để đọc `date_time`, gom fetch dữ liệu về helper chung, và giữ nguyên layout/luồng thao tác chính
-- Dọn thêm import thừa trong `src/app/teacher/page.tsx` để lint sạch ở consumer teacher dashboard
+- Dọn thêm import thừa trong `src/app/teacher/dashboard/page.tsx` để lint sạch ở canonical teacher dashboard
 
 ### Kiểm thử hẹp
 
-- Chạy `npx.cmd eslint src/app/api/teacher/dashboard/route.ts "src/app/api/activities/[id]/qr-sessions/route.ts" "src/app/teacher/activities/[id]/qr-sessions/page.tsx" src/app/teacher/page.tsx`
+- Chạy `npx.cmd eslint src/app/api/teacher/dashboard/route.ts "src/app/api/activities/[id]/qr-sessions/route.ts" "src/app/teacher/activities/[id]/qr-sessions/page.tsx" src/app/teacher/dashboard/page.tsx`
 - Kết quả: sạch lỗi, sạch warning
-- Chạy `rg -n "start_time" src/app/api/teacher/dashboard/route.ts "src/app/api/activities/[id]/qr-sessions/route.ts" "src/app/teacher/activities/[id]/qr-sessions/page.tsx" src/app/teacher/page.tsx`
+- Chạy `rg -n "start_time" src/app/api/teacher/dashboard/route.ts "src/app/api/activities/[id]/qr-sessions/route.ts" "src/app/teacher/activities/[id]/qr-sessions/page.tsx" src/app/teacher/dashboard/page.tsx`
 - Kết quả: không còn `start_time` trong phạm vi batch
 
 ### Kết quả

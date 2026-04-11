@@ -3,6 +3,7 @@ import { dbGet, dbReady, dbRun, withTransaction } from '@/lib/database';
 import { PointCalculationService } from '@/lib/scoring';
 import { requireRole } from '@/lib/guards';
 import { ApiError, successResponse, errorResponse } from '@/lib/api-response';
+import { teacherCanAccessActivity } from '@/lib/activity-access';
 
 type UiAchievementLevel = 'excellent' | 'good' | 'participated' | 'xuat_sac' | 'tot' | 'tham_gia';
 
@@ -49,7 +50,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return errorResponse(ApiError.notFound('Không tìm thấy hoạt động'));
     }
 
-    if (user.role === 'teacher' && Number(activity.teacher_id) !== Number(user.id)) {
+    if (
+      user.role === 'teacher' &&
+      !(await teacherCanAccessActivity(Number(user.id), Number(activityId)))
+    ) {
       return errorResponse(
         ApiError.forbidden('Bạn chỉ có thể đánh giá người tham gia của hoạt động do bạn tổ chức')
       );

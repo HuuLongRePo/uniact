@@ -5,6 +5,7 @@ import { existsSync } from 'fs';
 import { dbAll, dbGet, dbRun } from '@/lib/database';
 import { requireRole, requireAuth } from '@/lib/guards';
 import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
+import { teacherCanAccessActivity } from '@/lib/activity-access';
 
 // POST /api/activities/[id]/upload - Upload file attachments for activity
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -38,9 +39,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return errorResponse(ApiError.notFound('Không tìm thấy hoạt động'));
     }
 
-    // Only teacher of this activity or admin can upload
-    if (user.role !== 'admin' && activity.teacher_id !== user.id) {
-      return errorResponse(ApiError.forbidden('Bạn chỉ có thể tải file lên hoạt động của bạn'));
+    if (
+      user.role === 'teacher' &&
+      !(await teacherCanAccessActivity(Number(user.id), activityId))
+    ) {
+      return errorResponse(ApiError.forbidden('Bạn không có quyền tải file lên hoạt động này'));
     }
 
     const formData = await request.formData();
@@ -131,8 +134,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 // GET /api/activities/[id]/upload - Get list of uploaded files
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    let user;
     try {
-      await requireAuth(request);
+      user = await requireAuth(request);
     } catch {
       return errorResponse(ApiError.unauthorized('Chưa đăng nhập'));
     }
@@ -147,6 +151,13 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     if (!activity) {
       return errorResponse(ApiError.notFound('Không tìm thấy hoạt động'));
+    }
+
+    if (
+      user.role === 'teacher' &&
+      !(await teacherCanAccessActivity(Number(user.id), activityId))
+    ) {
+      return errorResponse(ApiError.forbidden('Không có quyền truy cập'));
     }
 
     const rows = await dbAll(

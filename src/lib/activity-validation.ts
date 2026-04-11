@@ -5,6 +5,8 @@ export type CreateActivityPayload = {
   location: string;
   max_participants: number;
   class_ids: number[];
+  mandatory_class_ids: number[];
+  voluntary_class_ids: number[];
   registration_deadline?: string;
   activity_type_id?: number;
   organization_level_id?: number;
@@ -17,6 +19,8 @@ export type UpdateActivityPayload = {
   location?: string;
   max_participants?: number;
   class_ids?: number[];
+  mandatory_class_ids?: number[];
+  voluntary_class_ids?: number[];
   registration_deadline?: string | null;
   activity_type_id?: number | null;
   organization_level_id?: number | null;
@@ -41,6 +45,88 @@ export function parsePositiveInt(value: unknown): number | null {
   return num;
 }
 
+function parseClassIdArray(
+  value: unknown,
+  fieldName: 'class_ids' | 'mandatory_class_ids' | 'voluntary_class_ids',
+  errors: Record<string, string>
+): number[] | undefined {
+  if (value === undefined) return undefined;
+  if (value === null) return [];
+  if (!Array.isArray(value)) {
+    errors[fieldName] = `${fieldName} phai la mang ID lop`;
+    return undefined;
+  }
+
+  const parsedIds: number[] = [];
+  for (const classId of value) {
+    const parsedClassId = parsePositiveInt(classId);
+    if (parsedClassId === null) {
+      errors[fieldName] = `Moi phan tu trong ${fieldName} phai la so nguyen duong`;
+      return undefined;
+    }
+    parsedIds.push(parsedClassId);
+  }
+
+  return Array.from(new Set(parsedIds));
+}
+
+function normalizeClassScopes(
+  input: Record<string, unknown>,
+  errors: Record<string, string>,
+  isCreate: boolean
+): Pick<UpdateActivityPayload, 'class_ids' | 'mandatory_class_ids' | 'voluntary_class_ids'> {
+  const hasClassIds = hasOwn(input, 'class_ids');
+  const hasMandatoryClassIds = hasOwn(input, 'mandatory_class_ids');
+  const hasVoluntaryClassIds = hasOwn(input, 'voluntary_class_ids');
+  const hasAnyClassScope = hasClassIds || hasMandatoryClassIds || hasVoluntaryClassIds;
+
+  if (!hasAnyClassScope) {
+    return isCreate
+      ? {
+          class_ids: [],
+          mandatory_class_ids: [],
+          voluntary_class_ids: [],
+        }
+      : {};
+  }
+
+  const legacyClassIds = parseClassIdArray(input.class_ids, 'class_ids', errors);
+  const mandatoryClassIds = parseClassIdArray(
+    input.mandatory_class_ids,
+    'mandatory_class_ids',
+    errors
+  );
+  const voluntaryClassIds = parseClassIdArray(
+    input.voluntary_class_ids,
+    'voluntary_class_ids',
+    errors
+  );
+
+  if (errors.class_ids || errors.mandatory_class_ids || errors.voluntary_class_ids) {
+    return {};
+  }
+
+  const normalizedMandatory = Array.from(
+    new Set(
+      hasMandatoryClassIds
+        ? mandatoryClassIds || []
+        : hasClassIds
+          ? legacyClassIds || []
+          : []
+    )
+  );
+  const mandatorySet = new Set(normalizedMandatory);
+  const normalizedVoluntary = Array.from(
+    new Set((voluntaryClassIds || []).filter((classId) => !mandatorySet.has(classId)))
+  );
+
+  return {
+    class_ids: Array.from(new Set([...normalizedMandatory, ...normalizedVoluntary])),
+    mandatory_class_ids: normalizedMandatory,
+    voluntary_class_ids: normalizedVoluntary,
+  };
+}
+
 function validateActivityBody(
   body: unknown,
   options: { mode: 'create' | 'update'; baseDateTime?: string | null }
@@ -50,44 +136,43 @@ function validateActivityBody(
   if (!body || typeof body !== 'object') {
     return {
       errors: {
-        general: 'Dữ liệu gửi lên không hợp lệ',
+        general: 'Du lieu gui len khong hop le',
       },
     };
   }
 
   const input = body as Record<string, unknown>;
   const isCreate = options.mode === 'create';
-
   const normalized: UpdateActivityPayload = {};
 
   const hasTitle = hasOwn(input, 'title');
   if (hasTitle) {
     if (typeof input.title !== 'string') {
-      errors.title = 'Tiêu đề không hợp lệ';
+      errors.title = 'Tieu de khong hop le';
     } else {
       const title = input.title.trim();
       if (!title) {
-        errors.title = 'Tiêu đề là bắt buộc';
+        errors.title = 'Tieu de la bat buoc';
       } else if (title.length < 3) {
-        errors.title = 'Tiêu đề ít nhất 3 ký tự';
+        errors.title = 'Tieu de it nhat 3 ky tu';
       } else if (title.length > 200) {
-        errors.title = 'Tiêu đề tối đa 200 ký tự';
+        errors.title = 'Tieu de toi da 200 ky tu';
       } else {
         normalized.title = title;
       }
     }
   } else if (isCreate) {
-    errors.title = 'Tiêu đề là bắt buộc';
+    errors.title = 'Tieu de la bat buoc';
   }
 
   const hasDescription = hasOwn(input, 'description');
   if (hasDescription) {
     if (typeof input.description !== 'string') {
-      errors.description = 'Mô tả không hợp lệ';
+      errors.description = 'Mo ta khong hop le';
     } else {
       const description = input.description.trim();
       if (description.length > 2000) {
-        errors.description = 'Mô tả tối đa 2000 ký tự';
+        errors.description = 'Mo ta toi da 2000 ky tu';
       } else {
         normalized.description = description;
       }
@@ -100,49 +185,49 @@ function validateActivityBody(
   if (hasDateTime) {
     const rawDateTime = input.date_time ?? input.start_time;
     if (typeof rawDateTime !== 'string') {
-      errors.date_time = 'Thời gian hoạt động không hợp lệ';
+      errors.date_time = 'Thoi gian hoat dong khong hop le';
     } else {
       const dateTime = rawDateTime.trim();
       if (!dateTime) {
-        errors.date_time = 'Thời gian hoạt động là bắt buộc';
+        errors.date_time = 'Thoi gian hoat dong la bat buoc';
       } else if (!isValidDateInput(dateTime)) {
-        errors.date_time = 'Thời gian hoạt động không hợp lệ';
+        errors.date_time = 'Thoi gian hoat dong khong hop le';
       } else {
         normalized.date_time = dateTime;
       }
     }
   } else if (isCreate) {
-    errors.date_time = 'Thời gian hoạt động là bắt buộc';
+    errors.date_time = 'Thoi gian hoat dong la bat buoc';
   }
 
   const hasLocation = hasOwn(input, 'location');
   if (hasLocation) {
     if (typeof input.location !== 'string') {
-      errors.location = 'Địa điểm không hợp lệ';
+      errors.location = 'Dia diem khong hop le';
     } else {
       const location = input.location.trim();
       if (!location) {
-        errors.location = 'Địa điểm là bắt buộc';
+        errors.location = 'Dia diem la bat buoc';
       } else if (location.length > 255) {
-        errors.location = 'Địa điểm tối đa 255 ký tự';
+        errors.location = 'Dia diem toi da 255 ky tu';
       } else {
         normalized.location = location;
       }
     }
   } else if (isCreate) {
-    errors.location = 'Địa điểm là bắt buộc';
+    errors.location = 'Dia diem la bat buoc';
   }
 
   const hasMaxParticipants = hasOwn(input, 'max_participants');
   if (hasMaxParticipants) {
     if (input.max_participants === null || input.max_participants === '') {
-      errors.max_participants = 'Số lượng tối đa phải là số nguyên dương';
+      errors.max_participants = 'So luong toi da phai la so nguyen duong';
     } else {
       const parsedMax = parsePositiveInt(input.max_participants);
       if (parsedMax === null) {
-        errors.max_participants = 'Số lượng tối đa phải là số nguyên dương';
+        errors.max_participants = 'So luong toi da phai la so nguyen duong';
       } else if (parsedMax > 5000) {
-        errors.max_participants = 'Số lượng tối đa không được vượt quá 5000';
+        errors.max_participants = 'So luong toi da khong duoc vuot qua 5000';
       } else {
         normalized.max_participants = parsedMax;
       }
@@ -151,29 +236,7 @@ function validateActivityBody(
     normalized.max_participants = 30;
   }
 
-  const hasClassIds = hasOwn(input, 'class_ids');
-  if (hasClassIds) {
-    if (input.class_ids === null) {
-      normalized.class_ids = [];
-    } else if (!Array.isArray(input.class_ids)) {
-      errors.class_ids = 'class_ids phải là mảng ID lớp';
-    } else {
-      const parsedIds: number[] = [];
-      for (const classId of input.class_ids) {
-        const parsedClassId = parsePositiveInt(classId);
-        if (parsedClassId === null) {
-          errors.class_ids = 'Mỗi class_id phải là số nguyên dương';
-          break;
-        }
-        parsedIds.push(parsedClassId);
-      }
-      if (!errors.class_ids) {
-        normalized.class_ids = Array.from(new Set(parsedIds));
-      }
-    }
-  } else if (isCreate) {
-    normalized.class_ids = [];
-  }
+  Object.assign(normalized, normalizeClassScopes(input, errors, isCreate));
 
   const hasRegistrationDeadline = hasOwn(input, 'registration_deadline');
   if (hasRegistrationDeadline) {
@@ -181,11 +244,11 @@ function validateActivityBody(
     if (rawDeadline === null || rawDeadline === '') {
       if (!isCreate) normalized.registration_deadline = null;
     } else if (typeof rawDeadline !== 'string') {
-      errors.registration_deadline = 'Deadline đăng ký không hợp lệ';
+      errors.registration_deadline = 'Deadline dang ky khong hop le';
     } else {
       const registrationDeadline = rawDeadline.trim();
       if (!registrationDeadline || !isValidDateInput(registrationDeadline)) {
-        errors.registration_deadline = 'Deadline đăng ký không hợp lệ';
+        errors.registration_deadline = 'Deadline dang ky khong hop le';
       } else {
         const dateTimeForValidation =
           normalized.date_time ??
@@ -198,7 +261,7 @@ function validateActivityBody(
 
           if (hoursDiff < 24) {
             errors.registration_deadline =
-              'Deadline đăng ký phải ít nhất 24 giờ trước thời gian hoạt động';
+              'Deadline dang ky phai it nhat 24 gio truoc thoi gian hoat dong';
           } else {
             normalized.registration_deadline = registrationDeadline;
           }
@@ -217,7 +280,7 @@ function validateActivityBody(
     } else {
       const parsedTypeId = parsePositiveInt(rawTypeId);
       if (parsedTypeId === null) {
-        errors.activity_type_id = 'Loại hoạt động không hợp lệ';
+        errors.activity_type_id = 'Loai hoat dong khong hop le';
       } else {
         normalized.activity_type_id = parsedTypeId;
       }
@@ -232,7 +295,7 @@ function validateActivityBody(
     } else {
       const parsedOrgLevelId = parsePositiveInt(rawOrgLevelId);
       if (parsedOrgLevelId === null) {
-        errors.organization_level_id = 'Cấp tổ chức không hợp lệ';
+        errors.organization_level_id = 'Cap to chuc khong hop le';
       } else {
         normalized.organization_level_id = parsedOrgLevelId;
       }
@@ -252,6 +315,8 @@ function validateActivityBody(
         location: normalized.location as string,
         max_participants: normalized.max_participants ?? 30,
         class_ids: normalized.class_ids || [],
+        mandatory_class_ids: normalized.mandatory_class_ids || normalized.class_ids || [],
+        voluntary_class_ids: normalized.voluntary_class_ids || [],
         ...(typeof normalized.registration_deadline === 'string'
           ? { registration_deadline: normalized.registration_deadline }
           : {}),

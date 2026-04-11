@@ -95,6 +95,7 @@ export async function up(db: any) {
     CREATE TABLE IF NOT EXISTS activity_classes (
       activity_id INTEGER NOT NULL,
       class_id INTEGER NOT NULL,
+      participation_mode TEXT DEFAULT 'mandatory' CHECK(participation_mode IN ('mandatory', 'voluntary')),
       PRIMARY KEY(activity_id, class_id),
       FOREIGN KEY(activity_id) REFERENCES activities(id),
       FOREIGN KEY(class_id) REFERENCES classes(id)
@@ -145,6 +146,7 @@ export async function up(db: any) {
       activity_id INTEGER NOT NULL,
       student_id INTEGER NOT NULL,
       attendance_status TEXT DEFAULT 'registered' CHECK(attendance_status IN ('registered', 'attended', 'absent')),
+      participation_source TEXT DEFAULT 'voluntary' CHECK(participation_source IN ('voluntary', 'assigned')),
       achievement_level TEXT CHECK(achievement_level IN ('excellent', 'good', 'participated')),
       feedback TEXT,
       evaluated_at DATETIME,

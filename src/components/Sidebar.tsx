@@ -1,5 +1,6 @@
 'use client';
 
+import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
@@ -157,7 +158,7 @@ export default function Sidebar() {
         { label: 'Hoạt động của tôi', href: '/teacher/activities', icon: BookOpen },
         { label: 'Phê duyệt', href: '/teacher/approvals', icon: CheckSquare },
         { label: 'Học viên', href: '/teacher/students', icon: Users },
-        { label: 'Lớp học', href: '/classes', icon: School },
+        { label: 'Lớp học', href: '/teacher/classes', icon: School },
       ],
     },
     {

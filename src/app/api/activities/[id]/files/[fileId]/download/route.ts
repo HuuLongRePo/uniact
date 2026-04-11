@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireRole } from '@/lib/guards';
 import { dbGet } from '@/lib/database';
 import { ApiError, errorResponse } from '@/lib/api-response';
+import { teacherCanAccessActivity } from '@/lib/activity-access';
 import { readFile } from 'fs/promises';
 import { existsSync } from 'fs';
 import path from 'path';
@@ -76,7 +77,10 @@ export async function GET(
       return errorResponse(ApiError.notFound('Không tìm thấy hoạt động'));
     }
 
-    if (user.role === 'teacher' && Number(activity.teacher_id) !== Number(user.id)) {
+    if (
+      user.role === 'teacher' &&
+      !(await teacherCanAccessActivity(Number(user.id), activityId))
+    ) {
       return errorResponse(ApiError.forbidden('Không có quyền truy cập'));
     }
 

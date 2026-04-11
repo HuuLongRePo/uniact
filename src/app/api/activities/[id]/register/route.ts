@@ -1,5 +1,13 @@
 import { NextRequest } from 'next/server';
-import { dbGet, dbRun, dbAll, dbHelpers, withTransaction } from '@/lib/database';
+import {
+  dbGet,
+  dbRun,
+  dbAll,
+  dbHelpers,
+  ensureActivityClassParticipationMode,
+  ensureParticipationColumns,
+  withTransaction,
+} from '@/lib/database';
 import { evaluateRegistrationPolicies } from '@/lib/activity-service';
 import { notificationService, ActivityRegistrationNotification } from '@/lib/notifications';
 import { requireApiRole } from '@/lib/guards';
@@ -25,6 +33,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
 
     const user = await requireApiRole(request, ['student']);
+    await ensureParticipationColumns();
+    await ensureActivityClassParticipationMode();
 
     // Read request body safely (may be empty for simple POST)
     let forceRegister = false;
@@ -79,9 +89,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
 
     // Kiểm tra học viên có thuộc lớp được mời không (dựa vào bảng activity_classes)
-    const rows = (await dbAll('SELECT class_id FROM activity_classes WHERE activity_id = ?', [
+    const rows = (await dbAll('SELECT class_id, participation_mode FROM activity_classes WHERE activity_id = ?', [
       activityId,
-    ])) as Array<{ class_id: number }>;
+    ])) as Array<{ class_id: number; participation_mode?: string | null }>;
 
     const classIds = rows.map((r) => r.class_id);
     if (classIds.length > 0 && (!user.class_id || !classIds.includes(user.class_id))) {
@@ -98,7 +108,23 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return errorResponse(ApiError.validation('Bạn đã đăng ký hoạt động này rồi'));
     }
 
-    // 🔐 Chính sách đăng ký (giới hạn tuần + xung đột cùng ngày)
+    // 🔐 Chính sách đăng ký (giới hạn tuần + xung đột trùng giờ bắt đầu)
+    const mandatoryClassMatch =
+      !!user.class_id &&
+      rows.some(
+        (row) =>
+          Number(row.class_id) === Number(user.class_id) &&
+          (row.participation_mode || 'mandatory') === 'mandatory'
+      );
+
+    if (mandatoryClassMatch) {
+      return errorResponse(
+        ApiError.validation(
+          'Hoat dong nay ap dung bat buoc voi lop cua ban. Ban khong can tu dang ky.'
+        )
+      );
+    }
+
     const policy = await evaluateRegistrationPolicies({
       studentId: user.id,
       activity,
@@ -108,10 +134,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     if (!policy.ok) {
       if (policy.error === 'conflict_detected') {
         return errorResponse(
-          ApiError.conflict('Bạn đã đăng ký hoạt động khác cùng ngày. Xác nhận để tiếp tục.', {
+          ApiError.conflict('Bạn đã đăng ký hoạt động khác trùng giờ bắt đầu. Xác nhận để tiếp tục.', {
             conflicts: policy.conflicts,
             can_override: policy.can_override,
-            hint: 'Gửi lại request với {"force_register": true} để bỏ qua cảnh báo',
+            hint: 'Gửi lại request với {"force_register": true} để bỏ qua cảnh báo trùng giờ bắt đầu',
           })
         );
       }
@@ -146,8 +172,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
       // Tạo đăng ký
       const insertResult = await dbRun(
-        `INSERT INTO participations (activity_id, student_id, attendance_status, created_at)
-         VALUES (?, ?, 'registered', datetime('now'))`,
+        `INSERT INTO participations (
+           activity_id,
+           student_id,
+           attendance_status,
+           participation_source,
+           created_at
+         )
+         VALUES (?, ?, 'registered', 'voluntary', datetime('now'))`,
         [activityId, user.id]
       );
 
@@ -215,6 +247,7 @@ export async function DELETE(
 ) {
   try {
     const user = await requireApiRole(request, ['student']);
+    await ensureParticipationColumns();
 
     const { id } = await params;
     const activityId = Number(id);
@@ -242,12 +275,21 @@ export async function DELETE(
 
     const cancellationResult = await withTransaction(async () => {
       const participation = (await dbGet(
-        'SELECT id, attendance_status FROM participations WHERE activity_id = ? AND student_id = ? LIMIT 1',
+        `SELECT
+           id,
+           attendance_status,
+           COALESCE(participation_source, 'voluntary') as participation_source
+         FROM participations
+         WHERE activity_id = ? AND student_id = ? LIMIT 1`,
         [activityId, user.id]
-      )) as { id: number; attendance_status: string } | undefined;
+      )) as { id: number; attendance_status: string; participation_source?: string | null } | undefined;
 
       if (!participation) {
         return { cancelled: false as const, reason: 'not_registered' as const };
+      }
+
+      if (participation.participation_source === 'assigned') {
+        throw new Error('MANDATORY_PARTICIPATION');
       }
 
       if (participation.attendance_status === 'attended') {
@@ -311,6 +353,12 @@ export async function DELETE(
 
     if (error.message === 'ALREADY_ATTENDED') {
       return errorResponse(ApiError.validation('Không thể hủy sau khi đã điểm danh'));
+    }
+
+    if (error.message === 'MANDATORY_PARTICIPATION') {
+      return errorResponse(
+        ApiError.validation('Ban dang nam trong danh sach tham gia bat buoc nen khong the tu huy dang ky')
+      );
     }
 
     return errorResponse(ApiError.internalError('Lỗi máy chủ nội bộ'));

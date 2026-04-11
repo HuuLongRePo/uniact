@@ -34,7 +34,7 @@ export async function checkWeeklyLimit(
   return { count, limit };
 }
 
-export async function detectSameDayConflicts(
+export async function detectSameStartTimeConflicts(
   studentId: number,
   activityId: number,
   dateTime: string
@@ -46,13 +46,23 @@ export async function detectSameDayConflicts(
     JOIN activities a ON p.activity_id = a.id
     WHERE p.student_id = ?
       AND p.attendance_status = 'registered'
-      AND DATE(a.date_time) = DATE(?)
+      AND datetime(a.date_time) = datetime(?)
       AND a.id != ?
     ORDER BY a.date_time
   `,
     [studentId, dateTime, activityId]
   );
   return conflicts;
+}
+
+// Legacy alias kept to avoid breaking older imports while moving the rule
+// from "same day" to the confirmed "same start time" business contract.
+export async function detectSameDayConflicts(
+  studentId: number,
+  activityId: number,
+  dateTime: string
+) {
+  return detectSameStartTimeConflicts(studentId, activityId, dateTime);
 }
 
 export async function evaluateRegistrationPolicies(opts: {
@@ -66,8 +76,9 @@ export async function evaluateRegistrationPolicies(opts: {
   if (count >= limit) {
     return { ok: false, error: `Bạn đã đạt giới hạn đăng ký ${limit} hoạt động trong tuần này` };
   }
-  // Conflict detection (same-day). Soft warning, can override.
-  const conflicts = await detectSameDayConflicts(
+  // Conflict detection follows the confirmed business rule:
+  // only flag registrations with the same activity start time.
+  const conflicts = await detectSameStartTimeConflicts(
     opts.studentId,
     opts.activityId,
     opts.activity.date_time

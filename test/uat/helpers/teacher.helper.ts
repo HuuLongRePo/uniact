@@ -51,7 +51,15 @@ export class TeacherHelper {
     const btn = this.page.locator('[data-testid="btn-create-activity"]')
     await expect(btn).toBeVisible()
     await btn.click()
-    await this.page.waitForURL(/\/activities\/new/)
+    const createDialogHeading = this.page
+      .locator('text=/Tạo hoạt động mới|Tao hoat dong moi|Chỉnh sửa hoạt động|Chinh sua hoat dong/i')
+      .first()
+    const dialogVisible = await createDialogHeading.isVisible({ timeout: 3000 }).catch(() => false)
+    if (dialogVisible) {
+      return
+    }
+
+    await this.page.waitForURL(/\/(teacher\/activities\/new|activities\/new)/)
   }
 
   // Fill activity form
@@ -111,14 +119,20 @@ export class TeacherHelper {
 
   // Submit activity form
   async submitActivityForm() {
-    const submitBtn = this.page.locator('button[type="submit"]').first()
+    const submitBtn = this.page
+      .locator('button:has-text("Gửi duyệt"), button:has-text("Gui duyet"), button[type="submit"]')
+      .first()
     await expect(submitBtn).toBeVisible()
     await submitBtn.click()
   }
 
   // Save as draft
   async saveDraft() {
-    const draftBtn = this.page.locator('button:has-text("Lưu nháp"), button:has-text("Draft")')
+    const draftBtn = this.page
+      .locator(
+        'button:has-text("Lưu nháp"), button:has-text("Luu nhap"), button:has-text("Save draft"), button:has-text("Save Draft"), button:has-text("Draft")'
+      )
+      .first()
     if (await draftBtn.isVisible()) {
       await draftBtn.click()
       await this.page.waitForTimeout(500)
@@ -131,7 +145,11 @@ export class TeacherHelper {
       await this.goToActivities()
       const card = await this.findActivityByTitle(activityTitle)
       if (card) {
-        const submitBtn = card.locator('button:has-text("Gửi duyệt"), button:has-text("Submit")')
+        const submitBtn = card
+          .locator(
+            'button:has-text("Gửi duyệt"), button:has-text("Gui duyet"), button:has-text("Submit")'
+          )
+          .first()
         if (await submitBtn.isVisible()) {
           await submitBtn.click()
           // Handle confirmation if appears
@@ -188,7 +206,7 @@ export class TeacherHelper {
 
   // Access QR Code page
   async goToQRCode(activityId: number) {
-    await this.page.goto(`${BASE_URL}/teacher/activities/${activityId}/qr`)
+    await this.page.goto(`${BASE_URL}/teacher/qr?activity_id=${activityId}`)
     await this.page.waitForLoadState('networkidle')
   }
 

@@ -1,36 +1,43 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { dbAll } from '@/lib/database';
+import { NextRequest } from 'next/server';
+import { dbAll, dbGet } from '@/lib/database';
 import { requireRole } from '@/lib/guards';
 import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
+import { teacherCanAccessActivity } from '@/lib/activity-access';
 
-/**
- * GET /api/activities/[id]/participants
- * Lấy danh sách participants của một activity
- * Teachers only (hoặc admin)
- */
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    let user;
     try {
-      await requireRole(request, ['teacher', 'admin']);
+      user = await requireRole(request, ['teacher', 'admin']);
     } catch (err: any) {
       const msg = String(err?.message || '');
       return errorResponse(
-        msg.includes('Chưa đăng nhập')
-          ? ApiError.unauthorized('Chưa đăng nhập')
-          : ApiError.forbidden('Không có quyền truy cập')
+        msg.includes('quy')
+          ? ApiError.forbidden('Forbidden')
+          : ApiError.unauthorized('Unauthorized')
       );
     }
 
     const { id } = await params;
     const activityId = Number(id);
-    if (isNaN(activityId)) {
-      return errorResponse(ApiError.validation('ID hoạt động không hợp lệ'));
+    if (Number.isNaN(activityId)) {
+      return errorResponse(ApiError.validation('Invalid activity id'));
     }
 
-    // Lấy participations với thông tin student và scores
+    const activity = (await dbGet('SELECT id FROM activities WHERE id = ?', [activityId])) as
+      | { id: number }
+      | undefined;
+    if (!activity) {
+      return errorResponse(ApiError.notFound('Activity not found'));
+    }
+
+    if (user.role === 'teacher' && !(await teacherCanAccessActivity(Number(user.id), activityId))) {
+      return errorResponse(ApiError.forbidden('Forbidden'));
+    }
+
     const participations = (await dbAll(
       `
-      SELECT 
+      SELECT
         p.id,
         p.student_id,
         u.name as full_name,
@@ -49,7 +56,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       LEFT JOIN classes c ON c.id = u.class_id
       LEFT JOIN student_scores ss ON ss.activity_id = p.activity_id AND ss.student_id = p.student_id
       WHERE p.activity_id = ?
-      ORDER BY 
+      ORDER BY
         CASE p.attendance_status
           WHEN 'attended' THEN 1
           WHEN 'registered' THEN 2
@@ -75,7 +82,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   } catch (error: any) {
     console.error('Error fetching participants:', error);
     return errorResponse(
-      ApiError.internalError('Không thể tải danh sách học viên tham gia', error?.message)
+      ApiError.internalError('Could not load activity participants', error?.message)
     );
   }
 }

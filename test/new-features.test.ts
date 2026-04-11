@@ -1,11 +1,15 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
-import { dbRun, dbGet, dbAll } from '@/lib/database'
+import { dbRun, dbGet, dbAll, dbReady } from '@/lib/database'
+import { ensureCoreTestSchema } from './core-test-schema'
 
 let testTeacherId: number
 let testActivityId: number
 
 describe('Activity Clone Feature', () => {
   beforeAll(async () => {
+    await dbReady()
+    await ensureCoreTestSchema()
+
     // Create test teacher
     const teacherResult = await dbRun(
       'INSERT INTO users (email, password_hash, name, role) VALUES (?, ?, ?, ?)',
@@ -68,6 +72,9 @@ describe('Activity Cancel Feature', () => {
   let cancelActivityId: number
 
   beforeAll(async () => {
+    await dbReady()
+    await ensureCoreTestSchema()
+
     const teacherResult = await dbRun(
       'INSERT INTO users (email, password_hash, name, role) VALUES (?, ?, ?, ?)',
       ['test-cancel-teacher@test.com', 'hash', 'Cancel Teacher', 'teacher']
@@ -122,6 +129,9 @@ describe('Student Awards Feature', () => {
   let awardId: number
 
   beforeAll(async () => {
+    await dbReady()
+    await ensureCoreTestSchema()
+
     const studentResult = await dbRun(
       'INSERT INTO users (email, password_hash, name, role) VALUES (?, ?, ?, ?)',
       ['test-award-student@test.com', 'hash', 'Award Student', 'student']

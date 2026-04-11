@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { dbAll, dbGet, dbRun, withTransaction } from '@/lib/database';
+import { dbAll, dbGet, dbRun, ensureParticipationColumns, withTransaction } from '@/lib/database';
 import { requireRole } from '@/lib/guards';
 import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
 
@@ -34,6 +34,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     ])) as any;
     if (!activity) return errorResponse(ApiError.notFound('Không tìm thấy hoạt động'));
 
+    await ensureParticipationColumns();
+
     if (user.role === 'teacher' && activity.teacher_id !== user.id) {
       return errorResponse(ApiError.forbidden('Bạn chỉ có thể thao tác trên hoạt động của mình'));
     }
@@ -48,21 +50,46 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
 
     let addedCount = 0;
+    let upgradedCount = 0;
 
     await withTransaction(async () => {
       for (const s of students) {
         const result = await dbRun(
-          `INSERT OR IGNORE INTO participations (activity_id, student_id, attendance_status)
-           VALUES (?, ?, 'registered')`,
+          `INSERT OR IGNORE INTO participations (
+             activity_id,
+             student_id,
+             attendance_status,
+             participation_source
+           )
+           VALUES (?, ?, 'registered', 'assigned')`,
           [activityId, s.id]
         );
-        if (result?.changes) addedCount += result.changes;
+        if (result?.changes) {
+          addedCount += result.changes;
+          continue;
+        }
+
+        const upgradeResult = await dbRun(
+          `UPDATE participations
+           SET participation_source = 'assigned',
+               updated_at = datetime('now')
+           WHERE activity_id = ?
+             AND student_id = ?
+             AND COALESCE(participation_source, 'voluntary') <> 'assigned'`,
+          [activityId, s.id]
+        );
+
+        if (upgradeResult?.changes) {
+          upgradedCount += upgradeResult.changes;
+        }
       }
     });
 
     return successResponse(
-      { added_count: addedCount },
-      `Đã thêm ${addedCount} học viên vào hoạt động`
+      { added_count: addedCount, upgraded_count: upgradedCount },
+      upgradedCount > 0
+        ? `Đã thêm ${addedCount} học viên và nâng ${upgradedCount} đăng ký lên bắt buộc`
+        : `Đã thêm ${addedCount} học viên vào hoạt động`
     );
   } catch (error: any) {
     console.error('Add class to participants error:', error);

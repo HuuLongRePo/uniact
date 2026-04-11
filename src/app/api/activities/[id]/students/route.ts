@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { dbAll, dbGet } from '@/lib/database';
 import { requireRole } from '@/lib/guards';
 import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
+import { teacherCanAccessActivity } from '@/lib/activity-access';
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -28,7 +29,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     ])) as any;
     if (!activity) return errorResponse(ApiError.notFound('Không tìm thấy hoạt động'));
 
-    if (user.role === 'teacher' && activity.teacher_id !== user.id) {
+    if (
+      user.role === 'teacher' &&
+      !(await teacherCanAccessActivity(Number(user.id), Number(activityId)))
+    ) {
       return errorResponse(ApiError.forbidden('Bạn chỉ có thể xem hoạt động của mình'));
     }
 

@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest'
 import { dbRun, dbGet, dbReady, withTransaction } from '@/lib/database'
+import { ensureCoreTestSchema } from './core-test-schema'
 
 describe('Race Condition Prevention - Activity Registration', () => {
   let activityId: number
@@ -7,6 +8,7 @@ describe('Race Condition Prevention - Activity Registration', () => {
 
   beforeAll(async () => {
     await dbReady()
+    await ensureCoreTestSchema()
 
     // Tạo hoạt động với max_participants = 5
     const activity = await dbRun(`

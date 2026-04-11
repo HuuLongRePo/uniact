@@ -62,8 +62,9 @@ Teacher: "Tạo hoạt động"
 
          ↓ (Teacher click "Gửi duyệt")
 
-[PUT /api/activities/{id}]
-  ├─ Update: approval_status='pending'
+[POST /api/activities/{id}/submit-approval]
+  ├─ Validate: activity is draft or rejected
+  ├─ Update: approval_status='requested' (status stays 'draft')
   ├─ Create audit log
   └─ Send notification to Admin
 
@@ -71,7 +72,7 @@ Teacher: "Tạo hoạt động"
 
 [POST /api/activities/{id}/approve]
   ├─ Validate admin permission
-  ├─ Check: approval_status='pending'
+  ├─ Check: approval_status='requested'
   ├─ Update: status='published', approval_status='approved'
   ├─ Create audit log
   ├─ Invalidate cache
@@ -106,7 +107,7 @@ Teacher: "Tạo hoạt động"
   - Unit test: 5+ overlap scenarios
   
 - [ ] **1.3.3 - Approval Workflow**
-  - Implement state machine: draft → pending → approved/rejected
+  - Implement state machine: draft -> requested -> published/rejected
   - Log every transition in audit_logs
   - Send notification after approval_status change
   
@@ -492,7 +493,7 @@ Task 1.1.2: Conflict Detection System
   
 Task 1.1.3: Approval Workflow
   Subtasks:
-    - [ ] Implement state machine (draft → pending → approved/rejected)
+    - [ ] Implement state machine (draft -> requested -> published/rejected)
     - [ ] Create activity_approvals table records
     - [ ] Audit logging for transitions
     - [ ] Email/notification on approval status change
@@ -780,7 +781,7 @@ Task 3.2.3: Business Logic Validation
   Subtasks:
     - [ ] Deadline >= 24h before activity
     - [ ] Max participants > current registrations
-    - [ ] Status transition rules (draft → pending → approved)
+    - [ ] Status transition rules (draft -> requested -> published)
     - [ ] Authorization checks (role-based)
   Assigned: Backend Developer
   Est: 2-3 days

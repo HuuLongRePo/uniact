@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Plus,
   Upload,
@@ -36,6 +36,33 @@ interface OrganizationLevel {
   name: string;
 }
 
+interface ParticipationPreviewStudent {
+  id: number;
+  name: string;
+  email: string | null;
+  participation_mode?: 'mandatory' | 'voluntary';
+  resolved_mode?: 'mandatory' | 'voluntary';
+  was_conflicted?: boolean;
+}
+
+interface ParticipationPreviewGroup {
+  class_id: number;
+  class_name: string;
+  participation_mode?: 'mandatory' | 'voluntary';
+  mandatory_count: number;
+  voluntary_count: number;
+  conflict_count: number;
+  students: ParticipationPreviewStudent[];
+}
+
+interface ParticipationPreview {
+  total_classes: number;
+  mandatory_participants: number;
+  voluntary_participants: number;
+  conflict_count: number;
+  groups: ParticipationPreviewGroup[];
+}
+
 export default function CreateActivityPage() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -43,7 +70,8 @@ export default function CreateActivityPage() {
   const [time, setTime] = useState('');
   const [location, setLocation] = useState('');
   const [maxParticipants, setMaxParticipants] = useState<number | ''>('');
-  const [selectedClasses, setSelectedClasses] = useState<number[]>([]);
+  const [mandatoryClassIds, setMandatoryClassIds] = useState<number[]>([]);
+  const [voluntaryClassIds, setVoluntaryClassIds] = useState<number[]>([]);
   const [activityTypeId, setActivityTypeId] = useState<number | ''>('');
   const [organizationLevelId, setOrganizationLevelId] = useState<number | ''>('');
   const [classes, setClasses] = useState<Class[]>([]);
@@ -57,6 +85,10 @@ export default function CreateActivityPage() {
   const [submitMode, setSubmitMode] = useState<'draft' | 'submit'>('draft');
   const [currentTab, setCurrentTab] = useState<'basic' | 'details' | 'files'>('basic');
   const [showPreview, setShowPreview] = useState(false);
+  const [participationPreview, setParticipationPreview] = useState<ParticipationPreview | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const selectedClasses = Array.from(new Set([...mandatoryClassIds, ...voluntaryClassIds]));
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -121,6 +153,57 @@ export default function CreateActivityPage() {
       });
   }, []);
 
+  useEffect(() => {
+    if (!showPreview) return;
+
+    if (selectedClasses.length === 0) {
+      setParticipationPreview(null);
+      setPreviewError(null);
+      return;
+    }
+
+    let active = true;
+
+    const loadPreview = async () => {
+      try {
+        setPreviewLoading(true);
+        setPreviewError(null);
+
+        const response = await fetch('/api/activities/participation-preview', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            class_ids: selectedClasses,
+            mandatory_class_ids: mandatoryClassIds,
+            voluntary_class_ids: voluntaryClassIds,
+          }),
+        });
+        const data = await response.json().catch(() => null);
+
+        if (!response.ok) {
+          throw new Error(data?.error || 'Khong the tai preview tham gia');
+        }
+
+        if (!active) return;
+        setParticipationPreview(data?.preview || null);
+      } catch (error: any) {
+        if (!active) return;
+        setParticipationPreview(null);
+        setPreviewError(error?.message || 'Khong the tai preview tham gia');
+      } finally {
+        if (active) {
+          setPreviewLoading(false);
+        }
+      }
+    };
+
+    void loadPreview();
+
+    return () => {
+      active = false;
+    };
+  }, [showPreview, selectedClasses, mandatoryClassIds, voluntaryClassIds]);
+
   // Drag & drop file reorder
   const handleDragStart = (idx: number) => setDraggedIdx(idx);
   const handleDragOver = (idx: number, e: React.DragEvent) => {
@@ -148,52 +231,90 @@ export default function CreateActivityPage() {
     setFiles((files) => files.filter((_, i) => i !== idx));
   };
 
-  const handleClassSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+  const handleMandatoryClassSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const values = Array.from(e.target.selectedOptions).map((opt) => Number(opt.value));
-    setSelectedClasses(values);
+    setMandatoryClassIds(values);
+    setVoluntaryClassIds((current) => current.filter((classId) => !values.includes(classId)));
+  };
+
+  const handleVoluntaryClassSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const values = Array.from(e.target.selectedOptions)
+      .map((opt) => Number(opt.value))
+      .filter((classId) => !mandatoryClassIds.includes(classId));
+    setVoluntaryClassIds(values);
   };
 
   const handleSubmit = async (e: React.FormEvent, mode: 'draft' | 'submit') => {
     e.preventDefault();
-    if (!title.trim() || !date || selectedClasses.length === 0) {
+    if (!title.trim() || !date || !location.trim() || selectedClasses.length === 0) {
       toast.error('Vui lòng nhập đầy đủ thông tin bắt buộc');
       return;
     }
     setSubmitting(true);
     setSuccess(false);
-    let uploadedFiles = [];
     try {
+      const createPayload = {
+        title: title.trim(),
+        description,
+        date_time: time ? `${date}T${time}` : `${date}T00:00`,
+        location: location.trim(),
+        max_participants: maxParticipants ? Number(maxParticipants) : 30,
+        class_ids: selectedClasses,
+        mandatory_class_ids: mandatoryClassIds,
+        voluntary_class_ids: voluntaryClassIds,
+        ...(activityTypeId ? { activity_type_id: Number(activityTypeId) } : {}),
+        ...(organizationLevelId ? { organization_level_id: Number(organizationLevelId) } : {}),
+      };
+
+      const createRes = await fetch('/api/activities', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(createPayload),
+      });
+
+      const createData = await createRes.json().catch(() => null);
+      if (!createRes.ok) {
+        throw new Error(createData?.error || 'Tạo hoạt động thất bại');
+      }
+
+      const createdActivityId =
+        createData?.activity?.id ?? createData?.data?.activity?.id ?? createData?.id;
+
+      if (!createdActivityId) {
+        throw new Error('Không xác định được hoạt động vừa tạo');
+      }
+
       if (files.length > 0) {
         setUploading(true);
         const formData = new FormData();
-        files.forEach((f) => formData.append('files', f));
-        const res = await fetch('/api/activities/upload', {
+        files.forEach((file) => formData.append('files', file));
+
+        const uploadRes = await fetch(`/api/activities/${createdActivityId}/files`, {
           method: 'POST',
           body: formData,
         });
-        if (!res.ok) throw new Error('Upload thất bại');
-        const data = await res.json();
-        uploadedFiles = data.files || [];
-        setUploading(false);
+        const uploadData = await uploadRes.json().catch(() => null);
+
+        if (!uploadRes.ok) {
+          throw new Error(
+            uploadData?.error || 'Hoạt động đã được tạo nhưng tải file lên thất bại'
+          );
+        }
       }
-      // Submit activity
-      const res = await fetch('/api/activities', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title,
-          description,
-          date_time: time ? `${date}T${time}` : `${date}T00:00`,
-          location,
-          max_participants: maxParticipants ? Number(maxParticipants) : null,
-          class_ids: selectedClasses,
-          activity_type_id: activityTypeId ? Number(activityTypeId) : null,
-          organization_level_id: organizationLevelId ? Number(organizationLevelId) : null,
-          files: uploadedFiles,
-          status: 'draft',
-        }),
-      });
-      if (!res.ok) throw new Error('Tạo hoạt động thất bại');
+
+      if (mode === 'submit') {
+        const submitRes = await fetch(`/api/activities/${createdActivityId}/submit-approval`, {
+          method: 'POST',
+        });
+        const submitData = await submitRes.json().catch(() => null);
+
+        if (!submitRes.ok) {
+          throw new Error(
+            submitData?.error || 'Hoạt động đã được tạo nhưng gửi duyệt thất bại'
+          );
+        }
+      }
+
       setSuccess(true);
       toast.success(mode === 'draft' ? 'Lưu nháp thành công!' : 'Gửi duyệt thành công!');
       setTitle('');
@@ -202,15 +323,18 @@ export default function CreateActivityPage() {
       setTime('');
       setLocation('');
       setMaxParticipants('');
-      setSelectedClasses([]);
+      setMandatoryClassIds([]);
+      setVoluntaryClassIds([]);
       setActivityTypeId('');
       setOrganizationLevelId('');
       setFiles([]);
       setTimeout(() => {
         window.location.href = '/teacher/activities';
       }, 1500);
+      return;
     } catch (err: any) {
       toast.error(err.message || 'Có lỗi xảy ra');
+      return;
     } finally {
       setSubmitting(false);
       setUploading(false);
@@ -252,7 +376,7 @@ export default function CreateActivityPage() {
                 className="ml-auto flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-sm hover:bg-gray-50"
               >
                 <Eye className="w-4 h-4" />
-                {showPreview ? 'Ẩn xem trước' : 'Xem trước'}
+                {showPreview ? 'An preview tham gia' : 'Xem preview tham gia'}
               </button>
             </div>
           </div>
@@ -361,13 +485,14 @@ export default function CreateActivityPage() {
                       <div>
                         <label className="block font-medium mb-1">
                           <MapPin className="w-4 h-4 inline mr-1" />
-                          Địa điểm
+                          Địa điểm <span className="text-red-500">*</span>
                         </label>
                         <input
                           type="text"
                           className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-200"
                           value={location}
                           onChange={(e) => setLocation(e.target.value)}
+                          required
                           disabled={submitting}
                           placeholder="Phòng 101"
                         />
@@ -383,9 +508,9 @@ export default function CreateActivityPage() {
                       <select
                         multiple
                         className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-200 h-32"
-                        value={selectedClasses.map(String)}
-                        onChange={handleClassSelect}
-                        required
+                        value={mandatoryClassIds.map(String)}
+                        onChange={handleMandatoryClassSelect}
+                        required={selectedClasses.length === 0}
                         disabled={submitting}
                       >
                         {classes.map((cls: any) => (
@@ -394,6 +519,102 @@ export default function CreateActivityPage() {
                           </option>
                         ))}
                       </select>
+                      <div className="mt-3">
+                        <label className="mb-1 block text-sm font-medium text-sky-700">
+                          Lop tu nguyen
+                        </label>
+                        <select
+                          multiple
+                          className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-200 h-32"
+                          value={voluntaryClassIds.map(String)}
+                          onChange={handleVoluntaryClassSelect}
+                          disabled={submitting}
+                        >
+                          {classes.map((cls: any) => (
+                            <option
+                              key={`voluntary-${cls.id}`}
+                              value={cls.id}
+                              disabled={mandatoryClassIds.includes(cls.id)}
+                            >
+                              {cls.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      {showPreview && (
+                        <div className="mt-4 rounded-lg border border-blue-200 bg-blue-50 p-4">
+                          <div className="mb-2 text-sm font-semibold text-blue-900">
+                            Preview participation hien tai
+                          </div>
+                          {selectedClasses.length === 0 ? (
+                            <p className="text-sm text-gray-600">
+                              Chon it nhat mot lop bat buoc hoac tu nguyen de xem preview cuoi cung.
+                            </p>
+                          ) : previewLoading ? (
+                            <div className="flex items-center gap-2 text-sm text-blue-700">
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              Dang tai preview...
+                            </div>
+                          ) : previewError ? (
+                            <p className="text-sm text-red-600">{previewError}</p>
+                          ) : participationPreview ? (
+                            <div className="space-y-3">
+                              <div className="grid grid-cols-2 gap-2 text-sm">
+                                <div className="rounded-lg bg-white p-3">
+                                  <div className="text-gray-500">So lop</div>
+                                  <div className="text-lg font-bold text-gray-900">
+                                    {participationPreview.total_classes}
+                                  </div>
+                                </div>
+                                <div className="rounded-lg bg-white p-3">
+                                  <div className="text-gray-500">Bat buoc</div>
+                                  <div className="text-lg font-bold text-orange-700">
+                                    {participationPreview.mandatory_participants}
+                                  </div>
+                                </div>
+                                <div className="rounded-lg bg-white p-3">
+                                  <div className="text-gray-500">Tu nguyen</div>
+                                  <div className="text-lg font-bold text-sky-700">
+                                    {participationPreview.voluntary_participants}
+                                  </div>
+                                </div>
+                                <div className="rounded-lg bg-white p-3">
+                                  <div className="text-gray-500">Xung dot scope</div>
+                                  <div className="text-lg font-bold text-amber-700">
+                                    {participationPreview.conflict_count}
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="text-xs text-gray-600">
+                                Neu mot lop xuat hien o ca hai danh sach, he thong se uu tien
+                                mandatory over voluntary.
+                              </div>
+                              <div className="space-y-2">
+                                {participationPreview.groups.map((group) => (
+                                  <details
+                                    key={group.class_id}
+                                    className="rounded-lg border border-blue-200 bg-white p-3"
+                                  >
+                                    <summary className="cursor-pointer list-none font-medium text-gray-800">
+                                      {group.class_name} • {group.mandatory_count} hoc vien bat buoc
+                                    </summary>
+                                    <div className="mt-2 space-y-1 text-sm text-gray-600">
+                                      {group.students.map((student) => (
+                                        <div key={student.id} className="flex justify-between gap-3">
+                                          <span>{student.name}</span>
+                                          <span className="text-xs text-gray-500">
+                                            {student.email || `ID ${student.id}`}
+                                          </span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </details>
+                                ))}
+                              </div>
+                            </div>
+                          ) : null}
+                        </div>
+                      )}
                       <div className="text-xs text-gray-500 mt-1">
                         💡 Giữ Ctrl (Windows) hoặc Cmd (Mac) để chọn nhiều lớp
                       </div>
@@ -460,8 +681,11 @@ export default function CreateActivityPage() {
                             setMaxParticipants(e.target.value === '' ? '' : Number(e.target.value))
                           }
                           disabled={submitting}
-                          placeholder="Không giới hạn"
+                          placeholder="Để trống sẽ dùng 30"
                         />
+                        <div className="text-xs text-gray-500 mt-1">
+                          Để trống nếu muốn dùng giá trị mặc định 30 người.
+                        </div>
                       </div>
                     </div>
 
@@ -575,8 +799,11 @@ export default function CreateActivityPage() {
                 {/* Action Buttons */}
                 <div className="pt-6 flex gap-3 border-t border-gray-200">
                   <button
-                    type="submit"
-                    onClick={() => setSubmitMode('draft')}
+                    type="button"
+                    onClick={(e) => {
+                      setSubmitMode('draft');
+                      handleSubmit(e as any, 'draft');
+                    }}
                     className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-semibold disabled:opacity-60 transition-all shadow-md"
                     disabled={submitting || uploading}
                   >
@@ -588,8 +815,11 @@ export default function CreateActivityPage() {
                     {submitting ? 'Đang xử lý...' : 'Lưu nháp'}
                   </button>
                   <button
-                    type="submit"
-                    onClick={() => setSubmitMode('submit')}
+                    type="button"
+                    onClick={(e) => {
+                      setSubmitMode('submit');
+                      handleSubmit(e as any, 'submit');
+                    }}
                     className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg font-semibold disabled:opacity-60 transition-all shadow-lg"
                     disabled={submitting || uploading}
                   >

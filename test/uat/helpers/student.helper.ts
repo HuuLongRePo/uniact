@@ -9,6 +9,47 @@ import { loginAs } from './login.helper'
 export class StudentHelper {
   constructor(private page: Page) {}
 
+  private parseQrPayload(rawValue: string) {
+    const trimmed = rawValue.trim()
+
+    if (!trimmed) {
+      throw new Error('QR payload is empty')
+    }
+
+    const extractPayload = (payload: Record<string, unknown>) => {
+      const token = payload.t ?? payload.qr_token ?? payload.session_token
+      const sessionId = payload.s ?? payload.session_id ?? payload.id
+      const normalizedToken = typeof token === 'string' ? token.trim() : ''
+      const normalizedSessionId = Number(sessionId)
+
+      if (!normalizedToken || !Number.isFinite(normalizedSessionId)) {
+        return null
+      }
+
+      return {
+        qr_token: normalizedToken,
+        session_id: normalizedSessionId,
+      }
+    }
+
+    try {
+      const parsed = JSON.parse(trimmed) as Record<string, unknown>
+      const payload = extractPayload(parsed)
+      if (payload) return payload
+    } catch {}
+
+    if (trimmed.includes('=')) {
+      const searchParams = new URLSearchParams(trimmed.startsWith('?') ? trimmed : `?${trimmed}`)
+      const payload = extractPayload({
+        t: searchParams.get('t') ?? searchParams.get('qr_token') ?? searchParams.get('session_token'),
+        s: searchParams.get('s') ?? searchParams.get('session_id') ?? searchParams.get('id'),
+      })
+      if (payload) return payload
+    }
+
+    throw new Error('QR payload format is invalid')
+  }
+
   /**
    * Login as Student
    */
@@ -114,14 +155,17 @@ export class StudentHelper {
    * QR Check-in
    */
   async scanQRCode(qrToken: string) {
-    // Navigate to QR scan page
-    await this.page.goto('/student/qr-scan')
+    const payload = this.parseQrPayload(qrToken)
+    const response = await this.page.request.post('/api/attendance/validate', {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      data: payload,
+    })
+    const body = await response.json().catch(() => ({}))
 
-    // For testing, we'll submit token directly
-    await this.page.fill('input[name="qr_token"], input[placeholder*="QR"]', qrToken)
-    await this.page.click('button:has-text("Check-in"), button[type="submit"]')
-
-    await expect(this.page.locator('text=/success|thành công/i')).toBeVisible({ timeout: 5000 })
+    expect(response.ok()).toBeTruthy()
+    expect(body?.success).toBeTruthy()
   }
 
   async viewAttendanceHistory() {
@@ -133,7 +177,7 @@ export class StudentHelper {
    * Scores & Points
    */
   async viewTotalPoints() {
-    await this.page.goto('/student/statistics')
+    await this.page.goto('/student/dashboard')
     const totalPoints = await this.page.locator('[data-testid="total-points"], .total-points').textContent()
     return totalPoints
   }
@@ -144,8 +188,8 @@ export class StudentHelper {
   }
 
   async viewPointsBreakdown() {
-    await this.page.goto('/student/points-breakdown')
-    await expect(this.page.locator('canvas, svg, [data-testid="chart"]')).toBeVisible({ timeout: 5000 })
+    await this.page.goto('/student/points')
+    await this.page.waitForSelector('canvas, svg, [data-testid="chart"]', { timeout: 5000 })
   }
 
   async viewParticipationHistory() {
@@ -168,8 +212,8 @@ export class StudentHelper {
   }
 
   async compareWithClass() {
-    await this.page.goto('/student/class-comparison')
-    await expect(this.page.locator('canvas, svg, [data-testid="chart"]')).toBeVisible({ timeout: 5000 })
+    await this.page.goto('/student/ranking')
+    await expect(this.page.locator('select, table, .leaderboard')).toBeVisible({ timeout: 5000 })
   }
 
   /**
@@ -181,9 +225,10 @@ export class StudentHelper {
   }
 
   async viewBadges() {
-    await this.page.goto('/student/badges')
-    const badgeCount = await this.page.locator('[data-testid="badge"], .badge').count()
-    expect(badgeCount).toBeGreaterThanOrEqual(0)
+    await this.page.goto('/student/awards')
+    await expect(this.page.locator('[data-testid="awards-heading"], h1, h2')).toContainText(
+      /Awards|Giáº£i thÆ°á»Ÿng/i
+    )
   }
 
   /**
@@ -220,14 +265,34 @@ export class StudentHelper {
     await expect(this.page.locator('h1, h2')).toContainText(/Polls|Khảo sát/i)
   }
 
-  async votePoll(pollId: number, optionIndex: number) {
-    await this.page.goto(`/student/polls/${pollId}`)
+  async votePoll(_pollId: number, optionIndex: number) {
+    await this.page.goto('/student/polls')
 
-    const option = this.page.locator(`input[name="option"][value="${optionIndex}"]`)
-    await option.check()
+    const actionButton = this.page
+      .locator(
+        'button:has-text("Tham gia poll"), button:has-text("Xem ket qua"), button:has-text("Participate"), button:has-text("View results")'
+      )
+      .first()
+    await actionButton.click()
 
-    await this.page.click('button[type="submit"]:has-text("Vote"), button[type="submit"]:has-text("Bình chọn")')
-    await expect(this.page.locator('text=/voted|đã bình chọn/i')).toBeVisible({ timeout: 5000 })
+    const option = this.page
+      .locator('input[type="checkbox"], input[type="radio"]')
+      .nth(Math.max(optionIndex, 0))
+
+    if (await option.isVisible()) {
+      await option.check()
+      await this.page.click(
+        'button:has-text("Gui phan hoi"), button:has-text("Vote"), button:has-text("Binh chon")'
+      )
+      await expect(this.page.locator('text=/voted|da binh chon|da ghi nhan/i')).toBeVisible({
+        timeout: 5000,
+      })
+      return
+    }
+
+    await expect(this.page.locator('text=/da tham gia poll nay|already voted|ket qua/i')).toBeVisible({
+      timeout: 5000,
+    })
   }
 
   /**
@@ -257,3 +322,4 @@ export class StudentHelper {
     await expect(this.page.locator('text=/updated|đã cập nhật/i')).toBeVisible({ timeout: 5000 })
   }
 }
+

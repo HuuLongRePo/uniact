@@ -27,12 +27,12 @@
     │ 3. Review draft          │
     │                           │
     │ 4. Click "Gửi duyệt"     │
-    ├──────────────────────────→ │ UPDATE approval_status='pending'
+    ├──────────────────────────→ │ UPDATE approval_status='requested'
     │                           │ INSERT activity_approvals record
     │                           │ CREATE audit_log entry
     │◄────── Confirm ───────────┤
     │                           │
-    │                           │ NOTIFY ADMIN → Pending approval
+    │                           │ NOTIFY ADMIN → Requested approval
     │                           │
     │                           ├──────────────────────→ │
     │                           │                       │ 5. Review
@@ -406,7 +406,7 @@ EDGE CASES:
 
 4. activity_approvals
    UNIQUE (activity_id, status) - per approval cycle
-   → Ensure 1 pending, 1 approved/rejected max
+   → Ensure 1 requested, 1 approved/rejected max
 ```
 
 ---
@@ -419,7 +419,7 @@ EDGE CASES:
 - [ ] Location conflict detection working
 - [ ] Teacher schedule warning shown
 - [ ] Multi-class assignment without duplicates
-- [ ] State machine: draft → pending → approved/rejected
+- [ ] State machine: draft -> requested -> published/rejected
 - [ ] All 10 edge cases handled
 
 ### **FLOW 2 Checklist**

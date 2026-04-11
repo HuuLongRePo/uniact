@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest'
 import { dbRun, dbGet, dbReady } from '@/lib/database'
+import { ensureCoreTestSchema } from './core-test-schema'
 import { requireActivityApproved } from '@/lib/guards'
 
 /**
@@ -14,6 +15,7 @@ describe('Approval Guard Logic', () => {
 
   beforeAll(async () => {
     await dbReady()
+    await ensureCoreTestSchema()
 
     // Create teacher
     teacherId = (await dbRun(

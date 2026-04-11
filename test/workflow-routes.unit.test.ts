@@ -116,7 +116,7 @@ describe('Workflow route fixes (unit, mocked)', () => {
 
       vi.doMock('@/lib/database', () => ({
         withTransaction: async (callback: any) => callback(),
-        dbAll: async () => [{ class_id: 1 }],
+        dbAll: async () => [],
         dbGet: async (sql: string) => {
           capturedQueries.push(sql)
           if (sql.includes('SELECT * FROM activities')) {
@@ -146,6 +146,8 @@ describe('Workflow route fixes (unit, mocked)', () => {
           if (sql.includes('INSERT INTO participations')) return { lastID: 900, changes: 1 }
           return { changes: 1 }
         },
+        ensureParticipationColumns: async () => undefined,
+        ensureActivityClassParticipationMode: async () => undefined,
         dbHelpers: {
           createAuditLog: async () => {},
         },
@@ -181,7 +183,7 @@ describe('Workflow route fixes (unit, mocked)', () => {
 
       vi.doMock('@/lib/database', () => ({
         withTransaction: async (callback: any) => callback(),
-        dbAll: async () => [{ class_id: 1 }],
+        dbAll: async () => [],
         dbGet: async (sql: string) => {
           if (sql.includes('SELECT * FROM activities')) {
             return {
@@ -200,6 +202,9 @@ describe('Workflow route fixes (unit, mocked)', () => {
           return null
         },
         dbRun: async () => ({ changes: 1 }),
+        ensureParticipationColumns: async () => undefined,
+        ensureActivityClassParticipationMode: async () => undefined,
+        dbHelpers: { createAuditLog: async () => {} },
       }))
 
       const route = await import('../src/app/api/activities/[id]/register/route')
@@ -247,6 +252,9 @@ describe('Workflow route fixes (unit, mocked)', () => {
           return null
         },
         dbRun: async () => ({ changes: 1 }),
+        ensureParticipationColumns: async () => undefined,
+        ensureActivityClassParticipationMode: async () => undefined,
+        dbHelpers: { createAuditLog: async () => {} },
       }))
 
       const route = await import('../src/app/api/activities/[id]/register/route')
@@ -277,7 +285,7 @@ describe('Workflow route fixes (unit, mocked)', () => {
 
       vi.doMock('@/lib/database', () => ({
         withTransaction: async (callback: any) => callback(),
-        dbAll: async () => [{ class_id: 1 }],
+        dbAll: async () => [],
         dbGet: async (sql: string) => {
           if (sql.includes('SELECT * FROM activities')) {
             return {
@@ -301,6 +309,9 @@ describe('Workflow route fixes (unit, mocked)', () => {
           }
           return { changes: 1 }
         },
+        ensureParticipationColumns: async () => undefined,
+        ensureActivityClassParticipationMode: async () => undefined,
+        dbHelpers: { createAuditLog: async () => {} },
       }))
 
       const route = await import('../src/app/api/activities/[id]/register/route')
@@ -348,6 +359,9 @@ describe('Workflow route fixes (unit, mocked)', () => {
           return null
         },
         dbRun: async () => ({ changes: 1 }),
+        ensureParticipationColumns: async () => undefined,
+        ensureActivityClassParticipationMode: async () => undefined,
+        dbHelpers: { createAuditLog: async () => {} },
       }))
 
       const route = await import('../src/app/api/activities/[id]/register/route')
@@ -357,7 +371,7 @@ describe('Workflow route fixes (unit, mocked)', () => {
       expect(res.status).toBe(403)
       const body = await res.json()
       expect(body.success).toBe(false)
-      expect(String(body.error)).toContain('không dành cho lớp')
+      expect(String(body.error)).toMatch(/không dành cho lớp|khong danh cho lop/i)
       expect(withTransaction).not.toHaveBeenCalled()
     })
   })
@@ -823,20 +837,37 @@ describe('Workflow route fixes (unit, mocked)', () => {
     })
   })
 
-  describe('Fix #6 - admin review route delegates to centralized approval helper', () => {
-    it('returns conflict and points to the new approval endpoint', async () => {
+  describe('Fix #6 - admin approval endpoint centralizes review actions', () => {
+    it('handles reject action via the approval endpoint', async () => {
       vi.doMock('@/lib/guards', () => ({
         requireApiRole: async () => ({ id: 601, role: 'admin' }),
       }))
 
-      const route = await import('../src/app/api/admin/activities/[id]/review/route')
+      const decideApproval = vi.fn(async () => ({ success: true }))
+      vi.doMock('@/lib/database', () => ({
+        dbGet: async (sql: string) => {
+          if (sql.includes('FROM activities')) {
+            return { id: 33, teacher_id: 12, status: 'draft', approval_status: 'requested', approval_notes: null, title: 'Needs review' }
+          }
+          if (sql.includes('SELECT id FROM activity_approvals')) {
+            return { id: 603 }
+          }
+          return null
+        },
+        dbHelpers: {
+          decideApproval,
+          submitActivityForApproval: async () => ({ lastID: 603 }),
+        },
+      }))
+
+      const route = await import('../src/app/api/admin/activities/[id]/approval/route')
       const req = { json: async () => ({ action: 'reject', notes: 'needs fixes' }) } as any
       const res: any = await route.POST(req, { params: Promise.resolve({ id: '33' }) } as any)
-      expect(res.status).toBe(409)
+      expect(res.status).toBe(200)
       const body = await res.json()
-      expect(body.success).toBe(false)
-      expect(body.code).toBe('CONFLICT')
-      expect(body.details?.replacement).toBe('/api/admin/activities/33/approval')
+      expect(body.success).toBe(true)
+      expect(body.data).toMatchObject({ status: 'draft', approval_status: 'rejected' })
+      expect(decideApproval).toHaveBeenCalledWith(603, 601, 'rejected', 'needs fixes')
     })
   })
 

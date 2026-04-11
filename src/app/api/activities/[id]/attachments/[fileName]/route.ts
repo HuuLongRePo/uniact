@@ -5,6 +5,7 @@ import { unlink } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
 import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
+import { teacherCanAccessActivity } from '@/lib/activity-access';
 
 // DELETE /api/activities/:id/attachments/:fileName - Delete attachment
 export async function DELETE(
@@ -46,9 +47,11 @@ export async function DELETE(
       return errorResponse(ApiError.notFound('Không tìm thấy hoạt động'));
     }
 
-    // Authorization: teacher can only delete from their own activities, admin can delete from any
-    if (user.role === 'teacher' && Number(existingActivity.teacher_id) !== Number(user.id)) {
-      return errorResponse(ApiError.forbidden('Bạn chỉ có thể xóa file trong hoạt động của bạn'));
+    if (
+      user.role === 'teacher' &&
+      !(await teacherCanAccessActivity(Number(user.id), activityId))
+    ) {
+      return errorResponse(ApiError.forbidden('Bạn không có quyền xóa file trong hoạt động này'));
     }
 
     // Delete file

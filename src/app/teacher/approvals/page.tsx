@@ -1,16 +1,17 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React from 'react';
+import { useEffect, useState } from 'react';
 import {
+  Calendar,
   CheckCircle,
   Clock,
-  XCircle,
-  Send,
-  MessageSquare,
-  User,
-  Calendar,
   MapPin,
+  MessageSquare,
+  Send,
+  User,
   Users,
+  XCircle,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -20,8 +21,9 @@ interface Activity {
   description: string;
   date_time: string;
   location: string;
-  status: 'draft' | 'pending_approval' | 'approved' | 'rejected';
-  teacher_status: string;
+  status: 'draft' | 'pending' | 'approved' | 'rejected';
+  approval_status?: string;
+  teacher_status?: string;
   teacher_name: string;
   created_at: string;
   submitted_at: string | null;
@@ -30,6 +32,47 @@ interface Activity {
   rejection_reason: string | null;
   max_participants: number | null;
   class_count: number;
+}
+
+function formatDateTime(value: string | null) {
+  if (!value) return null;
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return null;
+
+  return parsed.toLocaleString('vi-VN');
+}
+
+function statusBadge(status: Activity['status']) {
+  switch (status) {
+    case 'approved':
+      return (
+        <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-3 py-1 text-sm font-medium text-green-700">
+          <CheckCircle className="h-4 w-4" />
+          Da duyet
+        </span>
+      );
+    case 'pending':
+      return (
+        <span className="inline-flex items-center gap-1 rounded-full bg-yellow-100 px-3 py-1 text-sm font-medium text-yellow-700">
+          <Clock className="h-4 w-4" />
+          Cho duyet
+        </span>
+      );
+    case 'rejected':
+      return (
+        <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-3 py-1 text-sm font-medium text-red-700">
+          <XCircle className="h-4 w-4" />
+          Tu choi
+        </span>
+      );
+    default:
+      return (
+        <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-700">
+          Nhap
+        </span>
+      );
+  }
 }
 
 export default function ApprovalsPage() {
@@ -41,176 +84,146 @@ export default function ApprovalsPage() {
   const [resubmitting, setResubmitting] = useState(false);
 
   useEffect(() => {
-    fetchActivities();
+    void fetchActivities();
   }, [filter]);
 
   const fetchActivities = async () => {
     try {
       setLoading(true);
       const response = await fetch(`/api/teacher/activities/approvals?status=${filter}`);
-      if (!response.ok) throw new Error('Không thể tải danh sách hoạt động');
+      if (!response.ok) {
+        throw new Error('Khong the tai danh sach hoat dong');
+      }
+
       const data = await response.json();
-      setActivities(data.activities || []);
+      setActivities(data.activities || data.data?.activities || []);
     } catch (error) {
       console.error(error);
-      toast.error('Không thể tải danh sách hoạt động');
+      toast.error('Khong the tai danh sach hoat dong');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleResubmit = async (activityId: number) => {
-    if (!resubmitMessage.trim() && filter !== 'rejected') {
-      toast.error('Vui lòng nhập lý do gửi lại');
-      return;
-    }
+  const openActivityModal = (activity: Activity) => {
+    setSelectedActivity(activity);
+    setResubmitMessage('');
+  };
 
+  const handleResubmit = async (activityId: number) => {
     try {
       setResubmitting(true);
       const response = await fetch(`/api/teacher/activities/${activityId}/resubmit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          message: resubmitMessage || 'Gửi lại để duyệt',
+          message: resubmitMessage.trim() || 'Gui lai de duyet',
         }),
       });
 
-      if (!response.ok) throw new Error('Không thể gửi lại');
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(data?.message || data?.error || 'Khong the gui lai');
+      }
 
-      toast.success('Gửi duyệt thành công');
+      toast.success('Gui duyet thanh cong');
       setResubmitMessage('');
       setSelectedActivity(null);
-      fetchActivities();
+      await fetchActivities();
     } catch (error) {
       console.error(error);
-      toast.error('Không thể gửi duyệt');
+      toast.error(error instanceof Error ? error.message : 'Khong the gui duyet');
     } finally {
       setResubmitting(false);
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'approved':
-        return (
-          <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 text-sm font-medium rounded-full">
-            <CheckCircle className="w-4 h-4" />
-            Đã duyệt
-          </span>
-        );
-      case 'pending_approval':
-        return (
-          <span className="inline-flex items-center gap-1 px-3 py-1 bg-yellow-100 text-yellow-700 text-sm font-medium rounded-full">
-            <Clock className="w-4 h-4" />
-            Chờ duyệt
-          </span>
-        );
-      case 'rejected':
-        return (
-          <span className="inline-flex items-center gap-1 px-3 py-1 bg-red-100 text-red-700 text-sm font-medium rounded-full">
-            <XCircle className="w-4 h-4" />
-            Từ chối
-          </span>
-        );
-      default:
-        return (
-          <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-700 text-sm font-medium rounded-full">
-            📝 Nháp
-          </span>
-        );
-    }
-  };
-
   return (
     <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200 mb-6">
-          <h1 className="text-3xl font-bold text-gray-900">Theo dõi duyệt hoạt động</h1>
-          <p className="text-gray-600 mt-2">Quản lý hoạt động của bạn trong quy trình duyệt</p>
+      <div className="mx-auto max-w-6xl">
+        <div className="mb-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+          <h1 className="text-3xl font-bold text-gray-900">Theo doi duyet hoat dong</h1>
+          <p className="mt-2 text-gray-600">
+            Quan ly hoat dong cua ban trong quy trinh duyet.
+          </p>
         </div>
 
-        {/* Filter Tabs */}
-        <div className="flex gap-2 mb-6 border-b">
+        <div className="mb-6 flex gap-2 border-b">
           {(['all', 'pending', 'approved', 'rejected'] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setFilter(tab)}
-              className={`py-3 px-4 font-medium transition ${
+              className={`px-4 py-3 font-medium transition ${
                 filter === tab
-                  ? 'text-blue-600 border-b-2 border-blue-600'
+                  ? 'border-b-2 border-blue-600 text-blue-600'
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              {tab === 'all' && '📋 Tất cả'}
-              {tab === 'pending' && '⏳ Chờ duyệt'}
-              {tab === 'approved' && '✓ Đã duyệt'}
-              {tab === 'rejected' && '✗ Từ chối'}
+              {tab === 'all' && 'Tat ca'}
+              {tab === 'pending' && 'Cho duyet'}
+              {tab === 'approved' && 'Da duyet'}
+              {tab === 'rejected' && 'Tu choi'}
             </button>
           ))}
         </div>
 
-        {/* Activities Grid */}
         {loading ? (
-          <div className="bg-white rounded-lg shadow p-12 text-center">
-            <div className="animate-spin inline-block w-8 h-8 border-4 border-gray-200 border-t-blue-600 rounded-full"></div>
-            <p className="mt-4 text-gray-600">Đang tải...</p>
+          <div className="rounded-lg bg-white p-12 text-center shadow">
+            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-blue-600" />
+            <p className="mt-4 text-gray-600">Dang tai...</p>
           </div>
         ) : activities.length === 0 ? (
-          <div className="bg-white rounded-lg shadow p-12 text-center border border-gray-200">
-            <p className="text-gray-600 text-lg">Không có hoạt động nào</p>
+          <div className="rounded-lg border border-gray-200 bg-white p-12 text-center shadow">
+            <p className="text-lg text-gray-600">Khong co hoat dong nao</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-4">
             {activities.map((activity) => (
               <div
                 key={activity.id}
-                className="bg-white rounded-lg shadow p-6 border border-gray-200 hover:shadow-md transition"
+                className="rounded-lg border border-gray-200 bg-white p-6 shadow transition hover:shadow-md"
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
+                    <div className="mb-2 flex items-center gap-3">
                       <h3 className="text-xl font-bold text-gray-900">{activity.title}</h3>
-                      {getStatusBadge(activity.status)}
+                      {statusBadge(activity.status)}
                     </div>
-                    <p className="text-gray-600 mb-4">{activity.description}</p>
 
-                    {/* Activity Details Grid */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                    <p className="mb-4 text-gray-600">{activity.description}</p>
+
+                    <div className="grid grid-cols-2 gap-3 text-sm md:grid-cols-4">
                       <div className="flex items-center gap-2 text-gray-700">
-                        <Calendar className="w-4 h-4 text-gray-500" />
+                        <Calendar className="h-4 w-4 text-gray-500" />
                         {new Date(activity.date_time).toLocaleDateString('vi-VN')}
                       </div>
                       <div className="flex items-center gap-2 text-gray-700">
-                        <MapPin className="w-4 h-4 text-gray-500" />
-                        {activity.location || 'Chưa xác định'}
+                        <MapPin className="h-4 w-4 text-gray-500" />
+                        {activity.location || 'Chua xac dinh'}
                       </div>
                       <div className="flex items-center gap-2 text-gray-700">
-                        <Users className="w-4 h-4 text-gray-500" />
-                        {activity.class_count} lớp
+                        <Users className="h-4 w-4 text-gray-500" />
+                        {activity.class_count} lop
                       </div>
                       <div className="flex items-center gap-2 text-gray-700">
-                        <User className="w-4 h-4 text-gray-500" />
+                        <User className="h-4 w-4 text-gray-500" />
                         {activity.teacher_name}
                       </div>
                     </div>
 
-                    {/* Timeline */}
                     {activity.submitted_at && (
                       <div className="mt-4 space-y-2 text-sm text-gray-600">
-                        <div>
-                          ⏳ Gửi duyệt: {new Date(activity.submitted_at).toLocaleString('vi-VN')}
-                        </div>
+                        <div>Gui duyet: {formatDateTime(activity.submitted_at)}</div>
                         {activity.status === 'approved' && activity.approved_at && (
                           <div className="text-green-600">
-                            ✓ Đã duyệt: {new Date(activity.approved_at).toLocaleString('vi-VN')}
+                            Da duyet: {formatDateTime(activity.approved_at)}
                           </div>
                         )}
                         {activity.status === 'rejected' && activity.rejected_at && (
                           <div className="text-red-600">
-                            ✗ Từ chối: {new Date(activity.rejected_at).toLocaleString('vi-VN')}
+                            Tu choi: {formatDateTime(activity.rejected_at)}
                             {activity.rejection_reason && (
-                              <div className="mt-1">Lý do: {activity.rejection_reason}</div>
+                              <div className="mt-1">Ly do: {activity.rejection_reason}</div>
                             )}
                           </div>
                         )}
@@ -218,24 +231,23 @@ export default function ApprovalsPage() {
                     )}
                   </div>
 
-                  {/* Action Buttons */}
                   <div className="flex items-center gap-2">
                     {activity.status === 'rejected' && (
                       <button
-                        onClick={() => setSelectedActivity(activity)}
-                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-medium flex items-center gap-2 transition"
+                        onClick={() => openActivityModal(activity)}
+                        className="flex items-center gap-2 rounded bg-blue-600 px-4 py-2 font-medium text-white transition hover:bg-blue-700"
                       >
-                        <Send className="w-4 h-4" />
-                        Gửi lại
+                        <Send className="h-4 w-4" />
+                        Gui lai
                       </button>
                     )}
-                    {activity.status === 'pending_approval' && (
+                    {activity.status === 'pending' && (
                       <button
-                        onClick={() => setSelectedActivity(activity)}
-                        className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded font-medium flex items-center gap-2 transition"
+                        onClick={() => openActivityModal(activity)}
+                        className="flex items-center gap-2 rounded bg-gray-200 px-4 py-2 font-medium text-gray-700 transition hover:bg-gray-300"
                       >
-                        <MessageSquare className="w-4 h-4" />
-                        Chi tiết
+                        <MessageSquare className="h-4 w-4" />
+                        Chi tiet
                       </button>
                     )}
                   </div>
@@ -246,40 +258,45 @@ export default function ApprovalsPage() {
         )}
       </div>
 
-      {/* Resubmit Modal */}
       {selectedActivity && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
-            <h2 className="text-2xl font-bold mb-4">
-              {selectedActivity.status === 'rejected' ? 'Gửi lại duyệt' : 'Chi tiết hoạt động'}
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+          <div className="w-full max-w-md rounded-lg bg-white p-6">
+            <h2 className="mb-4 text-2xl font-bold">
+              {selectedActivity.status === 'rejected' ? 'Gui lai duyet' : 'Chi tiet hoat dong'}
             </h2>
 
-            <div className="space-y-4 mb-6">
+            <div className="mb-6 space-y-4">
               <div>
-                <p className="text-sm text-gray-600">Hoạt động</p>
+                <p className="text-sm text-gray-600">Hoat dong</p>
                 <p className="font-medium">{selectedActivity.title}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-600">Trạng thái hiện tại</p>
-                <p className="font-medium">{getStatusBadge(selectedActivity.status)}</p>
+                <p className="text-sm text-gray-600">Trang thai hien tai</p>
+                <div className="mt-1">{statusBadge(selectedActivity.status)}</div>
               </div>
+              {selectedActivity.submitted_at && (
+                <div>
+                  <p className="text-sm text-gray-600">Lan gui gan nhat</p>
+                  <p className="font-medium">{formatDateTime(selectedActivity.submitted_at)}</p>
+                </div>
+              )}
               {selectedActivity.rejection_reason && (
-                <div className="p-3 bg-red-50 rounded border border-red-200">
-                  <p className="text-sm font-medium text-red-700">Lý do từ chối:</p>
-                  <p className="text-sm text-red-600 mt-1">{selectedActivity.rejection_reason}</p>
+                <div className="rounded border border-red-200 bg-red-50 p-3">
+                  <p className="text-sm font-medium text-red-700">Ly do tu choi</p>
+                  <p className="mt-1 text-sm text-red-600">{selectedActivity.rejection_reason}</p>
                 </div>
               )}
               {selectedActivity.status === 'rejected' && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Ghi chú (tùy chọn)
+                  <label className="mb-2 block text-sm font-medium text-gray-700">
+                    Ghi chu
                   </label>
                   <textarea
                     value={resubmitMessage}
-                    onChange={(e) => setResubmitMessage(e.target.value)}
-                    placeholder="Nhập ghi chú gửi lại..."
+                    onChange={(event) => setResubmitMessage(event.target.value)}
+                    placeholder="Nhap ghi chu gui lai..."
                     rows={3}
-                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
               )}
@@ -288,17 +305,17 @@ export default function ApprovalsPage() {
             <div className="flex gap-3">
               <button
                 onClick={() => setSelectedActivity(null)}
-                className="flex-1 px-4 py-2 border rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition"
+                className="flex-1 rounded-lg border px-4 py-2 font-medium text-gray-700 transition hover:bg-gray-50"
               >
-                Đóng
+                Dong
               </button>
               {selectedActivity.status === 'rejected' && (
                 <button
-                  onClick={() => handleResubmit(selectedActivity.id)}
+                  onClick={() => void handleResubmit(selectedActivity.id)}
                   disabled={resubmitting}
-                  className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium disabled:opacity-50 transition"
+                  className="flex-1 rounded-lg bg-blue-600 px-4 py-2 font-medium text-white transition hover:bg-blue-700 disabled:opacity-50"
                 >
-                  {resubmitting ? 'Đang gửi...' : 'Gửi lại'}
+                  {resubmitting ? 'Dang gui...' : 'Gui lai'}
                 </button>
               )}
             </div>
