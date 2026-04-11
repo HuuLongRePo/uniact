@@ -809,6 +809,32 @@ Quy ước trạng thái: TODO / DOING / BLOCKED / DONE
 
 ### T-160 - Làm sạch cảnh báo eslint trong approval workflow test
 
+### T-161 - Nối teacher flow vào attendance policy / face-pilot
+
+- Trạng thái: DONE
+- Mục tiêu: biến attendance policy từ route/panel rời rạc thành flow teacher có thể truy cập rõ ràng trong vận hành
+- Phạm vi file:
+  - `src/components/Sidebar.tsx`
+  - `src/app/teacher/dashboard/page.tsx`
+  - `src/app/teacher/attendance/page.tsx`
+  - `src/app/teacher/attendance/policy/page.tsx`
+- Lý do cần làm: route policy đã có nhưng teacher chưa có đường vào rõ ràng từ flow điểm danh hiện tại
+- Rủi ro: thấp
+- Cách kiểm thử: build + smoke truy cập từ dashboard/sidebar/manual attendance
+- Tiêu chí hoàn thành: teacher nhìn thấy và mở được policy page từ các flow chính
+
+### T-162 - Thêm UAT cho attendance policy / face-pilot
+
+- Trạng thái: DONE
+- Mục tiêu: khóa flow policy/fallback ở mức UAT thay vì chỉ có route/unit regression
+- Phạm vi file:
+  - `test/uat/actor-teacher/06-attendance-policy-face-pilot.spec.ts`
+  - `test/uat/helpers/teacher.helper.ts`
+- Lý do cần làm: batch face-pilot đã qua build + route test nhưng chưa có bằng chứng UAT ở môi trường dev server thật
+- Rủi ro: trung bình
+- Cách kiểm thử: chạy focused playwright spec cho policy/fallback và rerun bundle teacher attendance liên quan
+- Tiêu chí hoàn thành: spec mới pass và không làm gãy manual attendance / QR teacher backbone
+
 - Trạng thái: TODO
 - Mục tiêu: dọn các warning `no-explicit-any` còn lại trong `approval-workflow.test.ts` để suite lõi này sạch hơn cả về runtime lẫn lint
 - Phạm vi file:

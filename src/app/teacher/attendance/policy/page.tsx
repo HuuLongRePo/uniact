@@ -199,7 +199,7 @@ export default function TeacherAttendancePolicyPage() {
   return (
     <div className="space-y-6 p-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Attendance Policy / Face Pilot</h1>
+        <h1 className="text-2xl font-bold text-gray-900" data-testid="attendance-policy-heading">Attendance Policy / Face Pilot</h1>
         <p className="mt-2 text-sm text-gray-600">
           Xem activity nào đủ điều kiện pilot face attendance và kiểm tra ngưỡng fallback QR theo preset vận hành.
         </p>
@@ -278,7 +278,7 @@ export default function TeacherAttendancePolicyPage() {
                   </div>
                   <div className="rounded-lg bg-gray-50 p-3">
                     <div className="text-xs uppercase tracking-wide text-gray-500">Face pilot</div>
-                    <div className={`mt-1 text-base font-semibold ${policyData.policy.facePilot.eligible ? 'text-emerald-700' : 'text-amber-700'}`}>
+                    <div data-testid="face-pilot-eligibility" className={`mt-1 text-base font-semibold ${policyData.policy.facePilot.eligible ? 'text-emerald-700' : 'text-amber-700'}`}>
                       {policyData.policy.facePilot.eligible ? 'Eligible' : 'Chưa đủ điều kiện'}
                     </div>
                   </div>
@@ -369,7 +369,7 @@ export default function TeacherAttendancePolicyPage() {
 
             {fallbackData ? (
               <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm">
-                <div className="font-semibold text-gray-900">
+                <div data-testid="fallback-status" className="font-semibold text-gray-900">
                   {fallbackData.fallback.triggered ? 'Nên fallback' : 'Chưa cần auto fallback'}
                 </div>
                 <div className="mt-1 text-gray-600">

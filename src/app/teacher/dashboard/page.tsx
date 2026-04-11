@@ -127,6 +127,24 @@ export default function TeacherDashboardPage() {
         </div>
       </div>
 
+      <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-5" data-testid="attendance-policy-cta">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <h2 className="text-lg font-bold text-blue-900">Điều phối điểm danh theo policy</h2>
+            <p className="mt-1 text-sm text-blue-800">
+              Xem activity nào đủ điều kiện pilot face attendance, kiểm tra preset QR fallback,
+              và chuẩn bị phương án chuyển sang mixed/manual khi quá tải.
+            </p>
+          </div>
+          <Link
+            href="/teacher/attendance/policy"
+            className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          >
+            Mở attendance policy
+          </Link>
+        </div>
+      </div>
+
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <div className="bg-white rounded-lg shadow p-6">

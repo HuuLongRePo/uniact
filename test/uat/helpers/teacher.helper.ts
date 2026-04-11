@@ -210,6 +210,13 @@ export class TeacherHelper {
     await this.page.waitForLoadState('networkidle')
   }
 
+  // Access attendance policy page
+  async goToAttendancePolicy() {
+    await this.page.goto(`${BASE_URL}/teacher/attendance/policy`)
+    await this.page.waitForLoadState('networkidle')
+    await expect(this.page.locator('[data-testid="attendance-policy-heading"]')).toBeVisible()
+  }
+
   // Verify dashboard stats visible
   async verifyDashboardStats() {
     await this.goToDashboard()

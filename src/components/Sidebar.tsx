@@ -165,6 +165,7 @@ export default function Sidebar() {
       title: 'ĐIỂM DANH & ĐÁNH GIÁ',
       items: [
         { label: 'Điểm danh', href: '/teacher/attendance', icon: UserCheck },
+        { label: 'Chính sách điểm danh', href: '/teacher/attendance/policy', icon: Sliders },
         { label: 'QR Điểm danh', href: '/teacher/qr', icon: QrCode },
       ],
     },
@@ -230,6 +231,9 @@ export default function Sidebar() {
   const isActive = (path: string) => {
     if (path === '/dashboard') {
       return pathname === path;
+    }
+    if (path === '/teacher/attendance' && pathname?.startsWith('/teacher/attendance/policy')) {
+      return false;
     }
     if (pathname === path) return true;
     if (pathname?.startsWith(path + '/')) return true;

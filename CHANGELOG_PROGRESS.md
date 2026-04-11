@@ -1,5 +1,43 @@
 # CHANGELOG PROGRESS
 
+## 2026-04-11 - Nối teacher flow vào attendance policy và thêm UAT face-pilot
+
+### Đã làm
+
+- Thêm đường vào rõ ràng cho teacher tới `\/teacher\/attendance\/policy` từ:
+  - `src/components/Sidebar.tsx`
+  - `src/app/teacher/dashboard/page.tsx`
+  - `src/app/teacher/attendance/page.tsx`
+- Điều chỉnh logic active state ở sidebar để trang `\/teacher\/attendance\/policy` không làm sáng đồng thời cả item cha `\/teacher\/attendance`.
+- Thêm `data-testid` cho trang policy để hỗ trợ UAT ổn định hơn (`attendance-policy-heading`, `face-pilot-eligibility`, `fallback-status`).
+- Mở rộng `TeacherHelper` với helper `goToAttendancePolicy()` cho các UAT sau này.
+- Bổ sung UAT mới `test/uat/actor-teacher/06-attendance-policy-face-pilot.spec.ts` để kiểm chứng:
+  - teacher tạo activity mandatory / high-volume candidate
+  - admin approve publish
+  - API attendance policy trả `facePilot.eligible = true`
+  - API fallback trả `triggered = true` với preset metrics
+  - teacher mở trang policy, chọn activity, và thấy fallback recommendation trên UI
+
+### Kiểm thử
+
+- Chạy `npm.cmd run build`
+- Kết quả: build pass
+- Chạy `npx playwright test test/uat/actor-teacher/06-attendance-policy-face-pilot.spec.ts --reporter=line`
+- Kết quả: `1` test pass
+- Chạy `npx playwright test test/uat/actor-teacher/03-attendance-manual-bulk.spec.ts test/uat/actor-teacher/04-qr-refresh-close.spec.ts test/uat/actor-teacher/06-attendance-policy-face-pilot.spec.ts --reporter=line`
+- Kết quả: `3` test pass
+
+### Kết quả
+
+- Attendance policy / face-pilot không còn là route rời rạc; teacher đã có đường vào thật từ dashboard, sidebar và manual attendance flow.
+- Có focused UAT chứng minh cả API lẫn UI policy/fallback hoạt động trong môi trường dev server thực tế.
+- Regression teacher attendance backbone vẫn xanh sau khi thêm flow mới.
+
+### Còn lại
+
+- Chưa có UAT cho `POST /api/attendance/face` ở mức end-to-end với biometric upstream thật; hiện mới khóa ở route-level regression.
+- Chưa đưa preset threshold / pilot selection vào lớp config động; hiện vẫn là operational preset trong code.
+
 ## 2026-04-11 - Ổn định attendance policy / face-pilot slice
 
 ### Đã làm

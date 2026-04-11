@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
@@ -157,10 +158,19 @@ export default function TeacherManualAttendancePage() {
       <h1 className="text-3xl font-bold mb-6">✅ Điểm Danh Thủ Công</h1>
 
       <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
-        <p className="text-yellow-800">
-          <strong>Lưu ý:</strong> Chức năng này dùng khi hệ thống QR không khả dụng. Ưu tiên sử dụng
-          QR code để điểm danh tự động.
-        </p>
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <p className="text-yellow-800">
+            <strong>Lưu ý:</strong> Chức năng này dùng khi hệ thống QR không khả dụng. Ưu tiên sử dụng
+            QR code để điểm danh tự động. Nếu cần đánh giá ngưỡng quá tải QR hoặc pilot face attendance,
+            hãy mở trang chính sách điểm danh.
+          </p>
+          <Link
+            href="/teacher/attendance/policy"
+            className="inline-flex items-center justify-center rounded-lg bg-yellow-600 px-4 py-2 text-sm font-medium text-white hover:bg-yellow-700"
+          >
+            Mở chính sách điểm danh
+          </Link>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
