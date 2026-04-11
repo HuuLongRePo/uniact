@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { resolveClientFetchUrl } from '@/lib/client-fetch-url';
 
 type ActivityOption = {
@@ -60,6 +61,8 @@ type FallbackResponse = {
 };
 
 export default function TeacherAttendancePolicyPage() {
+  const searchParams = useSearchParams();
+  const requestedActivityId = Number(searchParams.get('activityId') || '0') || null;
   const [activities, setActivities] = useState<ActivityOption[]>([]);
   const [selectedActivityId, setSelectedActivityId] = useState<number | null>(null);
   const [policyData, setPolicyData] = useState<AttendancePolicyResponse | null>(null);
@@ -82,7 +85,8 @@ export default function TeacherAttendancePolicyPage() {
         setLoadingActivities(true);
         setError(null);
 
-        const response = await fetch(resolveClientFetchUrl('/api/teacher/attendance/pilot-activities'));
+        const query = requestedActivityId ? `?activity_id=${requestedActivityId}` : '';
+        const response = await fetch(resolveClientFetchUrl(`/api/teacher/attendance/pilot-activities${query}`));
         if (!response.ok) {
           throw new Error('Không tải được danh sách hoạt động');
         }
@@ -101,7 +105,12 @@ export default function TeacherAttendancePolicyPage() {
         if (!cancelled) {
           setActivities(normalized);
           if (normalized.length > 0) {
-            setSelectedActivityId((current) => current ?? normalized[0].id);
+            setSelectedActivityId((current) => {
+              if (requestedActivityId && normalized.some((activity) => activity.id === requestedActivityId)) {
+                return requestedActivityId;
+              }
+              return current ?? normalized[0].id;
+            });
           }
         }
       } catch (loadError) {
@@ -120,7 +129,7 @@ export default function TeacherAttendancePolicyPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [requestedActivityId]);
 
   useEffect(() => {
     if (!selectedActivityId) {

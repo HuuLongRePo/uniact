@@ -8,8 +8,9 @@ import { loadAttendancePolicyConfig } from '@/lib/attendance-policy-config';
 export async function GET(request: NextRequest) {
   try {
     const user = await requireApiRole(request, ['teacher', 'admin']);
+    const requestedActivityId = Number(request.nextUrl.searchParams.get('activity_id') || '0') || null;
 
-    const activities = await dbAll(
+    const activities = (await dbAll(
       user.role === 'admin'
         ? `SELECT id, title, status, approval_status, max_participants, date_time, teacher_id
            FROM activities
@@ -21,7 +22,42 @@ export async function GET(request: NextRequest) {
            ORDER BY datetime(date_time) DESC, id DESC
            LIMIT 50`,
       user.role === 'admin' ? [] : [user.id]
-    );
+    )) as Array<{
+      id: number;
+      title: string;
+      status: string;
+      approval_status: string;
+      max_participants: number | null;
+      date_time: string | null;
+      teacher_id: number;
+    }>;
+
+    if (requestedActivityId && !activities.some((activity) => Number(activity.id) === requestedActivityId)) {
+      const requestedActivity = (await dbGet(
+        user.role === 'admin'
+          ? `SELECT id, title, status, approval_status, max_participants, date_time, teacher_id
+             FROM activities
+             WHERE id = ?`
+          : `SELECT id, title, status, approval_status, max_participants, date_time, teacher_id
+             FROM activities
+             WHERE id = ? AND teacher_id = ?`,
+        user.role === 'admin' ? [requestedActivityId] : [requestedActivityId, user.id]
+      )) as
+        | {
+            id: number;
+            title: string;
+            status: string;
+            approval_status: string;
+            max_participants: number | null;
+            date_time: string | null;
+            teacher_id: number;
+          }
+        | undefined;
+
+      if (requestedActivity) {
+        activities.unshift(requestedActivity);
+      }
+    }
 
     const config = await loadAttendancePolicyConfig();
     const rows = [] as any[];

@@ -211,8 +211,9 @@ export class TeacherHelper {
   }
 
   // Access attendance policy page
-  async goToAttendancePolicy() {
-    await this.page.goto(`${BASE_URL}/teacher/attendance/policy`)
+  async goToAttendancePolicy(activityId?: number) {
+    const suffix = activityId ? `?activityId=${activityId}` : ''
+    await this.page.goto(`${BASE_URL}/teacher/attendance/policy${suffix}`)
     await this.page.waitForLoadState('networkidle')
     await expect(this.page.locator('[data-testid="attendance-policy-heading"]')).toBeVisible()
   }

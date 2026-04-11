@@ -113,7 +113,7 @@ test.describe('Teacher - attendance policy / face pilot', () => {
     expect(fallbackData?.data?.fallback?.triggered).toBe(true)
     expect(fallbackData?.data?.fallback?.recommended_target_mode).toBe('mixed')
 
-    await teacher.goToAttendancePolicy()
+    await teacher.goToAttendancePolicy(activityId)
     await expect(teacherPage.locator(`button:has-text("${title}")`).first()).toBeVisible()
     await teacherPage.locator(`button:has-text("${title}")`).first().click()
     await expect(teacherPage.locator('[data-testid="face-pilot-eligibility"]')).toContainText('Eligible')

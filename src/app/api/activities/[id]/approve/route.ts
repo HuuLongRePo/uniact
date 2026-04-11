@@ -3,6 +3,7 @@ import { requireApiRole } from '@/lib/guards';
 import { dbGet, dbHelpers } from '@/lib/database';
 import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
 import { canDecideApproval } from '@/lib/activity-workflow';
+import { cache } from '@/lib/cache';
 
 /**
  * POST /api/activities/[id]/approve
@@ -69,6 +70,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     try {
       await dbHelpers.decideApproval(pendingApproval.id, user.id, 'approved', notes || null);
+      cache.invalidatePrefix('activities:');
     } catch (error: any) {
       if (String(error?.message || '').includes('already processed')) {
         return errorResponse(ApiError.conflict('Yêu cầu phê duyệt đã được xử lý trước đó'));

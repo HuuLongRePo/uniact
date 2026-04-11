@@ -897,3 +897,30 @@ Quy ước trạng thái: TODO / DOING / BLOCKED / DONE
 - Rủi ro: thấp
 - Cách kiểm thử: build + focused admin UAT
 - Tiêu chí hoàn thành: admin dashboard hiển thị overview policy runtime và còn đường vào nhanh tới màn cấu hình
+
+### T-167 - Ổn định student discovery UAT khỏi dữ liệu/caching sai lệch
+
+- Trạng thái: DONE
+- Mục tiêu: làm cho discovery-registration backbone phản ánh đúng student scope thật và không còn fail do dữ liệu test/caching sai
+- Phạm vi file:
+  - `src/app/api/activities/[id]/approve/route.ts`
+  - `test/uat/actor-student/01-discovery-registration.spec.ts`
+- Lý do cần làm: full Playwright suite còn đỏ ở nhánh student discovery-registration
+- Rủi ro: thấp
+- Cách kiểm thử: rerun focused student UAT + rerun full Playwright suite
+- Tiêu chí hoàn thành: spec student pass ổn định trong full suite
+
+### T-168 - Ổn định teacher attendance policy UAT khỏi top-50 drift
+
+- Trạng thái: DONE
+- Mục tiêu: bỏ phụ thuộc của teacher face-pilot UAT vào top-50 pilot activity list và cho phép deeplink theo activity cụ thể
+- Phạm vi file:
+  - `src/app/api/teacher/attendance/pilot-activities/route.ts`
+  - `src/app/teacher/attendance/policy/page.tsx`
+  - `test/uat/helpers/teacher.helper.ts`
+  - `test/uat/actor-teacher/06-attendance-policy-face-pilot.spec.ts`
+  - `test/teacher-attendance-pilot-activities-route.test.ts`
+- Lý do cần làm: spec teacher face-pilot pass khi chạy riêng nhưng có thể đỏ trong full suite khi activity mới tạo không còn nằm trong top-50 list
+- Rủi ro: thấp-trung bình
+- Cách kiểm thử: rerun focused teacher UAT + rerun full Playwright suite + build
+- Tiêu chí hoàn thành: spec teacher pass ổn định cả khi chạy riêng lẫn full suite

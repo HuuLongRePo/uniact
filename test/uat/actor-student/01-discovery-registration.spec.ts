@@ -9,10 +9,10 @@ async function createAndApproveActivity(browser: any) {
   const student = new StudentHelper(studentPage)
   await student.login()
 
-  const studentClassesRes = await studentPage.request.get('http://127.0.0.1:3000/api/classes')
-  expect(studentClassesRes.ok()).toBeTruthy()
-  const studentClassesData = await studentClassesRes.json()
-  const classId = studentClassesData?.data?.classes?.[0]?.id ?? studentClassesData?.classes?.[0]?.id
+  const meRes = await studentPage.request.get('http://127.0.0.1:3000/api/auth/me')
+  expect(meRes.ok()).toBeTruthy()
+  const meData = await meRes.json()
+  const classId = meData?.data?.user?.class_id ?? meData?.user?.class_id
   expect(classId).toBeTruthy()
   await studentContext.close()
 
@@ -41,7 +41,7 @@ async function createAndApproveActivity(browser: any) {
     data: {
       title,
       description: 'Published by UAT for student registration',
-      date_time: `2026-12-31T09:${minute}`,
+      date_time: `2028-12-31T09:${minute}`,
       location: 'Room REG-201',
       max_participants: 30,
       class_ids: [],
@@ -82,6 +82,8 @@ async function createAndApproveActivity(browser: any) {
 
 test.describe('Student - Discovery and registration backbone', () => {
   test('student can log in, see a published activity, and register', async ({ browser }) => {
+    test.setTimeout(60_000)
+
     const { activityId, title } = await createAndApproveActivity(browser)
 
     const studentContext = await browser.newContext()

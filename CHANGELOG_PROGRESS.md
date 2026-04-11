@@ -1,5 +1,48 @@
 # CHANGELOG PROGRESS
 
+## 2026-04-11 - Ổn định full-suite verification (student discovery + teacher policy)
+
+### Đã làm
+
+- Sửa `src/app/api/activities/[id]/approve/route.ts` để invalidate `activities:` cache ngay sau khi approve activity, tránh student discovery nhìn thấy dữ liệu cũ.
+- Mở rộng `src/app/api/teacher/attendance/pilot-activities/route.ts` hỗ trợ query `activity_id` để có thể ép đưa một activity cụ thể vào danh sách pilot trả về, kể cả khi nó nằm ngoài top-50 mặc định.
+- Cập nhật `src/app/teacher/attendance/policy/page.tsx` đọc `activityId` từ query string và ưu tiên chọn đúng activity được yêu cầu.
+- Mở rộng helper `test/uat/helpers/teacher.helper.ts` để `goToAttendancePolicy(activityId?)` hỗ trợ deeplink ổn định cho UAT.
+- Cập nhật `test/uat/actor-teacher/06-attendance-policy-face-pilot.spec.ts` dùng deeplink theo `activityId` thay vì phụ thuộc vào việc activity vừa tạo có nằm trong top-50 list hay không.
+- Tăng timeout cho `test/uat/actor-student/01-discovery-registration.spec.ts` và sửa dữ liệu test:
+  - lấy `class_id` thật từ `/api/auth/me` thay vì lấy class đầu tiên của toàn hệ thống
+  - dùng `date_time` ở mốc xa hơn (`2028-12-31`) để activity mới tạo không bị chìm khỏi top-100 discovery list mặc định
+- Bổ sung regression route test cho nhánh `activity_id` trong `test/teacher-attendance-pilot-activities-route.test.ts`.
+
+### Kiểm thử
+
+- Chạy focused Vitest:
+  - `npm.cmd test -- test/teacher-attendance-pilot-activities-route.test.ts test/attendance-policy-route.test.ts test/attendance-policy.test.ts test/face-attendance-route.test.ts`
+  - Kết quả: pass
+- Chạy focused Playwright:
+  - `npx playwright test test/uat/actor-student/01-discovery-registration.spec.ts --reporter=line`
+  - `npx playwright test test/uat/actor-teacher/06-attendance-policy-face-pilot.spec.ts --reporter=line`
+  - Kết quả: pass
+- Chạy full Playwright suite:
+  - `npm.cmd run test:e2e`
+  - Kết quả: `17` pass, `0` fail
+- Chạy full Vitest suite:
+  - `npm.cmd test`
+  - Kết quả: `77` files pass, `372` tests pass
+- Chạy production build:
+  - `npm.cmd run build`
+  - Kết quả: build pass
+
+### Kết quả
+
+- Verification stack hiện xanh toàn bộ ở mức unit/regression + full UAT + production build.
+- Hai điểm từng làm full suite không xanh đã được khóa lại bằng fix rõ nguyên nhân gốc, không chỉ chữa triệu chứng test.
+
+### Còn lại
+
+- Repo đang ở trạng thái sạch và đã đủ tốt để tiếp tục wave business/reporting/hardening tiếp theo nếu cần.
+
+
 ## 2026-04-11 - Thêm attendance policy visibility vào admin dashboard
 
 ### Đã làm
