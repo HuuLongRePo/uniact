@@ -35,7 +35,37 @@
 
 ### Còn lại
 
-- Chưa có UAT cho `POST /api/attendance/face` ở mức end-to-end với biometric upstream thật; hiện mới khóa ở route-level regression.
+- Chưa đưa preset threshold / pilot selection vào lớp config động; hiện vẫn là operational preset trong code.
+
+## 2026-04-11 - Thêm UAT API-level cho face attendance route
+
+### Đã làm
+
+- Bổ sung `test/uat/actor-teacher/07-face-attendance-route.spec.ts` để kiểm chứng `POST /api/attendance/face` bằng flow thật qua dev server.
+- Trong spec mới:
+  - teacher tạo activity mandatory / high-volume candidate
+  - admin approve publish
+  - teacher gọi `participants/add-class` để đảm bảo participation bắt buộc tồn tại cho lớp mục tiêu
+  - low-confidence face attendance trả `FACE_LOW_CONFIDENCE` + manual fallback guidance
+  - high-confidence face attendance ghi nhận thành công
+  - lần gọi lặp lại trả `already_recorded = true`
+- Chạy lại bundle teacher attendance mở rộng để xác nhận manual attendance / QR / policy / face route cùng xanh.
+
+### Kiểm thử
+
+- Chạy `npx playwright test test/uat/actor-teacher/07-face-attendance-route.spec.ts --reporter=line`
+- Kết quả: `1` test pass
+- Chạy `npx playwright test test/uat/actor-teacher/03-attendance-manual-bulk.spec.ts test/uat/actor-teacher/04-qr-refresh-close.spec.ts test/uat/actor-teacher/06-attendance-policy-face-pilot.spec.ts test/uat/actor-teacher/07-face-attendance-route.spec.ts --reporter=line`
+- Kết quả: `4` test pass
+
+### Kết quả
+
+- Cụm face attendance không còn chỉ được khóa ở unit/route-level; hiện đã có UAT API-level qua auth + DB + activity flow thật.
+- Teacher attendance bundle hiện xanh ở cả 4 nhánh: manual, QR, policy/fallback, face route.
+
+### Còn lại
+
+- Chưa có tích hợp biometric upstream thật trong UAT; hiện vẫn mô phỏng bằng `upstream_verified = true`.
 - Chưa đưa preset threshold / pilot selection vào lớp config động; hiện vẫn là operational preset trong code.
 
 ## 2026-04-11 - Ổn định attendance policy / face-pilot slice

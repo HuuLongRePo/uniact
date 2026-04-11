@@ -835,6 +835,17 @@ Quy ước trạng thái: TODO / DOING / BLOCKED / DONE
 - Cách kiểm thử: chạy focused playwright spec cho policy/fallback và rerun bundle teacher attendance liên quan
 - Tiêu chí hoàn thành: spec mới pass và không làm gãy manual attendance / QR teacher backbone
 
+### T-163 - Thêm UAT API-level cho face attendance route
+
+- Trạng thái: DONE
+- Mục tiêu: khóa `POST /api/attendance/face` ở mức UAT thực tế qua auth + DB + activity flow, thay vì chỉ route-level regression
+- Phạm vi file:
+  - `test/uat/actor-teacher/07-face-attendance-route.spec.ts`
+- Lý do cần làm: sau khi policy/fallback đã có UAT, nhánh face attendance trực tiếp vẫn còn thiếu bằng chứng dev-server end-to-end
+- Rủi ro: trung bình
+- Cách kiểm thử: chạy focused playwright spec cho face route, rồi rerun bundle teacher attendance liên quan
+- Tiêu chí hoàn thành: low-confidence fallback, success path, duplicate-safe path đều pass trong UAT
+
 - Trạng thái: TODO
 - Mục tiêu: dọn các warning `no-explicit-any` còn lại trong `approval-workflow.test.ts` để suite lõi này sạch hơn cả về runtime lẫn lint
 - Phạm vi file:
