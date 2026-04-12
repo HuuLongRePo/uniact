@@ -94,7 +94,7 @@ export default function StudentActivityDetailPage() {
     if (user && activityId) {
       fetchActivity();
     }
-  }, [user, authLoading, router, activityId, fetchActivity]);
+  }, [user, authLoading, activityId, fetchActivity]);
 
   const handleRegister = async (forceRegister: boolean = false) => {
     if (!activity) return;
@@ -377,7 +377,7 @@ export default function StudentActivityDetailPage() {
                       : 'bg-green-50 border-green-200 text-green-800'
                   }`}
                 >
-                  {activity.is_mandatory ? 'Ban nam trong danh sach tham gia bat buoc' : '✓ Bạn đã đăng ký'}
+                  {activity.is_mandatory ? 'Bắt buộc với bạn' : '✓ Bạn đã đăng ký'}
                 </div>
                 {activity.is_mandatory ? (
                   <p className="text-xs text-gray-600 text-center">

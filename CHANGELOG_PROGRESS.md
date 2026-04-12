@@ -1957,6 +1957,31 @@
 - Narrative “thiết kế dự kiến” và “production ready” được làm thực tế hơn
 - Hướng phát triển trong de-tai bám sát hơn các công việc đang diễn ra trên backbone của UniAct
 
+## 2026-04-12 - Hoàn thành T-151
+
+### Đã làm
+
+- Cập nhật `src/app/student/activities/[id]/page.tsx`:
+  - bỏ dependency `router` khỏi effect init để giảm sensitivity do object identity thay đổi ở test/mock env
+  - thống nhất label hiển thị mandatory ở detail page thành `Bắt buộc với bạn`
+- Harden `src/app/api/activities/[id]/register/route.ts`:
+  - preserve lỗi có shape API ở cả POST/DELETE thay vì mặc định collapse về internal error ở catch cuối
+- Thêm test mới `test/register-route-cancel-route.test.ts` cho 2 case backbone:
+  - hủy đăng ký khi thực tế chưa có đăng ký nào, trả success noop canonical
+  - chặn hủy sau khi đã điểm danh
+- Giữ xanh bundle student detail/register/list cùng approval backbone để tránh fix cục bộ làm lệch flow khác
+
+### Kiểm thử
+
+- Chạy `npm test -- --reporter dot test/student-activity-detail-page.test.tsx test/register-route-conflict.test.ts test/register-route-mandatory.test.ts test/register-route-cancel-route.test.ts test/student-activities-page.test.tsx test/activities-list-route.test.ts test/my-registrations-route.test.ts test/teacher-approvals-page.test.tsx test/teacher-approvals-route.test.ts test/teacher-resubmit-route.test.ts test/admin-approval-action-route.test.ts test/admin-approval-history-route.test.ts test/admin-pending-activities-route.test.ts test/activity-check-conflicts-route.test.ts`
+- Kết quả: `14/14` test files pass, `27/27` tests pass
+
+### Kết quả
+
+- Student detail/register-cancel flow rõ semantics hơn ở cả UI và route
+- Cancel flow có regression rõ cho mandatory, attended và noop
+- Batch này tiếp tục kéo UniAct gần hơn tới mốc release bằng cách làm sạch flow người dùng cuối thay vì chỉ cleanup tài liệu
+
 ## 2026-04-07 - Hoàn thành T-142
 
 ### Đã làm

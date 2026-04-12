@@ -236,7 +236,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return errorResponse(ApiError.validation('Hoạt động đã hết chỗ'));
     }
 
-    return errorResponse(ApiError.internalError('Lỗi máy chủ nội bộ'));
+    return errorResponse(
+      error instanceof ApiError ||
+        (error && typeof error.status === 'number' && typeof error.code === 'string')
+        ? error
+        : ApiError.internalError('Lỗi máy chủ nội bộ')
+    );
   }
 }
 
@@ -361,6 +366,11 @@ export async function DELETE(
       );
     }
 
-    return errorResponse(ApiError.internalError('Lỗi máy chủ nội bộ'));
+    return errorResponse(
+      error instanceof ApiError ||
+        (error && typeof error.status === 'number' && typeof error.code === 'string')
+        ? error
+        : ApiError.internalError('Lỗi máy chủ nội bộ')
+    );
   }
 }

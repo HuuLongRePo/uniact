@@ -112,6 +112,20 @@ Quy ước trạng thái: TODO / DOING / BLOCKED / DONE
 - Rủi ro: thấp
 - Cách kiểm thử: rà tính nhất quán narrative giữa de-tai với canonical docs/business truth hiện tại
 - Tiêu chí hoàn thành: de-tai phản ánh đúng hơn workflow, mức hiện thực và hướng phát triển của UniAct
+
+### T-151 - Siết student detail/register-cancel contract và khóa regression cho cancel semantics
+
+- Trạng thái: DONE
+- Mục tiêu: làm sạch thêm contract chi tiết hoạt động cho student, giảm sensitivity do effect dependency và khóa rõ các semantics hủy đăng ký/noop/attended ở route
+- Phạm vi file:
+  - `src/app/student/activities/[id]/page.tsx`
+  - `src/app/api/activities/[id]/register/route.ts`
+  - `test/student-activity-detail-page.test.tsx`
+  - `test/register-route-cancel-route.test.ts`
+- Lý do cần làm: cụm student detail/register-cancel là backbone trực tiếp của flow người dùng cuối, cần rõ semantics cho mandatory/noop/attended và ổn định behavior trong test/runtime
+- Rủi ro: thấp đến trung bình
+- Cách kiểm thử: chạy bundle student detail/register/list + approval backbone regression
+- Tiêu chí hoàn thành: detail page bớt render sensitivity, route cancel có regression rõ cho noop và attended, bundle regression liên quan vẫn xanh
 - Mục tiêu: đưa teacher approvals route về guard/response contract canonical, bỏ compatibility field thừa ở active route/page, đồng thời tránh route admin approval nuốt lỗi nghiệp vụ thành 500
 - Phạm vi file:
   - `src/app/api/teacher/activities/approvals/route.ts`
