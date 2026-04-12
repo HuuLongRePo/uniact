@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { dbRun, dbGet, dbAll } from '@/lib/database';
-import { getUserFromSession } from '@/lib/auth';
+import { requireApiRole } from '@/lib/guards';
+import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
 import { PointCalculationService } from '@/lib/scoring';
 
 /**
@@ -10,34 +11,28 @@ import { PointCalculationService } from '@/lib/scoring';
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const user = await getUserFromSession();
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const activityId = Number(id);
+    if (!Number.isInteger(activityId) || activityId <= 0) {
+      return errorResponse(ApiError.validation('Mã hoạt động không hợp lệ'));
     }
 
-    if (user.role !== 'admin' && user.role !== 'teacher') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
+    const user = await requireApiRole(request, ['admin', 'teacher']);
 
-    // Kiểm tra activity
-    const activity = await dbGet('SELECT * FROM activities WHERE id = ?', [id]);
+    const activity = await dbGet('SELECT * FROM activities WHERE id = ?', [activityId]);
     if (!activity) {
-      return NextResponse.json({ error: 'Activity not found' }, { status: 404 });
+      return errorResponse(ApiError.notFound('Không tìm thấy hoạt động'));
     }
 
     if (activity.status === 'completed') {
-      return NextResponse.json({ error: 'Activity already completed' }, { status: 400 });
+      return errorResponse(ApiError.validation('Hoạt động đã được hoàn thành'));
     }
 
     if (activity.status === 'cancelled') {
-      return NextResponse.json({ error: 'Cannot complete cancelled activity' }, { status: 400 });
+      return errorResponse(ApiError.validation('Không thể hoàn thành hoạt động đã bị hủy'));
     }
 
-    // 1. Đổi status sang completed
-    await dbRun('UPDATE activities SET status = ? WHERE id = ?', ['completed', id]);
+    await dbRun('UPDATE activities SET status = ? WHERE id = ?', ['completed', activityId]);
 
-    // 2. Tự động tính điểm cho tất cả participations có achievement_level
     const participations = await dbAll(
       `
       SELECT id, student_id, achievement_level
@@ -46,7 +41,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       AND attendance_status = 'attended'
       AND achievement_level IS NOT NULL
     `,
-      [id]
+      [activityId]
     );
 
     let pointsCalculated = 0;
@@ -72,34 +67,36 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       }
     }
 
-    // 3. Audit log
     await dbRun(
       `INSERT INTO audit_logs (actor_id, action, target_table, target_id, details)
        VALUES (?, 'COMPLETE_ACTIVITY', 'activities', ?, ?)`,
       [
         user.id,
-        id,
+        activityId,
         `Completed activity "${activity.title}" and calculated ${pointsCalculated} points`,
       ]
     );
 
-    return NextResponse.json({
-      success: true,
-      message: `Activity completed successfully. Calculated ${pointsCalculated}/${participations.length} points.`,
-      activity: {
-        id: activity.id,
-        title: activity.title,
-        status: 'completed',
+    return successResponse(
+      {
+        activity: {
+          id: activity.id,
+          title: activity.title,
+          status: 'completed',
+        },
+        pointsCalculated,
+        totalParticipations: participations.length,
+        results,
       },
-      pointsCalculated,
-      totalParticipations: participations.length,
-      results,
-    });
+      `Hoạt động đã được hoàn thành. Đã tính điểm ${pointsCalculated}/${participations.length} lượt tham gia.`
+    );
   } catch (error: any) {
     console.error('Error completing activity:', error);
-    return NextResponse.json(
-      { error: error.message || 'Failed to complete activity' },
-      { status: 500 }
+    return errorResponse(
+      error instanceof ApiError ||
+        (error && typeof error.status === 'number' && typeof error.code === 'string')
+        ? error
+        : ApiError.internalError('Không thể hoàn thành hoạt động', { details: error?.message })
     );
   }
 }

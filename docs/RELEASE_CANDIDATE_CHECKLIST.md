@@ -14,6 +14,8 @@
 - [x] activity participants canonicalized
 - [x] pending approvals canonicalized
 - [x] approval action/history canonicalized
+- [x] activity-types config routes canonicalized
+- [x] organization-levels config routes canonicalized
 
 ### Teacher surface
 - [x] approvals route canonicalized
@@ -36,6 +38,8 @@ Recommended pre-release regression bundle:
 
 ```bash
 npm test -- --reporter dot \
+  test/admin-config-route-contracts.test.ts \
+  test/admin-config-item-route-contracts.test.ts \
   test/admin-activities-route.test.ts \
   test/admin-activity-detail-route.test.ts \
   test/admin-activity-participants-route.test.ts \
@@ -66,7 +70,7 @@ npm test -- --reporter dot \
 
 - Some long-tail admin/teacher routes still use legacy auth/session or raw `NextResponse` patterns.
 - Release candidate status currently reflects backbone stability, not full repo-wide contract cleanup.
-- A larger operational sweep is still recommended before calling the project fully release-ready.
+- Activity completion and attendance-related admin routes still deserve one more focused sweep before calling the internal RC truly sturdy.
 
 ## Recommended next gates
 

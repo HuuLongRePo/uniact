@@ -1,13 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getUserFromSession } from '@/lib/auth';
+import { NextRequest } from 'next/server';
 import { dbAll } from '@/lib/database';
+import { requireApiRole } from '@/lib/guards';
+import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
 
 export async function GET(request: NextRequest) {
   try {
-    const user = await getUserFromSession(request);
-    if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    await requireApiRole(request, ['admin']);
 
     const records = await dbAll(`
       SELECT
@@ -29,9 +27,14 @@ export async function GET(request: NextRequest) {
       ORDER BY act.date_time DESC, u.name ASC
     `);
 
-    return NextResponse.json({ records });
-  } catch (error) {
+    return successResponse({ records });
+  } catch (error: any) {
     console.error('Get attendance error:', error);
-    return NextResponse.json({ error: 'Failed to fetch attendance' }, { status: 500 });
+    return errorResponse(
+      error instanceof ApiError ||
+        (error && typeof error.status === 'number' && typeof error.code === 'string')
+        ? error
+        : ApiError.internalError('Không thể tải danh sách điểm danh', { details: error?.message })
+    );
   }
 }

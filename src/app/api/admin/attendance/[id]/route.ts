@@ -1,26 +1,34 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getUserFromSession } from '@/lib/auth';
+import { NextRequest } from 'next/server';
 import { dbRun } from '@/lib/database';
+import { requireApiRole } from '@/lib/guards';
+import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
 
 export async function PUT(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
-    const user = await getUserFromSession(request);
-    if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    await requireApiRole(request, ['admin']);
 
     const { id } = await context.params;
+    const recordId = Number(id);
+    if (!Number.isInteger(recordId) || recordId <= 0) {
+      return errorResponse(ApiError.validation('Mã điểm danh không hợp lệ'));
+    }
+
     const { status } = await request.json();
 
     if (!['present', 'absent', 'late'].includes(status)) {
-      return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
+      return errorResponse(ApiError.validation('Trạng thái điểm danh không hợp lệ'));
     }
 
-    await dbRun('UPDATE attendance_records SET status = ? WHERE id = ?', [status, parseInt(id)]);
+    await dbRun('UPDATE attendance_records SET status = ? WHERE id = ?', [status, recordId]);
 
-    return NextResponse.json({ message: 'Attendance updated successfully' });
-  } catch (error) {
+    return successResponse({ updated: true, id: recordId, status }, 'Cập nhật điểm danh thành công');
+  } catch (error: any) {
     console.error('Update attendance error:', error);
-    return NextResponse.json({ error: 'Failed to update attendance' }, { status: 500 });
+    return errorResponse(
+      error instanceof ApiError ||
+        (error && typeof error.status === 'number' && typeof error.code === 'string')
+        ? error
+        : ApiError.internalError('Không thể cập nhật điểm danh', { details: error?.message })
+    );
   }
 }
