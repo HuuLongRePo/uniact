@@ -79,6 +79,22 @@ Quy ước trạng thái: TODO / DOING / BLOCKED / DONE
 - Cách kiểm thử: chạy hẹp page tests rồi rerun bundle regression liên quan student/teacher flows
 - Tiêu chí hoàn thành: teacher approvals page bỏ drift interface an toàn, student activities page không còn loop do dependency router và vẫn giữ contract hiện tại
 
+### T-148 - Canonicalize teacher approvals route và preserve admin approval action errors
+
+- Trạng thái: DONE
+- Mục tiêu: đưa teacher approvals route về guard/response contract canonical, bỏ compatibility field thừa ở active route/page, đồng thời tránh route admin approval nuốt lỗi nghiệp vụ thành 500
+- Phạm vi file:
+  - `src/app/api/teacher/activities/approvals/route.ts`
+  - `src/app/teacher/approvals/page.tsx`
+  - `src/app/api/admin/activities/[id]/approval/route.ts`
+  - `test/teacher-approvals-route.test.ts`
+  - `test/teacher-approvals-page.test.tsx`
+  - `test/admin-approval-action-route.test.ts`
+- Lý do cần làm: teacher approval backbone vẫn còn legacy auth + compatibility payload thừa; admin approval action là nút trung tâm nhưng vẫn có nguy cơ che mất 401/403/409 thật bằng 500
+- Rủi ro: thấp đến trung bình
+- Cách kiểm thử: chạy hẹp teacher approvals page/route + admin approval action, sau đó rerun bundle approval/student hiện có
+- Tiêu chí hoàn thành: teacher approvals route dùng `requireApiRole`, page không còn phụ thuộc fallback `data.data?.activities`, route admin approval preserve được `ApiError`
+
 ### T-101 - Chuẩn hóa contract danh sách hoạt động sinh viên
 
 - Trạng thái: DONE

@@ -113,6 +113,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     );
   } catch (error: any) {
     console.error('Approval error:', error);
-    return errorResponse(ApiError.internalError('Lỗi máy chủ nội bộ'));
+    const apiLikeError =
+      error instanceof ApiError ||
+      (error && typeof error.status === 'number' && typeof error.code === 'string')
+        ? error
+        : ApiError.internalError('Lỗi máy chủ nội bộ');
+    return errorResponse(apiLikeError);
   }
 }

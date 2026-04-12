@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { dbAll, dbReady } from '@/lib/database';
-import { requireRole } from '@/lib/guards';
+import { requireApiRole } from '@/lib/guards';
 import { ApiError, successResponse, errorResponse } from '@/lib/api-response';
 
 function mapApprovalStatusToUi(
@@ -24,12 +24,7 @@ export async function GET(request: NextRequest) {
   try {
     await dbReady();
 
-    let user;
-    try {
-      user = await requireRole(request, ['teacher', 'admin']);
-    } catch {
-      return errorResponse(ApiError.unauthorized('Chưa đăng nhập'));
-    }
+    const user = await requireApiRole(request, ['teacher', 'admin']);
 
     const { searchParams } = new URL(request.url);
     const filter = (searchParams.get('status') || 'all').toLowerCase();
@@ -92,7 +87,6 @@ export async function GET(request: NextRequest) {
       location: String(r.location || ''),
       status: mapApprovalStatusToUi(r.approval_status),
       approval_status: String(r.approval_status || ''),
-      teacher_status: String(r.approval_status || ''),
       teacher_name: String(r.teacher_name || ''),
       created_at: String(r.created_at || ''),
       submitted_at: r.submitted_at ? String(r.submitted_at) : null,

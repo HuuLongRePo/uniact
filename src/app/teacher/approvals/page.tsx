@@ -95,7 +95,7 @@ export default function ApprovalsPage() {
       }
 
       const data = await response.json();
-      setActivities(data.activities || data.data?.activities || []);
+      setActivities(data.activities || []);
     } catch (error) {
       console.error(error);
       toast.error('Khong the tai danh sach hoat dong');

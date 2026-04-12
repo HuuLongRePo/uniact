@@ -50,7 +50,7 @@ describe('GET /api/teacher/activities/approvals', () => {
     }));
 
     vi.doMock('@/lib/guards', () => ({
-      requireRole: async () => ({ id: 12, role: 'teacher' }),
+      requireApiRole: async () => ({ id: 12, role: 'teacher' }),
     }));
 
     const route = await import('../src/app/api/teacher/activities/approvals/route');

@@ -1890,6 +1890,34 @@
 - Student discovery page an toàn hơn trước render loop do dependency không ổn định
 - Student page tests bớt flaky theo thời gian, phù hợp hơn cho regression dài hạn
 
+## 2026-04-12 - Hoàn thành T-148
+
+### Mục tiêu
+
+- Canonicalize teacher approvals route đang còn dùng guard legacy và trả compatibility field thừa
+- Preserve lỗi nghiệp vụ có shape API ở admin approval action route thay vì collapse mọi trường hợp về 500
+- Khóa regression cho admin approval action bằng test mới
+
+### Đã làm
+
+- Đổi `src/app/api/teacher/activities/approvals/route.ts` sang `requireApiRole(...)`
+- Bỏ `teacher_status` khỏi payload active route
+- Dọn `src/app/teacher/approvals/page.tsx` để chỉ đọc canonical `data.activities`
+- Harden `src/app/api/admin/activities/[id]/approval/route.ts` để preserve các lỗi có shape API (`status` + `code`) thay vì luôn trả internal error
+- Thêm `test/admin-approval-action-route.test.ts` cho các case backbone ổn định
+- Cập nhật `test/teacher-approvals-route.test.ts` theo guard canonical mới
+
+### Kiểm thử hẹp và rộng
+
+- Chạy `npm test -- --reporter dot test/admin-approval-action-route.test.ts test/teacher-approvals-route.test.ts test/teacher-approvals-page.test.tsx test/teacher-resubmit-route.test.ts test/admin-approval-history-route.test.ts test/admin-pending-activities-route.test.ts test/student-activities-page.test.tsx test/activities-list-route.test.ts test/student-activity-detail-page.test.tsx test/activity-check-conflicts-route.test.ts test/register-route-conflict.test.ts test/my-registrations-route.test.ts`
+- Kết quả: `12/12` test files pass, `24/24` tests pass
+
+### Kết quả
+
+- Teacher approvals backbone bớt legacy auth và bớt compatibility payload drift
+- Teacher approvals page bám đúng canonical response hiện tại
+- Admin approval action route cứng cáp hơn trước các lỗi nghiệp vụ/guard có API shape
+
 ## 2026-04-07 - Hoàn thành T-142
 
 ### Đã làm
