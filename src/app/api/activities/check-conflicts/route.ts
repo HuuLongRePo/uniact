@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
       FROM activities a
       LEFT JOIN users u ON a.teacher_id = u.id
       WHERE a.location = ?
-      AND a.status IN ('published', 'pending')
+      AND a.status = 'published'
       AND a.id != ?
       AND (
         -- Overlap detection: [start1, end1] overlaps [start2, end2]
@@ -112,7 +112,7 @@ export async function POST(request: NextRequest) {
       FROM activities a
       LEFT JOIN users u ON a.teacher_id = u.id
       WHERE a.teacher_id = ?
-      AND a.status IN ('published', 'pending')
+      AND a.status = 'published'
       AND a.id != ?
       AND ABS((julianday(a.date_time) - julianday(?)) * 24) < 3  -- Within 3 hours
       ORDER BY time_diff_minutes ASC

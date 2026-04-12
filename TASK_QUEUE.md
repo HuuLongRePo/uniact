@@ -15,6 +15,18 @@ Quy ước trạng thái: TODO / DOING / BLOCKED / DONE
 
 ## Hàng đợi thực thi đề xuất
 
+### T-143 - Chuẩn hóa conflict check về activity status canonical
+
+- Trạng thái: DONE
+- Mục tiêu: loại bỏ việc dùng `activities.status='pending'` trong route kiểm tra xung đột để bám đúng contract canonical hiện tại
+- Phạm vi file:
+  - `src/app/api/activities/check-conflicts/route.ts`
+  - `test/activity-check-conflicts-route.test.ts`
+- Lý do cần làm: business/workflow đã chốt `pending` chỉ là display status, không phải DB status của bảng `activities`; nếu tiếp tục query `status IN ('published', 'pending')` sẽ duy trì drift và làm khó cleanup về sau
+- Rủi ro: thấp
+- Cách kiểm thử: chạy hẹp route test conflict + registration conflict
+- Tiêu chí hoàn thành: route chỉ query `published` ở lớp activity status canonical và có regression test khóa drift này
+
 ### T-101 - Chuẩn hóa contract danh sách hoạt động sinh viên
 
 - Trạng thái: DONE

@@ -1763,6 +1763,30 @@
 
 - Nhánh filter options (`/api/classes`, `/api/activity-types`) của participation report vẫn chưa có regression test riêng; phần này được xếp sang `T-142`
 
+## 2026-04-12 - Hoàn thành T-143
+
+### Đã làm
+
+- Sửa `src/app/api/activities/check-conflicts/route.ts` để không còn query `activities.status IN ('published', 'pending')`
+- Chuẩn hóa cả 2 truy vấn location conflict và teacher schedule warning về `a.status = 'published'`
+- Thêm regression test mới `test/activity-check-conflicts-route.test.ts` để khóa việc route này không được tái dùng status legacy `pending`
+- Tạo prompt điều hành mới tại `~/Desktop/UNIACT_EXECUTION_PROMPT_2026-04-12.md` để tiếp quản repo theo batch nhỏ, có test, có commit
+
+### Kiểm thử hẹp
+
+- Chạy `npm test -- --reporter dot test/activity-check-conflicts-route.test.ts test/register-route-conflict.test.ts`
+- Kết quả: `2/2` test files pass, `2/2` tests pass
+
+### Kết quả
+
+- Conflict-check route giờ bám đúng activity status canonical hiện tại
+- Giảm thêm một điểm drift giữa business/workflow docs và query runtime
+- Regression net đã có để chặn việc vô tình đưa `activities.status='pending'` quay lại ở batch sau
+
+### Còn lại
+
+- Vẫn cần rà tiếp các route/query khác đang còn dùng semantic legacy `pending` ở lớp activity status thay vì display status hoặc approval status
+
 ## 2026-04-07 - Hoàn thành T-142
 
 ### Đã làm
