@@ -1,6 +1,6 @@
 # TÀI LIỆU CANONICAL - UNIACT
 
-Ngày cập nhật: 2026-04-06
+Ngày cập nhật: 2026-04-12
 Trạng thái: nguồn điều hướng tài liệu hiện tại
 
 ## 1. Mục đích
@@ -25,8 +25,8 @@ Nếu có mâu thuẫn giữa các tài liệu, ưu tiên thứ tự ở mục 2
 4. `TASK_QUEUE.md`
 5. `CHANGELOG_PROGRESS.md`
 6. `BUGS_BOTTLENECKS.md`
-7. `UI_VIET_HOA_PLAN.md`
-8. `CLEANUP_REFACTOR_PLAN.md`
+7. `docs/archive/root-legacy/UI_VIET_HOA_PLAN.md` (tham khảo lịch sử nếu còn cần)
+8. `docs/archive/root-legacy/CLEANUP_REFACTOR_PLAN.md` (tham khảo lịch sử cleanup)
 
 Vai trò từng file:
 
@@ -36,8 +36,8 @@ Vai trò từng file:
 - `TASK_QUEUE.md`: hàng đợi công việc đang hoạt động, dùng để quyết định làm gì tiếp theo
 - `CHANGELOG_PROGRESS.md`: nhật ký tiến độ thực thi thật sự
 - `BUGS_BOTTLENECKS.md`: bug, điểm nghẽn, mức độ ưu tiên
-- `UI_VIET_HOA_PLAN.md`: phạm vi Việt hóa UI
-- `CLEANUP_REFACTOR_PLAN.md`: kế hoạch dọn rác, gộp trùng, chuẩn hóa cấu trúc
+- `docs/archive/root-legacy/UI_VIET_HOA_PLAN.md`: phạm vi Việt hóa UI ở giai đoạn trước, chỉ còn giá trị tham khảo
+- `docs/archive/root-legacy/CLEANUP_REFACTOR_PLAN.md`: kế hoạch dọn rác/cấu trúc ở giai đoạn trước, chỉ còn giá trị tham khảo
 
 ### Nhóm B - Tài liệu cài đặt và vận hành gần với repo hiện tại
 
@@ -75,7 +75,7 @@ Quy tắc:
 ### Nhóm E - Tài liệu lịch sử, snapshot, báo cáo theo đợt
 
 - phần lớn các file còn lại trong `docs/`
-- các file báo cáo root như `AUDIT_REPORT_SECURITY_UX_v1.0.md`, `MANUAL_TEST_CHECKLIST_v1.0.md`, `UX_FIXES_IMPLEMENTATION_GUIDE.md`
+- các file historical/report đã được gom về `docs/archive/root-legacy/`, ví dụ `AUDIT_REPORT_SECURITY_UX_v1.0.md`, `MANUAL_TEST_CHECKLIST_v1.0.md`, `UX_FIXES_IMPLEMENTATION_GUIDE.md`
 
 Quy tắc:
 
@@ -139,6 +139,7 @@ Quy tắc:
 - Khi thay đổi định hướng xử lý tổng thể, cập nhật `MASTER_PLAN.md`
 - Không tự tạo thêm README/index mới nếu nội dung chỉ lặp lại file canonical đã có
 - Nếu buộc phải tạo tài liệu snapshot theo đợt, ghi rõ đó là `historical` hoặc `report`, không gắn nhãn canonical
+- Tài liệu historical/report ở root nên được chuyển vào `docs/archive/root-legacy/` để giữ root gọn và tránh nhầm với tài liệu active
 
 ## 6. Kết luận
 

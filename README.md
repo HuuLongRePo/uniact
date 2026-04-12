@@ -1,6 +1,8 @@
 # uniact
 
 > Lưu ý tài liệu: dùng [CANONICAL_DOCS.md](CANONICAL_DOCS.md) làm điểm vào chuẩn cho tài liệu hiện tại của repo. Nếu có mâu thuẫn giữa README này với các file kế hoạch/audit ở root, ưu tiên `CANONICAL_DOCS.md` và nhóm tài liệu điều hành hiện tại.
+>
+> Từ 2026-04-12, các tài liệu historical/report không còn active ở root đã được gom vào `docs/archive/root-legacy/` để giữ cấu trúc repo gọn hơn.
 
 # [cite_start]CÔNG TRÌNH THAM DỰ CUỘC THI SINH VIÊN NGHIÊN CỨU KHOA HỌC - UNITECH NĂM HỌC 2024 - 2025 [cite: 10]
 [cite_start]**Tên đề tài:** Xây dựng Hệ thống Quản lý hoạt động ngoại khóa, phong trào thanh niên [cite: 30]

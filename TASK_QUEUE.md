@@ -82,6 +82,20 @@ Quy ước trạng thái: TODO / DOING / BLOCKED / DONE
 ### T-148 - Canonicalize teacher approvals route và preserve admin approval action errors
 
 - Trạng thái: DONE
+
+### T-149 - Housekeeping tài liệu root và gom historical docs vào archive
+
+- Trạng thái: DONE
+- Mục tiêu: làm gọn cấu trúc root repo, giảm nhiễu giữa tài liệu active và snapshot/report cũ mà không làm mất thông tin còn hữu ích
+- Phạm vi file:
+  - `CANONICAL_DOCS.md`
+  - `README.md`
+  - `docs/archive/root-legacy/README.md`
+  - di chuyển một nhóm file historical/report từ root sang `docs/archive/root-legacy/`
+- Lý do cần làm: root repo đang có quá nhiều file md điều hành lẫn historical report trộn nhau, gây khó cho tiếp quản và tăng khả năng đọc nhầm nguồn sự thật
+- Rủi ro: thấp nếu chỉ move các file ít active reference và cập nhật index canonical đi kèm
+- Cách kiểm thử: rà lại reference chính trong README/CANONICAL_DOCS, kiểm tra git diff và tree sau move
+- Tiêu chí hoàn thành: root repo gọn hơn, tài liệu active vẫn rõ, tài liệu cũ vẫn tra cứu được trong archive
 - Mục tiêu: đưa teacher approvals route về guard/response contract canonical, bỏ compatibility field thừa ở active route/page, đồng thời tránh route admin approval nuốt lỗi nghiệp vụ thành 500
 - Phạm vi file:
   - `src/app/api/teacher/activities/approvals/route.ts`

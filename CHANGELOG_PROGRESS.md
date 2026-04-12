@@ -1918,6 +1918,29 @@
 - Teacher approvals page bám đúng canonical response hiện tại
 - Admin approval action route cứng cáp hơn trước các lỗi nghiệp vụ/guard có API shape
 
+## 2026-04-12 - Hoàn thành T-149
+
+### Đã làm
+
+- Tạo `docs/archive/root-legacy/README.md` để mô tả khu vực archive cho tài liệu historical/report ở root
+- Di chuyển các file historical/report ít active reference từ root vào `docs/archive/root-legacy/`:
+  - `AUDIT_REPORT_SECURITY_UX_v1.0.md`
+  - `CLEANUP_GUIDE.md`
+  - `CLEANUP_REFACTOR_PLAN.md`
+  - `DELIVERY_ROADMAP.md`
+  - `FACE_ATTENDANCE_PLAN.md`
+  - `MANUAL_TEST_CHECKLIST_v1.0.md`
+  - `UI_VIET_HOA_PLAN.md`
+  - `UX_FIXES_IMPLEMENTATION_GUIDE.md`
+- Cập nhật `CANONICAL_DOCS.md` để phản ánh cấu trúc archive mới và làm rõ nhóm tài liệu historical
+- Cập nhật `README.md` để người vào repo biết historical docs đã được gom khỏi root
+
+### Kết quả
+
+- Root repo gọn hơn và ít nhiễu hơn cho người tiếp quản
+- Tài liệu active/canonical vẫn ở root rõ ràng
+- Tài liệu historical không mất mà được gom đúng chỗ hơn để tra cứu
+
 ## 2026-04-07 - Hoàn thành T-142
 
 ### Đã làm
