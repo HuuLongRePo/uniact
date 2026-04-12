@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { dbAll, dbGet, dbReady } from '@/lib/database';
-import { requireRole } from '@/lib/guards';
+import { requireApiRole } from '@/lib/guards';
 import { ApiError, successResponseWithExtra, errorResponse } from '@/lib/api-response';
 import { teacherCanAccessActivity } from '@/lib/activity-access';
 
@@ -10,12 +10,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const { id } = await params;
     await dbReady();
 
-    let user;
-    try {
-      user = await requireRole(request, ['teacher', 'admin']);
-    } catch {
-      return errorResponse(ApiError.unauthorized('Chưa đăng nhập'));
-    }
+    const user = await requireApiRole(request, ['teacher', 'admin']);
 
     const activityId = Number(id);
     if (!activityId || Number.isNaN(activityId)) {
@@ -101,7 +96,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   } catch (error: any) {
     console.error('Lỗi lấy danh sách người tham gia:', error);
     return errorResponse(
-      ApiError.internalError('Không thể lấy danh sách người tham gia', { details: error?.message })
+      error instanceof ApiError ||
+        (error && typeof error.status === 'number' && typeof error.code === 'string')
+        ? error
+        : ApiError.internalError('Không thể lấy danh sách người tham gia', { details: error?.message })
     );
   }
 }

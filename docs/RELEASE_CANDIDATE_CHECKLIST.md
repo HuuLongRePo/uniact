@@ -21,6 +21,8 @@
 - [x] dashboard auth/error contracts canonicalized
 - [x] teacher students contract canonicalized
 - [x] evaluate route canonicalized
+- [x] activity participants route canonicalized
+- [x] activity evaluate-batch route canonicalized
 
 ### Student surface
 - [x] activities list/detail backbone stabilized
@@ -44,6 +46,8 @@ npm test -- --reporter dot \
   test/teacher-dashboard-legacy-auth-route.test.ts \
   test/teacher-students-route.test.ts \
   test/teacher-evaluate-route.test.ts \
+  test/teacher-activity-participants-route.test.ts \
+  test/activity-access-routes.test.ts \
   test/teacher-approvals-route.test.ts \
   test/teacher-resubmit-route.test.ts \
   test/teacher-edit-activity-page.test.tsx \

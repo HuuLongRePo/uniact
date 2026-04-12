@@ -2151,6 +2151,33 @@
 - Repo hiện không chỉ có thêm code hardening, mà đã có một mốc internal RC prep được tài liệu hóa rõ bằng checklist và regression baseline
 - Đây là bước chuyển từ “liên tục sửa backbone” sang “bắt đầu gom trạng thái releaseable nội bộ có thể kiểm chứng được”
 
+## 2026-04-12 - Hoàn thành T-159 và T-160
+
+### Đã làm
+
+- Canonicalize `src/app/api/teacher/activities/[id]/participants/route.ts`:
+  - chuyển từ `requireRole` sang `requireApiRole`
+  - preserve `ApiError` / API-shaped errors ở catch cuối
+- Canonicalize `src/app/api/teacher/activities/[id]/evaluate/route.ts`:
+  - chuyển từ `requireRole` sang `requireApiRole`
+  - preserve `ApiError` / API-shaped errors ở catch cuối
+- Thêm `test/teacher-activity-participants-route.test.ts` để khóa forbidden guard preservation cho teacher activity participants route
+- Cập nhật `test/activity-access-routes.test.ts` để giữ xanh compatibility coverage sau khi teacher activity evaluate route chuyển sang canonical guard mới
+- Mở rộng `docs/RELEASE_CANDIDATE_CHECKLIST.md` để đưa thêm activity-level teacher routes vào baseline RC
+- Thêm `docs/INTERNAL_RC_SUMMARY_2026-04-12.md` để tóm tắt ngắn gọn trạng thái internal RC prep hiện tại của UniAct
+
+### Kiểm thử
+
+- Chạy RC regression baseline mở rộng:
+  - `npm test -- --reporter dot test/admin-activities-route.test.ts test/admin-activity-detail-route.test.ts test/admin-activity-participants-route.test.ts test/admin-approval-action-route.test.ts test/admin-approval-history-route.test.ts test/admin-pending-activities-route.test.ts test/teacher-dashboard-routes.test.ts test/teacher-dashboard-legacy-auth-route.test.ts test/teacher-students-route.test.ts test/teacher-evaluate-route.test.ts test/teacher-activity-participants-route.test.ts test/activity-access-routes.test.ts test/teacher-approvals-route.test.ts test/teacher-resubmit-route.test.ts test/teacher-edit-activity-page.test.tsx test/teacher-create-activity-page.test.tsx test/student-activity-detail-page.test.tsx test/register-route-conflict.test.ts test/register-route-mandatory.test.ts test/register-route-cancel-route.test.ts test/student-activities-page.test.tsx test/activities-list-route.test.ts test/my-registrations-route.test.ts test/activity-check-conflicts-route.test.ts`
+- Kết quả: `24/24` test files pass, `53/53` tests pass
+
+### Kết quả
+
+- Teacher activity-level surface đã đồng pha hơn với teacher backbone canonical mới
+- RC baseline hiện đã rộng và có tính đại diện hơn trước, không chỉ bao phủ dashboard/students/evaluate đơn lẻ mà còn phủ thêm participants/evaluate ở activity-level
+- Repo hiện đã có cả checklist lẫn summary nội bộ để hỗ trợ bước tiến tới internal RC mạnh hơn ở các batch sau
+
 ## 2026-04-07 - Hoàn thành T-142
 
 ### Đã làm

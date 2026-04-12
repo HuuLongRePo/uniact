@@ -216,6 +216,32 @@ Quy ước trạng thái: TODO / DOING / BLOCKED / DONE
 - Rủi ro: thấp
 - Cách kiểm thử: chạy regression bundle lớn nhất hiện tại sau khi cập nhật docs/checklist
 - Tiêu chí hoàn thành: có checklist RC nội bộ, master plan phản ánh mốc hiện tại và regression baseline xanh sau cập nhật
+
+### T-159 - Canonicalize teacher activity participants/evaluate routes
+
+- Trạng thái: DONE
+- Mục tiêu: kéo cặp route teacher ở activity-level (`participants`, `evaluate`) về cùng chuẩn guard/error với backbone teacher mới hơn
+- Phạm vi file:
+  - `src/app/api/teacher/activities/[id]/participants/route.ts`
+  - `src/app/api/teacher/activities/[id]/evaluate/route.ts`
+  - `test/teacher-activity-participants-route.test.ts`
+  - `test/activity-access-routes.test.ts`
+- Lý do cần làm: đây là route teacher gần user-flow thật, vẫn dùng `requireRole` + catch collapse và có nguy cơ lệch khỏi nhóm route teacher đã canonicalize gần đây
+- Rủi ro: trung bình
+- Cách kiểm thử: focused bundle route-level + gộp vào RC regression baseline mở rộng
+- Tiêu chí hoàn thành: route preserve canonical forbidden/API-shaped errors, test cũ vẫn xanh và có regression mới cho participants route
+
+### T-160 - Mở rộng RC regression baseline và tạo internal RC summary ngắn gọn
+
+- Trạng thái: DONE
+- Mục tiêu: mở rộng baseline RC để phản ánh các route mới được harden và tạo một bản tóm tắt release nội bộ ngắn gọn, dễ đọc hơn checklist thuần túy
+- Phạm vi file:
+  - `docs/RELEASE_CANDIDATE_CHECKLIST.md`
+  - `docs/INTERNAL_RC_SUMMARY_2026-04-12.md`
+- Lý do cần làm: khi số batch backbone tăng lên, chỉ checklist thôi chưa đủ giúp nhìn nhanh trạng thái release-prep; cần thêm summary ngắn để chốt mốc nội bộ rõ hơn
+- Rủi ro: thấp
+- Cách kiểm thử: chạy RC regression baseline mở rộng sau cập nhật docs
+- Tiêu chí hoàn thành: baseline RC có thêm route teacher activity-level và có summary nội bộ phản ánh đúng mức sẵn sàng hiện tại
 - Mục tiêu: đưa teacher approvals route về guard/response contract canonical, bỏ compatibility field thừa ở active route/page, đồng thời tránh route admin approval nuốt lỗi nghiệp vụ thành 500
 - Phạm vi file:
   - `src/app/api/teacher/activities/approvals/route.ts`

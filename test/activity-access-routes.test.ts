@@ -174,7 +174,7 @@ describe('activity access routes', () => {
     const mockDbRun = vi.fn(async () => ({ changes: 1, lastID: 1 }));
 
     vi.doMock('@/lib/guards', () => ({
-      requireRole: async () => ({ id: 12, role: 'teacher' }),
+      requireApiRole: async () => ({ id: 12, role: 'teacher' }),
     }));
 
     vi.doMock('@/lib/activity-access', () => ({
