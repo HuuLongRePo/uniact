@@ -53,6 +53,18 @@ Quy ước trạng thái: TODO / DOING / BLOCKED / DONE
 - Cách kiểm thử: chạy hẹp approval-history cùng bundle approval/register/conflict hiện tại
 - Tiêu chí hoàn thành: route giữ nguyên success shape, nhưng preserve được `ApiError` như forbidden thay vì biến thành internal error
 
+### T-146 - Harden teacher resubmit route và khóa regression cho teacher approval flow
+
+- Trạng thái: DONE
+- Mục tiêu: chuẩn hóa route gửi duyệt lại của teacher theo guard canonical, giữ conflict semantics rõ và có regression test riêng
+- Phạm vi file:
+  - `src/app/api/teacher/activities/[id]/resubmit/route.ts`
+  - `test/teacher-resubmit-route.test.ts`
+- Lý do cần làm: đây là route active mà `teacher/approvals/page.tsx` đang gọi trực tiếp; nếu còn giữ guard style legacy thì flow teacher approval sẽ tiếp tục không đồng đều so với backbone đã harden
+- Rủi ro: thấp
+- Cách kiểm thử: chạy bundle teacher resubmit + teacher approvals + student discovery/detail + approval/register/conflict regression
+- Tiêu chí hoàn thành: owner teacher gửi lại được, non-owner bị chặn đúng 403, activity pending sẵn trả conflict rõ ràng
+
 ### T-101 - Chuẩn hóa contract danh sách hoạt động sinh viên
 
 - Trạng thái: DONE

@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { dbGet, dbHelpers, dbReady } from '@/lib/database';
-import { requireRole } from '@/lib/guards';
+import { requireApiRole } from '@/lib/guards';
 import { ApiError, successResponse, errorResponse } from '@/lib/api-response';
 
 // POST /api/teacher/activities/[id]/resubmit
@@ -9,12 +9,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     await dbReady();
     const { id } = await params;
 
-    let user;
-    try {
-      user = await requireRole(request, ['teacher', 'admin']);
-    } catch {
-      return errorResponse(ApiError.unauthorized('Chưa đăng nhập'));
-    }
+    const user = await requireApiRole(request, ['teacher', 'admin']);
 
     const activityId = Number(id);
     if (!activityId || Number.isNaN(activityId)) {

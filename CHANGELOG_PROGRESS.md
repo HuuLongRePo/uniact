@@ -1839,6 +1839,35 @@
 
 - Chưa đụng sâu vào UI teacher approvals page vì vẫn còn khả năng phụ thuộc route resubmit riêng; phần đó nên được gom thành batch kế tiếp để tránh lan scope sang teacher edit/resubmit flow
 
+## 2026-04-12 - Hoàn thành T-146
+
+### Đã làm
+
+- Harden `src/app/api/teacher/activities/[id]/resubmit/route.ts`:
+  - đổi từ `requireRole(...)` sang `requireApiRole(...)`
+  - giữ semantics hiện tại cho owner teacher/admin
+  - giữ `CONFLICT` rõ ràng khi activity đã ở trạng thái chờ duyệt
+- Thêm regression test mới `test/teacher-resubmit-route.test.ts` cho 3 case chính:
+  - owner teacher resubmit thành công
+  - non-owner bị chặn 403
+  - activity pending sẵn trả conflict 409
+- Chạy lại kèm bundle student discovery/detail hiện có để xác nhận contract student list/detail vẫn ổn trong cùng milestone
+
+### Kiểm thử hẹp
+
+- Chạy `npm test -- --reporter dot test/teacher-resubmit-route.test.ts test/activities-list-route.test.ts test/student-activity-detail-page.test.tsx test/admin-approval-history-route.test.ts test/admin-pending-activities-route.test.ts test/my-registrations-route.test.ts test/teacher-approvals-route.test.ts test/activity-check-conflicts-route.test.ts test/register-route-conflict.test.ts`
+- Kết quả: `9/9` test files pass, `18/18` tests pass
+
+### Kết quả
+
+- Teacher approvals/resubmit flow active đã bớt lệch guard semantics so với backbone canonical
+- Student discovery/detail contract tiếp tục được giữ xanh trong lúc harden cụm teacher/admin approval
+- Milestone hiện tại bao phủ tốt hơn 3 actor chính: admin, teacher, student
+
+### Còn lại
+
+- Nếu tiếp tục, batch hợp lý kế tiếp sẽ là rà teacher approvals UI page để giảm field compatibility thừa như `teacher_status`, hoặc đi sâu hơn vào student discovery/detail error handling và docs cleanup liên quan canonical flow
+
 ## 2026-04-07 - Hoàn thành T-142
 
 ### Đã làm
