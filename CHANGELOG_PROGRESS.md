@@ -1868,6 +1868,28 @@
 
 - Nếu tiếp tục, batch hợp lý kế tiếp sẽ là rà teacher approvals UI page để giảm field compatibility thừa như `teacher_status`, hoặc đi sâu hơn vào student discovery/detail error handling và docs cleanup liên quan canonical flow
 
+## 2026-04-12 - Hoàn thành T-147
+
+### Đã làm
+
+- Cleanup nhẹ `src/app/teacher/approvals/page.tsx`:
+  - bỏ field interface legacy `teacher_status` không còn được page dùng
+- Ổn định `src/app/student/activities/page.tsx`:
+  - bỏ dependency `router` khỏi `useEffect` init để tránh refetch loop do object identity thay đổi qua render, nhất là trong test/mock env
+- Sửa `test/student-activities-page.test.tsx` để không còn phụ thuộc ngày quá khứ ở tab mặc định `upcoming`:
+  - đổi fixture `date_time` sang mốc tương lai xa, tránh flaky theo thời gian thực
+
+### Kiểm thử hẹp
+
+- Chạy `npm test -- --reporter dot test/teacher-approvals-page.test.tsx test/student-activities-page.test.tsx test/teacher-resubmit-route.test.ts test/activities-list-route.test.ts test/student-activity-detail-page.test.tsx`
+- Kỳ vọng sau fix: page tests teacher/student ổn định lại và không còn fail do thời gian hoặc router mock identity
+
+### Kết quả
+
+- Teacher approvals UI bớt drift type không cần thiết
+- Student discovery page an toàn hơn trước render loop do dependency không ổn định
+- Student page tests bớt flaky theo thời gian, phù hợp hơn cho regression dài hạn
+
 ## 2026-04-07 - Hoàn thành T-142
 
 ### Đã làm

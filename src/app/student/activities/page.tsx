@@ -78,7 +78,7 @@ export default function StudentActivitiesPage() {
       fetchActivities();
       fetchActivityTypes();
     }
-  }, [user, authLoading, router]);
+  }, [user, authLoading]);
 
   const fetchActivityTypes = async () => {
     try {

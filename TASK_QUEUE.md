@@ -65,6 +65,20 @@ Quy ước trạng thái: TODO / DOING / BLOCKED / DONE
 - Cách kiểm thử: chạy bundle teacher resubmit + teacher approvals + student discovery/detail + approval/register/conflict regression
 - Tiêu chí hoàn thành: owner teacher gửi lại được, non-owner bị chặn đúng 403, activity pending sẵn trả conflict rõ ràng
 
+### T-147 - Cleanup teacher approvals UI contract drift và ổn định student discovery page effect semantics
+
+- Trạng thái: DONE
+- Mục tiêu: dọn drift UI an toàn ở teacher approvals page, đồng thời xử lý root cause render/fetch loop ở student activities page để khóa ổn định behavior trong test và runtime
+- Phạm vi file:
+  - `src/app/teacher/approvals/page.tsx`
+  - `src/app/student/activities/page.tsx`
+  - `test/teacher-approvals-page.test.tsx`
+  - `test/student-activities-page.test.tsx`
+- Lý do cần làm: teacher approvals page còn giữ interface field legacy thừa, còn student discovery page đang phụ thuộc router object trong effect nên test mock làm lộ vòng lặp refetch không an toàn
+- Rủi ro: thấp đến trung bình
+- Cách kiểm thử: chạy hẹp page tests rồi rerun bundle regression liên quan student/teacher flows
+- Tiêu chí hoàn thành: teacher approvals page bỏ drift interface an toàn, student activities page không còn loop do dependency router và vẫn giữ contract hiện tại
+
 ### T-101 - Chuẩn hóa contract danh sách hoạt động sinh viên
 
 - Trạng thái: DONE

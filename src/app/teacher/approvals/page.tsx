@@ -23,7 +23,6 @@ interface Activity {
   location: string;
   status: 'draft' | 'pending' | 'approved' | 'rejected';
   approval_status?: string;
-  teacher_status?: string;
   teacher_name: string;
   created_at: string;
   submitted_at: string | null;
