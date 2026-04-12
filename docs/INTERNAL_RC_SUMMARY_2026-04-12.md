@@ -44,7 +44,7 @@ Recommended wording for the current repo state:
 
 ## Immediate next steps
 
-1. Run build verification and keep it green alongside the widened RC regression baseline.
-2. Execute targeted manual smoke for admin/teacher/student critical flows.
-3. Publish a clearer internal milestone note based on build + regression + smoke status.
-4. Only then consider tagging a stronger internal RC milestone.
+1. Execute targeted manual smoke for admin/teacher/student critical flows.
+2. Record blockers if any appear during smoke.
+3. If smoke stays clean, promote this into a stronger internal RC milestone note/tag.
+4. Only then consider broader release communication.
