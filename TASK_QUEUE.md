@@ -242,6 +242,24 @@ Quy ước trạng thái: TODO / DOING / BLOCKED / DONE
 - Rủi ro: thấp
 - Cách kiểm thử: chạy RC regression baseline mở rộng sau cập nhật docs
 - Tiêu chí hoàn thành: baseline RC có thêm route teacher activity-level và có summary nội bộ phản ánh đúng mức sẵn sàng hiện tại
+
+### T-161 - Canonicalize admin config backbone routes
+
+- Trạng thái: DONE
+- Mục tiêu: chuẩn hóa cụm cấu hình admin cốt lõi dùng để vận hành activities (`activity-types`, `organization-levels`) về cùng guard/response/error contract với backbone admin mới
+- Phạm vi file:
+  - `src/app/api/admin/activity-types/route.ts`
+  - `src/app/api/admin/activity-types/[id]/route.ts`
+  - `src/app/api/admin/organization-levels/route.ts`
+  - `src/app/api/admin/organization-levels/[id]/route.ts`
+  - `test/admin-config-route-contracts.test.ts`
+  - `test/admin-config-item-route-contracts.test.ts`
+- Lý do cần làm: đây là config surface ảnh hưởng trực tiếp tới hoạt động, vẫn còn legacy `getUserFromSession` + `NextResponse.json` và chưa nằm trong cùng contract với phần admin backbone đã harden trước đó
+- Rủi ro: thấp đến trung bình
+- Cách kiểm thử:
+  - focused config bundle
+  - RC regression baseline mở rộng
+- Tiêu chí hoàn thành: list/create/update/delete của config routes dùng `requireApiRole`, `successResponse`, `errorResponse`, preserve API-shaped errors và được đưa vào baseline RC
 - Mục tiêu: đưa teacher approvals route về guard/response contract canonical, bỏ compatibility field thừa ở active route/page, đồng thời tránh route admin approval nuốt lỗi nghiệp vụ thành 500
 - Phạm vi file:
   - `src/app/api/teacher/activities/approvals/route.ts`

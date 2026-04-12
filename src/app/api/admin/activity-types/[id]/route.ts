@@ -1,27 +1,23 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getUserFromSession } from '@/lib/auth';
+import { NextRequest } from 'next/server';
 import { dbGet, dbRun } from '@/lib/database';
 import { cache } from '@/lib/cache';
+import { requireApiRole } from '@/lib/guards';
+import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
 
 // PUT /api/admin/activity-types/[id] - Update activity type
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const user = await getUserFromSession();
-    if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
+    const user = await requireApiRole(request, ['admin']);
 
     const { id } = await params;
     const body = await request.json();
     const { name, multiplier, description } = body;
 
-    // Check if exists
     const existing = await dbGet('SELECT id FROM activity_types WHERE id = ?', [id]);
     if (!existing) {
-      return NextResponse.json({ error: 'Activity type not found' }, { status: 404 });
+      return errorResponse(ApiError.notFound('Không tìm thấy loại hoạt động'));
     }
 
-    // Build update query
     const updates: string[] = [];
     const values: any[] = [];
 
@@ -31,12 +27,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     }
     if (multiplier !== undefined) {
       if (typeof multiplier !== 'number' || multiplier < 0) {
-        return NextResponse.json(
-          {
-            error: 'Multiplier must be a positive number',
-          },
-          { status: 400 }
-        );
+        return errorResponse(ApiError.validation('Multiplier phải là số không âm'));
       }
       updates.push('multiplier = ?');
       values.push(multiplier);
@@ -47,27 +38,29 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     if (updates.length === 0) {
-      return NextResponse.json({ error: 'No fields to update' }, { status: 400 });
+      return errorResponse(ApiError.validation('Không có trường nào để cập nhật'));
     }
 
     values.push(id);
 
     await dbRun(`UPDATE activity_types SET ${updates.join(', ')} WHERE id = ?`, values);
-
-    // Invalidate cache
     cache.invalidatePrefix('activity_types');
 
-    // Audit log
     await dbRun(
       `INSERT INTO audit_logs (actor_id, action, target_table, target_id, details, created_at)
        VALUES (?, ?, ?, ?, ?, datetime('now'))`,
       [user.id, 'UPDATE', 'activity_types', id, JSON.stringify(body)]
     );
 
-    return NextResponse.json({ success: true, message: 'Activity type updated successfully' });
+    return successResponse({ updated: true }, 'Cập nhật loại hoạt động thành công');
   } catch (error: any) {
     console.error('Error updating activity type:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return errorResponse(
+      error instanceof ApiError ||
+        (error && typeof error.status === 'number' && typeof error.code === 'string')
+        ? error
+        : ApiError.internalError('Không thể cập nhật loại hoạt động', { details: error?.message })
+    );
   }
 }
 
@@ -77,44 +70,38 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getUserFromSession();
-    if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
+    const user = await requireApiRole(request, ['admin']);
 
     const { id } = await params;
-    // Check if exists
-    const existing = await dbGet('SELECT id, name FROM activity_types WHERE id = ?', [id]);
+    const existing = (await dbGet('SELECT id, name FROM activity_types WHERE id = ?', [id])) as any;
     if (!existing) {
-      return NextResponse.json({ error: 'Activity type not found' }, { status: 404 });
+      return errorResponse(ApiError.notFound('Không tìm thấy loại hoạt động'));
     }
 
-    // Check if used in activities
     const activities = await dbGet('SELECT id FROM activities WHERE activity_type_id = ?', [id]);
     if (activities) {
-      return NextResponse.json(
-        {
-          error: 'Cannot delete activity type that is in use. Please reassign activities first.',
-        },
-        { status: 400 }
+      return errorResponse(
+        ApiError.validation('Không thể xóa loại hoạt động đang được sử dụng, hãy gán lại hoạt động trước')
       );
     }
 
     await dbRun('DELETE FROM activity_types WHERE id = ?', [id]);
-
-    // Invalidate cache
     cache.invalidatePrefix('activity_types');
 
-    // Audit log
     await dbRun(
       `INSERT INTO audit_logs (actor_id, action, target_table, target_id, details, created_at)
        VALUES (?, ?, ?, ?, ?, datetime('now'))`,
       [user.id, 'DELETE', 'activity_types', id, JSON.stringify({ name: existing.name })]
     );
 
-    return NextResponse.json({ success: true, message: 'Activity type deleted successfully' });
+    return successResponse({ deleted: true }, 'Xóa loại hoạt động thành công');
   } catch (error: any) {
     console.error('Error deleting activity type:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return errorResponse(
+      error instanceof ApiError ||
+        (error && typeof error.status === 'number' && typeof error.code === 'string')
+        ? error
+        : ApiError.internalError('Không thể xóa loại hoạt động', { details: error?.message })
+    );
   }
 }

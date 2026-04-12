@@ -2178,6 +2178,65 @@
 - RC baseline hiện đã rộng và có tính đại diện hơn trước, không chỉ bao phủ dashboard/students/evaluate đơn lẻ mà còn phủ thêm participants/evaluate ở activity-level
 - Repo hiện đã có cả checklist lẫn summary nội bộ để hỗ trợ bước tiến tới internal RC mạnh hơn ở các batch sau
 
+## 2026-04-12 - Hoàn thành T-161
+
+### Đã làm
+
+- Canonicalize `src/app/api/admin/activity-types/route.ts`
+  - chuyển từ `getUserFromSession` sang `requireApiRole(request, ['admin'])`
+  - chuyển từ raw `NextResponse.json` sang `successResponse` / `errorResponse`
+  - chuẩn hóa validation/conflict/error handling cho list/create
+- Canonicalize `src/app/api/admin/activity-types/[id]/route.ts`
+  - chuẩn hóa update/delete theo contract admin backbone mới
+  - preserve API-shaped errors thay vì collapse 500/raw error cũ
+- Canonicalize `src/app/api/admin/organization-levels/route.ts`
+  - chuyển guard/response/error handling về cùng chuẩn canonical
+- Canonicalize `src/app/api/admin/organization-levels/[id]/route.ts`
+  - chuẩn hóa update/delete theo canonical contract
+- Thêm regression tests:
+  - `test/admin-config-route-contracts.test.ts`
+  - `test/admin-config-item-route-contracts.test.ts`
+- Mở rộng RC baseline để bao phủ cụm admin config backbone mới harden
+
+### Kiểm thử
+
+- Focused config bundle:
+  - `test/admin-config-route-contracts.test.ts`
+  - `test/admin-config-item-route-contracts.test.ts`
+  - kết quả: `2/2` test files pass, `5/5` tests pass
+- RC regression baseline mở rộng:
+  - `test/admin-config-route-contracts.test.ts`
+  - `test/admin-config-item-route-contracts.test.ts`
+  - `test/admin-activities-route.test.ts`
+  - `test/admin-activity-detail-route.test.ts`
+  - `test/admin-activity-participants-route.test.ts`
+  - `test/admin-approval-action-route.test.ts`
+  - `test/admin-approval-history-route.test.ts`
+  - `test/admin-pending-activities-route.test.ts`
+  - `test/teacher-dashboard-routes.test.ts`
+  - `test/teacher-dashboard-legacy-auth-route.test.ts`
+  - `test/teacher-students-route.test.ts`
+  - `test/teacher-evaluate-route.test.ts`
+  - `test/teacher-activity-participants-route.test.ts`
+  - `test/activity-access-routes.test.ts`
+  - `test/teacher-approvals-route.test.ts`
+  - `test/teacher-resubmit-route.test.ts`
+  - `test/student-activity-detail-page.test.tsx`
+  - `test/register-route-conflict.test.ts`
+  - `test/register-route-mandatory.test.ts`
+  - `test/register-route-cancel-route.test.ts`
+  - `test/student-activities-page.test.tsx`
+  - `test/activities-list-route.test.ts`
+  - `test/my-registrations-route.test.ts`
+  - `test/activity-check-conflicts-route.test.ts`
+  - kết quả: `24/24` test files pass, `56/56` tests pass
+
+### Kết quả
+
+- Cụm admin config backbone hiện đã đồng chuẩn hơn với phần admin backbone đã harden trước đó
+- RC baseline hiện không chỉ kiểm tra route nghiệp vụ activity/approval mà còn bao phủ thêm config surface điều hành cốt lõi
+- Mốc internal RC prep của UniAct tiếp tục vững hơn vì phần cấu hình quản trị ít còn lệch legacy auth/response hơn trước
+
 ## 2026-04-07 - Hoàn thành T-142
 
 ### Đã làm
