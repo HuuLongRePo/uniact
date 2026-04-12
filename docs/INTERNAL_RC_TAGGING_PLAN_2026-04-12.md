@@ -13,9 +13,12 @@ It should only be used after targeted manual smoke finishes without blockers.
 
 Before creating the tag, confirm all of the following:
 
+Reference execution note: see `docs/SMOKE_EXECUTION_PLAN_2026-04-12.md`.
+
 - [x] Widened RC regression baseline is green.
 - [x] Production build is green.
 - [ ] Targeted manual smoke checklist is completed.
+- [ ] Smoke environment/account setup is aligned with the intended seeded dataset.
 - [ ] No blocker remains open from smoke.
 
 ## Recommended tag

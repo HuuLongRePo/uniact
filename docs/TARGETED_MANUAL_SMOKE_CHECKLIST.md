@@ -42,3 +42,18 @@ This checklist focuses on the highest-value admin, teacher, and student flows ra
 - [ ] RC regression baseline is green.
 - [ ] No blocker found in admin/teacher/student smoke above.
 - [ ] If any smoke issue appears, log it before calling the milestone stronger than internal RC prep.
+
+## Practical note on execution
+
+At the current repo state, there is a distinction between:
+
+1. **Immediate smoke that is feasible now**
+   - build verification
+   - widened regression baseline
+   - lightweight UAT subset only if seeded accounts and running app match current helpers
+
+2. **Full targeted smoke gate**
+   - should be treated as the stronger gate before tagging
+   - requires seeded accounts and activity data to match the current UAT helper assumptions
+
+If UAT seed/accounts drift from the active database state, record that as an environment/setup blocker rather than mislabeling it as an application regression.
