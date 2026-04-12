@@ -2237,6 +2237,94 @@
 - RC baseline hiện không chỉ kiểm tra route nghiệp vụ activity/approval mà còn bao phủ thêm config surface điều hành cốt lõi
 - Mốc internal RC prep của UniAct tiếp tục vững hơn vì phần cấu hình quản trị ít còn lệch legacy auth/response hơn trước
 
+## 2026-04-12 - Hoàn thành T-162
+
+### Đã làm
+
+- Canonicalize `src/app/api/admin/attendance/route.ts`
+  - bỏ `getUserFromSession(request)` legacy
+  - dùng `requireApiRole(request, ['admin'])`
+  - trả về `successResponse` / `errorResponse`
+- Canonicalize `src/app/api/admin/attendance/[id]/route.ts`
+  - validate `id` điểm danh
+  - chuẩn hóa validation cho `status`
+  - dùng canonical response/error shape
+- Canonicalize `src/app/api/admin/activities/[id]/complete/route.ts`
+  - validate `activityId`
+  - chuyển sang `requireApiRole(request, ['admin', 'teacher'])`
+  - preserve forbidden/not-found/validation semantics thay vì raw `NextResponse` cũ
+  - giữ nguyên flow auto-calculate điểm + audit log
+- Thêm regression tests:
+  - `test/admin-attendance-routes.test.ts`
+  - `test/admin-activity-complete-route.test.ts`
+- Mở rộng RC baseline để bao phủ attendance/completion cluster
+
+### Kiểm thử
+
+- Focused bundle:
+  - `test/admin-attendance-routes.test.ts`
+  - `test/admin-activity-complete-route.test.ts`
+  - kết quả: `2/2` test files pass, `4/4` tests pass
+- RC regression baseline mở rộng:
+  - `test/admin-config-route-contracts.test.ts`
+  - `test/admin-config-item-route-contracts.test.ts`
+  - `test/admin-attendance-routes.test.ts`
+  - `test/admin-activity-complete-route.test.ts`
+  - `test/admin-activities-route.test.ts`
+  - `test/admin-activity-detail-route.test.ts`
+  - `test/admin-activity-participants-route.test.ts`
+  - `test/admin-approval-action-route.test.ts`
+  - `test/admin-approval-history-route.test.ts`
+  - `test/admin-pending-activities-route.test.ts`
+  - `test/teacher-dashboard-routes.test.ts`
+  - `test/teacher-dashboard-legacy-auth-route.test.ts`
+  - `test/teacher-students-route.test.ts`
+  - `test/teacher-evaluate-route.test.ts`
+  - `test/teacher-activity-participants-route.test.ts`
+  - `test/activity-access-routes.test.ts`
+  - `test/teacher-approvals-route.test.ts`
+  - `test/teacher-resubmit-route.test.ts`
+  - `test/student-activity-detail-page.test.tsx`
+  - `test/register-route-conflict.test.ts`
+  - `test/register-route-mandatory.test.ts`
+  - `test/register-route-cancel-route.test.ts`
+  - `test/student-activities-page.test.tsx`
+  - `test/activities-list-route.test.ts`
+  - `test/my-registrations-route.test.ts`
+  - `test/activity-check-conflicts-route.test.ts`
+  - kết quả: `26/26` test files pass, `60/60` tests pass
+
+### Kết quả
+
+- Attendance/completion cluster đã bớt hẳn legacy auth/response drift
+- RC baseline hiện đã chạm thêm một phần admin execution flow quan trọng, không chỉ config và approval surface
+- Internal RC prep của UniAct hiện có độ tin cậy tốt hơn vì phần admin vận hành thực thi cũng đã nằm trong baseline regression xanh
+
+## 2026-04-12 - Hoàn thành T-163
+
+### Đã làm
+
+- Chạy `npm run build` để xác nhận build production hiện tại của UniAct vẫn xanh sau chuỗi batch hardening gần đây
+- Cập nhật `docs/INTERNAL_RC_SUMMARY_2026-04-12.md`
+  - phản ánh rằng admin config backbone, attendance, và completion routes đã nhập vào mốc RC prep
+  - chuyển next steps sang build + smoke + milestone gate rõ ràng hơn
+- Tạo `docs/TARGETED_MANUAL_SMOKE_CHECKLIST.md`
+  - checklist ngắn cho admin/teacher/student critical flows
+  - tập trung vào flow vừa harden thay vì QA lan man
+- Cập nhật `README.md` để trỏ thêm tới smoke checklist ngoài RC checklist
+
+### Kiểm thử
+
+- Build verification:
+  - `npm run build`
+  - kết quả: build production thành công, compile/type/static generation xanh
+
+### Kết quả
+
+- Mốc internal RC prep giờ không chỉ có regression baseline xanh mà còn có build verification xanh
+- Repo đã có checklist smoke ngắn, thực dụng cho các flow ưu tiên cao nhất
+- Đây là bước chuyển hợp lý từ “đang harden backbone” sang “bắt đầu có gate phát hành nội bộ rõ ràng hơn”
+
 ## 2026-04-07 - Hoàn thành T-142
 
 ### Đã làm

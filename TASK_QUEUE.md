@@ -260,6 +260,38 @@ Quy ước trạng thái: TODO / DOING / BLOCKED / DONE
   - focused config bundle
   - RC regression baseline mở rộng
 - Tiêu chí hoàn thành: list/create/update/delete của config routes dùng `requireApiRole`, `successResponse`, `errorResponse`, preserve API-shaped errors và được đưa vào baseline RC
+
+### T-162 - Canonicalize admin attendance and activity completion routes
+
+- Trạng thái: DONE
+- Mục tiêu: dọn cụm admin attendance/completion còn lại về cùng contract release-prep với các route admin backbone đã cứng hóa trước đó
+- Phạm vi file:
+  - `src/app/api/admin/attendance/route.ts`
+  - `src/app/api/admin/attendance/[id]/route.ts`
+  - `src/app/api/admin/activities/[id]/complete/route.ts`
+  - `test/admin-attendance-routes.test.ts`
+  - `test/admin-activity-complete-route.test.ts`
+- Lý do cần làm: attendance/completion là cụm gần release nhưng còn dùng legacy session/raw response, và trước batch này gần như chưa có regression trực tiếp cho contract của chúng
+- Rủi ro: trung bình
+- Cách kiểm thử:
+  - focused attendance/completion bundle
+  - RC regression baseline mở rộng
+- Tiêu chí hoàn thành: route dùng `requireApiRole`, `successResponse`, `errorResponse`, preserve canonical errors, có regression trực tiếp và baseline RC vẫn xanh
+
+### T-163 - Chốt build verification và targeted manual smoke docs cho internal RC prep
+
+- Trạng thái: DONE
+- Mục tiêu: nâng mốc internal RC prep từ mức chỉ có regression route/page xanh lên mức có thêm build verification và checklist smoke ngắn cho các flow quan trọng
+- Phạm vi file:
+  - `docs/TARGETED_MANUAL_SMOKE_CHECKLIST.md`
+  - `docs/INTERNAL_RC_SUMMARY_2026-04-12.md`
+  - `README.md`
+- Lý do cần làm: regression xanh là cần nhưng chưa đủ; trước khi nói tới RC mạnh hơn cần có thêm build pass và checklist smoke ngắn, rõ, thực dụng
+- Rủi ro: thấp
+- Cách kiểm thử:
+  - `npm run build`
+  - rà lại docs/release note nội bộ sau build
+- Tiêu chí hoàn thành: build production xanh, có smoke checklist bám flow admin/teacher/student và summary nội bộ phản ánh đúng mốc mới
 - Mục tiêu: đưa teacher approvals route về guard/response contract canonical, bỏ compatibility field thừa ở active route/page, đồng thời tránh route admin approval nuốt lỗi nghiệp vụ thành 500
 - Phạm vi file:
   - `src/app/api/teacher/activities/approvals/route.ts`

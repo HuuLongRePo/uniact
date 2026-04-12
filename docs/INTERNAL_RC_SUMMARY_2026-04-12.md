@@ -11,6 +11,8 @@ The most important progress is not just individual bug fixes, but the growing co
 ### Admin backbone
 - activities list/detail/participants routes have been canonicalized
 - approval queue and approval history/action routes have been hardened
+- admin config routes (`activity-types`, `organization-levels`) are now aligned better with the same contract family
+- attendance and activity completion routes are now covered by the RC baseline too
 - error shapes and permission handling are more consistent
 
 ### Teacher backbone
@@ -42,7 +44,7 @@ Recommended wording for the current repo state:
 
 ## Immediate next steps
 
-1. Continue one or two more high-value legacy route cluster sweeps.
-2. Keep the RC regression baseline green.
-3. Add a release note / milestone summary once the next sweep lands.
+1. Run build verification and keep it green alongside the widened RC regression baseline.
+2. Execute targeted manual smoke for admin/teacher/student critical flows.
+3. Publish a clearer internal milestone note based on build + regression + smoke status.
 4. Only then consider tagging a stronger internal RC milestone.
