@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
-import { getUserFromSession } from '@/lib/auth';
 import { dbAll } from '@/lib/database';
 import { ApiError, successResponse, errorResponse } from '@/lib/api-response';
+import { requireApiRole } from '@/lib/guards';
 
 /**
  * GET /api/teacher/students
@@ -12,10 +12,7 @@ import { ApiError, successResponse, errorResponse } from '@/lib/api-response';
  */
 export async function GET(request: NextRequest) {
   try {
-    const user = await getUserFromSession();
-    if (!user || user.role !== 'teacher') {
-      return errorResponse(ApiError.forbidden('Chỉ giảng viên mới có thể truy cập'));
-    }
+    const user = await requireApiRole(request, ['teacher']);
 
     const { searchParams } = new URL(request.url);
     const classId = searchParams.get('class_id');
@@ -105,14 +102,23 @@ export async function GET(request: NextRequest) {
     )) as Array<{ id: number; name: string; grade: string }>;
 
     return successResponse({
-      students,
+      students: students.map((student) => ({
+        ...student,
+        full_name: student.name,
+        total_score: student.total_points,
+        activity_count: student.activities_count,
+        attended_count: 0,
+      })),
       classes,
       total: students.length,
     });
   } catch (error: any) {
     console.error('Lỗi lấy danh sách học viên của giảng viên:', error);
     return errorResponse(
-      ApiError.internalError('Không thể lấy danh sách học viên', { details: error?.message })
+      error instanceof ApiError ||
+        (error && typeof error.status === 'number' && typeof error.code === 'string')
+        ? error
+        : ApiError.internalError('Không thể lấy danh sách học viên', { details: error?.message })
     );
   }
 }

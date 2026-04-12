@@ -178,6 +178,19 @@ Quy ước trạng thái: TODO / DOING / BLOCKED / DONE
 - Rủi ro: thấp đến trung bình
 - Cách kiểm thử: chạy bundle teacher dashboard + teacher/admin/student backbone regression
 - Tiêu chí hoàn thành: teacher dashboard routes dùng canonical guard, preserve forbidden/API-shaped errors và regression xanh trên bundle liên quan
+
+### T-156 - Canonicalize teacher students contract và vá drift UI/API ở teacher students page
+
+- Trạng thái: DONE
+- Mục tiêu: kéo `api/teacher/students` về chuẩn guard/error canonical đồng thời làm teacher students page chịu được contract hiện tại thay vì phụ thuộc ngầm vào field cũ
+- Phạm vi file:
+  - `src/app/api/teacher/students/route.ts`
+  - `src/app/teacher/students/page.tsx`
+  - `test/teacher-students-route.test.ts`
+- Lý do cần làm: route teacher students đang dùng session auth legacy; page teacher students lại đang trông chờ các field như `full_name`, `total_score`, `activity_count` không khớp hoàn toàn với route hiện tại
+- Rủi ro: trung bình
+- Cách kiểm thử: chạy bundle teacher students/dashboard + admin/student backbone regression
+- Tiêu chí hoàn thành: route preserve canonical forbidden errors, page đọc được canonical payload tốt hơn và compatibility aliases khóa bằng regression test
 - Mục tiêu: đưa teacher approvals route về guard/response contract canonical, bỏ compatibility field thừa ở active route/page, đồng thời tránh route admin approval nuốt lỗi nghiệp vụ thành 500
 - Phạm vi file:
   - `src/app/api/teacher/activities/approvals/route.ts`

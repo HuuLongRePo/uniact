@@ -42,8 +42,9 @@ export default function TeacherStudentsPage() {
 
       if (studentsRes.ok) {
         const studentsData = await studentsRes.json();
-        setStudents(studentsData.students || []);
-        setFilteredStudents(studentsData.students || []);
+        const teacherStudents = studentsData.students || studentsData.data?.students || [];
+        setStudents(teacherStudents);
+        setFilteredStudents(teacherStudents);
       }
 
       if (classesRes.ok) {
@@ -88,9 +89,9 @@ export default function TeacherStudentsPage() {
     if (search) {
       filtered = filtered.filter(
         (s) =>
-          s.full_name.toLowerCase().includes(search.toLowerCase()) ||
-          s.email.toLowerCase().includes(search.toLowerCase()) ||
-          (s.student_code && s.student_code.toLowerCase().includes(search.toLowerCase()))
+          (s.full_name || s.name || '').toLowerCase().includes(search.toLowerCase()) ||
+          (s.email || '').toLowerCase().includes(search.toLowerCase()) ||
+          ((s.student_code || '') && (s.student_code || '').toLowerCase().includes(search.toLowerCase()))
       );
     }
 
@@ -102,15 +103,15 @@ export default function TeacherStudentsPage() {
     filtered.sort((a, b) => {
       let aVal, bVal;
       if (sortBy === 'name') {
-        aVal = a.full_name.toLowerCase();
-        bVal = b.full_name.toLowerCase();
+        aVal = (a.full_name || a.name || '').toLowerCase();
+        bVal = (b.full_name || b.name || '').toLowerCase();
       } else if (sortBy === 'score') {
-        aVal = a.total_score || 0;
-        bVal = b.total_score || 0;
+        aVal = a.total_score ?? a.total_points ?? 0;
+        bVal = b.total_score ?? b.total_points ?? 0;
       } else {
         // attendance
-        const aAttendance = a.attended_count / Math.max(a.activity_count, 1);
-        const bAttendance = b.attended_count / Math.max(b.activity_count, 1);
+        const aAttendance = (a.attended_count || 0) / Math.max(a.activity_count || a.activities_count || 1, 1);
+        const bAttendance = (b.attended_count || 0) / Math.max(b.activity_count || b.activities_count || 1, 1);
         aVal = aAttendance;
         bVal = bAttendance;
       }
