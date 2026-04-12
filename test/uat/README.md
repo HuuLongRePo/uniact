@@ -26,13 +26,13 @@ Expand them only after validating the underlying routes and test data assumption
 Before running `test:uat` or `test:uat:backbone`:
 
 1. Start the app manually at `BASE_URL` (default: `http://localhost:3000`)
-2. Ensure seeded accounts exist:
-   - admin@school.edu / admin123
-   - nguyen.van.tuan@school.edu / teacher123
-   - sv001.12a1@school.edu / student123
-3. Prefer a seeded/demo DB state compatible with backbone flows
+2. Ensure seeded accounts exist and match the current project seed direction:
+   - admin@annd.edu.vn / Admin@2025
+   - gv.nguyenthilan@annd.edu.vn / teacher123
+   - sv31a001@annd.edu.vn / student123
+3. Prefer a seeded/demo DB state compatible with backbone flows and current `scripts/seed/seed-data.ts`
 
 Current test runner status:
 - Playwright config is working
-- Backbone smoke tests are executable
-- Current failing condition is missing running app server, not broken test infrastructure
+- Backbone smoke tests are executable as a structured UAT subset
+- The main practical risk is seed/account drift or missing running app server, not missing UAT scaffolding

@@ -4,22 +4,22 @@
 
 export const TEST_ACCOUNTS = {
   admin: {
-    email: 'admin@school.edu',
-    password: 'admin123',
+    email: 'admin@annd.edu.vn',
+    password: 'Admin@2025',
     role: 'admin',
-    name: 'Admin User'
+    name: 'Quản Trị Hệ Thống'
   },
   teacher: {
-    email: 'nguyen.van.tuan@school.edu',
+    email: 'gv.nguyenthilan@annd.edu.vn',
     password: 'teacher123',
     role: 'teacher',
-    name: 'Nguyễn Văn Tuấn'
+    name: 'Đại tá, PGS.TS Nguyễn Thị Lan'
   },
   student: {
-    email: 'sv001.12a1@school.edu',
+    email: 'sv31a001@annd.edu.vn',
     password: 'student123',
     role: 'student',
-    name: 'Student 001'
+    name: 'Nguyễn Đức Anh'
   }
 } as const
 
