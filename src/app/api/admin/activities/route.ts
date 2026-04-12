@@ -1,14 +1,13 @@
-import { NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { dbAll, dbGet, dbReady } from '@/lib/database';
-import { getUserFromRequest } from '@/lib/guards';
+import { requireApiRole } from '@/lib/guards';
+import { getActivityDisplayStatus } from '@/lib/activity-workflow';
+import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
     await dbReady();
-    const user = await getUserFromRequest(request as any);
-    if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    await requireApiRole(request, ['admin']);
 
     const { searchParams } = new URL(request.url);
     const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10) || 1);
@@ -16,8 +15,8 @@ export async function GET(request: Request) {
     const offset = (page - 1) * limit;
 
     const search = (searchParams.get('search') || '').trim();
-    const status = (searchParams.get('status') || '').trim(); // supports: draft|pending|published|rejected|cancelled|completed
-    const approvalStatus = (searchParams.get('approval_status') || '').trim(); // supports: draft|requested|approved|rejected
+    const status = (searchParams.get('status') || '').trim();
+    const approvalStatus = (searchParams.get('approval_status') || '').trim();
     const teacherId = (searchParams.get('teacher_id') || '').trim();
 
     const where: string[] = [];
@@ -35,11 +34,14 @@ export async function GET(request: Request) {
     }
 
     if (teacherId) {
+      const teacherIdNumber = Number(teacherId);
+      if (!teacherIdNumber || Number.isNaN(teacherIdNumber)) {
+        return errorResponse(ApiError.validation('teacher_id không hợp lệ'));
+      }
       where.push('a.teacher_id = ?');
-      bindings.push(Number(teacherId));
+      bindings.push(teacherIdNumber);
     }
 
-    // Note: UI uses a derived "pending" status for approval requests (approval_status = 'requested').
     if (status) {
       if (status === 'pending') {
         where.push("a.approval_status = 'requested'");
@@ -53,7 +55,7 @@ export async function GET(request: Request) {
 
     const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
 
-    const activities = await dbAll(
+    const activities = ((await dbAll(
       `SELECT
         a.id,
         a.title,
@@ -68,11 +70,7 @@ export async function GET(request: Request) {
         a.max_participants,
         (SELECT COUNT(*) FROM participations p WHERE p.activity_id = a.id) as participant_count,
         COALESCE(a.base_points, 0) as points,
-        CASE
-          WHEN a.approval_status = 'requested' THEN 'pending'
-          WHEN a.approval_status = 'rejected' THEN 'rejected'
-          ELSE a.status
-        END as status,
+        a.status,
         a.approval_status,
         a.created_at
       FROM activities a
@@ -83,7 +81,10 @@ export async function GET(request: Request) {
       ORDER BY a.created_at DESC
       LIMIT ? OFFSET ?`,
       [...bindings, limit, offset]
-    );
+    )) as any[]).map((activity) => ({
+      ...activity,
+      status: getActivityDisplayStatus(activity.status, activity.approval_status),
+    }));
 
     const countRow = (await dbGet(
       `SELECT COUNT(*) as total
@@ -95,7 +96,7 @@ export async function GET(request: Request) {
 
     const total = Number(countRow?.total || 0);
 
-    return NextResponse.json({
+    return successResponse({
       activities: activities || [],
       pagination: {
         page,
@@ -106,6 +107,13 @@ export async function GET(request: Request) {
     });
   } catch (error: any) {
     console.error('Admin get activities error:', error);
-    return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });
+    return errorResponse(
+      error instanceof ApiError ||
+        (error && typeof error.status === 'number' && typeof error.code === 'string')
+        ? error
+        : ApiError.internalError('Không thể tải danh sách hoạt động', {
+            details: error?.message,
+          })
+    );
   }
 }

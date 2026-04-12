@@ -151,6 +151,19 @@ Quy ước trạng thái: TODO / DOING / BLOCKED / DONE
 - Rủi ro: trung bình
 - Cách kiểm thử: chạy bundle admin participants/detail + teacher/student backbone regression
 - Tiêu chí hoàn thành: participants route trả API shape canonical, preserve lỗi chuẩn, normalize attendance rõ ràng và admin detail page vẫn render đúng với response shape mới
+
+### T-154 - Canonicalize admin activities list route để khép admin activities surface
+
+- Trạng thái: DONE
+- Mục tiêu: kéo `api/admin/activities` ra khỏi legacy auth/raw response path, thống nhất với detail/participants/pending routes đã được harden
+- Phạm vi file:
+  - `src/app/api/admin/activities/route.ts`
+  - `src/app/admin/activities/page.tsx`
+  - `test/admin-activities-route.test.ts`
+- Lý do cần làm: admin activities list là route backbone cấp cao, vẫn dùng `getUserFromRequest`, raw unauthorized/internal responses và derive status ngay trong SQL kiểu legacy
+- Rủi ro: trung bình
+- Cách kiểm thử: chạy bundle admin activities/detail/participants/approval + teacher/student backbone regression
+- Tiêu chí hoàn thành: route list trả API shape canonical, preserve forbidden/validation tốt hơn, giữ display status đúng ở tầng response và admin page vẫn đọc được contract mới
 - Mục tiêu: đưa teacher approvals route về guard/response contract canonical, bỏ compatibility field thừa ở active route/page, đồng thời tránh route admin approval nuốt lỗi nghiệp vụ thành 500
 - Phạm vi file:
   - `src/app/api/teacher/activities/approvals/route.ts`

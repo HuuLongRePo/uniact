@@ -44,7 +44,7 @@ export default function AdminActivitiesPage() {
       const response = await fetch('/api/admin/activities');
       if (response.ok) {
         const data = await response.json();
-        setActivities(data.activities || []);
+        setActivities(data.activities || data.data?.activities || []);
       }
     } catch (error) {
       console.error('Error loading activities:', error);

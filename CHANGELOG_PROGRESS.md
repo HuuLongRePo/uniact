@@ -2042,6 +2042,33 @@
 - Attendance semantics ở admin detail rõ hơn, ít phụ thuộc ngầm vào contract cũ
 - Release backbone cho admin/teacher/student đang dần đồng pha thay vì mỗi surface một kiểu response riêng
 
+## 2026-04-12 - Hoàn thành T-154
+
+### Đã làm
+
+- Canonicalize `src/app/api/admin/activities/route.ts`:
+  - chuyển từ `getUserFromRequest` sang `requireApiRole(request, ['admin'])`
+  - đổi raw `NextResponse` sang `successResponse` / `errorResponse`
+  - validate rõ `teacher_id` filter
+  - bỏ derive `pending/rejected` trực tiếp trong SQL, thay bằng `getActivityDisplayStatus(...)` ở tầng response
+  - preserve `ApiError` / API-shaped errors thay vì trả raw unauthorized/internal error
+- Cập nhật `src/app/admin/activities/page.tsx` để đọc tốt hơn canonical success shape (`data.activities`) trong khi vẫn tương thích top-level hiện tại
+- Thêm test mới `test/admin-activities-route.test.ts` để khóa:
+  - canonical success shape + pending display status từ `approval_status=requested`
+  - preserve forbidden error shape
+  - invalid `teacher_id` filter trả validation error canonical
+
+### Kiểm thử
+
+- Chạy `npm test -- --reporter dot test/admin-activities-route.test.ts test/admin-activity-detail-route.test.ts test/admin-activity-participants-route.test.ts test/admin-approval-action-route.test.ts test/admin-approval-history-route.test.ts test/admin-pending-activities-route.test.ts test/teacher-edit-activity-page.test.tsx test/teacher-create-activity-page.test.tsx test/teacher-create-activity-preview.test.tsx test/teacher-edit-activity-preview.test.tsx test/student-activity-detail-page.test.tsx test/register-route-conflict.test.ts test/register-route-mandatory.test.ts test/register-route-cancel-route.test.ts test/student-activities-page.test.tsx test/activities-list-route.test.ts test/my-registrations-route.test.ts test/teacher-approvals-route.test.ts test/teacher-resubmit-route.test.ts test/activity-check-conflicts-route.test.ts`
+- Kết quả: `20/20` test files pass, `40/40` tests pass
+
+### Kết quả
+
+- Admin activities surface giờ đã được harden khá đồng bộ ở list/detail/participants/pending
+- Display status cho admin UI vẫn đúng, nhưng workflow truth không còn bị nhúng lẫn với SQL legacy
+- Đây là một bước release-prep đáng kể vì giảm mạnh drift giữa các route trung tâm của admin surface
+
 ## 2026-04-07 - Hoàn thành T-142
 
 ### Đã làm
