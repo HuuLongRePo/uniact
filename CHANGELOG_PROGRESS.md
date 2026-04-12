@@ -1,5 +1,45 @@
 # CHANGELOG PROGRESS
 
+## 2026-04-12 - Đồng bộ admin scores page với export/filter contract backend
+
+### Đã làm
+
+- Cập nhật `src/app/admin/scores/page.tsx` để export CSV không còn tự dựng file ở client từ `filteredScores`, mà chuyển sang dùng đúng backend contract `GET /api/admin/scores?export=csv`.
+- Export giờ tự mang theo filter hiện tại của UI:
+  - `search`
+  - `class_id`
+  - `min_points`
+- Bổ sung thêm card `Sinh viên có điều chỉnh` trên admin scores page để governance summary sát hơn với `summary.adjusted_students_count` từ API.
+- Giữ nguyên các insight reward/penalty đã thêm trước đó nhưng đồng bộ chặt hơn giữa page và route contract.
+- Mở rộng regression `test/admin-scores-route.test.ts` để khóa query filtering theo:
+  - search
+  - class_id
+  - min_points
+
+### Kiểm thử
+
+- Chạy focused Vitest:
+  - `npm.cmd test -- test/admin-scores-route.test.ts`
+  - Kết quả: pass
+- Chạy full Vitest suite:
+  - `npm.cmd test`
+  - Kết quả: pass
+- Chạy production build:
+  - `npm.cmd run build`
+  - Kết quả: build pass
+
+### Kết quả
+
+- Admin scores page không còn drift export semantics so với backend route.
+- Filter UI hiện bám tốt hơn với contract export/report thật thay vì tự dựng CSV ở client.
+- Batch này là hardening hữu ích cho score governance flow sau khi wave bonus/penalty visibility đã hoàn tất.
+
+### Còn lại
+
+- Chưa có page-level test riêng cho admin scores page.
+- Nếu tiếp tục, ROI còn lại nghiêng về cleanup/hardening dài đuôi hoặc một batch operational visibility nhỏ khác.
+
+
 ## 2026-04-11 - Khôi phục alerts runtime khỏi schema drift và thêm escalation summary
 
 ### Đã làm

@@ -1015,6 +1015,18 @@ Quy ước trạng thái: TODO / DOING / BLOCKED / DONE
 - Cách kiểm thử: focused alerts regression + full Vitest + build
 - Tiêu chí hoàn thành: route tự chữa drift trên existing DB, fresh schema mới có `is_read`, và alerts API còn trả summary usable
 
+### T-177 - Đồng bộ admin scores page với backend export/filter contract
+
+- Trạng thái: DONE
+- Mục tiêu: loại bỏ drift giữa CSV export phía page và CSV/report contract phía backend trong admin scores
+- Phạm vi file:
+  - `src/app/admin/scores/page.tsx`
+  - `test/admin-scores-route.test.ts`
+- Lý do cần làm: sau wave score governance, page vẫn tự dựng CSV ở client nên dễ lệch semantics/filter khỏi route backend đã được làm giàu dữ liệu
+- Rủi ro: thấp
+- Cách kiểm thử: focused admin scores route regression + full Vitest + build
+- Tiêu chí hoàn thành: export page dùng backend route, giữ được filter hiện tại, và repo vẫn xanh
+
 ### T-174 - Tách admin activity statistics helper khỏi page/harness noise
 
 - Trạng thái: DONE

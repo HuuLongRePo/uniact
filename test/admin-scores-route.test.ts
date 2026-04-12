@@ -102,6 +102,28 @@ describe('GET /api/admin/scores', () => {
     })
   })
 
+  it('applies search, class, and min-points filters in the scores query', async () => {
+    mockDbAll.mockResolvedValueOnce([]).mockResolvedValueOnce([])
+
+    const route = await import('../src/app/api/admin/scores/route')
+    const response = await route.GET({
+      nextUrl: {
+        searchParams: new URLSearchParams([
+          ['search', 'Nguyen'],
+          ['class_id', '3'],
+          ['min_points', '200'],
+        ]),
+      },
+    } as any)
+
+    expect(response.status).toBe(200)
+    const [query, params] = mockDbAll.mock.calls[0] as [string, any[]]
+    expect(query).toContain('u.name LIKE ? OR u.email LIKE ?')
+    expect(query).toContain('u.class_id = ?')
+    expect(query).toContain('HAVING total_points >= ?')
+    expect(params).toEqual(['%Nguyen%', '%Nguyen%', '3', 200])
+  })
+
   it('exports csv with new bonus/penalty columns', async () => {
     mockDbAll
       .mockResolvedValueOnce([

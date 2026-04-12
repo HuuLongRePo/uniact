@@ -87,6 +87,15 @@ const EMPTY_INSIGHTS: ScoresInsights = {
   recent_adjustments: [],
 };
 
+function buildScoresExportUrl(searchTerm: string, classFilter: string, minPoints: string) {
+  const params = new URLSearchParams();
+  if (searchTerm.trim()) params.set('search', searchTerm.trim());
+  if (classFilter && classFilter !== 'all') params.set('class_id', classFilter);
+  if (minPoints.trim()) params.set('min_points', minPoints.trim());
+  params.set('export', 'csv');
+  return `/api/admin/scores?${params.toString()}`;
+}
+
 function getClassesFromResponse(payload: unknown): ClassOption[] {
   if (!payload || typeof payload !== 'object') return [];
   const record = payload as {
@@ -193,51 +202,9 @@ export default function AdminStudentScoresPage() {
   };
 
   const handleExport = () => {
-    const csv = [
-      [
-        'Hạng',
-        'Tên',
-        'Email',
-        'Lớp',
-        'Tổng điểm',
-        'Hoạt động',
-        'Tham gia',
-        'Xuất sắc',
-        'Tốt',
-        'Trung bình',
-        'Giải thưởng',
-        'Điểm thưởng',
-        'Điều chỉnh cộng',
-        'Điều chỉnh trừ',
-      ].join(','),
-      ...filteredScores.map((s) =>
-        [
-          s.rank,
-          s.name,
-          s.email,
-          s.class_name || '-',
-          s.total_points,
-          s.activities_count,
-          s.participated_count,
-          s.excellent_count,
-          s.good_count,
-          s.average_count,
-          s.awards_count,
-          s.award_points,
-          s.bonus_adjustment_points,
-          s.penalty_points,
-        ].join(',')
-      ),
-    ].join('\n');
-
-    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `student-scores-${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
-    window.URL.revokeObjectURL(url);
-    toast.success(`Đã export ${filteredScores.length} sinh viên`);
+    const url = buildScoresExportUrl(searchTerm, classFilter, minPoints);
+    window.location.href = url;
+    toast.success('Đang chuẩn bị file CSV...');
   };
 
   const filteredStats = useMemo(
@@ -270,7 +237,7 @@ export default function AdminStudentScoresPage() {
           </p>
         </div>
 
-        <div className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-5">
+        <div className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-6">
           <div className="rounded-lg bg-white p-6 shadow-lg">
             <div className="flex items-center justify-between">
               <div>
@@ -326,6 +293,18 @@ export default function AdminStudentScoresPage() {
                 </p>
               </div>
               <ShieldAlert className="h-12 w-12 text-orange-600 opacity-20" />
+            </div>
+          </div>
+
+          <div className="rounded-lg bg-white p-6 shadow-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Sinh viên có điều chỉnh</p>
+                <p className="mt-1 text-3xl font-bold text-purple-600">
+                  {summary.adjusted_students_count}
+                </p>
+              </div>
+              <RefreshCw className="h-12 w-12 text-purple-600 opacity-20" />
             </div>
           </div>
         </div>
