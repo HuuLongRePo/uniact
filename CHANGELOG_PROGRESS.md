@@ -1982,6 +1982,36 @@
 - Cancel flow có regression rõ cho mandatory, attended và noop
 - Batch này tiếp tục kéo UniAct gần hơn tới mốc release bằng cách làm sạch flow người dùng cuối thay vì chỉ cleanup tài liệu
 
+## 2026-04-12 - Hoàn thành T-152
+
+### Đã làm
+
+- Canonicalize `src/app/api/admin/activities/[id]/route.ts`:
+  - chuyển từ `getUserFromRequest` sang `requireApiRole(request, ['admin'])`
+  - chuyển từ `NextResponse.json(...)` raw sang `successResponse` / `errorResponse`
+  - thêm validate rõ `activityId`
+  - preserve `ApiError` / API-shaped errors thay vì trả raw unauthorized/internal error
+  - tách helper lấy activity detail và dùng `getActivityDisplayStatus(...)` ở tầng response thay vì nhúng logic lệch trực tiếp trong SQL
+  - thêm not-found guard cho `PUT` và `DELETE`
+  - chuẩn hóa thông điệp lỗi tiếng Việt cho admin detail/edit flow
+- Thêm test mới `test/admin-activity-detail-route.test.ts` để khóa:
+  - requested activity vẫn hiển thị `status: pending` nhưng giữ `approval_status: requested`
+  - lỗi forbidden được preserve theo API shape canonical
+  - update rỗng trả validation error canonical
+  - delete activity không tồn tại trả not-found canonical và không chạy `dbRun`
+- Verify thêm teacher edit/create bundle để chắc admin route cleanup không phá contract lân cận
+
+### Kiểm thử
+
+- Chạy `npm test -- --reporter dot test/admin-activity-detail-route.test.ts test/admin-approval-action-route.test.ts test/admin-approval-history-route.test.ts test/admin-pending-activities-route.test.ts test/teacher-edit-activity-page.test.tsx test/teacher-create-activity-page.test.tsx test/teacher-create-activity-preview.test.tsx test/teacher-edit-activity-preview.test.tsx test/student-activity-detail-page.test.tsx test/register-route-conflict.test.ts test/register-route-mandatory.test.ts test/register-route-cancel-route.test.ts test/student-activities-page.test.tsx test/activities-list-route.test.ts test/my-registrations-route.test.ts test/teacher-approvals-route.test.ts test/teacher-resubmit-route.test.ts test/activity-check-conflicts-route.test.ts`
+- Kết quả: `18/18` test files pass, `34/34` tests pass
+
+### Kết quả
+
+- Admin detail/edit flow bớt lệch đáng kể so với backbone canonical hiện tại
+- Status hiển thị `pending` vẫn được giữ đúng cho UI, nhưng workflow truth `approval_status='requested'` không còn bị làm mờ trong contract
+- Một điểm legacy quan trọng của admin surface đã được kéo về cùng chuẩn auth/error/response với các route backbone khác
+
 ## 2026-04-07 - Hoàn thành T-142
 
 ### Đã làm

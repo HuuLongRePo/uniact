@@ -1,60 +1,69 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { dbAll, dbGet, dbReady, dbRun } from '@/lib/database';
-import { getUserFromRequest } from '@/lib/guards';
+import { NextRequest } from 'next/server';
+import { dbGet, dbReady, dbRun } from '@/lib/database';
+import { requireApiRole } from '@/lib/guards';
+import { getActivityDisplayStatus } from '@/lib/activity-workflow';
+import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
+
+async function getAdminActivityDetail(activityId: number | string) {
+  const activity = (await dbGet(
+    `SELECT 
+      a.*, 
+      at.name as activity_type_name,
+      ol.name as organization_level_name,
+      u.name as creator_name
+    FROM activities a
+    LEFT JOIN activity_types at ON a.activity_type_id = at.id
+    LEFT JOIN organization_levels ol ON a.organization_level_id = ol.id
+    LEFT JOIN users u ON a.teacher_id = u.id
+    WHERE a.id = ?`,
+    [activityId]
+  )) as any;
+
+  if (!activity) {
+    throw ApiError.notFound('Không tìm thấy hoạt động');
+  }
+
+  return {
+    ...activity,
+    status: getActivityDisplayStatus(activity.status, activity.approval_status),
+  };
+}
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = await params;
     await dbReady();
-    const user = await getUserFromRequest(request as any);
-    if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    await requireApiRole(request, ['admin']);
+
+    const { id } = await params;
+    const activityId = Number(id);
+    if (!activityId || Number.isNaN(activityId)) {
+      return errorResponse(ApiError.validation('ID hoạt động không hợp lệ'));
     }
 
-    const activityId = id;
-
-    const activity = await dbGet(
-      `SELECT 
-        a.*,
-        CASE
-          WHEN a.approval_status = 'requested' THEN 'pending'
-          WHEN a.approval_status = 'rejected' THEN 'rejected'
-          ELSE a.status
-        END as status,
-        at.name as activity_type_name,
-        ol.name as organization_level_name,
-        u.name as creator_name
-      FROM activities a
-      LEFT JOIN activity_types at ON a.activity_type_id = at.id
-      LEFT JOIN organization_levels ol ON a.organization_level_id = ol.id
-      LEFT JOIN users u ON a.teacher_id = u.id
-      WHERE a.id = ?`,
-      [activityId]
-    );
-
-    if (!activity) {
-      return NextResponse.json({ error: 'Activity not found' }, { status: 404 });
-    }
-
-    return NextResponse.json({ activity });
+    const activity = await getAdminActivityDetail(activityId);
+    return successResponse({ activity });
   } catch (error: any) {
     console.error('Get activity error:', error);
-    return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });
+    return errorResponse(
+      error instanceof ApiError ||
+        (error && typeof error.status === 'number' && typeof error.code === 'string')
+        ? error
+        : ApiError.internalError('Không thể tải thông tin hoạt động', {
+            details: error?.message,
+          })
+    );
   }
 }
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = await params;
     await dbReady();
-    const user = await getUserFromRequest(request as any);
-    if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const user = await requireApiRole(request, ['admin']);
 
+    const { id } = await params;
     const activityId = Number(id);
     if (!activityId || Number.isNaN(activityId)) {
-      return NextResponse.json({ error: 'Invalid activity ID' }, { status: 400 });
+      return errorResponse(ApiError.validation('ID hoạt động không hợp lệ'));
     }
 
     const body = await request.json();
@@ -77,7 +86,12 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     if (Object.keys(updates).length === 0) {
-      return NextResponse.json({ error: 'No changes provided' }, { status: 400 });
+      return errorResponse(ApiError.validation('Không có thay đổi nào được gửi lên'));
+    }
+
+    const existing = await dbGet('SELECT id FROM activities WHERE id = ?', [activityId]);
+    if (!existing) {
+      return errorResponse(ApiError.notFound('Không tìm thấy hoạt động'));
     }
 
     const sets: string[] = [];
@@ -90,7 +104,6 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
     await dbRun(`UPDATE activities SET ${sets.join(', ')} WHERE id = ?`, [...bindings, activityId]);
 
-    // Audit
     try {
       await dbRun(
         'INSERT INTO audit_logs (actor_id, action, target_table, target_id, details) VALUES (?, ?, ?, ?, ?)',
@@ -102,33 +115,22 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
           JSON.stringify({ changes: Object.keys(updates) }),
         ]
       );
-    } catch (e) {
-      console.error('Failed to write audit log (activities PUT):', e);
+    } catch (auditError) {
+      console.error('Failed to write audit log (activities PUT):', auditError);
     }
 
-    const activity = await dbGet(
-      `SELECT 
-        a.*,
-        CASE
-          WHEN a.approval_status = 'requested' THEN 'pending'
-          WHEN a.approval_status = 'rejected' THEN 'rejected'
-          ELSE a.status
-        END as status,
-        at.name as activity_type_name,
-        ol.name as organization_level_name,
-        u.name as creator_name
-      FROM activities a
-      LEFT JOIN activity_types at ON a.activity_type_id = at.id
-      LEFT JOIN organization_levels ol ON a.organization_level_id = ol.id
-      LEFT JOIN users u ON a.teacher_id = u.id
-      WHERE a.id = ?`,
-      [activityId]
-    );
-
-    return NextResponse.json({ activity });
+    const activity = await getAdminActivityDetail(activityId);
+    return successResponse({ activity });
   } catch (error: any) {
     console.error('Update activity error (admin):', error);
-    return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });
+    return errorResponse(
+      error instanceof ApiError ||
+        (error && typeof error.status === 'number' && typeof error.code === 'string')
+        ? error
+        : ApiError.internalError('Không thể cập nhật hoạt động', {
+            details: error?.message,
+          })
+    );
   }
 }
 
@@ -137,16 +139,20 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
     await dbReady();
-    const user = await getUserFromRequest(request as any);
-    if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    await requireApiRole(request, ['admin']);
+
+    const { id } = await params;
+    const activityId = Number(id);
+    if (!activityId || Number.isNaN(activityId)) {
+      return errorResponse(ApiError.validation('ID hoạt động không hợp lệ'));
     }
 
-    const activityId = id;
+    const existing = await dbGet('SELECT id FROM activities WHERE id = ?', [activityId]);
+    if (!existing) {
+      return errorResponse(ApiError.notFound('Không tìm thấy hoạt động'));
+    }
 
-    // Soft delete
     await dbRun(
       `UPDATE activities 
        SET status = 'cancelled', updated_at = CURRENT_TIMESTAMP
@@ -154,9 +160,16 @@ export async function DELETE(
       [activityId]
     );
 
-    return NextResponse.json({ success: true });
+    return successResponse({ success: true }, 'Đã hủy hoạt động');
   } catch (error: any) {
     console.error('Delete activity error:', error);
-    return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });
+    return errorResponse(
+      error instanceof ApiError ||
+        (error && typeof error.status === 'number' && typeof error.code === 'string')
+        ? error
+        : ApiError.internalError('Không thể hủy hoạt động', {
+            details: error?.message,
+          })
+    );
   }
 }

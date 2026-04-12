@@ -126,6 +126,18 @@ Quy ước trạng thái: TODO / DOING / BLOCKED / DONE
 - Rủi ro: thấp đến trung bình
 - Cách kiểm thử: chạy bundle student detail/register/list + approval backbone regression
 - Tiêu chí hoàn thành: detail page bớt render sensitivity, route cancel có regression rõ cho noop và attended, bundle regression liên quan vẫn xanh
+
+### T-152 - Canonicalize admin activity detail/edit route theo backbone workflow hiện tại
+
+- Trạng thái: DONE
+- Mục tiêu: kéo `api/admin/activities/[id]` ra khỏi legacy contract, thống nhất auth/error shape/status display với backbone canonical hiện tại
+- Phạm vi file:
+  - `src/app/api/admin/activities/[id]/route.ts`
+  - `test/admin-activity-detail-route.test.ts`
+- Lý do cần làm: route này đang là điểm lệch đáng kể của admin detail/edit flow, dùng guard kiểu cũ, raw response, message English và map status ngay trong SQL theo cách khó kiểm soát
+- Rủi ro: trung bình
+- Cách kiểm thử: chạy bundle admin detail/approval + teacher edit/create + student backbone regression
+- Tiêu chí hoàn thành: admin detail/edit route trả API shape canonical, preserve forbidden/not-found/validation tốt hơn và vẫn giữ display status `pending` đúng ở tầng response
 - Mục tiêu: đưa teacher approvals route về guard/response contract canonical, bỏ compatibility field thừa ở active route/page, đồng thời tránh route admin approval nuốt lỗi nghiệp vụ thành 500
 - Phạm vi file:
   - `src/app/api/teacher/activities/approvals/route.ts`
