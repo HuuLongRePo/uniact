@@ -164,6 +164,20 @@ Quy ước trạng thái: TODO / DOING / BLOCKED / DONE
 - Rủi ro: trung bình
 - Cách kiểm thử: chạy bundle admin activities/detail/participants/approval + teacher/student backbone regression
 - Tiêu chí hoàn thành: route list trả API shape canonical, preserve forbidden/validation tốt hơn, giữ display status đúng ở tầng response và admin page vẫn đọc được contract mới
+
+### T-155 - Canonicalize teacher dashboard auth/error contracts
+
+- Trạng thái: DONE
+- Mục tiêu: kéo teacher dashboard routes khỏi auth/session legacy và đảm bảo lỗi guard canonical không bị nuốt thành 500
+- Phạm vi file:
+  - `src/app/api/teacher/dashboard/route.ts`
+  - `src/app/api/teacher/dashboard-stats/route.ts`
+  - `test/teacher-dashboard-routes.test.ts`
+  - `test/teacher-dashboard-legacy-auth-route.test.ts`
+- Lý do cần làm: teacher dashboard là bề mặt teacher quan trọng cho release-prep; route đang dùng `getUserFromSession` và catch đang collapse `ApiError` thành internal error
+- Rủi ro: thấp đến trung bình
+- Cách kiểm thử: chạy bundle teacher dashboard + teacher/admin/student backbone regression
+- Tiêu chí hoàn thành: teacher dashboard routes dùng canonical guard, preserve forbidden/API-shaped errors và regression xanh trên bundle liên quan
 - Mục tiêu: đưa teacher approvals route về guard/response contract canonical, bỏ compatibility field thừa ở active route/page, đồng thời tránh route admin approval nuốt lỗi nghiệp vụ thành 500
 - Phạm vi file:
   - `src/app/api/teacher/activities/approvals/route.ts`

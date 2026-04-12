@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
-import { getUserFromSession } from '@/lib/auth';
 import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
+import { requireApiRole } from '@/lib/guards';
 import { getTeacherDashboardSnapshot } from '@/lib/teacher-dashboard-data';
 
 /**
@@ -9,10 +9,7 @@ import { getTeacherDashboardSnapshot } from '@/lib/teacher-dashboard-data';
  */
 export async function GET(request: NextRequest) {
   try {
-    const user = await getUserFromSession();
-    if (!user || user.role !== 'teacher') {
-      return errorResponse(ApiError.forbidden('Chi giang vien moi co the truy cap'));
-    }
+    const user = await requireApiRole(request, ['teacher']);
 
     const snapshot = await getTeacherDashboardSnapshot(Number(user.id));
 
@@ -45,7 +42,10 @@ export async function GET(request: NextRequest) {
   } catch (error: any) {
     console.error('Loi lay thong ke dashboard giang vien:', error);
     return errorResponse(
-      ApiError.internalError('Khong the lay thong ke dashboard', { details: error.message })
+      error instanceof ApiError ||
+        (error && typeof error.status === 'number' && typeof error.code === 'string')
+        ? error
+        : ApiError.internalError('Khong the lay thong ke dashboard', { details: error?.message })
     );
   }
 }

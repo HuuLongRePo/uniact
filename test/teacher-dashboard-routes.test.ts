@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
-  mockGetUserFromSession: vi.fn(),
+  mockRequireApiRole: vi.fn(),
   mockGetTeacherDashboardSnapshot: vi.fn(),
 }));
 
-vi.mock('@/lib/auth', () => ({
-  getUserFromSession: mocks.mockGetUserFromSession,
+vi.mock('@/lib/guards', () => ({
+  requireApiRole: mocks.mockRequireApiRole,
 }));
 
 vi.mock('@/lib/teacher-dashboard-data', () => ({
@@ -132,7 +132,7 @@ function createSnapshot() {
 describe('Teacher dashboard routes', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.mockGetUserFromSession.mockResolvedValue({ id: 7, role: 'teacher' });
+    mocks.mockRequireApiRole.mockResolvedValue({ id: 7, role: 'teacher' });
     mocks.mockGetTeacherDashboardSnapshot.mockResolvedValue(createSnapshot());
   });
 
@@ -175,7 +175,7 @@ describe('Teacher dashboard routes', () => {
   });
 
   it('maps the shared snapshot to the legacy compatibility shape', async () => {
-    const response = await dashboardRoute.GET();
+    const response = await dashboardRoute.GET({} as any);
 
     expect(response.status).toBe(200);
     expect(mocks.mockGetTeacherDashboardSnapshot).toHaveBeenCalledWith(7);
@@ -219,7 +219,8 @@ describe('Teacher dashboard routes', () => {
   });
 
   it('rejects non-teacher access', async () => {
-    mocks.mockGetUserFromSession.mockResolvedValue({ id: 9, role: 'student' });
+    const { ApiError } = await import('../src/lib/api-response');
+    mocks.mockRequireApiRole.mockRejectedValue(ApiError.forbidden('Không có quyền truy cập'));
 
     const response = await dashboardStatsRoute.GET({} as any);
 
@@ -229,5 +230,6 @@ describe('Teacher dashboard routes', () => {
 
     expect(body.success).toBe(false);
     expect(body.code).toBe('FORBIDDEN');
+    expect(body.error).toBe('Không có quyền truy cập');
   });
 });

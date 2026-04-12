@@ -1,14 +1,12 @@
-import { getUserFromSession } from '@/lib/auth';
+import { NextRequest } from 'next/server';
 import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
+import { requireApiRole } from '@/lib/guards';
 import { getTeacherDashboardSnapshot } from '@/lib/teacher-dashboard-data';
 
 // GET /api/teacher/dashboard - compatibility overview for older teacher clients
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const user = await getUserFromSession();
-    if (!user || user.role !== 'teacher') {
-      return errorResponse(ApiError.forbidden('Chi giang vien moi co the truy cap'));
-    }
+    const user = await requireApiRole(request, ['teacher']);
 
     const snapshot = await getTeacherDashboardSnapshot(Number(user.id));
     const totalStudents = snapshot.classes.reduce((sum, item) => sum + item.student_count, 0);
@@ -53,9 +51,12 @@ export async function GET() {
   } catch (error: unknown) {
     console.error('Loi lay dashboard giang vien:', error);
     return errorResponse(
-      ApiError.internalError('Khong the lay du lieu tong quan', {
-        details: error instanceof Error ? error.message : 'Unknown error',
-      })
+      error instanceof ApiError ||
+        (error && typeof (error as any).status === 'number' && typeof (error as any).code === 'string')
+        ? (error as any)
+        : ApiError.internalError('Khong the lay du lieu tong quan', {
+            details: error instanceof Error ? error.message : 'Unknown error',
+          })
     );
   }
 }
