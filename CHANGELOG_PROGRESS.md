@@ -1941,6 +1941,22 @@
 - Tài liệu active/canonical vẫn ở root rõ ràng
 - Tài liệu historical không mất mà được gom đúng chỗ hơn để tra cứu
 
+## 2026-04-12 - Hoàn thành T-150
+
+### Đã làm
+
+- Đồng bộ `de-tai/README.md` theo mốc cập nhật mới và điều chỉnh narrative sang trạng thái hệ thống hiện tại
+- Cập nhật `de-tai/05-PHAN-TICH-HE-THONG.md` để mô tả rõ hơn các actor flow đang thực sự tồn tại trong hệ thống
+- Cập nhật `de-tai/06-THIET-KE-HE-THONG.md` để phản ánh response/API/workflow canonical hiện tại, đặc biệt là phân biệt `status` và `approval_status`
+- Làm rõ trong `de-tai/PERMISSIONS_AND_BUSINESS_RULES.md` đâu là phần đã có trong hệ thống, đâu là định hướng/thiết kế cần hoàn thiện thêm
+- Điều chỉnh `de-tai/08-KET-QUA-DANH-GIA.md` và `de-tai/09-KET-LUAN.md` theo hướng: hệ thống đã có mức hiện thực đáng kể, nhưng vẫn đang tiếp tục harden và hoàn thiện theo các milestone release
+
+### Kết quả
+
+- Nhánh tài liệu học thuật bớt lệch so với codebase hiện tại
+- Narrative “thiết kế dự kiến” và “production ready” được làm thực tế hơn
+- Hướng phát triển trong de-tai bám sát hơn các công việc đang diễn ra trên backbone của UniAct
+
 ## 2026-04-07 - Hoàn thành T-142
 
 ### Đã làm

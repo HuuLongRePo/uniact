@@ -53,6 +53,8 @@
 
 **Use Case**: Giảng viên muốn xem hoạt động đã có để **tránh trùng lịch, nghiên cứu kế hoạch**.
 
+Lưu ý cập nhật theo hệ thống hiện tại: năng lực hiển thị chi tiết cho teacher cần luôn bám các route và page đã hiện thực. Các phần mô tả dưới đây nên được xem là định hướng nghiệp vụ và phạm vi mong muốn, không mặc định suy ra rằng mọi biến thể UI/API đã hoàn thiện 100%.
+
 #### Option A: **Full Transparency** (Recommended)
 
 ```typescript
@@ -240,7 +242,7 @@ Response: {
 
 ### 3.1. Location Conflict - "Phòng đã được sử dụng"
 
-**Business Rule**: **KHÔNG được** tạo 2 hoạt động cùng địa điểm trong cùng khung giờ.
+**Business Rule**: Hệ thống cần phát hiện và cảnh báo/kiểm soát xung đột theo luồng nghiệp vụ. Ở trạng thái hiện tại, phần backbone đã hiện thực rõ nhất là conflict theo đăng ký và một số kiểm tra phục vụ workflow hoạt động; các phần conflict nâng cao theo địa điểm/lịch vẫn nên xem là hướng cần hoàn thiện thêm.
 
 #### Detection API
 
@@ -790,6 +792,8 @@ test('student only sees activities for their class', async () => {
 ---
 
 ## 7. 📊 Summary Checklist
+
+Lưu ý: checklist dưới đây là bảng tổng hợp giữa phần đã có trong hệ thống và phần định hướng cần hoàn thiện thêm. Khi sử dụng cho báo cáo đề tài, nên phân biệt rõ "đã hiện thực", "đã có một phần", và "định hướng tiếp theo".
 
 ### Core Features
 

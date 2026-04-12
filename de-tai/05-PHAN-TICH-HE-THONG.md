@@ -108,25 +108,25 @@ Hệ thống được thiết kế theo 3 vai trò chính:
 Các yêu cầu chức năng được mô tả theo nhóm (theo vai trò), tránh liệt kê danh sách tính năng chi tiết khi chưa kiểm chứng đầy đủ ở mức màn hình/API.
 
 **Admin:**
-- Quản trị người dùng và lớp.
-- Duyệt hoạt động và theo dõi lịch sử duyệt.
-- Quản lý các dữ liệu danh mục/cấu hình phục vụ nghiệp vụ.
-- Xem báo cáo/tổng hợp và xuất dữ liệu (CSV theo các tuyến export hiện có).
-- Quản lý khen thưởng/đề xuất (awards) và duyệt đề xuất theo vai trò.
-- Duyệt đề xuất cộng điểm (bonus) và theo dõi lịch sử.
-- Tra cứu nhật ký thao tác (audit logs) phục vụ truy vết.
+- Quản trị người dùng, lớp và các danh mục hệ thống.
+- Duyệt hoạt động, từ chối hoạt động, theo dõi lịch sử duyệt và trạng thái approval.
+- Quản lý các dữ liệu cấu hình phục vụ nghiệp vụ như loại hoạt động, cấp tổ chức, loại khen thưởng và một số cấu hình hỗ trợ vận hành.
+- Xem báo cáo/tổng hợp và xuất dữ liệu theo các tuyến export đã hiện thực.
+- Quản lý luồng bonus/awards theo phạm vi đang có trong hệ thống.
+- Tra cứu audit logs và một số dữ liệu truy vết phục vụ quản trị.
 
 **Teacher:**
-- Tạo/chỉnh sửa hoạt động và gửi duyệt.
+- Tạo/chỉnh sửa hoạt động của mình, gửi duyệt và gửi lại khi bị từ chối.
+- Theo dõi danh sách hoạt động theo trạng thái duyệt (nháp, chờ duyệt, đã duyệt, bị từ chối).
 - Tạo mã QR và thực hiện điểm danh theo nghiệp vụ.
-- Quản lý lớp và theo dõi tình hình tham gia.
-- Xem báo cáo theo lớp/hoạt động và xuất dữ liệu theo lớp (tuỳ tuyến export).
-- Tạo đề xuất cộng điểm (bonus) hoặc đề xuất khen thưởng (awards) trong phạm vi được phép.
+- Quản lý lớp, danh sách tham gia, và theo dõi tình hình sinh viên trong các hoạt động thuộc phạm vi của mình.
+- Xem báo cáo theo lớp/hoạt động và thực hiện các thao tác nghiệp vụ liên quan bonus/awards trong phạm vi được phép.
 
 **Student:**
-- Xem/đăng ký hoạt động và theo dõi lịch sử tham gia.
-- Điểm danh QR theo hướng dẫn.
-- Theo dõi điểm, thông báo và lịch sử (khen thưởng/đề xuất nếu được hiển thị theo vai trò).
+- Xem danh sách hoạt động được áp dụng cho mình, bao gồm cả phân biệt hoạt động áp dụng và không áp dụng theo phạm vi lớp.
+- Đăng ký hoạt động, xử lý cảnh báo xung đột giờ bắt đầu, hủy đăng ký khi còn trong điều kiện cho phép.
+- Tham gia điểm danh QR theo hướng dẫn của giáo viên.
+- Theo dõi lịch sử tham gia, trạng thái đăng ký, thông báo và các dữ liệu cá nhân được phép xem.
 
 ---
 

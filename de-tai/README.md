@@ -3,8 +3,8 @@
 > Lưu ý: đây là nhánh tài liệu học thuật và thuyết minh đề tài. Không dùng file này làm nguồn sự thật cho task queue, script chạy dự án hay trạng thái sửa lỗi hiện tại. Khi cần tài liệu vận hành repo, ưu tiên [../CANONICAL_DOCS.md](../CANONICAL_DOCS.md).
 
 > Hệ thống Quản lý Hoạt động Ngoại khóa & Điểm Rèn Luyện  
-> **Phiên bản: v2.2.0**  
-> **Cập nhật: 14/01/2026**
+> **Phiên bản tài liệu: v2.3.0**  
+> **Cập nhật: 12/04/2026**
 
 ---
 
@@ -40,7 +40,7 @@
 
 ---
 
-## ⭐ Điểm Mới v2.2.0 (14/01/2026)
+## ⭐ Điểm cập nhật v2.3.0 (12/04/2026)
 
 ### 1. PERMISSIONS_AND_BUSINESS_RULES.md (1,400+ dòng)
 
@@ -65,15 +65,15 @@
 
 **Tích hợp:** Chương 4 (Thiết kế DB) + Phụ lục C
 
-### 3. NHAT-KY-THUC-HIEN.md (Updated)
+### 3. Đồng bộ với trạng thái hệ thống hiện tại
 
-**Cập nhật:**
-- 📅 Timeline 6 giai đoạn (10/2025 → 02/2026)
-- ✅ 8 Đợt triển khai với deliverables
-- 📊 Code stats: 450+ files, 35,000+ lines, 80+ components
-- 📈 Feature completion: 98%
+**Cập nhật trọng tâm:**
+- ✅ Điều chỉnh lại mô tả workflow approval theo trạng thái canonical hiện tại
+- ✅ Bổ sung rõ student discovery/register/cancel flow và phạm vi áp dụng theo lớp
+- ✅ Cập nhật narrative từ “thiết kế dự kiến” sang “hệ thống đã có phần hiện thực đáng kể, vẫn đang tiếp tục hoàn thiện”
+- ✅ Đồng bộ lại hướng phát triển theo roadmap thực tế: harden backbone, cleanup contract, kiểm thử hồi quy, sẵn sàng cho milestone release lớn hơn
 
-**Tích hợp:** Chương 6 (Kết quả) + Phụ lục
+**Tích hợp:** Chương 3 (Phân tích), Chương 4 (Thiết kế), Chương 6 (Kết quả), Chương 7 (Kết luận)
 
 ---
 
@@ -101,9 +101,8 @@
 
 **Tổng quan:**
 - 19 MD files
-- ~6,500 lines total
-- ~170 pages (A4)
-- 98% complete
+- bộ tài liệu học thuật + kỹ thuật bổ trợ cho đề tài
+- phản ánh trạng thái hệ thống ở mức học thuật, không thay thế tài liệu vận hành ở root/docs
 
 **Growth v2.2.0:**
 - +2,400 lines (+40%)
@@ -133,6 +132,7 @@
 
 | Ver | Date | Highlights |
 |-----|------|-----------|
+| v2.3.0 | 12/04/2026 | Đồng bộ với trạng thái hệ thống và hướng phát triển hiện tại |
 | v2.2.0 | 14/01/2026 | **Permissions & Business Logic** ⭐ |
 | v2.1.2 | 13/01/2026 | UI/UX enhancements |
 | v2.0 | 01/2026 | Production ready |
@@ -140,5 +140,5 @@
 
 ---
 
-**Status:** ✅ Production Ready - 98%  
-**Next:** UAT Testing → Deployment (02/2026)
+**Status:** ✅ Tài liệu học thuật đã được đồng bộ lại theo hệ thống hiện tại  
+**Next:** tiếp tục cập nhật theo các milestone release lớn và hoàn thiện số liệu đánh giá thực nghiệm khi chốt hệ thống

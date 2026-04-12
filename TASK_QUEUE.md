@@ -96,6 +96,22 @@ Quy ước trạng thái: TODO / DOING / BLOCKED / DONE
 - Rủi ro: thấp nếu chỉ move các file ít active reference và cập nhật index canonical đi kèm
 - Cách kiểm thử: rà lại reference chính trong README/CANONICAL_DOCS, kiểm tra git diff và tree sau move
 - Tiêu chí hoàn thành: root repo gọn hơn, tài liệu active vẫn rõ, tài liệu cũ vẫn tra cứu được trong archive
+
+### T-150 - Đồng bộ nhánh tài liệu de-tai theo trạng thái hệ thống hiện tại
+
+- Trạng thái: DONE
+- Mục tiêu: cập nhật nhánh tài liệu học thuật để phản ánh đúng hơn hệ thống hiện tại và hướng phát triển tiếp theo, nhưng không biến de-tai thành changelog kỹ thuật
+- Phạm vi file:
+  - `de-tai/README.md`
+  - `de-tai/05-PHAN-TICH-HE-THONG.md`
+  - `de-tai/06-THIET-KE-HE-THONG.md`
+  - `de-tai/PERMISSIONS_AND_BUSINESS_RULES.md`
+  - `de-tai/08-KET-QUA-DANH-GIA.md`
+  - `de-tai/09-KET-LUAN.md`
+- Lý do cần làm: de-tai hiện có chỗ còn viết theo hướng “thiết kế dự kiến/production ready” chưa khớp hoàn toàn với trạng thái codebase đang được harden dần
+- Rủi ro: thấp
+- Cách kiểm thử: rà tính nhất quán narrative giữa de-tai với canonical docs/business truth hiện tại
+- Tiêu chí hoàn thành: de-tai phản ánh đúng hơn workflow, mức hiện thực và hướng phát triển của UniAct
 - Mục tiêu: đưa teacher approvals route về guard/response contract canonical, bỏ compatibility field thừa ở active route/page, đồng thời tránh route admin approval nuốt lỗi nghiệp vụ thành 500
 - Phạm vi file:
   - `src/app/api/teacher/activities/approvals/route.ts`
