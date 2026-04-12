@@ -175,6 +175,10 @@ npm test -- --watch
 npm run test:e2e
 ```
 
+#### **Internal RC prep**
+- Xem `docs/RELEASE_CANDIDATE_CHECKLIST.md` để biết regression baseline hiện tại cho mốc internal release candidate.
+- Lưu ý: repo đang được harden dần theo backbone ưu tiên, nên trạng thái hiện tại gần với “internal RC prep” hơn là “public production release”.
+
 #### **Format & Lint Code**
 ```bash
 # Format code (Prettier)

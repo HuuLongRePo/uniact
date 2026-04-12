@@ -191,6 +191,31 @@ Quy ước trạng thái: TODO / DOING / BLOCKED / DONE
 - Rủi ro: trung bình
 - Cách kiểm thử: chạy bundle teacher students/dashboard + admin/student backbone regression
 - Tiêu chí hoàn thành: route preserve canonical forbidden errors, page đọc được canonical payload tốt hơn và compatibility aliases khóa bằng regression test
+
+### T-157 - Canonicalize teacher evaluate route theo backbone guard/error hiện tại
+
+- Trạng thái: DONE
+- Mục tiêu: kéo `api/teacher/evaluate` về chuẩn `requireApiRole` và preserve canonical errors thay vì auth phân nhánh thủ công
+- Phạm vi file:
+  - `src/app/api/teacher/evaluate/route.ts`
+  - `test/teacher-evaluate-route.test.ts`
+- Lý do cần làm: evaluate là route nghiệp vụ teacher quan trọng nhưng vẫn dùng `getUserFromRequest` + catch collapse 500 kiểu legacy
+- Rủi ro: thấp đến trung bình
+- Cách kiểm thử: chạy focused teacher evaluate bundle rồi gộp vào pre-release regression bundle lớn
+- Tiêu chí hoàn thành: route dùng canonical guard, preserve forbidden/API-shaped errors và regression xanh cho success + validation + permission
+
+### T-158 - Tạo mốc internal RC prep docs và khóa regression baseline lớn nhất hiện tại
+
+- Trạng thái: DONE
+- Mục tiêu: biến đà hardening hiện tại thành một mốc release-prep có checklist/reference rõ ràng thay vì chỉ là chuỗi commit rời rạc
+- Phạm vi file:
+  - `docs/RELEASE_CANDIDATE_CHECKLIST.md`
+  - `docs/MASTER-PLAN-UNIACT-COMPLETION.md`
+  - `README.md`
+- Lý do cần làm: repo đang tiến gần internal release candidate, cần tài liệu hóa baseline regression và trạng thái backbone hiện tại để các batch sau bám theo cùng một mốc
+- Rủi ro: thấp
+- Cách kiểm thử: chạy regression bundle lớn nhất hiện tại sau khi cập nhật docs/checklist
+- Tiêu chí hoàn thành: có checklist RC nội bộ, master plan phản ánh mốc hiện tại và regression baseline xanh sau cập nhật
 - Mục tiêu: đưa teacher approvals route về guard/response contract canonical, bỏ compatibility field thừa ở active route/page, đồng thời tránh route admin approval nuốt lỗi nghiệp vụ thành 500
 - Phạm vi file:
   - `src/app/api/teacher/activities/approvals/route.ts`

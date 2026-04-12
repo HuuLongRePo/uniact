@@ -190,6 +190,13 @@
 - [ ] Release checklist pass trên môi trường staging trước production.
 - [ ] Tài liệu vận hành + backup/restore + rollback đầy đủ.
 
+### 4.4 Mốc hiện tại: Internal Release Candidate Prep (2026-04-12)
+- Admin backbone đã được harden đáng kể ở cụm activities: list, detail, participants, pending, approval action/history.
+- Teacher backbone đã được harden thêm ở approvals, resubmit, dashboard, students, evaluate.
+- Student backbone đã được làm sạch thêm ở activities list/detail, register/cancel semantics, registrations counting và conflict handling.
+- Mốc hiện tại phù hợp gọi là **internal release candidate prep**, chưa phải public production-ready.
+- Checklist tham chiếu: `docs/RELEASE_CANDIDATE_CHECKLIST.md`.
+
 ---
 
 ## 5) ƯU TIÊN TRIỂN KHAI NGAY (NEXT 10 NGÀY)

@@ -8,21 +8,14 @@
 
 import { NextRequest } from 'next/server';
 import { dbGet, dbRun, dbReady, dbHelpers } from '@/lib/database';
-import { getUserFromRequest } from '@/lib/guards';
+import { requireApiRole } from '@/lib/guards';
 import { ApiError, successResponse, errorResponse } from '@/lib/api-response';
 
 export async function POST(request: NextRequest) {
   try {
     await dbReady();
 
-    const user = await getUserFromRequest(request);
-    if (!user) {
-      return errorResponse(ApiError.unauthorized('Chưa đăng nhập'));
-    }
-
-    if (user.role !== 'teacher') {
-      return errorResponse(ApiError.forbidden('Chỉ giảng viên mới có thể đánh giá'));
-    }
+    const user = await requireApiRole(request, ['teacher']);
 
     const { participation_id, achievement_level, feedback } = await request.json();
 
@@ -150,7 +143,12 @@ export async function POST(request: NextRequest) {
     );
   } catch (error: any) {
     console.error('Teacher evaluate error:', error);
-    return errorResponse(ApiError.internalError('Lỗi server', { details: error?.message }));
+    return errorResponse(
+      error instanceof ApiError ||
+        (error && typeof error.status === 'number' && typeof error.code === 'string')
+        ? error
+        : ApiError.internalError('Lỗi server', { details: error?.message })
+    );
   }
 }
 

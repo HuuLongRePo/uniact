@@ -2121,6 +2121,36 @@
 - Đây là fix vừa release-oriented vừa thực dụng, vì nó vá luôn một drift dữ liệu có thể ảnh hưởng teacher UI thật chứ không chỉ route internals
 - Admin/teacher/student backbone đang ngày càng đồng pha hơn về auth, error shape và compatibility transition
 
+## 2026-04-12 - Hoàn thành T-157 và T-158
+
+### Đã làm
+
+- Canonicalize `src/app/api/teacher/evaluate/route.ts`:
+  - chuyển từ `getUserFromRequest` sang `requireApiRole(request, ['teacher'])`
+  - preserve `ApiError` / API-shaped errors ở catch cuối thay vì collapse 500
+- Thêm `test/teacher-evaluate-route.test.ts` để khóa:
+  - forbidden guard preservation
+  - validation cho `achievement_level`
+  - success path khi teacher đánh giá participation đã attended và sở hữu activity
+- Tạo `docs/RELEASE_CANDIDATE_CHECKLIST.md` để chốt baseline internal RC prep hiện tại:
+  - nêu rõ backbone admin/teacher/student đã harden
+  - chỉ ra regression baseline khuyến nghị
+  - ghi rõ đây là internal RC prep, chưa phải public production release
+- Cập nhật `docs/MASTER-PLAN-UNIACT-COMPLETION.md` để thêm mốc hiện tại `Internal Release Candidate Prep (2026-04-12)`
+- Cập nhật `README.md` để trỏ tới RC checklist mới và làm rõ trạng thái release hiện tại của repo
+
+### Kiểm thử
+
+- Chạy regression bundle lớn nhất hiện tại:
+  - `npm test -- --reporter dot test/admin-activities-route.test.ts test/admin-activity-detail-route.test.ts test/admin-activity-participants-route.test.ts test/admin-approval-action-route.test.ts test/admin-approval-history-route.test.ts test/admin-pending-activities-route.test.ts test/teacher-dashboard-routes.test.ts test/teacher-dashboard-legacy-auth-route.test.ts test/teacher-students-route.test.ts test/teacher-evaluate-route.test.ts test/teacher-approvals-route.test.ts test/teacher-resubmit-route.test.ts test/teacher-edit-activity-page.test.tsx test/teacher-create-activity-page.test.tsx test/student-activity-detail-page.test.tsx test/register-route-conflict.test.ts test/register-route-mandatory.test.ts test/register-route-cancel-route.test.ts test/student-activities-page.test.tsx test/activities-list-route.test.ts test/my-registrations-route.test.ts test/activity-check-conflicts-route.test.ts`
+- Kết quả: `22/22` test files pass, `48/48` tests pass
+
+### Kết quả
+
+- Teacher evaluate route đã nhập vào backbone canonical thay vì đứng riêng kiểu legacy
+- Repo hiện không chỉ có thêm code hardening, mà đã có một mốc internal RC prep được tài liệu hóa rõ bằng checklist và regression baseline
+- Đây là bước chuyển từ “liên tục sửa backbone” sang “bắt đầu gom trạng thái releaseable nội bộ có thể kiểm chứng được”
+
 ## 2026-04-07 - Hoàn thành T-142
 
 ### Đã làm
