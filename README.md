@@ -179,6 +179,7 @@ npm run test:e2e
 - Xem `docs/RELEASE_CANDIDATE_CHECKLIST.md` để biết regression baseline hiện tại cho mốc internal release candidate.
 - Xem `docs/TARGETED_MANUAL_SMOKE_CHECKLIST.md` để chạy smoke test ngắn cho các flow admin/teacher/student quan trọng nhất.
 - Xem `docs/INTERNAL_RELEASE_NOTE_2026-04-12.md` để có milestone note ngắn gọn về trạng thái internal RC hiện tại.
+- Xem `docs/INTERNAL_RC_TAGGING_PLAN_2026-04-12.md` và `docs/INTERNAL_RC_ANNOUNCEMENT_TEMPLATE_2026-04-12.md` để chốt tag/announcement sau khi smoke sạch.
 - Lưu ý: repo đang được harden dần theo backbone ưu tiên, nên trạng thái hiện tại gần với “internal RC prep” hơn là “public production release”.
 
 #### **Format & Lint Code**
