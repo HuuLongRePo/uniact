@@ -138,6 +138,19 @@ Quy ước trạng thái: TODO / DOING / BLOCKED / DONE
 - Rủi ro: trung bình
 - Cách kiểm thử: chạy bundle admin detail/approval + teacher edit/create + student backbone regression
 - Tiêu chí hoàn thành: admin detail/edit route trả API shape canonical, preserve forbidden/not-found/validation tốt hơn và vẫn giữ display status `pending` đúng ở tầng response
+
+### T-153 - Canonicalize admin participants contract và làm rõ attendance semantics ở detail page
+
+- Trạng thái: DONE
+- Mục tiêu: kéo `api/admin/activities/[id]/participants` về chuẩn backbone hiện tại, đồng thời làm admin detail page chịu được canonical response shape và attendance semantics rõ hơn
+- Phạm vi file:
+  - `src/app/api/admin/activities/[id]/participants/route.ts`
+  - `src/app/admin/activities/[id]/page.tsx`
+  - `test/admin-activity-participants-route.test.ts`
+- Lý do cần làm: participants route vẫn dùng session/auth kiểu cũ và raw response; detail page cũng đang phụ thuộc ngầm vào status attendance cũ, dễ drift khi route được chuẩn hóa
+- Rủi ro: trung bình
+- Cách kiểm thử: chạy bundle admin participants/detail + teacher/student backbone regression
+- Tiêu chí hoàn thành: participants route trả API shape canonical, preserve lỗi chuẩn, normalize attendance rõ ràng và admin detail page vẫn render đúng với response shape mới
 - Mục tiêu: đưa teacher approvals route về guard/response contract canonical, bỏ compatibility field thừa ở active route/page, đồng thời tránh route admin approval nuốt lỗi nghiệp vụ thành 500
 - Phạm vi file:
   - `src/app/api/teacher/activities/approvals/route.ts`

@@ -53,7 +53,7 @@ interface Participant {
   user_email: string;
   class_name: string | null;
   registered_at: string;
-  attendance_status: 'present' | 'absent' | null;
+  attendance_status: 'present' | 'absent' | 'not_participated' | null;
   achievement_level: 'excellent' | 'good' | 'average' | 'participated' | null;
   points_earned: number;
 }
@@ -107,16 +107,16 @@ export default function AdminActivityDetailPage() {
       if (!activityRes.ok) throw new Error('Failed to fetch activity');
 
       const activityData = await activityRes.json();
-      setActivity(activityData.activity);
+      setActivity(activityData.activity || activityData.data?.activity || null);
 
       if (participantsRes.ok) {
         const participantsData = await participantsRes.json();
-        setParticipants(participantsData.participants || []);
+        setParticipants(participantsData.participants || participantsData.data?.participants || []);
       }
 
       if (historyRes.ok) {
         const historyData = await historyRes.json();
-        setApprovalHistory(historyData.history || []);
+        setApprovalHistory(historyData.history || historyData.data?.history || []);
       }
     } catch (error) {
       console.error('Error fetching activity:', error);
@@ -198,7 +198,7 @@ export default function AdminActivityDetailPage() {
             ? 'Có mặt'
             : p.attendance_status === 'absent'
               ? 'Vắng'
-              : 'Chưa điểm danh',
+              : 'Chưa tham gia',
           p.achievement_level || '-',
           p.points_earned || 0,
         ].join(',')
@@ -523,7 +523,7 @@ export default function AdminActivityDetailPage() {
                               </span>
                             ) : (
                               <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs">
-                                Chưa điểm danh
+                                Chưa tham gia
                               </span>
                             )}
                           </td>

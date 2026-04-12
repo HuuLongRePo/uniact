@@ -1,17 +1,18 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getUserFromSession } from '@/lib/auth';
+import { NextRequest } from 'next/server';
 import { dbAll } from '@/lib/database';
+import { requireApiRole } from '@/lib/guards';
+import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
 import { formatAttendanceStatus } from '@/lib/formatters';
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = await params;
-    const user = await getUserFromSession();
-    if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    await requireApiRole(request, ['admin']);
 
-    const activityId = id;
+    const { id } = await params;
+    const activityId = Number(id);
+    if (!activityId || Number.isNaN(activityId)) {
+      return errorResponse(ApiError.validation('ID hoạt động không hợp lệ'));
+    }
 
     const participants = await dbAll(
       `SELECT 
@@ -35,14 +36,22 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     const normalizedParticipants = (participants as any[]).map((participant) => ({
       ...participant,
-      attendance_status: participant.attendance_status
-        ? formatAttendanceStatus(participant.attendance_status)
-        : null,
+      attendance_status: formatAttendanceStatus(participant.attendance_status ?? null) as
+        | 'present'
+        | 'absent'
+        | 'not_participated',
     }));
 
-    return NextResponse.json({ participants: normalizedParticipants });
+    return successResponse({ participants: normalizedParticipants });
   } catch (error: any) {
     console.error('Get participants error:', error);
-    return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });
+    return errorResponse(
+      error instanceof ApiError ||
+        (error && typeof error.status === 'number' && typeof error.code === 'string')
+        ? error
+        : ApiError.internalError('Không thể tải danh sách người tham gia', {
+            details: error?.message,
+          })
+    );
   }
 }
