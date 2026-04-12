@@ -30,6 +30,12 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     return successResponse({ history });
   } catch (error: any) {
     console.error('Get approval history error:', error);
-    return errorResponse(ApiError.internalError('Không thể tải lịch sử phê duyệt'));
+    return errorResponse(
+      error instanceof ApiError
+        ? error
+        : ApiError.internalError('Không thể tải lịch sử phê duyệt', {
+            details: error?.message,
+          })
+    );
   }
 }

@@ -7,16 +7,14 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { dbAll, dbReady } from '@/lib/database';
-import { getUserFromRequest } from '@/lib/guards';
+import { requireApiRole } from '@/lib/guards';
 import { getActivityDisplayStatus } from '@/lib/activity-workflow';
+import { ApiError, errorResponse } from '@/lib/api-response';
 
 export async function GET(request: NextRequest) {
   try {
     await dbReady();
-    const user = await getUserFromRequest(request as any);
-    if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    await requireApiRole(request, ['admin']);
 
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
@@ -68,9 +66,12 @@ export async function GET(request: NextRequest) {
     });
   } catch (error: any) {
     console.error('Get pending approvals error:', error);
-    return NextResponse.json(
-      { error: error.message || 'Failed to get pending approvals' },
-      { status: 500 }
+    return errorResponse(
+      error instanceof ApiError
+        ? error
+        : ApiError.internalError('Không thể tải danh sách chờ phê duyệt', {
+            details: error?.message,
+          })
     );
   }
 }

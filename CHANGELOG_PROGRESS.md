@@ -1787,6 +1787,58 @@
 
 - Vẫn cần rà tiếp các route/query khác đang còn dùng semantic legacy `pending` ở lớp activity status thay vì display status hoặc approval status
 
+## 2026-04-12 - Hoàn thành T-144
+
+### Đã làm
+
+- Harden `src/app/api/admin/activities/pending/route.ts`:
+  - đổi từ `getUserFromRequest` sang `requireApiRole(request, ['admin'])`
+  - giữ mapping display status qua `getActivityDisplayStatus(...)`
+  - chuẩn hóa nhánh lỗi về `errorResponse(ApiError...)` thay vì trả JSON legacy rời rạc
+- Sửa `src/app/api/activities/my-registrations/route.ts` để `participant_count` chỉ đếm participation active states `registered|attended`, tránh phồng số khi có bản ghi không còn tham gia hiệu lực
+- Thêm regression tests:
+  - `test/admin-pending-activities-route.test.ts`
+  - `test/my-registrations-route.test.ts`
+- Giữ tương thích có chủ đích ở `teacher approvals`: route vẫn trả `teacher_status` để không phá consumer cũ, nhưng test đã khóa rõ mapping canonical `requested -> pending`
+
+### Kiểm thử hẹp
+
+- Chạy `npm test -- --reporter dot test/admin-pending-activities-route.test.ts test/my-registrations-route.test.ts test/teacher-approvals-route.test.ts test/activity-check-conflicts-route.test.ts test/register-route-conflict.test.ts`
+- Kết quả: `5/5` test files pass, `6/6` tests pass
+
+### Kết quả
+
+- Admin pending queue bám chặt hơn vào guard/error contract canonical của backbone
+- Student my-registrations giảm drift số liệu participant_count ở flow đã đăng ký của người dùng
+- Regression net quanh approval/register/conflict/my-registrations đã dày hơn cho milestone one-shot hiện tại
+
+### Còn lại
+
+- Vẫn còn các cụm legacy semantics khác ngoài milestone này, đặc biệt quanh docs cũ, approval engine phụ và một số compatibility fields chưa thể bỏ ngay nếu chưa xác minh hết consumer active
+
+## 2026-04-12 - Hoàn thành T-145
+
+### Đã làm
+
+- Harden `src/app/api/admin/activities/[id]/approval-history/route.ts` để preserve `ApiError` từ guard thay vì luôn collapse về `500 internal error`
+- Thêm regression test mới `test/admin-approval-history-route.test.ts`
+- Giữ success shape hiện tại của route (`success + history`) để không phá consumer active, chỉ siết canonical behavior ở nhánh lỗi
+
+### Kiểm thử hẹp
+
+- Chạy `npm test -- --reporter dot test/admin-approval-history-route.test.ts test/admin-pending-activities-route.test.ts test/my-registrations-route.test.ts test/teacher-approvals-route.test.ts test/activity-check-conflicts-route.test.ts test/register-route-conflict.test.ts`
+- Kết quả: `6/6` test files pass, `8/8` tests pass
+
+### Kết quả
+
+- Cụm admin approval flow nay có cả pending queue lẫn approval history cùng bám guard/error semantics nhất quán hơn
+- Milestone one-shot hiện tại đã gom được 3 cụm backbone active: conflict check, admin pending/history, student my-registrations
+- Regression net cho các route này đã đủ dày để commit/push như một milestone rõ ràng thay vì các bản vá lẻ
+
+### Còn lại
+
+- Chưa đụng sâu vào UI teacher approvals page vì vẫn còn khả năng phụ thuộc route resubmit riêng; phần đó nên được gom thành batch kế tiếp để tránh lan scope sang teacher edit/resubmit flow
+
 ## 2026-04-07 - Hoàn thành T-142
 
 ### Đã làm

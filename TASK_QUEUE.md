@@ -27,6 +27,32 @@ Quy ước trạng thái: TODO / DOING / BLOCKED / DONE
 - Cách kiểm thử: chạy hẹp route test conflict + registration conflict
 - Tiêu chí hoàn thành: route chỉ query `published` ở lớp activity status canonical và có regression test khóa drift này
 
+### T-144 - Harden admin pending queue và my-registrations theo contract backbone
+
+- Trạng thái: DONE
+- Mục tiêu: chuẩn hóa `admin pending approvals` về guard/error canonical, đồng thời sửa `my-registrations` để số lượng người tham gia bám đúng participation active states
+- Phạm vi file:
+  - `src/app/api/admin/activities/pending/route.ts`
+  - `src/app/api/activities/my-registrations/route.ts`
+  - `test/admin-pending-activities-route.test.ts`
+  - `test/my-registrations-route.test.ts`
+- Lý do cần làm: đây là 2 route active trong backbone admin/student, một bên còn dùng guard/response style legacy, một bên còn đếm participant quá rộng dễ làm số liệu lệch
+- Rủi ro: thấp
+- Cách kiểm thử: chạy hẹp bundle admin pending + my registrations + teacher approvals + conflict/register regression
+- Tiêu chí hoàn thành: pending queue trả status hiển thị đúng và guard/error nhất quán; my-registrations chỉ đếm `registered|attended` cho participant_count và vẫn phân loại đúng upcoming/completed/cancelled
+
+### T-145 - Harden admin approval-history route theo canonical error contract
+
+- Trạng thái: DONE
+- Mục tiêu: giữ approval history là route admin backbone sạch guard/error semantics, không nuốt 401/403 thành 500
+- Phạm vi file:
+  - `src/app/api/admin/activities/[id]/approval-history/route.ts`
+  - `test/admin-approval-history-route.test.ts`
+- Lý do cần làm: approval history là phần nối tiếp trực tiếp của admin approval flow; nếu route này collapse mọi lỗi thành 500 sẽ làm chẩn đoán và UI handling sai ngữ nghĩa
+- Rủi ro: thấp
+- Cách kiểm thử: chạy hẹp approval-history cùng bundle approval/register/conflict hiện tại
+- Tiêu chí hoàn thành: route giữ nguyên success shape, nhưng preserve được `ApiError` như forbidden thay vì biến thành internal error
+
 ### T-101 - Chuẩn hóa contract danh sách hoạt động sinh viên
 
 - Trạng thái: DONE

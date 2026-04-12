@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
         a.location,
         a.status as activity_status,
         u.name as teacher_name,
-        (SELECT COUNT(*) FROM participations WHERE activity_id = a.id) as participant_count,
+        (SELECT COUNT(*) FROM participations WHERE activity_id = a.id AND attendance_status IN ('registered', 'attended')) as participant_count,
         a.max_participants
       FROM participations p
       JOIN activities a ON p.activity_id = a.id
