@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserFromSession } from '@/lib/auth';
 import { dbAll } from '@/lib/database';
+import { requireApiRole } from '@/lib/guards';
 import { ApiError, errorResponse } from '@/lib/api-response';
 
 type ActivityStatisticsRow = {
@@ -58,10 +58,7 @@ function toCsvValue(value: string | number): string {
 
 export async function GET(request: NextRequest) {
   try {
-    const user = await getUserFromSession();
-    if (!user || user.role !== 'admin') {
-      return errorResponse(ApiError.forbidden('Bạn không có quyền truy cập báo cáo thống kê.'));
-    }
+    await requireApiRole(request, ['admin']);
 
     const searchParams = request.nextUrl.searchParams;
     const startDate = searchParams.get('start_date') || '';
@@ -241,12 +238,15 @@ export async function GET(request: NextRequest) {
       statistics: stats,
       insights,
     });
-  } catch (error: unknown) {
+  } catch (error: any) {
     console.error('Error generating activity statistics:', error);
     return errorResponse(
-      ApiError.internalError(
-        error instanceof Error ? error.message : 'Không thể tạo báo cáo thống kê.'
-      )
+      error instanceof ApiError ||
+        (error && typeof error.status === 'number' && typeof error.code === 'string')
+        ? error
+        : ApiError.internalError(
+            error instanceof Error ? error.message : 'Không thể tạo báo cáo thống kê.'
+          )
     );
   }
 }

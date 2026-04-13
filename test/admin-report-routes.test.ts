@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   mockGetUserFromSession: vi.fn(),
+  mockRequireApiRole: vi.fn(),
   mockDbAll: vi.fn(),
 }));
 
@@ -9,6 +10,10 @@ const adminUser = { id: 1, role: 'admin' };
 
 vi.mock('@/lib/auth', () => ({
   getUserFromSession: mocks.mockGetUserFromSession,
+}));
+
+vi.mock('@/lib/guards', () => ({
+  requireApiRole: mocks.mockRequireApiRole,
 }));
 
 vi.mock('@/lib/database', () => ({
@@ -34,6 +39,7 @@ function makeRequest(url: string) {
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.mockGetUserFromSession.mockResolvedValue(adminUser);
+  mocks.mockRequireApiRole.mockResolvedValue(adminUser);
 });
 
 describe('Admin report routes', () => {
@@ -240,6 +246,20 @@ describe('Admin report routes', () => {
     expect(csv).toContain('School');
     expect(csv).toContain('Chưa tham gia');
     expect(csv).toContain('Face');
+  });
+
+  it('activity statistics route preserves canonical forbidden errors from guard', async () => {
+    const { ApiError } = await import('../src/lib/api-response');
+    mocks.mockRequireApiRole.mockRejectedValue(ApiError.forbidden('Không có quyền truy cập'));
+
+    const response = await activityStatisticsRoute.GET(
+      makeRequest('http://localhost/api/admin/reports/activity-statistics')
+    );
+
+    expect(response.status).toBe(403);
+    const body = await response.json();
+    expect(body.success).toBe(false);
+    expect(body.code).toBe('FORBIDDEN');
   });
 
   it('student points legacy route returns 410 with replacement guidance', async () => {

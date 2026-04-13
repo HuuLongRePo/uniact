@@ -5,11 +5,11 @@
  * Admin views all activities pending approval
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { dbAll, dbReady } from '@/lib/database';
 import { requireApiRole } from '@/lib/guards';
 import { getActivityDisplayStatus } from '@/lib/activity-workflow';
-import { ApiError, errorResponse } from '@/lib/api-response';
+import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
 
 export async function GET(request: NextRequest) {
   try {
@@ -17,11 +17,10 @@ export async function GET(request: NextRequest) {
     await requireApiRole(request, ['admin']);
 
     const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '20');
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '20', 10) || 20));
     const offset = (page - 1) * limit;
 
-    // Pending approvals: activities waiting for admin review (approval_status='requested')
     const activities = (await dbAll(
       `SELECT 
         a.*,
@@ -46,16 +45,14 @@ export async function GET(request: NextRequest) {
       status: getActivityDisplayStatus(activity.status, activity.approval_status),
     }));
 
-    // Get total count
     const countResult = (await dbAll(
       `SELECT COUNT(*) as total FROM activities WHERE approval_status = 'requested'`,
       []
     )) as any[];
 
-    const total = countResult[0]?.total || 0;
+    const total = Number(countResult[0]?.total || 0);
 
-    return NextResponse.json({
-      success: true,
+    return successResponse({
       activities: normalizedActivities,
       pagination: {
         page,
@@ -67,7 +64,8 @@ export async function GET(request: NextRequest) {
   } catch (error: any) {
     console.error('Get pending approvals error:', error);
     return errorResponse(
-      error instanceof ApiError
+      error instanceof ApiError ||
+        (error && typeof error.status === 'number' && typeof error.code === 'string')
         ? error
         : ApiError.internalError('Không thể tải danh sách chờ phê duyệt', {
             details: error?.message,
