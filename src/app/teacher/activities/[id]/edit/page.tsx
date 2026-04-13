@@ -537,45 +537,78 @@ export default function EditActivityPage({
                 disabled={!canEdit}
                 className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {showParticipationPreview ? 'Ẩn xem trước danh sách tham gia' : 'Xem trước danh sách tham gia'}
+                {showParticipationPreview
+                  ? 'Ẩn xem trước danh sách tham gia'
+                  : 'Xem trước danh sách tham gia'}
               </button>
             </div>
-            <div className="space-y-2">
-              {classes.length === 0 ? (
-                <p className="text-gray-600">Không có lớp nào</p>
-              ) : (
-                classes.map((item) => (
-                  <label
-                    key={item.id}
-                    className="flex cursor-pointer items-center gap-3 rounded-lg border p-3 hover:bg-gray-50"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedClasses.includes(item.id)}
-                      onChange={(event) => {
-                        if (event.target.checked) {
-                          setMandatoryClassIds((current) =>
-                            current.includes(item.id) ? current : [...current, item.id]
-                          );
-                          setVoluntaryClassIds((current) =>
-                            current.filter((classId) => classId !== item.id)
-                          );
-                        } else {
-                          setMandatoryClassIds((current) =>
-                            current.filter((classId) => classId !== item.id)
-                          );
-                          setVoluntaryClassIds((current) =>
-                            current.filter((classId) => classId !== item.id)
-                          );
-                        }
-                      }}
-                      disabled={!canEdit}
-                      className="h-4 w-4 rounded border-gray-300"
-                    />
-                    <span className="text-gray-700">{item.name}</span>
-                  </label>
-                ))
-              )}
+
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+              <p className="font-medium">Hãy chọn rõ lớp bắt buộc và lớp tự nguyện cho hoạt động này.</p>
+              <ul className="mt-2 list-disc space-y-1 pl-5 text-amber-800">
+                <li><strong>Bắt buộc:</strong> sinh viên trong lớp sẽ được áp dụng bắt buộc, không cần tự đăng ký.</li>
+                <li><strong>Tự nguyện:</strong> sinh viên trong lớp được phép tự đăng ký.</li>
+                <li>Nếu một lớp xuất hiện ở cả hai nhóm, hệ thống sẽ ưu tiên <strong>bắt buộc</strong>.</li>
+              </ul>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div>
+                <label className="mb-2 block text-sm font-medium text-orange-700">Lớp bắt buộc</label>
+                <select
+                  multiple
+                  className="h-32 w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                  value={mandatoryClassIds.map(String)}
+                  onChange={(event) => {
+                    const values = Array.from(event.target.selectedOptions).map((option) =>
+                      parseInt(option.value, 10)
+                    );
+                    setMandatoryClassIds(values);
+                    setVoluntaryClassIds((current) =>
+                      current.filter((classId) => !values.includes(classId))
+                    );
+                  }}
+                  disabled={!canEdit}
+                >
+                  {classes.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.name}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-1 text-xs text-gray-500">
+                  Các lớp này sẽ được gán diện bắt buộc tham gia.
+                </p>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-sky-700">Lớp tự nguyện</label>
+                <select
+                  multiple
+                  className="h-32 w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                  value={voluntaryClassIds.map(String)}
+                  onChange={(event) => {
+                    const values = Array.from(event.target.selectedOptions)
+                      .map((option) => parseInt(option.value, 10))
+                      .filter((classId) => !mandatoryClassIds.includes(classId));
+                    setVoluntaryClassIds(values);
+                  }}
+                  disabled={!canEdit}
+                >
+                  {classes.map((item) => (
+                    <option
+                      key={`voluntary-${item.id}`}
+                      value={item.id}
+                      disabled={mandatoryClassIds.includes(item.id)}
+                    >
+                      {item.name}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-1 text-xs text-gray-500">
+                  Các lớp này có thể tự đăng ký nếu muốn tham gia.
+                </p>
+              </div>
             </div>
             {showParticipationPreview && (
               <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">

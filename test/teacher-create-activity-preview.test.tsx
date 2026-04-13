@@ -37,17 +37,9 @@ describe('CreateActivityPage participation preview', () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
 
-      if (url === '/api/classes?mine=1') {
-        return jsonResponse({ classes: [{ id: 1, name: 'CNTT K18A' }] });
-      }
-
-      if (url === '/api/activity-types') {
-        return jsonResponse({ types: [] });
-      }
-
-      if (url === '/api/organization-levels') {
-        return jsonResponse({ levels: [] });
-      }
+      if (url === '/api/classes?mine=1') return jsonResponse({ classes: [{ id: 1, name: 'CNTT K18A' }] });
+      if (url === '/api/activity-types') return jsonResponse({ types: [] });
+      if (url === '/api/organization-levels') return jsonResponse({ levels: [] });
 
       if (url === '/api/activities/participation-preview' && init?.method === 'POST') {
         expect(JSON.parse(String(init.body || '{}'))).toEqual({
@@ -84,7 +76,7 @@ describe('CreateActivityPage participation preview', () => {
     vi.stubGlobal('fetch', fetchMock);
     window.fetch = fetchMock as typeof fetch;
 
-    const { container } = render(<CreateActivityPage />);
+    const { container } = render(React.createElement(CreateActivityPage));
     expect((await screen.findAllByText('CNTT K18A')).length).toBeGreaterThan(0);
 
     const classSelects = container.querySelectorAll('select[multiple]');

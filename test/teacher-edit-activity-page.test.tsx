@@ -74,27 +74,12 @@ describe('EditActivityPage', () => {
         });
       }
 
-      if (url === '/api/classes?mine=1') {
-        return jsonResponse({
-          classes: [{ id: 1, name: 'CNTT K18A' }],
-        });
-      }
-
-      if (url === '/api/activity-types') {
-        return jsonResponse({
-          types: [{ id: 5, name: 'Tình nguyện' }],
-        });
-      }
-
-      if (url === '/api/organization-levels') {
-        return jsonResponse({
-          levels: [{ id: 7, name: 'Cấp trường' }],
-        });
-      }
+      if (url === '/api/classes?mine=1') return jsonResponse({ classes: [{ id: 1, name: 'CNTT K18A' }] });
+      if (url === '/api/activity-types') return jsonResponse({ types: [{ id: 5, name: 'Tình nguyện' }] });
+      if (url === '/api/organization-levels') return jsonResponse({ levels: [{ id: 7, name: 'Cấp trường' }] });
 
       if (url === '/api/activities/55' && init?.method === 'PUT') {
         const body = JSON.parse(String(init.body || '{}'));
-
         expect(body).toMatchObject({
           title: 'Hoạt động đã sửa',
           description: 'Mô tả đã cập nhật',
@@ -106,17 +91,11 @@ describe('EditActivityPage', () => {
           class_ids: [1],
         });
         expect(body).not.toHaveProperty('status');
-
-        return jsonResponse({
-          activity: { id: 55, title: body.title },
-        });
+        return jsonResponse({ activity: { id: 55, title: body.title } });
       }
 
       if (url === '/api/activities/55/submit-approval' && init?.method === 'POST') {
-        return jsonResponse({
-          activity_id: 55,
-          new_status: 'draft',
-        });
+        return jsonResponse({ activity_id: 55, new_status: 'draft' });
       }
 
       throw new Error(`Unexpected fetch: ${url}`);
@@ -125,27 +104,19 @@ describe('EditActivityPage', () => {
     vi.stubGlobal('fetch', fetchMock);
     window.fetch = fetchMock as typeof fetch;
 
-    render(<EditActivityPage params={{ id: '55' }} />);
+    render(React.createElement(EditActivityPage, { params: { id: '55' } as any }));
 
     expect(await screen.findByText('Hoạt động bị từ chối')).toBeInTheDocument();
     expect(screen.getByText('Tình nguyện')).toBeInTheDocument();
     expect(screen.getByText('Cấp trường')).toBeInTheDocument();
 
     const textInputs = screen.getAllByRole('textbox');
-    fireEvent.change(textInputs[0] as HTMLInputElement, {
-      target: { value: 'Hoạt động đã sửa' },
-    });
-    fireEvent.change(textInputs[1] as HTMLTextAreaElement, {
-      target: { value: 'Mô tả đã cập nhật' },
-    });
-    fireEvent.change(textInputs[2] as HTMLInputElement, {
-      target: { value: 'Phòng B2' },
-    });
+    fireEvent.change(textInputs[0] as HTMLInputElement, { target: { value: 'Hoạt động đã sửa' } });
+    fireEvent.change(textInputs[1] as HTMLTextAreaElement, { target: { value: 'Mô tả đã cập nhật' } });
+    fireEvent.change(textInputs[2] as HTMLInputElement, { target: { value: 'Phòng B2' } });
 
     const numberInput = document.querySelector('input[type="number"]') as HTMLInputElement;
-    fireEvent.change(numberInput, {
-      target: { value: '' },
-    });
+    fireEvent.change(numberInput, { target: { value: '' } });
 
     fireEvent.click(screen.getByRole('button', { name: 'Gửi duyệt' }));
 

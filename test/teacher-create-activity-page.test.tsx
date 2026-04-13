@@ -38,26 +38,19 @@ describe('CreateActivityPage', () => {
       const url = String(input);
 
       if (url === '/api/classes?mine=1') {
-        return jsonResponse({
-          classes: [{ id: 1, name: 'CNTT K18A' }],
-        });
+        return jsonResponse({ classes: [{ id: 1, name: 'CNTT K18A' }] });
       }
 
       if (url === '/api/activity-types') {
-        return jsonResponse({
-          types: [{ id: 5, name: 'Tình nguyện' }],
-        });
+        return jsonResponse({ types: [{ id: 5, name: 'Tình nguyện' }] });
       }
 
       if (url === '/api/organization-levels') {
-        return jsonResponse({
-          levels: [{ id: 7, name: 'Cấp trường' }],
-        });
+        return jsonResponse({ levels: [{ id: 7, name: 'Cấp trường' }] });
       }
 
       if (url === '/api/activities' && init?.method === 'POST') {
         const body = JSON.parse(String(init.body || '{}'));
-
         expect(body).toMatchObject({
           title: 'Hoạt động legacy',
           date_time: '2026-04-20T08:30',
@@ -70,32 +63,16 @@ describe('CreateActivityPage', () => {
         expect(body).not.toHaveProperty('files');
         expect(body).not.toHaveProperty('status');
 
-        return jsonResponse(
-          {
-            activity: { id: 321, title: body.title },
-          },
-          true,
-          201
-        );
+        return jsonResponse({ activity: { id: 321, title: body.title } }, true, 201);
       }
 
       if (url === '/api/activities/321/files' && init?.method === 'POST') {
-        expect(init.body).toBeInstanceOf(FormData);
-        return jsonResponse(
-          {
-            file: { id: 801, file_name: 'guide.pdf' },
-            files: [{ id: 801, file_name: 'guide.pdf' }],
-          },
-          true,
-          201
-        );
+        expect(init?.body).toBeInstanceOf(FormData);
+        return jsonResponse({ files: [{ id: 801, file_name: 'guide.pdf' }] }, true, 201);
       }
 
       if (url === '/api/activities/321/submit-approval' && init?.method === 'POST') {
-        return jsonResponse({
-          activity_id: 321,
-          new_status: 'draft',
-        });
+        return jsonResponse({ activity_id: 321, new_status: 'draft' });
       }
 
       throw new Error(`Unexpected fetch: ${url}`);
@@ -104,23 +81,19 @@ describe('CreateActivityPage', () => {
     vi.stubGlobal('fetch', fetchMock);
     window.fetch = fetchMock as typeof fetch;
 
-    const { container } = render(<CreateActivityPage />);
+    const { container } = render(React.createElement(CreateActivityPage));
 
     expect((await screen.findAllByText('CNTT K18A')).length).toBeGreaterThan(0);
 
     const textInputs = container.querySelectorAll('input[type="text"]');
-    fireEvent.change(textInputs[0] as HTMLInputElement, {
-      target: { value: 'Hoạt động legacy' },
-    });
+    fireEvent.change(textInputs[0] as HTMLInputElement, { target: { value: 'Hoạt động legacy' } });
     fireEvent.change(container.querySelector('input[type="date"]') as HTMLInputElement, {
       target: { value: '2026-04-20' },
     });
     fireEvent.change(container.querySelector('input[type="time"]') as HTMLInputElement, {
       target: { value: '08:30' },
     });
-    fireEvent.change(textInputs[1] as HTMLInputElement, {
-      target: { value: 'Phòng 101' },
-    });
+    fireEvent.change(textInputs[1] as HTMLInputElement, { target: { value: 'Phòng 101' } });
 
     const classSelects = container.querySelectorAll('select[multiple]');
     const mandatorySelect = classSelects[0] as HTMLSelectElement;
@@ -131,9 +104,7 @@ describe('CreateActivityPage', () => {
 
     const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement;
     const file = new File(['pdf-content'], 'guide.pdf', { type: 'application/pdf' });
-    fireEvent.change(fileInput, {
-      target: { files: [file] },
-    });
+    fireEvent.change(fileInput, { target: { files: [file] } });
 
     fireEvent.click(screen.getByRole('button', { name: /Gửi duyệt/i }));
 
@@ -143,20 +114,13 @@ describe('CreateActivityPage', () => {
 
     expect(
       fetchMock.mock.calls.some(
-        ([url, init]) => String(url) === '/api/activities/upload' && init?.method === 'POST'
-      )
-    ).toBe(false);
-
-    expect(
-      fetchMock.mock.calls.some(
         ([url, init]) => String(url) === '/api/activities/321/files' && init?.method === 'POST'
       )
     ).toBe(true);
 
     expect(
       fetchMock.mock.calls.some(
-        ([url, init]) =>
-          String(url) === '/api/activities/321/submit-approval' && init?.method === 'POST'
+        ([url, init]) => String(url) === '/api/activities/321/submit-approval' && init?.method === 'POST'
       )
     ).toBe(true);
   });

@@ -74,17 +74,9 @@ describe('EditActivityPage participation preview', () => {
         });
       }
 
-      if (url === '/api/classes?mine=1') {
-        return jsonResponse({ classes: [{ id: 1, name: 'CNTT K18A' }] });
-      }
-
-      if (url === '/api/activity-types') {
-        return jsonResponse({ types: [{ id: 5, name: 'Tình nguyện' }] });
-      }
-
-      if (url === '/api/organization-levels') {
-        return jsonResponse({ levels: [{ id: 7, name: 'Cấp trường' }] });
-      }
+      if (url === '/api/classes?mine=1') return jsonResponse({ classes: [{ id: 1, name: 'CNTT K18A' }] });
+      if (url === '/api/activity-types') return jsonResponse({ types: [{ id: 5, name: 'Tình nguyện' }] });
+      if (url === '/api/organization-levels') return jsonResponse({ levels: [{ id: 7, name: 'Cấp trường' }] });
 
       if (url === '/api/activities/participation-preview' && init?.method === 'POST') {
         expect(JSON.parse(String(init.body || '{}'))).toEqual({
@@ -121,7 +113,7 @@ describe('EditActivityPage participation preview', () => {
     vi.stubGlobal('fetch', fetchMock);
     window.fetch = fetchMock as typeof fetch;
 
-    render(<EditActivityPage params={Promise.resolve({ id: '55' })} />);
+    render(React.createElement(EditActivityPage, { params: Promise.resolve({ id: '55' }) }));
 
     expect(await screen.findByText('Hoạt động bị từ chối')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Xem trước danh sách tham gia' }));
