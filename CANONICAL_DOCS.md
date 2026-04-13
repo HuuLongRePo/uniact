@@ -21,33 +21,39 @@ Nếu có mâu thuẫn giữa các tài liệu, ưu tiên thứ tự ở mục 2
 
 1. `PROJECT_AUDIT.md`
 2. `CORE_PRODUCT_FLOW.md`
-3. `MASTER_PLAN.md`
+3. `BUSINESS_DECISIONS.md`
 4. `TASK_QUEUE.md`
-5. `CHANGELOG_PROGRESS.md`
-6. `BUGS_BOTTLENECKS.md`
-7. `docs/archive/root-legacy/UI_VIET_HOA_PLAN.md` (tham khảo lịch sử nếu còn cần)
-8. `docs/archive/root-legacy/CLEANUP_REFACTOR_PLAN.md` (tham khảo lịch sử cleanup)
+5. `docs/RELEASE_CANDIDATE_CHECKLIST.md`
+6. `docs/SMOKE_EXECUTION_PLAN_2026-04-12.md`
+7. `docs/INTERNAL_RC_SUMMARY_2026-04-12.md`
+8. `docs/archive/root-legacy/MASTER_PLAN.md` (tham khảo chiến lược cũ nếu còn cần)
+9. `docs/archive/root-legacy/CHANGELOG_PROGRESS.md` (tham khảo tiến độ lịch sử nếu còn cần)
+10. `docs/archive/root-legacy/BUGS_BOTTLENECKS.md` (tham khảo backlog drift cũ nếu còn cần)
 
 Vai trò từng file:
 
 - `PROJECT_AUDIT.md`: ảnh chụp hiện trạng repo, rủi ro và tín hiệu sức khỏe codebase
 - `CORE_PRODUCT_FLOW.md`: định nghĩa xương sống sản phẩm và các luồng sống còn
-- `MASTER_PLAN.md`: chiến lược xử lý tổng thể
+- `BUSINESS_DECISIONS.md`: nguồn sự thật cho quyết định nghiệp vụ đã chốt
 - `TASK_QUEUE.md`: hàng đợi công việc đang hoạt động, dùng để quyết định làm gì tiếp theo
-- `CHANGELOG_PROGRESS.md`: nhật ký tiến độ thực thi thật sự
-- `BUGS_BOTTLENECKS.md`: bug, điểm nghẽn, mức độ ưu tiên
-- `docs/archive/root-legacy/UI_VIET_HOA_PLAN.md`: phạm vi Việt hóa UI ở giai đoạn trước, chỉ còn giá trị tham khảo
-- `docs/archive/root-legacy/CLEANUP_REFACTOR_PLAN.md`: kế hoạch dọn rác/cấu trúc ở giai đoạn trước, chỉ còn giá trị tham khảo
+- `docs/RELEASE_CANDIDATE_CHECKLIST.md`: baseline release/internal RC đang còn active
+- `docs/SMOKE_EXECUTION_PLAN_2026-04-12.md`: kế hoạch smoke runtime đang còn active
+- `docs/INTERNAL_RC_SUMMARY_2026-04-12.md`: snapshot milestone internal RC gần nhất
+- các file trong `docs/archive/root-legacy/`: chỉ còn giá trị lịch sử/tham khảo
 
 ### Nhóm B - Tài liệu cài đặt và vận hành gần với repo hiện tại
 
-- `INSTALL.md`
+- `README.md`
+- `.env.example`
 - `package.json`
+- `docs/03-DEVELOPMENT_GUIDE.md`
+- `docs/04-DEPLOYMENT.md`
 
 Quy tắc:
 
-- `INSTALL.md` là điểm vào cài đặt ưu tiên
+- `README.md` là điểm vào tổng quan/cài đặt ngắn gọn ưu tiên
 - khi lệnh trong tài liệu khác với script thật, ưu tiên `package.json`
+- `INSTALL.md` cũ nếu còn cần chỉ được xem là tài liệu historical sau cleanup
 
 ### Nhóm C - Tài liệu tổng quan và tham khảo kỹ thuật
 
@@ -134,9 +140,8 @@ Quy tắc:
 
 ## 5. Quy tắc cập nhật tài liệu từ nay
 
-- Khi thay đổi task hoặc trạng thái thực thi, cập nhật `TASK_QUEUE.md` và `CHANGELOG_PROGRESS.md`
-- Khi phát hiện rủi ro mới hoặc contract drift mới, cập nhật `PROJECT_AUDIT.md` hoặc `BUGS_BOTTLENECKS.md`
-- Khi thay đổi định hướng xử lý tổng thể, cập nhật `MASTER_PLAN.md`
+- Khi thay đổi task hoặc trạng thái thực thi, cập nhật `TASK_QUEUE.md` và/hoặc nhóm docs RC/smoke đang active nếu liên quan release gate
+- Khi phát hiện rủi ro mới hoặc contract drift mới, cập nhật `PROJECT_AUDIT.md` và tài liệu nghiệp vụ/liên quan nếu cần
 - Không tự tạo thêm README/index mới nếu nội dung chỉ lặp lại file canonical đã có
 - Nếu buộc phải tạo tài liệu snapshot theo đợt, ghi rõ đó là `historical` hoặc `report`, không gắn nhãn canonical
 - Tài liệu historical/report ở root nên được chuyển vào `docs/archive/root-legacy/` để giữ root gọn và tránh nhầm với tài liệu active
