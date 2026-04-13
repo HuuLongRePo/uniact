@@ -409,7 +409,7 @@ const demoData = {
       managerIndex: 0,
       maxParticipants: 50,
       classIndexes: [0, 1, 5, 6],
-      status: 'pending', // Để test bước 2: "Teacher gửi phê duyệt → pending"
+      status: 'draft', // Canonicalized: dùng approval_status='requested' thay cho status='pending'
       activityTypeIndex: 0,
       orgLevelIndex: 3
     },
@@ -1523,20 +1523,26 @@ async function seedDemo(): Promise<void> {
   }
   console.log(`   ✅ Tạo ${demoData.classes.length} lớp học`)
 
-  // Assign some teachers as primary teachers for classes (for teaching_class_name display)
+  // Assign seeded homeroom teachers as primary teachers for classes.
+  // Also attach the main UAT teacher account to at least one class so class-management smoke can run.
   try {
-    const teacherRows = await dbAll(
-      `SELECT id FROM users WHERE role = 'teacher' ORDER BY created_at DESC, id DESC LIMIT ?`,
-      [classIds.length]
-    ) as Array<{ id: number }>
     for (let i = 0; i < classIds.length; i++) {
-      const teacherId = teacherRows[i]?.id
+      const teacherId = managerIds[demoData.classes[i]?.managerIndex]
       if (!teacherId) continue
       const classId = classIds[i]
       await dbRun('UPDATE classes SET teacher_id = ? WHERE id = ?', [teacherId, classId])
       await dbRun(
         "INSERT OR IGNORE INTO class_teachers (class_id, teacher_id, role, assigned_at) VALUES (?, ?, 'primary', datetime('now'))",
         [classId, teacherId]
+      )
+    }
+
+    const uatTeacherRow = await dbGet('SELECT id FROM users WHERE email = ?', ['gv.nguyenthilan@annd.edu.vn']) as { id?: number } | undefined
+    const uatTeacherId = Number(uatTeacherRow?.id || 0)
+    if (uatTeacherId > 0 && classIds[0]) {
+      await dbRun(
+        "INSERT OR IGNORE INTO class_teachers (class_id, teacher_id, role, assigned_at) VALUES (?, ?, 'support', datetime('now'))",
+        [classIds[0], uatTeacherId]
       )
     }
   } catch (e) {
@@ -1922,7 +1928,7 @@ async function seedDemo(): Promise<void> {
   for (const r of sampleRoles) {
     const studentId = studentIds[r.studentIndex]
     const result = await dbRun(
-      'INSERT INTO role_assignments (student_id, role_type, start_date) VALUES (?, ?, ?)',
+      'INSERT INTO role_assignments (user_id, role, assigned_at) VALUES (?, ?, ?)',
       [studentId, r.role_type, new Date(Date.now() - r.startOffsetDays * 24 * 3600 * 1000).toISOString()]
     )
     roleIds.push(result.lastID)
@@ -1953,7 +1959,7 @@ async function seedDemo(): Promise<void> {
         achievementIds[i],
         points,
         `Đề xuất thưởng từ giải ${ach.contest_name} (${ach.level}/${ach.rank})`,
-        'pending',
+        'draft',
         managerIds[0]
       ]
     )
@@ -2071,10 +2077,18 @@ async function seedComprehensiveCoverage(input: {
 
     await dbRun(
       `INSERT INTO point_calculations (
-        participation_id, base_points, type_multiplier, level_multiplier,
-        achievement_multiplier, subtotal, bonus_points, penalty_points, total_points, formula
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [row.id, basePoints, typeMultiplier, levelMultiplier, achievementMultiplier, subtotal, bonusPoints, penaltyPoints, totalPoints, formula]
+        participation_id, activity_id, base_points, coefficient,
+        bonus_points, penalty_points, total_points, calculated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
+      [
+        row.id,
+        row.activity_id,
+        basePoints,
+        typeMultiplier * levelMultiplier * achievementMultiplier,
+        bonusPoints,
+        penaltyPoints,
+        totalPoints,
+      ]
     )
   }
 

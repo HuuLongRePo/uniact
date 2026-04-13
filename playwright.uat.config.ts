@@ -1,5 +1,7 @@
 import { defineConfig, devices } from '@playwright/test'
 
+const baseURL = process.env.BASE_URL || 'http://127.0.0.1:3000'
+
 /**
  * Playwright Configuration for UAT (User Acceptance Testing)
  * Separate from E2E config for cleaner test organization
@@ -47,7 +49,7 @@ export default defineConfig({
   // Shared settings for all projects
   use: {
     // Base URL
-    baseURL: process.env.BASE_URL || 'http://localhost:3000',
+    baseURL,
     
     // Collect trace when retrying failed tests
     trace: 'on-first-retry',
@@ -78,12 +80,16 @@ export default defineConfig({
   ],
   
   // Web server configuration (auto-start dev server)
-  webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:3000',
-    reuseExistingServer: !process.env.CI,
-    timeout: 120 * 1000,
-    stdout: 'ignore',
-    stderr: 'pipe',
-  },
+  ...(process.env.PW_SKIP_WEBSERVER === '1'
+    ? {}
+    : {
+        webServer: {
+          command: 'npm run dev',
+          url: baseURL,
+          reuseExistingServer: true,
+          timeout: 120 * 1000,
+          stdout: 'ignore',
+          stderr: 'pipe',
+        },
+      }),
 })

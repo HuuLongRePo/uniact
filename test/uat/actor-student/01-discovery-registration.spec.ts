@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test'
 import { StudentHelper } from '../helpers/student.helper'
 import { TeacherHelper } from '../helpers/teacher.helper'
 import { AdminHelper } from '../helpers/admin.helper'
+import { BASE_URL } from '../helpers/test-accounts'
 
 async function createAndApproveActivity(browser: any) {
   const studentContext = await browser.newContext()
@@ -9,7 +10,7 @@ async function createAndApproveActivity(browser: any) {
   const student = new StudentHelper(studentPage)
   await student.login()
 
-  const meRes = await studentPage.request.get('http://127.0.0.1:3000/api/auth/me')
+  const meRes = await studentPage.request.get(`${BASE_URL}/api/auth/me`)
   expect(meRes.ok()).toBeTruthy()
   const meData = await meRes.json()
   const classId = meData?.data?.user?.class_id ?? meData?.user?.class_id
@@ -21,13 +22,13 @@ async function createAndApproveActivity(browser: any) {
   const teacher = new TeacherHelper(teacherPage)
   await teacher.login()
 
-  const typesRes = await teacherPage.request.get('http://127.0.0.1:3000/api/activity-types')
+  const typesRes = await teacherPage.request.get(`${BASE_URL}/api/activity-types`)
   expect(typesRes.ok()).toBeTruthy()
   const typesData = await typesRes.json()
   const activityTypeId = typesData?.types?.[0]?.id ?? typesData?.activityTypes?.[0]?.id
   expect(activityTypeId).toBeTruthy()
 
-  const levelsRes = await teacherPage.request.get('http://127.0.0.1:3000/api/organization-levels')
+  const levelsRes = await teacherPage.request.get(`${BASE_URL}/api/organization-levels`)
   expect(levelsRes.ok()).toBeTruthy()
   const levelsData = await levelsRes.json()
   const organizationLevelId = levelsData?.levels?.[0]?.id ?? levelsData?.organization_levels?.[0]?.id
@@ -36,7 +37,7 @@ async function createAndApproveActivity(browser: any) {
   const unique = Date.now()
   const title = `UAT Register ${unique}`
   const minute = String(unique % 60).padStart(2, '0')
-  const createRes = await teacherPage.request.post('http://127.0.0.1:3000/api/activities', {
+  const createRes = await teacherPage.request.post(`${BASE_URL}/api/activities`, {
     headers: { 'Content-Type': 'application/json' },
     data: {
       title,
@@ -57,7 +58,8 @@ async function createAndApproveActivity(browser: any) {
   const activityId = createData?.data?.activity?.id ?? createData?.activity?.id ?? createData?.id
   expect(activityId).toBeTruthy()
 
-  const submitRes = await teacherPage.request.post(`http://127.0.0.1:3000/api/activities/${activityId}/submit-approval`, {
+  const submitRes = await teacherPage.request.post(`${BASE_URL}/api/activities/${activityId}/submit-approval`, {
+    timeout: 15000,
     headers: { 'Content-Type': 'application/json' },
     data: {},
   })
@@ -68,7 +70,8 @@ async function createAndApproveActivity(browser: any) {
   const admin = new AdminHelper(adminPage)
   await admin.login()
 
-  const approveRes = await adminPage.request.post(`http://127.0.0.1:3000/api/activities/${activityId}/approve`, {
+  const approveRes = await adminPage.request.post(`${BASE_URL}/api/activities/${activityId}/approve`, {
+    timeout: 15000,
     headers: { 'Content-Type': 'application/json' },
     data: { notes: 'Approved for student registration UAT' },
   })
@@ -91,12 +94,12 @@ test.describe('Student - Discovery and registration backbone', () => {
     const student = new StudentHelper(studentPage)
     await student.login()
 
-    await studentPage.goto('/student/activities')
+    await studentPage.goto(`${BASE_URL}/student/activities`)
     await studentPage.waitForLoadState('domcontentloaded')
     await expect(studentPage.locator('body')).toContainText(/Hoạt động|Activities/i)
     await expect(studentPage.locator('body')).toContainText(title)
 
-    let registerRes = await studentPage.request.post(`http://127.0.0.1:3000/api/activities/${activityId}/register`, {
+    let registerRes = await studentPage.request.post(`${BASE_URL}/api/activities/${activityId}/register`, {
       headers: { 'Content-Type': 'application/json' },
       data: {},
     })
@@ -115,7 +118,7 @@ test.describe('Student - Discovery and registration backbone', () => {
       }
 
       if (!alreadyRegistered && registerRes.status() === 409 && canOverrideConflict) {
-        registerRes = await studentPage.request.post(`http://127.0.0.1:3000/api/activities/${activityId}/register`, {
+        registerRes = await studentPage.request.post(`${BASE_URL}/api/activities/${activityId}/register`, {
           headers: { 'Content-Type': 'application/json' },
           data: { force_register: true },
         })
@@ -127,7 +130,7 @@ test.describe('Student - Discovery and registration backbone', () => {
       }
     }
 
-    const activityRes = await studentPage.request.get(`http://127.0.0.1:3000/api/activities/${activityId}`)
+    const activityRes = await studentPage.request.get(`${BASE_URL}/api/activities/${activityId}`)
     expect(activityRes.ok()).toBeTruthy()
     const activityData = await activityRes.json()
     const activity = activityData?.data?.activity ?? activityData?.activity

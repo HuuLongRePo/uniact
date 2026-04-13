@@ -10,10 +10,10 @@ export const TEST_ACCOUNTS = {
     name: 'Quản Trị Hệ Thống'
   },
   teacher: {
-    email: 'gv.nguyenthilan@annd.edu.vn',
+    email: 'gvcn.nguyenvanmanh@annd.edu.vn',
     password: 'teacher123',
     role: 'teacher',
-    name: 'Đại tá, PGS.TS Nguyễn Thị Lan'
+    name: 'Thượng tá Nguyễn Văn Mạnh'
   },
   student: {
     email: 'sv31a001@annd.edu.vn',

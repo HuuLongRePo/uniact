@@ -65,7 +65,7 @@
     "face-api.js": "^0.22.2",
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.545.0",
-    "next": "15.5.4",
+    "next": "15.5.15",
     "node-cron": "^3.0.3",
     "papaparse": "^5.5.3",
     "qrcode": "^1.5.4",
@@ -93,10 +93,10 @@
     "@types/qrcode": "^1.5.5",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "@vitest/ui": "^4.0.9",
+    "@vitest/ui": "^4.1.4",
     "canvas": "^3.2.0",
     "eslint": "^9",
-    "eslint-config-next": "15.5.4",
+    "eslint-config-next": "15.5.15",
     "eslint-config-prettier": "^10.1.8",
     "happy-dom": "^20.0.10",
     "jsdom": "^27.2.0",
@@ -104,6 +104,6 @@
     "tailwindcss": "^4",
     "tsx": "^4.20.6",
     "typescript": "^5",
-    "vitest": "^4.0.9"
+    "vitest": "^4.1.4"
   }
 }

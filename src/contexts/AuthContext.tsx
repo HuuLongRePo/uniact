@@ -62,9 +62,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
             if (response.ok) {
               const data = await response.json();
-              console.warn('✅ AuthContext: User authenticated:', data.user?.email);
-              setUser(data.user);
-              return true;
+              const resolvedUser = data?.data?.user ?? data?.user ?? null;
+              console.warn('✅ AuthContext: User authenticated:', resolvedUser?.email);
+              setUser(resolvedUser);
+              return Boolean(resolvedUser);
             } else {
               console.warn('❌ AuthContext: Not authenticated');
               setUser(null);

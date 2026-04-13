@@ -15,26 +15,11 @@ async function applyAuthCookie(page: Page, token: string) {
       value: token,
       url: BASE_URL,
       httpOnly: true,
-      sameSite: 'Lax'
+      sameSite: 'Strict'
     }
   ])
 }
 
-let loginRequestCounter = 0
-
-function getTestForwardedFor(role: 'admin' | 'teacher' | 'student') {
-  loginRequestCounter += 1
-
-  const roleBase =
-    role === 'admin'
-      ? 11
-      : role === 'teacher'
-        ? 12
-        : 13
-
-  const hostPart = (loginRequestCounter % 200) + 1
-  return `127.0.${roleBase}.${hostPart}`
-}
 
 export async function loginAs(page: Page, role: 'admin' | 'teacher' | 'student') {
   const account = TEST_ACCOUNTS[role]
@@ -58,9 +43,9 @@ export async function loginAs(page: Page, role: 'admin' | 'teacher' | 'student')
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       const response = await page.request.post(`${BASE_URL}/api/auth/login`, {
+        timeout: 15000,
         headers: {
-          'Content-Type': 'application/json',
-          'x-forwarded-for': getTestForwardedFor(role)
+          'Content-Type': 'application/json'
         },
         data: {
           email: account.email,
@@ -88,8 +73,22 @@ export async function loginAs(page: Page, role: 'admin' | 'teacher' | 'student')
       }
 
       await applyAuthCookie(page, token)
+
+      const verifyRes = await page.request.get(`${BASE_URL}/api/auth/me`, {
+        timeout: 15000,
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+      const verifyData = await verifyRes.json().catch(() => ({}))
+      const verifiedRole = verifyData?.data?.user?.role ?? verifyData?.user?.role
+      if (!verifyRes.ok() || verifiedRole !== role) {
+        throw new Error(`Auth verification failed for ${role}: ${verifyRes.status()} ${JSON.stringify(verifyData)}`)
+      }
+
       await page.goto(`${BASE_URL}${rolePathMap[role]}`)
       await page.waitForLoadState('domcontentloaded')
+      await page.waitForTimeout(300)
       return account
     } catch (err) {
       lastError = err

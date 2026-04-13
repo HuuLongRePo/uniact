@@ -44,7 +44,17 @@ Recommended wording for the current repo state:
 
 ## Immediate next steps
 
-1. Execute targeted manual smoke for admin/teacher/student critical flows.
-2. Record blockers if any appear during smoke.
-3. If smoke stays clean, promote this into a stronger internal RC milestone note/tag.
-4. Only then consider broader release communication.
+1. Keep the targeted admin/teacher/student production-runtime smoke subset green.
+2. Record any additional blockers that appear outside this verified subset.
+3. Continue targeted dependency/security remediation from the improved baseline.
+4. Promote this into a stronger internal RC milestone note/tag once the current runtime-smoke and regression baseline stay stable together.
+
+## New runtime confidence gained
+
+Since the original RC-prep summary, UniAct has also gained a stronger practical runtime signal:
+- a targeted three-actor smoke subset now passes on a production runtime (`npm run build` + `next start`)
+- the validated subset covers:
+  - admin approval access
+  - student discovery and registration
+  - teacher class-management backbone
+- production runtime verification also exposed and helped close a real configuration gap: local production smoke requires `JWT_SECRET`, and `.env.example` now documents that requirement

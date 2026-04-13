@@ -7,8 +7,14 @@ import { rateLimit } from '@/lib/rateLimit';
 // WHAT: API endpoint cho đăng nhập
 // WHY: Xác thực user credentials
 export const POST = apiHandler(async (request: NextRequest) => {
-  // Rate limit: 10 lần/15 phút per IP để chống brute force
-  const rl = rateLimit(request, 10, 15 * 60 * 1000);
+  const isUatMode =
+    process.env.NODE_ENV === 'test' ||
+    process.env.UAT_MODE === '1' ||
+    process.env.PLAYWRIGHT === '1';
+
+  // Rate limit: 10 lần/15 phút per IP để chống brute force.
+  // Bỏ qua trong UAT/test mode để tránh các lượt smoke lặp lại tự đầu độc local login state.
+  const rl = isUatMode ? { allowed: true } : rateLimit(request, 10, 15 * 60 * 1000);
   if (!rl.allowed) {
     return errorResponse(new ApiError('RATE_LIMITED', 'Quá nhiều lần thử. Vui lòng thử lại sau 15 phút.', 429));
   }

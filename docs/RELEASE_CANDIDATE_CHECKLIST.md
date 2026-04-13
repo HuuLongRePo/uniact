@@ -16,6 +16,8 @@
 - [x] approval action/history canonicalized
 - [x] activity-types config routes canonicalized
 - [x] organization-levels config routes canonicalized
+- [x] attendance routes canonicalized
+- [x] activity completion route canonicalized
 
 ### Teacher surface
 - [x] approvals route canonicalized
@@ -40,6 +42,8 @@ Recommended pre-release regression bundle:
 npm test -- --reporter dot \
   test/admin-config-route-contracts.test.ts \
   test/admin-config-item-route-contracts.test.ts \
+  test/admin-attendance-routes.test.ts \
+  test/admin-activity-complete-route.test.ts \
   test/admin-activities-route.test.ts \
   test/admin-activity-detail-route.test.ts \
   test/admin-activity-participants-route.test.ts \
@@ -70,11 +74,13 @@ npm test -- --reporter dot \
 
 - Some long-tail admin/teacher routes still use legacy auth/session or raw `NextResponse` patterns.
 - Release candidate status currently reflects backbone stability, not full repo-wide contract cleanup.
-- Activity completion and attendance-related admin routes still deserve one more focused sweep before calling the internal RC truly sturdy.
+- Dependency/security cleanup is improved but not complete yet, with `npm audit` still reporting 14 vulnerabilities (0 critical, 9 high, 1 moderate, 4 low).
+- Production-like runtime smoke now exists for three backbone actors, but broader operational gates and wider smoke coverage are still pending.
 
 ## Recommended next gates
 
 1. Run the regression baseline above and keep it green.
 2. Sweep one more high-value legacy route cluster.
-3. Run build + targeted manual smoke for admin/teacher/student key flows.
-4. Tag an internal RC milestone only after docs and regression baseline remain stable together.
+3. Keep the production build + targeted production-runtime smoke for admin/teacher/student key flows green.
+4. Continue targeted dependency remediation after the smoke baseline remains stable.
+5. Tag an internal RC milestone only after docs, regression baseline, and runtime smoke remain stable together.
