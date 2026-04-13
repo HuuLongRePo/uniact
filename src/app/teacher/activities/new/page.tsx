@@ -181,7 +181,7 @@ export default function CreateActivityPage() {
         const data = await response.json().catch(() => null);
 
         if (!response.ok) {
-          throw new Error(data?.error || 'Khong the tai preview tham gia');
+          throw new Error(data?.error || 'Không thể tải bản xem trước danh sách tham gia');
         }
 
         if (!active) return;
@@ -189,7 +189,7 @@ export default function CreateActivityPage() {
       } catch (error: any) {
         if (!active) return;
         setParticipationPreview(null);
-        setPreviewError(error?.message || 'Khong the tai preview tham gia');
+        setPreviewError(error?.message || 'Không thể tải bản xem trước danh sách tham gia');
       } finally {
         if (active) {
           setPreviewLoading(false);
@@ -376,7 +376,7 @@ export default function CreateActivityPage() {
                 className="ml-auto flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-sm hover:bg-gray-50"
               >
                 <Eye className="w-4 h-4" />
-                {showPreview ? 'An preview tham gia' : 'Xem preview tham gia'}
+                {showPreview ? 'Ẩn xem trước danh sách tham gia' : 'Xem trước danh sách tham gia'}
               </button>
             </div>
           </div>
@@ -503,57 +503,78 @@ export default function CreateActivityPage() {
                     <div>
                       <label className="block font-medium mb-1">
                         <UsersIcon className="w-4 h-4 inline mr-1" />
-                        Chọn lớp <span className="text-red-500">*</span>
+                        Phạm vi lớp áp dụng <span className="text-red-500">*</span>
                       </label>
-                      <select
-                        multiple
-                        className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-200 h-32"
-                        value={mandatoryClassIds.map(String)}
-                        onChange={handleMandatoryClassSelect}
-                        required={selectedClasses.length === 0}
-                        disabled={submitting}
-                      >
-                        {classes.map((cls: any) => (
-                          <option key={cls.id} value={cls.id}>
-                            {cls.name}
-                          </option>
-                        ))}
-                      </select>
-                      <div className="mt-3">
-                        <label className="mb-1 block text-sm font-medium text-sky-700">
-                          Lop tu nguyen
-                        </label>
-                        <select
-                          multiple
-                          className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-200 h-32"
-                          value={voluntaryClassIds.map(String)}
-                          onChange={handleVoluntaryClassSelect}
-                          disabled={submitting}
-                        >
-                          {classes.map((cls: any) => (
-                            <option
-                              key={`voluntary-${cls.id}`}
-                              value={cls.id}
-                              disabled={mandatoryClassIds.includes(cls.id)}
-                            >
-                              {cls.name}
-                            </option>
-                          ))}
-                        </select>
+                      <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                        <p className="font-medium">Nếu không chọn lớp nào, bạn chưa thể lưu hoạt động.</p>
+                        <ul className="mt-2 list-disc space-y-1 pl-5 text-amber-800">
+                          <li><strong>Bắt buộc:</strong> sinh viên trong lớp sẽ được áp dụng bắt buộc, không cần tự đăng ký.</li>
+                          <li><strong>Tự nguyện:</strong> sinh viên trong lớp được phép tự đăng ký.</li>
+                          <li>Nếu một lớp xuất hiện ở cả hai nhóm, hệ thống sẽ ưu tiên <strong>bắt buộc</strong>.</li>
+                        </ul>
+                      </div>
+                      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                        <div>
+                          <label className="mb-1 block text-sm font-medium text-orange-700">
+                            Lớp bắt buộc
+                          </label>
+                          <select
+                            multiple
+                            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-200 h-32"
+                            value={mandatoryClassIds.map(String)}
+                            onChange={handleMandatoryClassSelect}
+                            required={selectedClasses.length === 0}
+                            disabled={submitting}
+                          >
+                            {classes.map((cls: any) => (
+                              <option key={cls.id} value={cls.id}>
+                                {cls.name}
+                              </option>
+                            ))}
+                          </select>
+                          <p className="mt-1 text-xs text-gray-500">
+                            Các lớp này sẽ được gán diện bắt buộc tham gia.
+                          </p>
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-sm font-medium text-sky-700">
+                            Lớp tự nguyện
+                          </label>
+                          <select
+                            multiple
+                            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-200 h-32"
+                            value={voluntaryClassIds.map(String)}
+                            onChange={handleVoluntaryClassSelect}
+                            disabled={submitting}
+                          >
+                            {classes.map((cls: any) => (
+                              <option
+                                key={`voluntary-${cls.id}`}
+                                value={cls.id}
+                                disabled={mandatoryClassIds.includes(cls.id)}
+                              >
+                                {cls.name}
+                              </option>
+                            ))}
+                          </select>
+                          <p className="mt-1 text-xs text-gray-500">
+                            Các lớp này có thể tự đăng ký nếu muốn tham gia.
+                          </p>
+                        </div>
                       </div>
                       {showPreview && (
                         <div className="mt-4 rounded-lg border border-blue-200 bg-blue-50 p-4">
                           <div className="mb-2 text-sm font-semibold text-blue-900">
-                            Preview participation hien tai
+                            Xem trước danh sách tham gia hiện tại
                           </div>
                           {selectedClasses.length === 0 ? (
                             <p className="text-sm text-gray-600">
-                              Chon it nhat mot lop bat buoc hoac tu nguyen de xem preview cuoi cung.
+                              Chọn ít nhất một lớp bắt buộc hoặc tự nguyện để xem danh sách dự kiến.
                             </p>
                           ) : previewLoading ? (
                             <div className="flex items-center gap-2 text-sm text-blue-700">
                               <Loader2 className="h-4 w-4 animate-spin" />
-                              Dang tai preview...
+                              Đang tải danh sách xem trước...
                             </div>
                           ) : previewError ? (
                             <p className="text-sm text-red-600">{previewError}</p>
@@ -561,33 +582,33 @@ export default function CreateActivityPage() {
                             <div className="space-y-3">
                               <div className="grid grid-cols-2 gap-2 text-sm">
                                 <div className="rounded-lg bg-white p-3">
-                                  <div className="text-gray-500">So lop</div>
+                                  <div className="text-gray-500">Số lớp</div>
                                   <div className="text-lg font-bold text-gray-900">
                                     {participationPreview.total_classes}
                                   </div>
                                 </div>
                                 <div className="rounded-lg bg-white p-3">
-                                  <div className="text-gray-500">Bat buoc</div>
+                                  <div className="text-gray-500">Bắt buộc</div>
                                   <div className="text-lg font-bold text-orange-700">
                                     {participationPreview.mandatory_participants}
                                   </div>
                                 </div>
                                 <div className="rounded-lg bg-white p-3">
-                                  <div className="text-gray-500">Tu nguyen</div>
+                                  <div className="text-gray-500">Tự nguyện</div>
                                   <div className="text-lg font-bold text-sky-700">
                                     {participationPreview.voluntary_participants}
                                   </div>
                                 </div>
                                 <div className="rounded-lg bg-white p-3">
-                                  <div className="text-gray-500">Xung dot scope</div>
+                                  <div className="text-gray-500">Xung đột phạm vi</div>
                                   <div className="text-lg font-bold text-amber-700">
                                     {participationPreview.conflict_count}
                                   </div>
                                 </div>
                               </div>
                               <div className="text-xs text-gray-600">
-                                Neu mot lop xuat hien o ca hai danh sach, he thong se uu tien
-                                mandatory over voluntary.
+                                Nếu một lớp xuất hiện ở cả hai danh sách, hệ thống sẽ ưu tiên
+                                bắt buộc hơn tự nguyện.
                               </div>
                               <div className="space-y-2">
                                 {participationPreview.groups.map((group) => (
@@ -596,7 +617,7 @@ export default function CreateActivityPage() {
                                     className="rounded-lg border border-blue-200 bg-white p-3"
                                   >
                                     <summary className="cursor-pointer list-none font-medium text-gray-800">
-                                      {group.class_name} • {group.mandatory_count} hoc vien bat buoc
+                                      {group.class_name} • {group.mandatory_count} học viên bắt buộc
                                     </summary>
                                     <div className="mt-2 space-y-1 text-sm text-gray-600">
                                       {group.students.map((student) => (

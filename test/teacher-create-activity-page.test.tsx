@@ -45,13 +45,13 @@ describe('CreateActivityPage', () => {
 
       if (url === '/api/activity-types') {
         return jsonResponse({
-          types: [{ id: 5, name: 'Tinh nguyen' }],
+          types: [{ id: 5, name: 'Tình nguyện' }],
         });
       }
 
       if (url === '/api/organization-levels') {
         return jsonResponse({
-          levels: [{ id: 7, name: 'Cap truong' }],
+          levels: [{ id: 7, name: 'Cấp trường' }],
         });
       }
 
@@ -59,9 +59,9 @@ describe('CreateActivityPage', () => {
         const body = JSON.parse(String(init.body || '{}'));
 
         expect(body).toMatchObject({
-          title: 'Hoat dong legacy',
+          title: 'Hoạt động legacy',
           date_time: '2026-04-20T08:30',
-          location: 'Phong 101',
+          location: 'Phòng 101',
           max_participants: 30,
           class_ids: [1],
           mandatory_class_ids: [1],
@@ -110,7 +110,7 @@ describe('CreateActivityPage', () => {
 
     const textInputs = container.querySelectorAll('input[type="text"]');
     fireEvent.change(textInputs[0] as HTMLInputElement, {
-      target: { value: 'Hoat dong legacy' },
+      target: { value: 'Hoạt động legacy' },
     });
     fireEvent.change(container.querySelector('input[type="date"]') as HTMLInputElement, {
       target: { value: '2026-04-20' },
@@ -119,7 +119,7 @@ describe('CreateActivityPage', () => {
       target: { value: '08:30' },
     });
     fireEvent.change(textInputs[1] as HTMLInputElement, {
-      target: { value: 'Phong 101' },
+      target: { value: 'Phòng 101' },
     });
 
     const classSelects = container.querySelectorAll('select[multiple]');

@@ -56,13 +56,13 @@ describe('EditActivityPage', () => {
         return jsonResponse({
           activity: {
             id: 55,
-            title: 'Hoat dong cu',
-            description: 'Mo ta cu',
+            title: 'Hoạt động cũ',
+            description: 'Mô tả cũ',
             date_time: '2026-04-25T08:30:00.000Z',
             location: 'Phong A1',
             status: 'draft',
             approval_status: 'rejected',
-            rejected_reason: 'Can bo sung thong tin',
+            rejected_reason: 'Cần bổ sung thông tin',
             max_participants: null,
             activity_type_id: 5,
             organization_level_id: 7,
@@ -82,13 +82,13 @@ describe('EditActivityPage', () => {
 
       if (url === '/api/activity-types') {
         return jsonResponse({
-          types: [{ id: 5, name: 'Tinh nguyen' }],
+          types: [{ id: 5, name: 'Tình nguyện' }],
         });
       }
 
       if (url === '/api/organization-levels') {
         return jsonResponse({
-          levels: [{ id: 7, name: 'Cap truong' }],
+          levels: [{ id: 7, name: 'Cấp trường' }],
         });
       }
 
@@ -96,10 +96,10 @@ describe('EditActivityPage', () => {
         const body = JSON.parse(String(init.body || '{}'));
 
         expect(body).toMatchObject({
-          title: 'Hoat dong da sua',
-          description: 'Mo ta da cap nhat',
+          title: 'Hoạt động đã sửa',
+          description: 'Mô tả đã cập nhật',
           date_time: '2026-04-25T08:30',
-          location: 'Phong B2',
+          location: 'Phòng B2',
           max_participants: 30,
           activity_type_id: 5,
           organization_level_id: 7,
@@ -127,19 +127,19 @@ describe('EditActivityPage', () => {
 
     render(<EditActivityPage params={{ id: '55' }} />);
 
-    expect(await screen.findByText('Hoat dong bi tu choi')).toBeInTheDocument();
-    expect(screen.getByText('Tinh nguyen')).toBeInTheDocument();
-    expect(screen.getByText('Cap truong')).toBeInTheDocument();
+    expect(await screen.findByText('Hoạt động bị từ chối')).toBeInTheDocument();
+    expect(screen.getByText('Tình nguyện')).toBeInTheDocument();
+    expect(screen.getByText('Cấp trường')).toBeInTheDocument();
 
     const textInputs = screen.getAllByRole('textbox');
     fireEvent.change(textInputs[0] as HTMLInputElement, {
-      target: { value: 'Hoat dong da sua' },
+      target: { value: 'Hoạt động đã sửa' },
     });
     fireEvent.change(textInputs[1] as HTMLTextAreaElement, {
-      target: { value: 'Mo ta da cap nhat' },
+      target: { value: 'Mô tả đã cập nhật' },
     });
     fireEvent.change(textInputs[2] as HTMLInputElement, {
-      target: { value: 'Phong B2' },
+      target: { value: 'Phòng B2' },
     });
 
     const numberInput = document.querySelector('input[type="number"]') as HTMLInputElement;
@@ -147,10 +147,10 @@ describe('EditActivityPage', () => {
       target: { value: '' },
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Gui duyet' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Gửi duyệt' }));
 
     await waitFor(() => {
-      expect(toastSuccessMock).toHaveBeenCalledWith('Gui duyet thanh cong');
+      expect(toastSuccessMock).toHaveBeenCalledWith('Gửi duyệt thành công');
     });
 
     expect(
