@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const mockGetUserFromSession = vi.fn()
+const mockRequireApiRole = vi.fn()
 const mockDbAll = vi.fn()
 
-vi.mock('@/lib/auth', () => ({
-  getUserFromSession: (...args: any[]) => mockGetUserFromSession(...args),
+vi.mock('@/lib/guards', () => ({
+  requireApiRole: (...args: any[]) => mockRequireApiRole(...args),
 }))
 
 vi.mock('@/lib/database', () => ({
@@ -14,9 +14,9 @@ vi.mock('@/lib/database', () => ({
 describe('GET /api/admin/scores', () => {
   beforeEach(() => {
     vi.resetModules()
-    mockGetUserFromSession.mockReset()
+    mockRequireApiRole.mockReset()
     mockDbAll.mockReset()
-    mockGetUserFromSession.mockResolvedValue({ id: 1, role: 'admin' })
+    mockRequireApiRole.mockResolvedValue({ id: 1, role: 'admin' })
   })
 
   it('returns score summary and insights with bonus/penalty breakdown', async () => {
@@ -121,7 +121,20 @@ describe('GET /api/admin/scores', () => {
     expect(query).toContain('u.name LIKE ? OR u.email LIKE ?')
     expect(query).toContain('u.class_id = ?')
     expect(query).toContain('HAVING total_points >= ?')
+    expect(query).toContain("p.attendance_status = 'attended'")
+    expect(query).not.toContain("p.attendance_status IN ('present', 'attended')")
     expect(params).toEqual(['%Nguyen%', '%Nguyen%', '3', 200])
+  })
+
+  it('preserves canonical forbidden errors from guard', async () => {
+    mockRequireApiRole.mockRejectedValue({ status: 403, code: 'FORBIDDEN', message: 'Không có quyền truy cập' })
+
+    const route = await import('../src/app/api/admin/scores/route')
+    const response = await route.GET({ nextUrl: { searchParams: new URLSearchParams() } } as any)
+
+    expect(response.status).toBe(403)
+    const body = await response.json()
+    expect(body.code).toBe('FORBIDDEN')
   })
 
   it('exports csv with new bonus/penalty columns', async () => {

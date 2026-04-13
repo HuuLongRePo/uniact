@@ -2047,12 +2047,12 @@ async function seedComprehensiveCoverage(input: {
     [approvedActivityId]
   ) as Array<{ id: number; student_id: number; activity_id: number }>
 
-  const attendanceStatuses = ['present', 'present', 'late', 'excused', 'absent', 'present', 'late', 'present']
+  const attendanceStatuses = ['recorded', 'recorded', 'recorded', 'recorded', 'void', 'recorded', 'recorded', 'recorded']
   for (let i = 0; i < attendanceTargets.length; i++) {
     const row = attendanceTargets[i]
     await dbRun(
       'INSERT INTO attendance_records (qr_session_id, activity_id, student_id, recorded_by, method, status, location, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      [activeSession.lastID, row.activity_id, row.student_id, managerIds[0], 'qr', attendanceStatuses[i] || 'present', 'Khu A', 'QA seeded attendance']
+      [activeSession.lastID, row.activity_id, row.student_id, managerIds[0], 'qr', attendanceStatuses[i] || 'recorded', 'Khu A', 'QA seeded attendance']
     )
   }
 

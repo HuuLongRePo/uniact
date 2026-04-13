@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserFromSession } from '@/lib/auth';
 import { dbAll } from '@/lib/database';
+import { requireApiRole } from '@/lib/guards';
 import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
 
 type StudentScoreRow = {
@@ -34,9 +34,7 @@ function toCsvValue(value: string | number): string {
 // GET /api/admin/scores - Get all student scores with export option
 export async function GET(request: NextRequest) {
   try {
-    const user = await getUserFromSession();
-    if (!user) return errorResponse(ApiError.unauthorized('Unauthorized'));
-    if (user.role !== 'admin') return errorResponse(ApiError.forbidden('Forbidden'));
+    await requireApiRole(request, ['admin']);
 
     const searchParams = request.nextUrl.searchParams;
     const search = searchParams.get('search') || '';
@@ -51,14 +49,14 @@ export async function GET(request: NextRequest) {
         u.email as email,
         u.class_id as class_id,
         c.name as class_name,
-        COALESCE(SUM(CASE WHEN p.attendance_status IN ('present', 'attended') THEN pc.total_points ELSE 0 END), 0)
+        COALESCE(SUM(CASE WHEN p.attendance_status = 'attended' THEN pc.total_points ELSE 0 END), 0)
           + COALESCE((SELECT SUM(ss.points) FROM student_scores ss WHERE ss.student_id = u.id AND ss.source LIKE 'adjustment:%'), 0)
           as total_points,
-        COUNT(DISTINCT CASE WHEN p.attendance_status IN ('registered', 'present', 'attended') THEN p.activity_id END) as activities_count,
-        COUNT(DISTINCT CASE WHEN p.attendance_status IN ('present', 'attended') THEN p.activity_id END) as participated_count,
-        COUNT(DISTINCT CASE WHEN p.attendance_status IN ('present', 'attended') AND p.achievement_level = 'excellent' THEN p.activity_id END) as excellent_count,
-        COUNT(DISTINCT CASE WHEN p.attendance_status IN ('present', 'attended') AND p.achievement_level = 'good' THEN p.activity_id END) as good_count,
-        COUNT(DISTINCT CASE WHEN p.attendance_status IN ('present', 'attended') AND p.achievement_level = 'average' THEN p.activity_id END) as average_count,
+        COUNT(DISTINCT CASE WHEN p.attendance_status IN ('registered', 'attended') THEN p.activity_id END) as activities_count,
+        COUNT(DISTINCT CASE WHEN p.attendance_status = 'attended' THEN p.activity_id END) as participated_count,
+        COUNT(DISTINCT CASE WHEN p.attendance_status = 'attended' AND p.achievement_level = 'excellent' THEN p.activity_id END) as excellent_count,
+        COUNT(DISTINCT CASE WHEN p.attendance_status = 'attended' AND p.achievement_level = 'good' THEN p.activity_id END) as good_count,
+        COUNT(DISTINCT CASE WHEN p.attendance_status = 'attended' AND p.achievement_level = 'average' THEN p.activity_id END) as average_count,
         (SELECT COUNT(*) FROM student_awards sa WHERE sa.student_id = u.id) as awards_count,
         COALESCE((SELECT SUM(ss.points) FROM student_scores ss WHERE ss.student_id = u.id AND ss.source LIKE 'award:%'), 0) as award_points,
         COALESCE((SELECT SUM(ss.points) FROM student_scores ss WHERE ss.student_id = u.id AND ss.source LIKE 'adjustment:%'), 0) as adjustment_points,
@@ -225,6 +223,16 @@ export async function GET(request: NextRequest) {
     return successResponse({ scores, summary, insights });
   } catch (error: any) {
     console.error('Get scores error:', error);
-    return errorResponse(ApiError.internalError(error.message || 'Internal server error'));
+    const isCanonicalApiError =
+      error instanceof ApiError ||
+      (error && typeof error.status === 'number' && typeof error.code === 'string');
+
+    return errorResponse(
+      isCanonicalApiError
+        ? error instanceof ApiError
+          ? error
+          : new ApiError(error.code, error.message || 'Không có quyền truy cập', error.status, error.details)
+        : ApiError.internalError(error?.message || 'Không thể tải bảng điểm')
+    );
   }
 }

@@ -874,7 +874,7 @@ export const dbHelpers = {
           device_id?: number | null;
           location?: string | null;
           note?: string | null;
-          status?: 'present' | 'recorded';
+          status?: 'recorded';
         }
       | number
       | null,
@@ -897,7 +897,7 @@ export const dbHelpers = {
             device_id: attendance.device_id ?? null,
             location: attendance.location ?? null,
             note: attendance.note ?? null,
-            status: attendance.status || 'present',
+            status: attendance.status || 'recorded',
           }
         : {
             qr_session_id: attendance as number | null,
@@ -908,7 +908,7 @@ export const dbHelpers = {
             device_id: device_id ?? null,
             location: location ?? null,
             note: note ?? null,
-            status: 'present' as const,
+            status: 'recorded' as const,
           };
 
     const result = await dbRun(
@@ -941,7 +941,7 @@ export const dbHelpers = {
     const row = (await dbGet(
       `SELECT COUNT(*) as count
        FROM attendance_records
-       WHERE qr_session_id = ? AND recorded_at IS NOT NULL AND status IN ('present', 'recorded')`,
+       WHERE qr_session_id = ? AND recorded_at IS NOT NULL AND status = 'recorded'`,
       [qr_session_id]
     )) as { count?: number } | undefined;
     return Number(row?.count || 0);
