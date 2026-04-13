@@ -131,6 +131,13 @@ npm run seed
 ```
 Import dữ liệu mẫu (sinh viên, lớp, hoạt động) cho environment của nhà phát triển.
 
+Tài khoản seed canonical hiện tại cho QA/demo backbone:
+- `admin@annd.edu.vn / Admin@2025`
+- `gvcn.nguyenvanmanh@annd.edu.vn / teacher123`
+- `sv31a001@annd.edu.vn / student123`
+
+Lưu ý: repo vẫn có thể giữ một số account `school.edu` để tương thích với luồng/dev legacy, nhưng với smoke/UAT/demo hiện tại nên ưu tiên bộ account ANND ở trên.
+
 ### 3. CHẠY HỆ THỐNG
 
 #### **Development Server** (với live reload)

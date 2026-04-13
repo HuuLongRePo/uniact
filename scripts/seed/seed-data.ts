@@ -1214,6 +1214,8 @@ async function clearData() {
     'audit_logs',
     'devices',
     'activities',
+    'activity_types',
+    'organization_levels',
     'classes',
     'departments',
     'security_question_attempts',
@@ -1253,7 +1255,7 @@ async function seedDemo(): Promise<void> {
     avatar_url: avatarUrlFromSeed('admin')
   }
 
-  // 0. Create admin (phục vụ E2E)
+  // 0. Create legacy compatibility admin (phục vụ E2E/dev cũ)
   await dbRun(
     `INSERT OR IGNORE INTO users (
       email, username, password_hash, name, role,
@@ -1282,7 +1284,7 @@ async function seedDemo(): Promise<void> {
     ]
   )
 
-  // 0b. Create ANND admin (demo)
+  // 0b. Create canonical ANND admin (QA/demo/UAT hiện tại)
   await dbRun(
     `INSERT OR IGNORE INTO users (
       email, username, password_hash, name, role,
@@ -1448,7 +1450,7 @@ async function seedDemo(): Promise<void> {
     )
   }
 
-  // 1b. Create specific teachers used by E2E
+  // 1b. Create specific legacy teachers used by older E2E/dev assumptions
   await dbRun(
     `INSERT OR IGNORE INTO users (
       email, username, password_hash, name, role,
@@ -1674,7 +1676,7 @@ async function seedDemo(): Promise<void> {
 
   console.log(`   ✅ Tạo ${studentIds.length} học sinh`)
 
-  // 3b. Create a specific student used by E2E: sv001.12a1@school.edu
+  // 3b. Create a specific legacy student used by older E2E/dev assumptions: sv001.12a1@school.edu
   const class12A1 = classIds[0]
   const e2eStudentAddr = studentAddressFromIndex(999)
   await dbRun(
@@ -2327,7 +2329,7 @@ async function seedMinimal(): Promise<void> {
 
   await dbRun('UPDATE users SET updated_at = COALESCE(updated_at, created_at, CURRENT_TIMESTAMP)')
   
-  console.log('   ✅ Tạo 1 admin: admin@school.edu / admin123')
+  console.log('   ✅ Tạo 1 admin legacy compatibility: admin@school.edu / admin123')
 }
 
 async function seedEnhanced(): Promise<void> {

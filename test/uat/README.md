@@ -26,11 +26,16 @@ Expand them only after validating the underlying routes and test data assumption
 Before running `test:uat` or `test:uat:backbone`:
 
 1. Start the app manually at `BASE_URL` (default: `http://localhost:3000`)
-2. Ensure seeded accounts exist and match the current project seed direction:
+2. Ensure seeded accounts exist and match the current canonical QA/demo seed direction:
    - admin@annd.edu.vn / Admin@2025
-   - gv.nguyenthilan@annd.edu.vn / teacher123
+   - gvcn.nguyenvanmanh@annd.edu.vn / teacher123
    - sv31a001@annd.edu.vn / student123
 3. Prefer a seeded/demo DB state compatible with backbone flows and current `scripts/seed/seed-data.ts`
+4. The current canonical local smoke gate is production-like runtime (`npm run build` + `next start`), not chained `next dev --turbopack` runs.
+
+Compatibility note:
+- Some legacy `school.edu` accounts may still exist in seed data for backward compatibility with older E2E/dev assumptions.
+- For current UAT/smoke and demo flows, treat the ANND accounts above as the source of truth.
 
 Current test runner status:
 - Playwright config is working
