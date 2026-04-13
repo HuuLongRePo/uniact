@@ -60,10 +60,10 @@ export async function GET(_request: NextRequest) {
         p.achievement_level,
         NULL as award_type,
         pc.base_points,
-        pc.type_multiplier,
-        pc.level_multiplier,
-        pc.achievement_multiplier,
-        pc.subtotal,
+        COALESCE(pc.coefficient, 1) as type_multiplier,
+        COALESCE(ol.multiplier, 1) as level_multiplier,
+        COALESCE(am.multiplier, 1) as achievement_multiplier,
+        (COALESCE(pc.base_points, 0) * COALESCE(pc.coefficient, 1) * COALESCE(ol.multiplier, 1) * COALESCE(am.multiplier, 1)) as subtotal,
         pc.bonus_points,
         pc.penalty_points,
         pc.total_points,
@@ -73,6 +73,7 @@ export async function GET(_request: NextRequest) {
       LEFT JOIN activity_types at ON a.activity_type_id = at.id
       LEFT JOIN organization_levels ol ON a.organization_level_id = ol.id
       LEFT JOIN point_calculations pc ON p.id = pc.participation_id
+      LEFT JOIN achievement_multipliers am ON am.achievement_level = p.achievement_level
       WHERE p.student_id = ? AND p.attendance_status = 'attended'
       ORDER BY a.date_time DESC
     `,
@@ -84,7 +85,7 @@ export async function GET(_request: NextRequest) {
       `
       SELECT 
         at.name as type_name,
-        COALESCE(MAX(pc.type_multiplier), 1) as type_multiplier,
+        COALESCE(MAX(pc.coefficient), 1) as type_multiplier,
         COUNT(DISTINCT p.id) as activity_count,
         COALESCE(SUM(pc.total_points), 0) as total_points,
         COALESCE(AVG(pc.total_points), 0) as avg_points
@@ -168,7 +169,7 @@ export async function GET(_request: NextRequest) {
       `
       SELECT 
         COALESCE(SUM(pc.base_points), 0) as total_base_points,
-        COALESCE(SUM(pc.subtotal), 0) as total_after_multipliers,
+        COALESCE(SUM(COALESCE(pc.base_points, 0) * COALESCE(pc.coefficient, 1)), 0) as total_after_multipliers,
         COALESCE(SUM(pc.bonus_points), 0) as total_bonus,
         COALESCE(SUM(pc.penalty_points), 0) as total_penalty,
         COALESCE(SUM(pc.total_points), 0) as grand_total,

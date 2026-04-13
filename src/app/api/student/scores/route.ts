@@ -26,16 +26,16 @@ export async function GET(request: NextRequest) {
           `SELECT 
             pc.participation_id,
             pc.base_points,
-            pc.type_multiplier,
-            pc.level_multiplier,
-            pc.achievement_multiplier,
-            pc.subtotal,
+            COALESCE(pc.coefficient, 1) as type_multiplier,
+            COALESCE(ol.multiplier, 1) as level_multiplier,
+            COALESCE(am.multiplier, 1) as achievement_multiplier,
+            (COALESCE(pc.base_points, 0) * COALESCE(pc.coefficient, 1) * COALESCE(ol.multiplier, 1) * COALESCE(am.multiplier, 1)) as subtotal,
             pc.bonus_points,
             pc.penalty_points,
             pc.total_points,
-            pc.formula,
+            ('(' || COALESCE(pc.base_points, 0) || ' × ' || COALESCE(pc.coefficient, 1) || ' × ' || COALESCE(ol.multiplier, 1) || ' × ' || COALESCE(am.multiplier, 1) || ') + ' || COALESCE(pc.bonus_points, 0) || ' - ' || COALESCE(pc.penalty_points, 0) || ' = ' || COALESCE(pc.total_points, 0)) as formula,
             pc.calculated_at,
-             p.achievement_level,
+            p.achievement_level,
             p.evaluated_at,
             a.title as activity_title,
             at.name as activity_type_name,
@@ -43,8 +43,9 @@ export async function GET(request: NextRequest) {
            FROM point_calculations pc
            JOIN participations p ON pc.participation_id = p.id
            JOIN activities a ON p.activity_id = a.id
-           JOIN activity_types at ON a.activity_type_id = at.id
-           JOIN organization_levels ol ON a.organization_level_id = ol.id
+           LEFT JOIN activity_types at ON a.activity_type_id = at.id
+           LEFT JOIN organization_levels ol ON a.organization_level_id = ol.id
+           LEFT JOIN achievement_multipliers am ON am.achievement_level = p.achievement_level
            WHERE p.student_id = ?
            ORDER BY pc.calculated_at DESC`,
           [user.id]

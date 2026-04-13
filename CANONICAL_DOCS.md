@@ -1,6 +1,6 @@
 # TÀI LIỆU CANONICAL - UNIACT
 
-Ngày cập nhật: 2026-04-12
+Ngày cập nhật: 2026-04-13
 Trạng thái: nguồn điều hướng tài liệu hiện tại
 
 ## 1. Mục đích
@@ -46,12 +46,11 @@ Vai trò từng file:
 - `README.md`
 - `.env.example`
 - `package.json`
-- `docs/03-DEVELOPMENT_GUIDE.md`
-- `docs/04-DEPLOYMENT.md`
+- `test/uat/README.md`
 
 Quy tắc:
 
-- `README.md` là điểm vào tổng quan/cài đặt ngắn gọn ưu tiên
+- `README.md` là điểm vào duy nhất cho cài đặt, env, migrate, seed, test, demo và release-prep
 - khi lệnh trong tài liệu khác với script thật, ưu tiên `package.json`
 - `INSTALL.md` cũ nếu còn cần chỉ được xem là tài liệu historical sau cleanup
 
@@ -59,12 +58,11 @@ Quy tắc:
 
 - `README.md`
 - `docs/SYSTEM_FLOWS_DIAGRAM.md`
-- `docs/03-DEVELOPMENT_GUIDE.md`
-- `docs/04-DEPLOYMENT.md`
+- `test/uat/README.md`
 
 Quy tắc:
 
-- nhóm này dùng để hiểu bối cảnh, kiến trúc, định hướng và tài liệu tham khảo
+- nhóm này dùng để hiểu bối cảnh, kiến trúc, execution path và tài liệu tham khảo kỹ thuật còn active
 - không dùng nhóm này làm nguồn sự thật duy nhất cho trạng thái task hoặc mức độ hoàn thành hiện tại
 
 ### Nhóm D - Tài liệu học thuật và báo cáo đề tài
@@ -92,8 +90,8 @@ Quy tắc:
 
 ### `README.md`
 
-- còn hữu ích như tài liệu giới thiệu dự án và bối cảnh sản phẩm
-- có nội dung mang tính đề tài/nghiên cứu nhiều hơn là onboarding thực thi hiện tại
+- hiện là entrypoint chính cho onboarding kỹ thuật, setup, seed, test, demo và release-prep
+- nếu có mâu thuẫn giữa README và tài liệu historical, ưu tiên README + `package.json`
 
 ### `docs/01-README.md`
 
@@ -112,13 +110,12 @@ Quy tắc:
 
 Đọc theo thứ tự:
 
-1. `CANONICAL_DOCS.md`
-2. `PROJECT_AUDIT.md`
-3. `CORE_PRODUCT_FLOW.md`
-4. `TASK_QUEUE.md`
-5. `CHANGELOG_PROGRESS.md`
-6. `BUGS_BOTTLENECKS.md`
-7. `INSTALL.md`
+1. `README.md`
+2. `CANONICAL_DOCS.md`
+3. `PROJECT_AUDIT.md`
+4. `CORE_PRODUCT_FLOW.md`
+5. `BUSINESS_DECISIONS.md`
+6. `TASK_QUEUE.md`
 
 ### Nếu mục tiêu là hiểu nghiệp vụ và bài toán sản phẩm
 

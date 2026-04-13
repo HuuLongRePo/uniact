@@ -80,10 +80,10 @@ export async function GET(request: NextRequest) {
         ol.name as organization_level,
         u.name as organizer_name,
         pc.base_points,
-        pc.type_multiplier,
-        pc.level_multiplier,
-        pc.achievement_multiplier,
-        pc.subtotal,
+        COALESCE(pc.coefficient, 1) as type_multiplier,
+        COALESCE(ol.multiplier, 1) as level_multiplier,
+        COALESCE(am.multiplier, 1) as achievement_multiplier,
+        (COALESCE(pc.base_points, 0) * COALESCE(pc.coefficient, 1) * COALESCE(ol.multiplier, 1) * COALESCE(am.multiplier, 1)) as subtotal,
         pc.bonus_points,
         pc.penalty_points,
         pc.total_points,
@@ -97,6 +97,7 @@ export async function GET(request: NextRequest) {
       LEFT JOIN organization_levels ol ON a.organization_level_id = ol.id
       LEFT JOIN users u ON a.teacher_id = u.id
       LEFT JOIN point_calculations pc ON p.id = pc.participation_id
+      LEFT JOIN achievement_multipliers am ON am.achievement_level = p.achievement_level
       LEFT JOIN users evaluator ON p.evaluated_by = evaluator.id
       WHERE p.student_id = ?
     `;

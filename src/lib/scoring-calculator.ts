@@ -109,8 +109,17 @@ export class ScoringCalculator {
    * Lưu kết quả tính điểm vào database
    */
   static async saveCalculation(participationId: number, result: CalculationResult): Promise<void> {
-    const { totalPoints, breakdown, formula } = result;
-    const subtotal = breakdown.base * breakdown.type * breakdown.level * breakdown.achievement;
+    const { totalPoints, breakdown } = result;
+    const effectiveCoefficient = breakdown.type * breakdown.level * breakdown.achievement;
+
+    const participation = await dbGet(
+      'SELECT student_id, activity_id FROM participations WHERE id = ?',
+      [participationId]
+    );
+
+    if (!participation) {
+      throw new Error(`Participation ${participationId} not found`);
+    }
 
     const existingCalculation = await dbGet(
       'SELECT id FROM point_calculations WHERE participation_id = ? ORDER BY calculated_at DESC, id DESC LIMIT 1',
@@ -121,28 +130,22 @@ export class ScoringCalculator {
       await dbRun(
         `
         UPDATE point_calculations
-        SET base_points = ?,
-            type_multiplier = ?,
-            level_multiplier = ?,
-            achievement_multiplier = ?,
-            subtotal = ?,
+        SET activity_id = ?,
+            base_points = ?,
+            coefficient = ?,
             bonus_points = ?,
             penalty_points = ?,
             total_points = ?,
-            formula = ?,
             calculated_at = CURRENT_TIMESTAMP
         WHERE id = ?
       `,
         [
+          participation.activity_id,
           breakdown.base,
-          breakdown.type,
-          breakdown.level,
-          breakdown.achievement,
-          subtotal,
+          effectiveCoefficient,
           breakdown.bonus,
           breakdown.penalty,
           totalPoints,
-          formula,
           existingCalculation.id,
         ]
       );
@@ -151,40 +154,25 @@ export class ScoringCalculator {
         `
         INSERT INTO point_calculations (
           participation_id,
+          activity_id,
           base_points,
-          type_multiplier,
-          level_multiplier,
-          achievement_multiplier,
-          subtotal,
+          coefficient,
           bonus_points,
           penalty_points,
           total_points,
-          formula,
           calculated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
       `,
         [
           participationId,
+          participation.activity_id,
           breakdown.base,
-          breakdown.type,
-          breakdown.level,
-          breakdown.achievement,
-          subtotal,
+          effectiveCoefficient,
           breakdown.bonus,
           breakdown.penalty,
           totalPoints,
-          formula,
         ]
       );
-    }
-
-    const participation = await dbGet(
-      'SELECT student_id, activity_id FROM participations WHERE id = ?',
-      [participationId]
-    );
-
-    if (!participation) {
-      throw new Error(`Participation ${participationId} not found`);
     }
 
     const existingScore = await dbGet(
