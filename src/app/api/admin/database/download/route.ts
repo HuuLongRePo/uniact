@@ -1,30 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserFromSession } from '@/lib/auth';
+import { requireApiRole } from '@/lib/guards';
+import { ApiError, errorResponse } from '@/lib/api-response';
 import fs from 'fs';
 import path from 'path';
+
+function validateBackupFilename(filename: string | null): string {
+  if (!filename) {
+    throw ApiError.validation('Thiếu tên file backup');
+  }
+
+  if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+    throw ApiError.validation('Tên file backup không hợp lệ');
+  }
+
+  return filename;
+}
 
 // GET /api/admin/database/download - Download backup file
 export async function GET(request: NextRequest) {
   try {
-    const user = await getUserFromSession();
-    if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
+    await requireApiRole(request, ['admin']);
 
-    const filename = request.nextUrl.searchParams.get('file');
-    if (!filename) {
-      return NextResponse.json({ error: 'Filename required' }, { status: 400 });
-    }
-
-    // Security: prevent directory traversal
-    if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
-      return NextResponse.json({ error: 'Invalid filename' }, { status: 400 });
-    }
-
+    const filename = validateBackupFilename(request.nextUrl.searchParams.get('file'));
     const backupPath = path.join(process.cwd(), 'backups', filename);
 
     if (!fs.existsSync(backupPath)) {
-      return NextResponse.json({ error: 'Backup file not found' }, { status: 404 });
+      return errorResponse(ApiError.notFound('Không tìm thấy file backup'));
     }
 
     const fileBuffer = fs.readFileSync(backupPath);
@@ -37,6 +38,11 @@ export async function GET(request: NextRequest) {
     });
   } catch (error: any) {
     console.error('Download backup error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return errorResponse(
+      error instanceof ApiError ||
+        (error && typeof error.status === 'number' && typeof error.code === 'string')
+        ? error
+        : ApiError.internalError('Không thể tải file backup', { details: error?.message })
+    );
   }
 }

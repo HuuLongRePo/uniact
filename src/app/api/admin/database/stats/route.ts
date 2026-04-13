@@ -1,18 +1,15 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getUserFromRequest } from '@/lib/guards';
+import { NextRequest } from 'next/server';
+import { requireApiRole } from '@/lib/guards';
 import { dbGet } from '@/lib/database';
+import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
 import fs from 'fs';
 import path from 'path';
 
 // GET /api/admin/database/stats - Get database statistics
 export async function GET(request: NextRequest) {
   try {
-    const user = await getUserFromRequest(request);
-    if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
+    await requireApiRole(request, ['admin']);
 
-    // Get database file size (respect env or default to uniact.db)
     const configuredPath = process.env.DATABASE_PATH || 'uniact.db';
     const dbPath = path.isAbsolute(configuredPath)
       ? configuredPath
@@ -20,14 +17,12 @@ export async function GET(request: NextRequest) {
     const stats = fs.statSync(dbPath);
     const size_mb = stats.size / (1024 * 1024);
 
-    // Count tables
     const tables = (await dbGet(`
       SELECT COUNT(*) as count 
       FROM sqlite_master 
       WHERE type = 'table' AND name NOT LIKE 'sqlite_%'
     `)) as { count: number };
 
-    // Count total records (simplified - count users + activities + participations)
     const userCount = (await dbGet('SELECT COUNT(*) as count FROM users')) as { count: number };
     const activityCount = (await dbGet('SELECT COUNT(*) as count FROM activities')) as {
       count: number;
@@ -38,7 +33,6 @@ export async function GET(request: NextRequest) {
     const records =
       (userCount?.count || 0) + (activityCount?.count || 0) + (participationCount?.count || 0);
 
-    // Get last backup time (from backup_history table if exists)
     let lastBackup = null;
     try {
       const backup = (await dbGet(
@@ -46,11 +40,10 @@ export async function GET(request: NextRequest) {
       )) as { created_at: string } | undefined;
       lastBackup = backup?.created_at || null;
     } catch {
-      // Table doesn't exist yet
+      lastBackup = null;
     }
 
-    return NextResponse.json({
-      success: true,
+    return successResponse({
       stats: {
         size_mb,
         tables: tables?.count || 0,
@@ -60,6 +53,11 @@ export async function GET(request: NextRequest) {
     });
   } catch (error: any) {
     console.error('Get DB stats error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return errorResponse(
+      error instanceof ApiError ||
+        (error && typeof error.status === 'number' && typeof error.code === 'string')
+        ? error
+        : ApiError.internalError('Không thể tải thống kê cơ sở dữ liệu', { details: error?.message })
+    );
   }
 }

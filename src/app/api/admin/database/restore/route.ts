@@ -1,60 +1,75 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getUserFromSession } from '@/lib/auth';
+import { NextRequest } from 'next/server';
 import { dbRun } from '@/lib/database';
+import { requireApiRole } from '@/lib/guards';
+import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
 import fs from 'fs';
 import path from 'path';
+
+function validateBackupFilename(filename: string | null | undefined): string {
+  if (!filename) {
+    throw ApiError.validation('Thiếu tên file backup');
+  }
+
+  if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+    throw ApiError.validation('Tên file backup không hợp lệ');
+  }
+
+  return filename;
+}
 
 // POST /api/admin/database/restore - Restore database from backup
 export async function POST(request: NextRequest) {
   try {
-    const user = await getUserFromSession();
-    if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    const user = await requireApiRole(request, ['admin']);
+
+    let body: { filename?: string };
+    try {
+      body = await request.json();
+    } catch {
+      return errorResponse(ApiError.badRequest('Dữ liệu JSON không hợp lệ'));
     }
 
-    const { filename } = await request.json();
-
-    if (!filename) {
-      return NextResponse.json({ error: 'Filename required' }, { status: 400 });
-    }
-
-    // Security: prevent directory traversal
-    if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
-      return NextResponse.json({ error: 'Invalid filename' }, { status: 400 });
-    }
-
+    const filename = validateBackupFilename(body.filename);
     const backupPath = path.join(process.cwd(), 'backups', filename);
     const dbPath = path.join(process.cwd(), 'uniact.db');
 
     if (!fs.existsSync(backupPath)) {
-      return NextResponse.json({ error: 'Backup file not found' }, { status: 404 });
+      return errorResponse(ApiError.notFound('Không tìm thấy file backup'));
     }
 
-    // Create a safety backup before restore
+    if (!fs.existsSync(dbPath)) {
+      return errorResponse(ApiError.notFound('Không tìm thấy cơ sở dữ liệu hiện tại'));
+    }
+
     const safetyBackup = path.join(process.cwd(), 'backups', `pre_restore_${Date.now()}.db`);
     fs.copyFileSync(dbPath, safetyBackup);
-
-    // Restore database
     fs.copyFileSync(backupPath, dbPath);
 
-    // Log the restore action (after database is restored)
     try {
       await dbRun(
         `INSERT INTO audit_logs (actor_id, action, target_table, target_id, details, created_at)
          VALUES (?, 'DATABASE_RESTORE', 'system', 0, ?, datetime('now'))`,
         [user.id, JSON.stringify({ filename, safety_backup: path.basename(safetyBackup) })]
       );
-    } catch {
-      // If audit log fails, continue anyway
+    } catch (auditError) {
+      console.error('Failed to write audit log (database restore):', auditError);
     }
 
-    return NextResponse.json({
-      success: true,
-      message: 'Database restored successfully',
-      safety_backup: path.basename(safetyBackup),
-    });
+    return successResponse(
+      {
+        restored: true,
+        filename,
+        safety_backup: path.basename(safetyBackup),
+      },
+      'Khôi phục cơ sở dữ liệu thành công'
+    );
   } catch (error: any) {
     console.error('Restore error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return errorResponse(
+      error instanceof ApiError ||
+        (error && typeof error.status === 'number' && typeof error.code === 'string')
+        ? error
+        : ApiError.internalError('Không thể khôi phục cơ sở dữ liệu', { details: error?.message })
+    );
   }
 }

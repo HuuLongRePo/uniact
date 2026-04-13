@@ -1,20 +1,26 @@
-import { NextResponse } from 'next/server';
-import { getUserFromSession } from '@/lib/auth';
-import { db } from '@/lib/database';
+import { NextRequest } from 'next/server';
+import { requireApiRole } from '@/lib/guards';
+import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
 import fs from 'fs';
 import path from 'path';
 
+function formatUptime(): string {
+  const uptime = process.uptime();
+  const hours = Math.floor(uptime / 3600);
+  const minutes = Math.floor((uptime % 3600) / 60);
+  return `${hours}h ${minutes}m`;
+}
+
 // GET - Lấy thống kê hệ thống
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const user = await getUserFromSession();
+    await requireApiRole(request, ['admin']);
 
-    if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
-    }
+    const configuredPath = process.env.DATABASE_PATH || './uniact.db';
+    const dbPath = path.isAbsolute(configuredPath)
+      ? configuredPath
+      : path.join(process.cwd(), configuredPath);
 
-    // Database size
-    const dbPath = process.env.DATABASE_PATH || './uniact.db';
     let dbSize = '0 MB';
     try {
       const stats = fs.statSync(dbPath);
@@ -24,13 +30,6 @@ export async function GET() {
       console.error('Cannot read DB size:', e);
     }
 
-    // Uptime (giả sử server chạy liên tục)
-    const uptime = process.uptime();
-    const hours = Math.floor(uptime / 3600);
-    const minutes = Math.floor((uptime % 3600) / 60);
-    const uptimeStr = `${hours}h ${minutes}m`;
-
-    // Last backup
     let lastBackup = null;
     try {
       const backupDir = path.join(process.cwd(), 'backups');
@@ -54,14 +53,19 @@ export async function GET() {
       console.error('Cannot read backup dir:', e);
     }
 
-    return NextResponse.json({
+    return successResponse({
       dbSize,
       dbPath,
-      uptime: uptimeStr,
+      uptime: formatUptime(),
       lastBackup,
     });
   } catch (error: any) {
     console.error('GET /api/admin/system-stats error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return errorResponse(
+      error instanceof ApiError ||
+        (error && typeof error.status === 'number' && typeof error.code === 'string')
+        ? error
+        : ApiError.internalError('Không thể tải thống kê hệ thống', { details: error?.message })
+    );
   }
 }
