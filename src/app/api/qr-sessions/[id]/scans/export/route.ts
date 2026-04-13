@@ -74,7 +74,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       LEFT JOIN classes c ON c.id = u.class_id
       WHERE ar.qr_session_id = ?
         AND ar.recorded_at IS NOT NULL
-        AND ar.status IN ('recorded', 'present')
+        AND ar.status = 'recorded'
       ORDER BY ar.recorded_at DESC, ar.id DESC
       LIMIT 500`,
       [sessionId]
@@ -156,6 +156,13 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     });
   } catch (error: any) {
     console.error('Export attendance records error:', error);
-    return errorResponse(ApiError.internalError('Không thể xuất dữ liệu điểm danh'));
+    return errorResponse(
+      error instanceof ApiError ||
+        (error && typeof error.status === 'number' && typeof error.code === 'string')
+        ? error instanceof ApiError
+          ? error
+          : new ApiError(error.code, error.message || 'Không thể xuất dữ liệu điểm danh', error.status, error.details)
+        : ApiError.internalError('Không thể xuất dữ liệu điểm danh')
+    );
   }
 }

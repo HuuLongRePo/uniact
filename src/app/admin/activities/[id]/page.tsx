@@ -53,7 +53,7 @@ interface Participant {
   user_email: string;
   class_name: string | null;
   registered_at: string;
-  attendance_status: 'present' | 'absent' | 'not_participated' | null;
+  attendance_status: 'attended' | 'absent' | 'registered' | 'not_participated' | null;
   achievement_level: 'excellent' | 'good' | 'average' | 'participated' | null;
   points_earned: number;
 }
@@ -104,7 +104,7 @@ export default function AdminActivityDetailPage() {
         fetch(`/api/admin/activities/${activityId}/approval-history`),
       ]);
 
-      if (!activityRes.ok) throw new Error('Failed to fetch activity');
+      if (!activityRes.ok) throw new Error('Không thể tải thông tin hoạt động');
 
       const activityData = await activityRes.json();
       setActivity(activityData.activity || activityData.data?.activity || null);
@@ -151,7 +151,7 @@ export default function AdminActivityDetailPage() {
 
       const data = await res.json();
 
-      if (!res.ok) throw new Error(data.error || 'Approval failed');
+      if (!res.ok) throw new Error(data.error || 'Không thể xử lý phê duyệt');
 
       toast.success(
         approvalAction === 'approve' ? 'Đã phê duyệt hoạt động' : 'Đã từ chối hoạt động'
@@ -159,7 +159,7 @@ export default function AdminActivityDetailPage() {
       setShowApprovalModal(false);
       fetchActivity();
     } catch (error: any) {
-      toast.error(error.message || 'Có lỗi xảy ra');
+      toast.error(error.message || 'Có lỗi xảy ra khi xử lý phê duyệt');
     } finally {
       setSubmitting(false);
     }
@@ -171,7 +171,7 @@ export default function AdminActivityDetailPage() {
         method: 'DELETE',
       });
 
-      if (!res.ok) throw new Error('Delete failed');
+      if (!res.ok) throw new Error('Không thể xóa hoạt động');
 
       toast.success('Đã xóa hoạt động');
       router.push('/admin/activities');
@@ -182,7 +182,7 @@ export default function AdminActivityDetailPage() {
 
   const exportParticipants = () => {
     if (participants.length === 0) {
-      toast.error('Không có người tham gia để export');
+      toast.error('Không có người tham gia để xuất');
       return;
     }
 
@@ -194,7 +194,7 @@ export default function AdminActivityDetailPage() {
           p.user_email,
           p.class_name || '-',
           new Date(p.registered_at).toLocaleDateString('vi-VN'),
-          p.attendance_status === 'present'
+          p.attendance_status === 'attended'
             ? 'Có mặt'
             : p.attendance_status === 'absent'
               ? 'Vắng'
@@ -209,10 +209,10 @@ export default function AdminActivityDetailPage() {
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `activity-${activityId}-participants-${new Date().toISOString().split('T')[0]}.csv`;
+    link.download = `hoat-dong-${activityId}-nguoi-tham-gia-${new Date().toISOString().split('T')[0]}.csv`;
     link.click();
     window.URL.revokeObjectURL(url);
-    toast.success(`Đã export ${participants.length} người tham gia`);
+    toast.success(`Đã xuất ${participants.length} người tham gia`);
   };
 
   if (authLoading || loading) {
@@ -285,7 +285,7 @@ export default function AdminActivityDetailPage() {
         </div>
 
         {/* Action Buttons */}
-        {activity.status === 'pending' && (
+        {(activity.approval_status === 'requested' || activity.status === 'pending') && (
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6 flex items-center justify-between">
             <div className="flex items-center gap-2 text-yellow-800">
               <AlertCircle className="w-5 h-5" />
@@ -467,7 +467,7 @@ export default function AdminActivityDetailPage() {
                   className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300"
                 >
                   <Download className="w-4 h-4 mr-2" />
-                  Export CSV
+                  Xuất CSV
                 </button>
               </div>
 
@@ -513,7 +513,7 @@ export default function AdminActivityDetailPage() {
                             {new Date(p.registered_at).toLocaleDateString('vi-VN')}
                           </td>
                           <td className="px-4 py-3">
-                            {p.attendance_status === 'present' ? (
+                            {p.attendance_status === 'attended' ? (
                               <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">
                                 Có mặt
                               </span>
@@ -523,7 +523,7 @@ export default function AdminActivityDetailPage() {
                               </span>
                             ) : (
                               <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs">
-                                Chưa tham gia
+                                Đã đăng ký / chưa điểm danh
                               </span>
                             )}
                           </td>

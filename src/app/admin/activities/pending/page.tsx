@@ -45,7 +45,7 @@ export default function PendingActivitiesPage() {
     try {
       setLoading(true);
       const res = await fetch('/api/admin/activities/pending');
-      if (!res.ok) throw new Error('Failed to fetch');
+      if (!res.ok) throw new Error('Không thể tải danh sách hoạt động chờ duyệt');
       const data = await res.json();
       setActivities(data.activities || []);
     } catch (error) {
@@ -63,7 +63,7 @@ export default function PendingActivitiesPage() {
         body: JSON.stringify({ action: 'approve', notes: '' }),
       });
 
-      if (!res.ok) throw new Error('Approval failed');
+      if (!res.ok) throw new Error('Không thể phê duyệt hoạt động');
 
       toast.success('Đã phê duyệt');
       fetchActivities();
@@ -117,7 +117,7 @@ export default function PendingActivitiesPage() {
                       <div className="flex items-start gap-3 mb-3">
                         <h3 className="text-lg font-semibold text-gray-900">{activity.title}</h3>
                         <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded-full">
-                          Chờ duyệt
+                          Chờ phê duyệt
                         </span>
                       </div>
 
@@ -208,7 +208,7 @@ export default function PendingActivitiesPage() {
                 body: JSON.stringify({ action: 'reject', notes: reason }),
               });
 
-              if (!res.ok) throw new Error('Rejection failed');
+              if (!res.ok) throw new Error('Không thể từ chối hoạt động');
               toast.success('Đã từ chối');
               fetchActivities();
             } catch (error) {

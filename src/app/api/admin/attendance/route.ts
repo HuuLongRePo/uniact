@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
         u.name as userName,
         u.email as userEmail,
         CASE
-          WHEN ar.status IN ('present', 'absent', 'late') THEN ar.status
+          WHEN ar.status = 'void' THEN 'absent'
           ELSE 'present'
         END as status,
         0 as pointsAwarded

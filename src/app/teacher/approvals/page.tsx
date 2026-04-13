@@ -48,27 +48,27 @@ function statusBadge(status: Activity['status']) {
       return (
         <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-3 py-1 text-sm font-medium text-green-700">
           <CheckCircle className="h-4 w-4" />
-          Da duyet
+          Đã duyệt
         </span>
       );
     case 'pending':
       return (
         <span className="inline-flex items-center gap-1 rounded-full bg-yellow-100 px-3 py-1 text-sm font-medium text-yellow-700">
           <Clock className="h-4 w-4" />
-          Cho duyet
+          Chờ duyệt
         </span>
       );
     case 'rejected':
       return (
         <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-3 py-1 text-sm font-medium text-red-700">
           <XCircle className="h-4 w-4" />
-          Tu choi
+          Từ chối
         </span>
       );
     default:
       return (
         <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-700">
-          Nhap
+          Nháp
         </span>
       );
   }
@@ -91,14 +91,14 @@ export default function ApprovalsPage() {
       setLoading(true);
       const response = await fetch(`/api/teacher/activities/approvals?status=${filter}`);
       if (!response.ok) {
-        throw new Error('Khong the tai danh sach hoat dong');
+        throw new Error('Không thể tải danh sách hoạt động');
       }
 
       const data = await response.json();
       setActivities(data.activities || []);
     } catch (error) {
       console.error(error);
-      toast.error('Khong the tai danh sach hoat dong');
+      toast.error('Không thể tải danh sách hoạt động');
     } finally {
       setLoading(false);
     }
@@ -116,22 +116,22 @@ export default function ApprovalsPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          message: resubmitMessage.trim() || 'Gui lai de duyet',
+          message: resubmitMessage.trim() || 'Gửi lại để duyệt',
         }),
       });
 
       const data = await response.json().catch(() => null);
       if (!response.ok) {
-        throw new Error(data?.message || data?.error || 'Khong the gui lai');
+        throw new Error(data?.message || data?.error || 'Không thể gửi lại');
       }
 
-      toast.success('Gui duyet thanh cong');
+      toast.success('Gửi duyệt thành công');
       setResubmitMessage('');
       setSelectedActivity(null);
       await fetchActivities();
     } catch (error) {
       console.error(error);
-      toast.error(error instanceof Error ? error.message : 'Khong the gui duyet');
+      toast.error(error instanceof Error ? error.message : 'Không thể gửi duyệt');
     } finally {
       setResubmitting(false);
     }
@@ -141,9 +141,9 @@ export default function ApprovalsPage() {
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="mx-auto max-w-6xl">
         <div className="mb-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-          <h1 className="text-3xl font-bold text-gray-900">Theo doi duyet hoat dong</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Theo dõi duyệt hoạt động</h1>
           <p className="mt-2 text-gray-600">
-            Quan ly hoat dong cua ban trong quy trinh duyet.
+            Quản lý hoạt động của bạn trong quy trình duyệt.
           </p>
         </div>
 
@@ -158,10 +158,10 @@ export default function ApprovalsPage() {
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              {tab === 'all' && 'Tat ca'}
-              {tab === 'pending' && 'Cho duyet'}
-              {tab === 'approved' && 'Da duyet'}
-              {tab === 'rejected' && 'Tu choi'}
+              {tab === 'all' && 'Tất cả'}
+              {tab === 'pending' && 'Chờ duyệt'}
+              {tab === 'approved' && 'Đã duyệt'}
+              {tab === 'rejected' && 'Từ chối'}
             </button>
           ))}
         </div>
@@ -169,11 +169,11 @@ export default function ApprovalsPage() {
         {loading ? (
           <div className="rounded-lg bg-white p-12 text-center shadow">
             <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-blue-600" />
-            <p className="mt-4 text-gray-600">Dang tai...</p>
+            <p className="mt-4 text-gray-600">Đang tải...</p>
           </div>
         ) : activities.length === 0 ? (
           <div className="rounded-lg border border-gray-200 bg-white p-12 text-center shadow">
-            <p className="text-lg text-gray-600">Khong co hoat dong nao</p>
+            <p className="text-lg text-gray-600">Không có hoạt động nào</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-4">
@@ -198,11 +198,11 @@ export default function ApprovalsPage() {
                       </div>
                       <div className="flex items-center gap-2 text-gray-700">
                         <MapPin className="h-4 w-4 text-gray-500" />
-                        {activity.location || 'Chua xac dinh'}
+                        {activity.location || 'Chưa xác định'}
                       </div>
                       <div className="flex items-center gap-2 text-gray-700">
                         <Users className="h-4 w-4 text-gray-500" />
-                        {activity.class_count} lop
+                        {activity.class_count} lớp
                       </div>
                       <div className="flex items-center gap-2 text-gray-700">
                         <User className="h-4 w-4 text-gray-500" />
@@ -212,17 +212,17 @@ export default function ApprovalsPage() {
 
                     {activity.submitted_at && (
                       <div className="mt-4 space-y-2 text-sm text-gray-600">
-                        <div>Gui duyet: {formatDateTime(activity.submitted_at)}</div>
+                        <div>Gửi duyệt: {formatDateTime(activity.submitted_at)}</div>
                         {activity.status === 'approved' && activity.approved_at && (
                           <div className="text-green-600">
-                            Da duyet: {formatDateTime(activity.approved_at)}
+                            Đã duyệt: {formatDateTime(activity.approved_at)}
                           </div>
                         )}
                         {activity.status === 'rejected' && activity.rejected_at && (
                           <div className="text-red-600">
-                            Tu choi: {formatDateTime(activity.rejected_at)}
+                            Từ chối: {formatDateTime(activity.rejected_at)}
                             {activity.rejection_reason && (
-                              <div className="mt-1">Ly do: {activity.rejection_reason}</div>
+                              <div className="mt-1">Lý do: {activity.rejection_reason}</div>
                             )}
                           </div>
                         )}
@@ -237,7 +237,7 @@ export default function ApprovalsPage() {
                         className="flex items-center gap-2 rounded bg-blue-600 px-4 py-2 font-medium text-white transition hover:bg-blue-700"
                       >
                         <Send className="h-4 w-4" />
-                        Gui lai
+                        Gửi lại
                       </button>
                     )}
                     {activity.status === 'pending' && (
@@ -246,7 +246,7 @@ export default function ApprovalsPage() {
                         className="flex items-center gap-2 rounded bg-gray-200 px-4 py-2 font-medium text-gray-700 transition hover:bg-gray-300"
                       >
                         <MessageSquare className="h-4 w-4" />
-                        Chi tiet
+                        Chi tiết
                       </button>
                     )}
                   </div>
@@ -261,39 +261,39 @@ export default function ApprovalsPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
           <div className="w-full max-w-md rounded-lg bg-white p-6">
             <h2 className="mb-4 text-2xl font-bold">
-              {selectedActivity.status === 'rejected' ? 'Gui lai duyet' : 'Chi tiet hoat dong'}
+              {selectedActivity.status === 'rejected' ? 'Gửi lại duyệt' : 'Chi tiết hoạt động'}
             </h2>
 
             <div className="mb-6 space-y-4">
               <div>
-                <p className="text-sm text-gray-600">Hoat dong</p>
+                <p className="text-sm text-gray-600">Hoạt động</p>
                 <p className="font-medium">{selectedActivity.title}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-600">Trang thai hien tai</p>
+                <p className="text-sm text-gray-600">Trạng thái hiện tại</p>
                 <div className="mt-1">{statusBadge(selectedActivity.status)}</div>
               </div>
               {selectedActivity.submitted_at && (
                 <div>
-                  <p className="text-sm text-gray-600">Lan gui gan nhat</p>
+                  <p className="text-sm text-gray-600">Lần gửi gần nhất</p>
                   <p className="font-medium">{formatDateTime(selectedActivity.submitted_at)}</p>
                 </div>
               )}
               {selectedActivity.rejection_reason && (
                 <div className="rounded border border-red-200 bg-red-50 p-3">
-                  <p className="text-sm font-medium text-red-700">Ly do tu choi</p>
+                  <p className="text-sm font-medium text-red-700">Lý do từ chối</p>
                   <p className="mt-1 text-sm text-red-600">{selectedActivity.rejection_reason}</p>
                 </div>
               )}
               {selectedActivity.status === 'rejected' && (
                 <div>
                   <label className="mb-2 block text-sm font-medium text-gray-700">
-                    Ghi chu
+                    Ghi chú
                   </label>
                   <textarea
                     value={resubmitMessage}
                     onChange={(event) => setResubmitMessage(event.target.value)}
-                    placeholder="Nhap ghi chu gui lai..."
+                    placeholder="Nhập ghi chú gửi lại..."
                     rows={3}
                     className="w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
@@ -306,7 +306,7 @@ export default function ApprovalsPage() {
                 onClick={() => setSelectedActivity(null)}
                 className="flex-1 rounded-lg border px-4 py-2 font-medium text-gray-700 transition hover:bg-gray-50"
               >
-                Dong
+                Đóng
               </button>
               {selectedActivity.status === 'rejected' && (
                 <button
@@ -314,7 +314,7 @@ export default function ApprovalsPage() {
                   disabled={resubmitting}
                   className="flex-1 rounded-lg bg-blue-600 px-4 py-2 font-medium text-white transition hover:bg-blue-700 disabled:opacity-50"
                 >
-                  {resubmitting ? 'Dang gui...' : 'Gui lai'}
+                  {resubmitting ? 'Đang gửi...' : 'Gửi lại'}
                 </button>
               )}
             </div>

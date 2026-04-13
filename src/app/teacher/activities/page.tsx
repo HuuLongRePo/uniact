@@ -277,7 +277,7 @@ export default function TeacherActivitiesPage() {
   const getStatusBadge = (status: Activity['status']) => {
     const badges: Record<Activity['status'], { className: string; label: string }> = {
       draft: { className: 'bg-gray-100 text-gray-800', label: 'Nháp' },
-      pending: { className: 'bg-yellow-100 text-yellow-800', label: 'Chờ phê duyệt' },
+      pending: { className: 'bg-yellow-100 text-yellow-800', label: 'Chờ duyệt' },
       rejected: { className: 'bg-red-100 text-red-800', label: 'Bị từ chối' },
       published: { className: 'bg-green-100 text-green-800', label: 'Đã phát hành' },
       cancelled: { className: 'bg-red-100 text-red-800', label: 'Đã hủy' },
@@ -305,7 +305,7 @@ export default function TeacherActivitiesPage() {
           <h1 className="text-3xl font-bold text-gray-900 mb-2" data-testid="activities-heading">
             Quản lý hoạt động
           </h1>
-          <p className="text-gray-600">Danh sách hoạt động bạn tạo và quản lý</p>
+          <p className="text-gray-600">Danh sách hoạt động bạn tạo, gửi duyệt và theo dõi trạng thái</p>
         </div>
         <button
           onClick={handleCreateNew}
@@ -398,7 +398,7 @@ export default function TeacherActivitiesPage() {
                     href={`/teacher/activities/${activity.id}/participants`}
                     className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition text-sm"
                   >
-                    📊 Đánh giá học viên
+                    📊 Quản lý người tham gia
                   </Link>
 
                   <Link
