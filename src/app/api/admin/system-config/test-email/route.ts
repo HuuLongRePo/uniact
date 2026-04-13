@@ -1,28 +1,31 @@
-import { NextResponse } from 'next/server';
-import { getUserFromSession } from '@/lib/auth';
+import { NextRequest } from 'next/server';
+import { requireApiRole } from '@/lib/guards';
+import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
 
 // POST - Test email configuration
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
-    const user = await getUserFromSession();
+    const user = await requireApiRole(request, ['admin']);
 
-    if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    let body: {
+      smtpHost?: string;
+      smtpPort?: string | number;
+      smtpUser?: string;
+      smtpPass?: string;
+      smtpFrom?: string;
+    };
+    try {
+      body = await request.json();
+    } catch {
+      return errorResponse(ApiError.badRequest('Dữ liệu JSON không hợp lệ'));
     }
 
-    const body = await request.json();
     const { smtpHost, smtpPort, smtpUser, smtpPass, smtpFrom } = body;
 
     if (!smtpHost || !smtpPort || !smtpUser || !smtpPass) {
-      return NextResponse.json({ error: 'Missing SMTP configuration' }, { status: 400 });
+      return errorResponse(ApiError.validation('Thiếu cấu hình SMTP bắt buộc'));
     }
 
-    // Mock email sending (nodemailer not installed)
-    // In production, you would use nodemailer here
-    // const transporter = nodemailer.createTransport({ ... })
-    // await transporter.sendMail({ ... })
-
-    // For now, just simulate email sending
     console.warn('Email test simulation:', {
       from: smtpFrom || smtpUser,
       to: user.email,
@@ -30,21 +33,22 @@ export async function POST(request: Request) {
       config: { smtpHost, smtpPort },
     });
 
-    // Simulate delay
     await new Promise((resolve) => setTimeout(resolve, 500));
 
-    return NextResponse.json({
-      success: true,
-      message: `Email test đã gửi đến ${user.email}`,
-    });
+    return successResponse(
+      {
+        sent: true,
+        recipient: user.email,
+      },
+      `Email test đã gửi đến ${user.email}`
+    );
   } catch (error: any) {
     console.error('POST /api/admin/system-config/test-email error:', error);
-    return NextResponse.json(
-      {
-        error: error.message || 'Failed to send test email',
-        details: error.toString(),
-      },
-      { status: 500 }
+    return errorResponse(
+      error instanceof ApiError ||
+        (error && typeof error.status === 'number' && typeof error.code === 'string')
+        ? error
+        : ApiError.internalError('Không thể gửi email kiểm tra', { details: error?.message })
     );
   }
 }

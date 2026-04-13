@@ -1,42 +1,46 @@
-import { NextResponse } from 'next/server';
-import { getUserFromSession } from '@/lib/auth';
+import { NextRequest } from 'next/server';
 import { dbAll, dbGet, dbRun } from '@/lib/database';
+import { requireApiRole } from '@/lib/guards';
+import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
+
+const VALID_CONFIG_TYPES = ['email', 'backup', 'maintenance'] as const;
+type ConfigType = (typeof VALID_CONFIG_TYPES)[number];
+
+function getDefaultConfig() {
+  return {
+    email: {
+      provider: 'nodemailer',
+      smtpHost: '',
+      smtpPort: '587',
+      smtpUser: '',
+      smtpPass: '',
+      smtpFrom: '',
+      enabled: false,
+    },
+    backup: {
+      autoBackup: true,
+      backupTime: '02:00',
+      retentionDays: 7,
+      backupLocation: '/backups',
+    },
+    maintenance: {
+      enabled: false,
+      message: 'Hệ thống đang bảo trì. Vui lòng quay lại sau.',
+    },
+  };
+}
 
 // GET - Lấy cấu hình hệ thống
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const user = await getUserFromSession();
-
-    if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
-    }
+    await requireApiRole(request, ['admin']);
 
     const configs = (await dbAll(
       'SELECT * FROM system_config WHERE category IN (?, ?, ?)',
       ['email', 'backup', 'maintenance']
     )) as any[];
 
-    const result: any = {
-      email: {
-        provider: 'nodemailer',
-        smtpHost: '',
-        smtpPort: '587',
-        smtpUser: '',
-        smtpPass: '',
-        smtpFrom: '',
-        enabled: false,
-      },
-      backup: {
-        autoBackup: true,
-        backupTime: '02:00',
-        retentionDays: 7,
-        backupLocation: '/backups',
-      },
-      maintenance: {
-        enabled: false,
-        message: 'Hệ thống đang bảo trì. Vui lòng quay lại sau.',
-      },
-    };
+    const result = getDefaultConfig() as any;
 
     configs.forEach((config) => {
       try {
@@ -53,59 +57,68 @@ export async function GET() {
       }
     });
 
-    return NextResponse.json(result);
+    return successResponse(result);
   } catch (error: any) {
     console.error('GET /api/admin/system-config/advanced error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return errorResponse(
+      error instanceof ApiError ||
+        (error && typeof error.status === 'number' && typeof error.code === 'string')
+        ? error
+        : ApiError.internalError('Không thể tải cấu hình hệ thống', { details: error?.message })
+    );
   }
 }
 
 // PUT - Cập nhật cấu hình
-export async function PUT(request: Request) {
+export async function PUT(request: NextRequest) {
   try {
-    const user = await getUserFromSession();
+    await requireApiRole(request, ['admin']);
 
-    if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    let body: { type?: ConfigType; data?: unknown };
+    try {
+      body = await request.json();
+    } catch {
+      return errorResponse(ApiError.badRequest('Dữ liệu JSON không hợp lệ'));
     }
 
-    const body = await request.json();
     const { type, data } = body;
 
-    if (!type || !data) {
-      return NextResponse.json({ error: 'Missing type or data' }, { status: 400 });
+    if (!type || data === undefined) {
+      return errorResponse(ApiError.validation('Thiếu type hoặc data'));
     }
 
-    const validTypes = ['email', 'backup', 'maintenance'];
-    if (!validTypes.includes(type)) {
-      return NextResponse.json({ error: 'Invalid type' }, { status: 400 });
+    if (!VALID_CONFIG_TYPES.includes(type)) {
+      return errorResponse(ApiError.validation('Loại cấu hình không hợp lệ'));
     }
 
     const value = JSON.stringify(data);
-
-    // Kiểm tra xem config đã tồn tại chưa
-    const existing = (await dbGet(
-      'SELECT id FROM system_config WHERE category = ? AND key = ?',
-      [type, 'config']
-    )) as any;
+    const existing = (await dbGet('SELECT id FROM system_config WHERE category = ? AND key = ?', [
+      type,
+      'config',
+    ])) as any;
 
     if (existing) {
-      // Cập nhật
-      await dbRun(
-        'UPDATE system_config SET value = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-        [value, existing.id]
-      );
+      await dbRun('UPDATE system_config SET value = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [
+        value,
+        existing.id,
+      ]);
     } else {
-      // Tạo mới
       await dbRun(
         'INSERT INTO system_config (category, key, value, created_at, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)',
         [type, 'config', value]
       );
     }
 
-    return NextResponse.json({ success: true });
+    return successResponse({ success: true }, 'Cập nhật cấu hình thành công');
   } catch (error: any) {
     console.error('PUT /api/admin/system-config/advanced error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return errorResponse(
+      error instanceof ApiError ||
+        (error && typeof error.status === 'number' && typeof error.code === 'string')
+        ? error
+        : ApiError.internalError('Không thể cập nhật cấu hình hệ thống', {
+            details: error?.message,
+          })
+    );
   }
 }
