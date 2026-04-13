@@ -47,6 +47,7 @@ export default function TeacherActivitiesPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
+  const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'title'>('newest');
   const limit = 10;
 
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -95,6 +96,10 @@ export default function TeacherActivitiesPage() {
   useEffect(() => {
     fetchActivities();
   }, [page, filter, fetchActivities]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [filter]);
 
   const submitApproval = async (activityId: number) => {
     setActionLoading({ type: 'submit', id: activityId });
@@ -269,9 +274,14 @@ export default function TeacherActivitiesPage() {
     await deleteActivity(id);
   };
 
-  const filteredActivities = activities.filter((activity) => {
-    if (filter === 'all') return true;
-    return activity.status === filter;
+  const sortedActivities = [...activities].sort((a, b) => {
+    if (sortBy === 'title') {
+      return a.title.localeCompare(b.title, 'vi');
+    }
+
+    const timeA = new Date(a.date_time).getTime();
+    const timeB = new Date(b.date_time).getTime();
+    return sortBy === 'oldest' ? timeA - timeB : timeB - timeA;
   });
 
   const getStatusBadge = (status: Activity['status']) => {
@@ -316,7 +326,7 @@ export default function TeacherActivitiesPage() {
         </button>
       </div>
 
-      <div className="bg-white rounded-lg shadow p-4 mb-6">
+      <div className="bg-white rounded-lg shadow p-4 mb-6 space-y-4">
         <div className="flex gap-2 flex-wrap">
           {FILTER_OPTIONS.map((option) => (
             <button
@@ -332,16 +342,32 @@ export default function TeacherActivitiesPage() {
             </button>
           ))}
         </div>
+
+        <div className="flex items-center gap-3">
+          <label htmlFor="teacher-activity-sort" className="text-sm font-medium text-gray-700">
+            Sắp xếp:
+          </label>
+          <select
+            id="teacher-activity-sort"
+            value={sortBy}
+            onChange={(event) => setSortBy(event.target.value as 'newest' | 'oldest' | 'title')}
+            className="rounded border border-gray-300 px-3 py-2 text-sm text-gray-700"
+          >
+            <option value="newest">Mới nhất</option>
+            <option value="oldest">Cũ nhất</option>
+            <option value="title">Theo tên A-Z</option>
+          </select>
+        </div>
       </div>
 
-      {filteredActivities.length === 0 ? (
+      {sortedActivities.length === 0 ? (
         <EmptyState
           title="Không tìm thấy dữ liệu"
           message="Hiện chưa có hoạt động nào trong danh sách này."
         />
       ) : (
         <div className="space-y-4">
-          {filteredActivities.map((activity) => {
+          {sortedActivities.map((activity) => {
             const canEditAndResubmit =
               activity.status === 'draft' || activity.status === 'rejected';
             const canCancelPublished =
@@ -536,7 +562,7 @@ export default function TeacherActivitiesPage() {
         </div>
       )}
 
-      {filteredActivities.length > 0 && (
+      {sortedActivities.length > 0 && (
         <div className="mt-6 bg-gray-50 rounded-lg p-4 flex justify-between items-center">
           <p className="text-sm text-gray-700">
             Hiển thị <span className="font-medium">{(page - 1) * limit + 1}</span>-

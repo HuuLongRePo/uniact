@@ -28,6 +28,8 @@ export default function PendingActivitiesPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [activities, setActivities] = useState<Activity[]>([]);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0, pages: 1 });
   const [approveTargetId, setApproveTargetId] = useState<number | null>(null);
   const [rejectTargetId, setRejectTargetId] = useState<number | null>(null);
 
@@ -39,15 +41,18 @@ export default function PendingActivitiesPage() {
     if (user) {
       fetchActivities();
     }
-  }, [user, authLoading, router]);
+  }, [user, authLoading, router, page]);
 
   const fetchActivities = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/admin/activities/pending');
+      const res = await fetch(`/api/admin/activities/pending?page=${page}&limit=10`);
       if (!res.ok) throw new Error('Không thể tải danh sách hoạt động chờ duyệt');
       const data = await res.json();
       setActivities(data.activities || []);
+      setPagination(
+        data.pagination || { page, limit: 10, total: data.activities?.length || 0, pages: 1 }
+      );
     } catch (error) {
       toast.error('Không thể tải danh sách');
     } finally {
@@ -105,7 +110,7 @@ export default function PendingActivitiesPage() {
             <div className="p-4 bg-yellow-50 border-b border-yellow-200">
               <div className="flex items-center gap-2 text-yellow-800">
                 <AlertCircle className="w-5 h-5" />
-                <span className="font-medium">Có {activities.length} hoạt động cần phê duyệt</span>
+                <span className="font-medium">Có {pagination.total} hoạt động cần phê duyệt</span>
               </div>
             </div>
 
@@ -175,6 +180,35 @@ export default function PendingActivitiesPage() {
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {activities.length > 0 && (
+          <div className="mt-6 flex items-center justify-between rounded-lg bg-white p-4 shadow">
+            <p className="text-sm text-gray-700">
+              Hiển thị <span className="font-medium">{(pagination.page - 1) * pagination.limit + 1}</span>-<span className="font-medium">{Math.min(pagination.page * pagination.limit, pagination.total)}</span> trong tổng số <span className="font-medium">{pagination.total}</span> hoạt động chờ duyệt
+            </p>
+            {pagination.pages > 1 && (
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                  disabled={pagination.page === 1}
+                  className="rounded border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  ← Trước
+                </button>
+                <span className="rounded border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700">
+                  Trang {pagination.page}/{pagination.pages}
+                </span>
+                <button
+                  onClick={() => setPage((prev) => Math.min(pagination.pages, prev + 1))}
+                  disabled={pagination.page === pagination.pages}
+                  className="rounded border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Tiếp →
+                </button>
+              </div>
+            )}
           </div>
         )}
 
