@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     if (!hasLegacy && !hasMandatory && !hasVoluntary) {
       return errorResponse(
         ApiError.validation(
-          'Can gui it nhat mot trong cac truong class_ids, mandatory_class_ids, voluntary_class_ids'
+          'Cần gửi ít nhất một trong các trường class_ids, mandatory_class_ids hoặc voluntary_class_ids'
         )
       );
     }
@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
 
     if (accessibleClasses.length !== classIds.length) {
       return errorResponse(
-        ApiError.forbidden('Ban chi co the preview danh sach cho cac lop nam trong pham vi cua minh')
+        ApiError.forbidden('Bạn chỉ có thể xem trước danh sách của các lớp thuộc phạm vi quản lý của mình')
       );
     }
 
@@ -158,6 +158,6 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: any) {
     console.error('Participation preview error:', error);
-    return errorResponse(ApiError.internalError('Khong the tai preview tham gia', error?.message));
+    return errorResponse(ApiError.internalError('Không thể tải danh sách xem trước tham gia', error?.message));
   }
 }

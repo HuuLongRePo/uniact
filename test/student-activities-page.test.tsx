@@ -102,10 +102,10 @@ describe('StudentActivitiesPage registration conflict flow', () => {
           activities: [
             {
               id: 10,
-              title: 'Hoat dong A',
-              description: 'Mo ta A',
+              title: 'Hoạt động A',
+              description: 'Mô tả A',
               date_time: '2099-04-12T08:00:00.000Z',
-              location: 'Hoi truong A',
+              location: 'Hội trường A',
               teacher_name: 'Teacher A',
               participant_count: 5,
               max_participants: 20,
@@ -128,14 +128,14 @@ describe('StudentActivitiesPage registration conflict flow', () => {
         return jsonResponse(
           {
             success: false,
-            error: 'Ban da dang ky hoat dong khac trung gio bat dau. Xac nhan de tiep tuc.',
+            error: 'Bạn đã đăng ký hoạt động khác trùng giờ bắt đầu. Xác nhận để tiếp tục.',
             code: 'CONFLICT',
             details: {
               can_override: true,
               conflicts: [
                 {
                   id: 77,
-                  title: 'Hoat dong bi trung',
+                  title: 'Hoạt động bị trùng',
                   date_time: '2099-04-12T08:00:00.000Z',
                   location: 'Phong B',
                 },
@@ -154,11 +154,11 @@ describe('StudentActivitiesPage registration conflict flow', () => {
 
     render(<StudentActivitiesPage />);
 
-    expect(await screen.findByText('Hoat dong A')).toBeInTheDocument();
+    expect(await screen.findByText('Hoạt động A')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Đăng ký ngay' }));
 
     expect(await screen.findByText('Xung đột giờ bắt đầu')).toBeInTheDocument();
-    expect(screen.getByText('Hoat dong bi trung')).toBeInTheDocument();
+    expect(screen.getByText('Hoạt động bị trùng')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Vẫn đăng ký' }));
 
@@ -189,24 +189,24 @@ describe('StudentActivitiesPage registration conflict flow', () => {
           activities: [
             {
               id: 10,
-              title: 'Hoat dong ap dung',
-              description: 'Mo ta A',
+              title: 'Hoạt động áp dụng',
+              description: 'Mô tả A',
               date_time: '2099-04-12T08:00:00.000Z',
-              location: 'Hoi truong A',
+              location: 'Hội trường A',
               teacher_name: 'Teacher A',
               participant_count: 5,
               max_participants: 20,
               status: 'published',
               is_registered: false,
               applies_to_student: true,
-              applicability_reason: 'Ap dung vi lop cua ban nam trong pham vi hoat dong.',
-              activity_type: 'Tinh nguyen',
-              organization_level: 'Cap truong',
+              applicability_reason: 'Áp dụng vì lớp của bạn nằm trong phạm vi hoạt động.',
+              activity_type: 'Tình nguyện',
+              organization_level: 'Cấp trường',
             },
             {
               id: 11,
-              title: 'Hoat dong lop khac',
-              description: 'Mo ta B',
+              title: 'Hoạt động lớp khác',
+              description: 'Mô tả B',
               date_time: '2099-04-13T08:00:00.000Z',
               location: 'Phong B',
               teacher_name: 'Teacher B',
@@ -216,9 +216,9 @@ describe('StudentActivitiesPage registration conflict flow', () => {
               is_registered: false,
               applies_to_student: false,
               applicability_reason:
-                'Khong thuoc pham vi cua ban vi hoat dong dang danh rieng cho lop khac.',
-              activity_type: 'Hoc thuat',
-              organization_level: 'Cap khoa',
+                'Không thuộc phạm vi của bạn vì hoạt động đang dành riêng cho lớp khác.',
+              activity_type: 'Học thuật',
+              organization_level: 'Cấp khoa',
             },
           ],
         });
@@ -231,12 +231,12 @@ describe('StudentActivitiesPage registration conflict flow', () => {
 
     render(<StudentActivitiesPage />);
 
-    expect(await screen.findByText('Hoat dong ap dung')).toBeInTheDocument();
-    expect(screen.queryByText('Hoat dong lop khac')).not.toBeInTheDocument();
+    expect(await screen.findByText('Hoạt động áp dụng')).toBeInTheDocument();
+    expect(screen.queryByText('Hoạt động lớp khác')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Không thuộc phạm vi của bạn' }));
 
-    expect(await screen.findByText('Hoat dong lop khac')).toBeInTheDocument();
+    expect(await screen.findByText('Hoạt động lớp khác')).toBeInTheDocument();
     expect(
       screen.getByText('Không thể đăng ký vì hoạt động này không áp dụng cho bạn')
     ).toBeInTheDocument();
@@ -257,7 +257,7 @@ describe('StudentActivitiesPage registration conflict flow', () => {
             {
               id: 12,
               title: 'Mandatory Activity',
-              description: 'Mo ta M',
+              description: 'Mô tả M',
               date_time: '2099-04-20T08:00:00.000Z',
               location: 'Hall M',
               teacher_name: 'Teacher M',
@@ -269,9 +269,9 @@ describe('StudentActivitiesPage registration conflict flow', () => {
               is_mandatory: true,
               can_cancel: false,
               applies_to_student: true,
-              applicability_reason: 'Ap dung vi lop cua ban nam trong pham vi hoat dong.',
-              activity_type: 'Tinh nguyen',
-              organization_level: 'Cap truong',
+              applicability_reason: 'Áp dụng vì lớp của bạn nằm trong phạm vi hoạt động.',
+              activity_type: 'Tình nguyện',
+              organization_level: 'Cấp trường',
             },
           ],
         });
@@ -285,7 +285,7 @@ describe('StudentActivitiesPage registration conflict flow', () => {
     render(<StudentActivitiesPage />);
 
     expect(await screen.findByText('Mandatory Activity')).toBeInTheDocument();
-    expect(screen.getAllByText('Bắt buộc với bạn').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Bắt buộc tham gia').length).toBeGreaterThan(0);
     expect(
       screen.getByText('Bạn đã được xếp vào danh sách tham gia bắt buộc nên không thể tự hủy đăng ký')
     ).toBeInTheDocument();

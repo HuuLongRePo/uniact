@@ -338,7 +338,7 @@ export default function StudentActivitiesPage() {
               activity.applicability_reason ||
               (appliesToStudent
                 ? 'Hoạt động này đang áp dụng cho bạn.'
-                : 'Hoạt động này hiện không áp dụng cho bạn.');
+                : 'Bạn không thể đăng ký vì hoạt động này không áp dụng cho bạn.');
 
             return (
               <div
@@ -374,11 +374,11 @@ export default function StudentActivitiesPage() {
                         : 'bg-amber-100 text-amber-800'
                     }`}
                   >
-                    {appliesToStudent ? 'Áp dụng với bạn' : 'Không thuộc phạm vi của bạn'}
+                    {appliesToStudent ? 'Áp dụng với bạn' : 'Không áp dụng cho bạn'}
                   </span>
                   {isMandatory && (
                     <span className="bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded">
-                      Bắt buộc với bạn
+                      Bắt buộc tham gia
                     </span>
                   )}
                 </div>
@@ -434,7 +434,7 @@ export default function StudentActivitiesPage() {
                           : 'bg-green-50 border-green-200 text-green-700'
                       }`}
                     >
-                      {isMandatory ? 'Bắt buộc với bạn' : '✅ Đã đăng ký'}
+                      {isMandatory ? 'Bắt buộc tham gia' : '✅ Đã đăng ký'}
                     </div>
                     {isMandatory ? (
                       <p className="text-xs text-gray-500 text-center">

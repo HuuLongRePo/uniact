@@ -56,13 +56,13 @@ describe('EditActivityPage participation preview', () => {
         return jsonResponse({
           activity: {
             id: 55,
-            title: 'Hoat dong cu',
-            description: 'Mo ta cu',
+            title: 'Hoạt động cũ',
+            description: 'Mô tả cũ',
             date_time: '2026-04-25T08:30:00.000Z',
             location: 'Phong A1',
             status: 'draft',
             approval_status: 'rejected',
-            rejected_reason: 'Can bo sung thong tin',
+            rejected_reason: 'Cần bổ sung thông tin',
             max_participants: null,
             activity_type_id: 5,
             organization_level_id: 7,
@@ -79,11 +79,11 @@ describe('EditActivityPage participation preview', () => {
       }
 
       if (url === '/api/activity-types') {
-        return jsonResponse({ types: [{ id: 5, name: 'Tinh nguyen' }] });
+        return jsonResponse({ types: [{ id: 5, name: 'Tình nguyện' }] });
       }
 
       if (url === '/api/organization-levels') {
-        return jsonResponse({ levels: [{ id: 7, name: 'Cap truong' }] });
+        return jsonResponse({ levels: [{ id: 7, name: 'Cấp trường' }] });
       }
 
       if (url === '/api/activities/participation-preview' && init?.method === 'POST') {
@@ -123,11 +123,11 @@ describe('EditActivityPage participation preview', () => {
 
     render(<EditActivityPage params={Promise.resolve({ id: '55' })} />);
 
-    expect(await screen.findByText('Hoat dong bi tu choi')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Xem preview tham gia' }));
+    expect(await screen.findByText('Hoạt động bị từ chối')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Xem trước danh sách tham gia' }));
 
     await waitFor(() => {
-      expect(screen.getByText('Preview participation hien tai')).toBeInTheDocument();
+      expect(screen.getByText('Xem trước danh sách tham gia hiện tại')).toBeInTheDocument();
     });
 
     expect(screen.getAllByText(/CNTT K18A/i).length).toBeGreaterThan(0);

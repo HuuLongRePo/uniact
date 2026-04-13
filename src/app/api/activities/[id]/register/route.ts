@@ -28,7 +28,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const rl = rateLimit(request, 30, 60 * 1000);
     if (!rl.allowed) {
       return errorResponse(
-        new ApiError('RATE_LIMITED', 'Too many registration requests', 429)
+        new ApiError('RATE_LIMITED', 'Bạn gửi yêu cầu đăng ký quá nhanh, vui lòng thử lại sau', 429)
       );
     }
 
@@ -120,7 +120,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     if (mandatoryClassMatch) {
       return errorResponse(
         ApiError.validation(
-          'Hoat dong nay ap dung bat buoc voi lop cua ban. Ban khong can tu dang ky.'
+          'Hoạt động này áp dụng bắt buộc với lớp của bạn. Bạn không cần tự đăng ký.'
         )
       );
     }
@@ -137,7 +137,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           ApiError.conflict('Bạn đã đăng ký hoạt động khác trùng giờ bắt đầu. Xác nhận để tiếp tục.', {
             conflicts: policy.conflicts,
             can_override: policy.can_override,
-            hint: 'Gửi lại request với {"force_register": true} để bỏ qua cảnh báo trùng giờ bắt đầu',
+            hint: 'Gửi lại yêu cầu với {"force_register": true} để bỏ qua cảnh báo trùng giờ bắt đầu',
           })
         );
       }

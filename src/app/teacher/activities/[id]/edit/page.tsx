@@ -141,7 +141,7 @@ export default function EditActivityPage({
         const data = await response.json().catch(() => null);
 
         if (!response.ok) {
-          throw new Error(data?.error || 'Khong the tai preview tham gia');
+          throw new Error(data?.error || 'Không thể tải danh sách xem trước tham gia');
         }
 
         if (!active) return;
@@ -149,7 +149,7 @@ export default function EditActivityPage({
       } catch (error) {
         if (!active) return;
         setParticipationPreview(null);
-        setPreviewError(getErrorMessage(error, 'Khong the tai preview tham gia'));
+        setPreviewError(getErrorMessage(error, 'Không thể tải danh sách xem trước tham gia'));
       } finally {
         if (active) {
           setPreviewLoading(false);
@@ -176,12 +176,12 @@ export default function EditActivityPage({
       ]);
 
       if (!activityRes.ok) {
-        throw new Error('Khong the tai hoat dong');
+        throw new Error('Không thể tải hoạt động');
       }
 
       const nextActivity = extractActivity(await activityRes.json());
       if (!canEditActivity(nextActivity)) {
-        toast.error('Chi co the chinh sua hoat dong nhap hoac bi tu choi');
+        toast.error('Chỉ có thể chỉnh sửa hoạt động nháp hoặc bị từ chối');
         router.push('/teacher/activities');
         return;
       }
@@ -232,7 +232,7 @@ export default function EditActivityPage({
       }
     } catch (error) {
       console.error(error);
-      toast.error('Khong the tai du lieu');
+      toast.error('Không thể tải dữ liệu');
       router.push('/teacher/activities');
     } finally {
       setLoading(false);
@@ -241,27 +241,27 @@ export default function EditActivityPage({
 
   const submitActivity = async (mode: 'draft' | 'submit') => {
     if (!title.trim()) {
-      toast.error('Vui long nhap ten hoat dong');
+      toast.error('Vui lòng nhập tên hoạt động');
       return;
     }
 
     if (!description.trim()) {
-      toast.error('Vui long nhap mo ta');
+      toast.error('Vui lòng nhập mô tả');
       return;
     }
 
     if (!date) {
-      toast.error('Vui long chon ngay');
+      toast.error('Vui lòng chọn ngày');
       return;
     }
 
     if (!location.trim()) {
-      toast.error('Vui long nhap dia diem');
+      toast.error('Vui lòng nhập địa điểm');
       return;
     }
 
     if (selectedClasses.length === 0) {
-      toast.error('Vui long chon it nhat mot lop');
+      toast.error('Vui lòng chọn ít nhất một lớp');
       return;
     }
 
@@ -302,16 +302,16 @@ export default function EditActivityPage({
           throw new Error(
             submitData?.message ||
               submitData?.error ||
-              'Hoat dong da cap nhat nhung gui duyet that bai'
+              'Hoạt động đã cập nhật nhưng gửi duyệt thất bại'
           );
         }
       }
 
-      toast.success(mode === 'draft' ? 'Luu nhap thanh cong' : 'Gui duyet thanh cong');
+      toast.success(mode === 'draft' ? 'Lưu nháp thành công' : 'Gửi duyệt thành công');
       router.push('/teacher/activities');
     } catch (error) {
       console.error(error);
-      toast.error(getErrorMessage(error, 'Khong the cap nhat hoat dong'));
+      toast.error(getErrorMessage(error, 'Không thể cập nhật hoạt động'));
     } finally {
       setSubmitting(false);
     }
@@ -340,7 +340,7 @@ export default function EditActivityPage({
       <div className="min-h-screen bg-gray-50 py-8">
         <div className="mx-auto max-w-4xl">
           <div className="rounded-lg border border-gray-200 bg-white p-12 text-center shadow">
-            <p className="text-gray-600">Khong tim thay hoat dong</p>
+            <p className="text-gray-600">Không tìm thấy hoạt động</p>
           </div>
         </div>
       </div>
@@ -359,13 +359,13 @@ export default function EditActivityPage({
             className="flex items-center gap-2 text-gray-600 transition hover:text-gray-900"
           >
             <ArrowLeft className="h-5 w-5" />
-            Quay lai
+            Quay lại
           </button>
 
           {!canEdit && (
             <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-red-700">
               <Lock className="h-5 w-5" />
-              <span className="font-medium">Khong the chinh sua hoat dong nay</span>
+              <span className="font-medium">Không thể chỉnh sửa hoạt động này</span>
             </div>
           )}
         </div>
@@ -374,13 +374,13 @@ export default function EditActivityPage({
           <div className="mb-6 flex gap-3 rounded-lg border border-orange-200 bg-orange-50 p-4">
             <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-orange-600" />
             <div>
-              <p className="font-medium text-orange-900">Hoat dong bi tu choi</p>
+              <p className="font-medium text-orange-900">Hoạt động bị từ chối</p>
               <p className="mt-1 text-sm text-orange-700">
-                Vui long cap nhat hoat dong va gui lai de duyet.
+                Vui lòng cập nhật hoạt động và gửi lại để duyệt.
               </p>
               {activity.rejected_reason && (
                 <p className="mt-2 text-sm text-orange-800">
-                  Ly do: {activity.rejected_reason}
+                  Lý do: {activity.rejected_reason}
                 </p>
               )}
             </div>
@@ -389,15 +389,15 @@ export default function EditActivityPage({
 
         <form onSubmit={handleFormSubmit} className="space-y-6">
           <div className="space-y-4 rounded-lg border border-gray-200 bg-white p-6 shadow">
-            <h2 className="text-lg font-bold text-gray-900">Thong tin hoat dong</h2>
+            <h2 className="text-lg font-bold text-gray-900">Thông tin hoạt động</h2>
 
             <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700">Ten hoat dong *</label>
+              <label className="mb-2 block text-sm font-medium text-gray-700">Tên hoạt động *</label>
               <input
                 type="text"
                 value={title}
                 onChange={(event) => setTitle(event.target.value)}
-                placeholder="Nhap ten hoat dong"
+                placeholder="Nhập tên hoạt động"
                 required
                 disabled={!canEdit}
                 className="w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
@@ -405,11 +405,11 @@ export default function EditActivityPage({
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700">Mo ta *</label>
+              <label className="mb-2 block text-sm font-medium text-gray-700">Mô tả *</label>
               <textarea
                 value={description}
                 onChange={(event) => setDescription(event.target.value)}
-                placeholder="Nhap mo ta chi tiet"
+                placeholder="Nhập mô tả chi tiết"
                 rows={4}
                 required
                 disabled={!canEdit}
@@ -419,11 +419,11 @@ export default function EditActivityPage({
           </div>
 
           <div className="space-y-4 rounded-lg border border-gray-200 bg-white p-6 shadow">
-            <h2 className="text-lg font-bold text-gray-900">Thoi gian va dia diem</h2>
+            <h2 className="text-lg font-bold text-gray-900">Thời gian và địa điểm</h2>
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700">Ngay *</label>
+                <label className="mb-2 block text-sm font-medium text-gray-700">Ngày *</label>
                 <input
                   type="date"
                   value={date}
@@ -435,7 +435,7 @@ export default function EditActivityPage({
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700">Gio</label>
+                <label className="mb-2 block text-sm font-medium text-gray-700">Giờ</label>
                 <input
                   type="time"
                   value={time}
@@ -446,12 +446,12 @@ export default function EditActivityPage({
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700">Dia diem *</label>
+                <label className="mb-2 block text-sm font-medium text-gray-700">Địa điểm *</label>
                 <input
                   type="text"
                   value={location}
                   onChange={(event) => setLocation(event.target.value)}
-                  placeholder="Nhap dia diem"
+                  placeholder="Nhập địa điểm"
                   required
                   disabled={!canEdit}
                   className="w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
@@ -461,12 +461,12 @@ export default function EditActivityPage({
           </div>
 
           <div className="space-y-4 rounded-lg border border-gray-200 bg-white p-6 shadow">
-            <h2 className="text-lg font-bold text-gray-900">Loai va dung luong</h2>
+            <h2 className="text-lg font-bold text-gray-900">Loại và dung lượng</h2>
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               <div>
                 <label className="mb-2 block text-sm font-medium text-gray-700">
-                  Loai hoat dong
+                  Loại hoạt động
                 </label>
                 <select
                   value={activityTypeId}
@@ -476,7 +476,7 @@ export default function EditActivityPage({
                   disabled={!canEdit}
                   className="w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
                 >
-                  <option value="">-- Chon loai --</option>
+                  <option value="">-- Chọn loại --</option>
                   {activityTypes.map((type) => (
                     <option key={type.id} value={type.id}>
                       {type.name}
@@ -487,7 +487,7 @@ export default function EditActivityPage({
 
               <div>
                 <label className="mb-2 block text-sm font-medium text-gray-700">
-                  Cap to chuc
+                  Cấp tổ chức
                 </label>
                 <select
                   value={organizationLevelId}
@@ -499,7 +499,7 @@ export default function EditActivityPage({
                   disabled={!canEdit}
                   className="w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
                 >
-                  <option value="">-- Chon cap --</option>
+                  <option value="">-- Chọn cấp --</option>
                   {organizationLevels.map((level) => (
                     <option key={level.id} value={level.id}>
                       {level.name}
@@ -510,7 +510,7 @@ export default function EditActivityPage({
 
               <div>
                 <label className="mb-2 block text-sm font-medium text-gray-700">
-                  So luong toi da
+                  Số lượng tối đa
                 </label>
                 <input
                   type="number"
@@ -518,31 +518,31 @@ export default function EditActivityPage({
                   onChange={(event) =>
                     setMaxParticipants(event.target.value ? parseInt(event.target.value, 10) : '')
                   }
-                  placeholder="So luong"
+                  placeholder="Số lượng"
                   disabled={!canEdit}
                   min="0"
                   className="w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
                 />
-                <p className="mt-1 text-xs text-gray-500">De trong se dung mac dinh 30.</p>
+                <p className="mt-1 text-xs text-gray-500">Để trống sẽ dùng mặc định 30.</p>
               </div>
             </div>
           </div>
 
           <div className="space-y-4 rounded-lg border border-gray-200 bg-white p-6 shadow">
             <div className="flex items-center justify-between gap-4">
-              <h2 className="text-lg font-bold text-gray-900">Lop hoc *</h2>
+              <h2 className="text-lg font-bold text-gray-900">Phạm vi lớp áp dụng *</h2>
               <button
                 type="button"
                 onClick={() => setShowParticipationPreview((current) => !current)}
                 disabled={!canEdit}
                 className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {showParticipationPreview ? 'An preview tham gia' : 'Xem preview tham gia'}
+                {showParticipationPreview ? 'Ẩn xem trước danh sách tham gia' : 'Xem trước danh sách tham gia'}
               </button>
             </div>
             <div className="space-y-2">
               {classes.length === 0 ? (
-                <p className="text-gray-600">Khong co lop nao</p>
+                <p className="text-gray-600">Không có lớp nào</p>
               ) : (
                 classes.map((item) => (
                   <label
@@ -580,16 +580,16 @@ export default function EditActivityPage({
             {showParticipationPreview && (
               <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
                 <div className="mb-2 text-sm font-semibold text-blue-900">
-                  Preview participation hien tai
+                  Xem trước danh sách tham gia hiện tại
                 </div>
                 {selectedClasses.length === 0 ? (
                   <p className="text-sm text-gray-600">
-                    Chon it nhat mot lop de xem danh sach tham gia bat buoc.
+                    Chọn ít nhất một lớp để xem danh sách dự kiến theo phạm vi bắt buộc hoặc tự nguyện.
                   </p>
                 ) : previewLoading ? (
                   <div className="flex items-center gap-2 text-sm text-blue-700">
                     <div className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-blue-200 border-t-blue-600" />
-                    Dang tai preview...
+                    Đang tải danh sách xem trước...
                   </div>
                 ) : previewError ? (
                   <p className="text-sm text-red-600">{previewError}</p>
@@ -597,21 +597,21 @@ export default function EditActivityPage({
                   <div className="space-y-3">
                     <div className="grid grid-cols-2 gap-2 text-sm">
                       <div className="rounded-lg bg-white p-3">
-                        <div className="text-gray-500">So lop</div>
+                        <div className="text-gray-500">Số lớp</div>
                         <div className="text-lg font-bold text-gray-900">
                           {participationPreview.total_classes}
                         </div>
                       </div>
                       <div className="rounded-lg bg-white p-3">
-                        <div className="text-gray-500">Bat buoc</div>
+                        <div className="text-gray-500">Bắt buộc</div>
                         <div className="text-lg font-bold text-orange-700">
                           {participationPreview.mandatory_participants}
                         </div>
                       </div>
                     </div>
                     <div className="text-xs text-gray-600">
-                      Preview hien tai dang nhom theo lop. Backbone se mo rong them voluntary va
-                      conflict preview o batch sau.
+                      Danh sách hiện được nhóm theo lớp. Nếu một lớp xuất hiện ở cả hai nhóm,
+                      hệ thống sẽ ưu tiên bắt buộc hơn tự nguyện.
                     </div>
                     <div className="space-y-2">
                       {participationPreview.groups.map((group) => (
@@ -620,7 +620,7 @@ export default function EditActivityPage({
                           className="rounded-lg border border-blue-200 bg-white p-3"
                         >
                           <summary className="cursor-pointer list-none font-medium text-gray-800">
-                            {group.class_name} • {group.mandatory_count} hoc vien bat buoc
+                            {group.class_name} • {group.mandatory_count} học viên bắt buộc
                           </summary>
                           <div className="mt-2 space-y-1 text-sm text-gray-600">
                             {group.students.map((student) => (
@@ -650,7 +650,7 @@ export default function EditActivityPage({
                 className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-gray-200 px-6 py-3 font-bold text-gray-700 transition hover:bg-gray-300 disabled:opacity-50"
               >
                 <Save className="h-5 w-5" />
-                Luu nhap
+                Lưu nháp
               </button>
               <button
                 type="button"
@@ -659,7 +659,7 @@ export default function EditActivityPage({
                 className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-blue-600 px-6 py-3 font-bold text-white transition hover:bg-blue-700 disabled:opacity-50"
               >
                 <Send className="h-5 w-5" />
-                Gui duyet
+                Gửi duyệt
               </button>
             </div>
           )}

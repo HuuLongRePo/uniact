@@ -92,10 +92,10 @@ describe('CreateActivityPage participation preview', () => {
     mandatorySelect.options[0].selected = true;
     fireEvent.change(mandatorySelect);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Xem preview tham gia' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Xem trước danh sách tham gia' }));
 
     await waitFor(() => {
-      expect(screen.getByText('Preview participation hien tai')).toBeInTheDocument();
+      expect(screen.getByText('Xem trước danh sách tham gia hiện tại')).toBeInTheDocument();
     });
 
     expect(screen.getAllByText(/CNTT K18A/i).length).toBeGreaterThan(0);
