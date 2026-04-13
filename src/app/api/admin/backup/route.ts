@@ -1,31 +1,27 @@
-import { NextResponse } from 'next/server';
-import { getUserFromSession } from '@/lib/auth';
+import { NextRequest, NextResponse } from 'next/server';
+import { requireApiRole } from '@/lib/guards';
+import { ApiError, errorResponse } from '@/lib/api-response';
 import fs from 'fs';
 import path from 'path';
 
 // POST - Tạo backup ngay
-export async function POST() {
+export async function POST(request: NextRequest) {
   try {
-    const user = await getUserFromSession();
+    await requireApiRole(request, ['admin']);
 
-    if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
-    }
-
-    const dbPath = process.env.DATABASE_PATH || './uniact.db';
+    const configuredPath = process.env.DATABASE_PATH || './uniact.db';
+    const dbPath = path.isAbsolute(configuredPath)
+      ? configuredPath
+      : path.join(process.cwd(), configuredPath);
 
     if (!fs.existsSync(dbPath)) {
-      return NextResponse.json({ error: 'Database not found' }, { status: 404 });
+      return errorResponse(ApiError.notFound('Không tìm thấy cơ sở dữ liệu'));
     }
 
-    // Đọc file database
     const dbBuffer = fs.readFileSync(dbPath);
-
-    // Tạo tên file backup
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const filename = `uniact-${timestamp}.db`;
 
-    // Trả về file backup
     return new NextResponse(dbBuffer, {
       headers: {
         'Content-Type': 'application/octet-stream',
@@ -35,6 +31,11 @@ export async function POST() {
     });
   } catch (error: any) {
     console.error('POST /api/admin/backup error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return errorResponse(
+      error instanceof ApiError ||
+        (error && typeof error.status === 'number' && typeof error.code === 'string')
+        ? error
+        : ApiError.internalError('Không thể tạo file backup', { details: error?.message })
+    );
   }
 }

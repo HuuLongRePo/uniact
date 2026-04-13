@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { dbAll, dbGet } from '@/lib/database';
-import { getUserFromSession } from '@/lib/auth';
+import { requireApiRole } from '@/lib/guards';
+import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
 
 interface RankingRecord {
   rank: number;
@@ -17,15 +18,11 @@ interface RankingRecord {
 
 export async function GET(req: NextRequest) {
   try {
-    const user = await getUserFromSession();
-
-    if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
-    }
+    await requireApiRole(req, ['admin']);
 
     const { searchParams } = new URL(req.url);
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '25');
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '25', 10) || 25));
     const classId = searchParams.get('class_id') ? parseInt(searchParams.get('class_id')!) : null;
     const orgLevelId = searchParams.get('org_level_id')
       ? parseInt(searchParams.get('org_level_id')!)
@@ -190,8 +187,8 @@ export async function GET(req: NextRequest) {
       };
     });
 
-    return NextResponse.json({
-      data: rankedResults,
+    return successResponse({
+      rankings: rankedResults,
       pagination: {
         page,
         limit,
@@ -206,8 +203,13 @@ export async function GET(req: NextRequest) {
         sort_by: sortBy,
       },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Rankings error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return errorResponse(
+      error instanceof ApiError ||
+        (error && typeof error.status === 'number' && typeof error.code === 'string')
+        ? error
+        : ApiError.internalError('Không thể tải bảng xếp hạng', { details: error?.message })
+    );
   }
 }
