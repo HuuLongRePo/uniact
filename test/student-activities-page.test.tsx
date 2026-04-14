@@ -64,7 +64,7 @@ describe('StudentActivitiesPage', () => {
         return jsonResponse({ types: [{ id: 1, name: 'Tình nguyện', base_points: 5 }] });
       }
 
-      if (url.endsWith('/api/activities')) {
+      if (url.includes('/api/activities?')) {
         return jsonResponse({
           activities: [
             {
@@ -123,7 +123,7 @@ describe('StudentActivitiesPage', () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
       if (url.endsWith('/api/activity-types')) return jsonResponse({ types: [] });
-      if (url.endsWith('/api/activities')) {
+      if (url.includes('/api/activities?')) {
         return jsonResponse({
           activities: [
             {

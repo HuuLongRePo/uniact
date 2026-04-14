@@ -38,6 +38,9 @@ export default function StudentActivitiesPage() {
   const [activities, setActivities] = useState<ActivitySummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'upcoming' | 'all'>('upcoming');
+  const [page, setPage] = useState(1);
+  const [limit] = useState(12);
+  const [total, setTotal] = useState(0);
   const [registering, setRegistering] = useState<number | null>(null);
   const [cancelModalActivity, setCancelModalActivity] = useState<ActivitySummary | null>(null);
   const [registerConflict, setRegisterConflict] = useState<RegistrationConflictState | null>(null);
@@ -57,7 +60,7 @@ export default function StudentActivitiesPage() {
       void fetchActivities();
       void fetchActivityTypes();
     }
-  }, [user, authLoading, router]);
+  }, [user, authLoading, router, page, limit]);
 
   const fetchActivityTypes = async () => {
     try {
@@ -74,9 +77,19 @@ export default function StudentActivitiesPage() {
   const fetchActivities = async () => {
     setLoading(true);
     try {
-      const response = await fetch(resolveClientFetchUrl('/api/activities'));
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString(),
+      });
+      const response = await fetch(resolveClientFetchUrl(`/api/activities?${params}`));
       const data = await response.json();
-      setActivities(response.ok ? data.activities || [] : []);
+      if (response.ok) {
+        setActivities(data.activities || []);
+        setTotal(Number(data.total || 0));
+      } else {
+        setActivities([]);
+        setTotal(0);
+      }
     } catch (error) {
       console.error('Fetch activities error:', error);
       setActivities([]);
@@ -142,6 +155,10 @@ export default function StudentActivitiesPage() {
       setRegistering(null);
     }
   };
+
+  useEffect(() => {
+    setPage(1);
+  }, [filter, visibilityTab]);
 
   const filteredActivities = useMemo(() => {
     const now = new Date();
@@ -273,18 +290,47 @@ export default function StudentActivitiesPage() {
           message="Hiện chưa có hoạt động nào phù hợp với bộ lọc hiện tại."
         />
       ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {filteredActivities.map((activity) => (
-            <StudentActivityCard
-              key={activity.id}
-              activity={activity}
-              registering={registering}
-              onView={(id) => router.push(`/student/activities/${id}`)}
-              onRegister={(id) => handleRegister(id)}
-              onCancel={(selectedActivity) => setCancelModalActivity(selectedActivity)}
-            />
-          ))}
-        </div>
+        <>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {filteredActivities.map((activity) => (
+              <StudentActivityCard
+                key={activity.id}
+                activity={activity}
+                registering={registering}
+                onView={(id) => router.push(`/student/activities/${id}`)}
+                onRegister={(id) => handleRegister(id)}
+                onCancel={(selectedActivity) => setCancelModalActivity(selectedActivity)}
+              />
+            ))}
+          </div>
+
+          <div className="mt-6 flex items-center justify-between rounded-lg bg-white p-4 shadow">
+            <p className="text-sm text-gray-700">
+              Hiển thị <span className="font-medium">{(page - 1) * limit + 1}</span>-<span className="font-medium">{Math.min(page * limit, total)}</span> trong tổng số <span className="font-medium">{total}</span> hoạt động
+            </p>
+            {total > limit && (
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                  disabled={page === 1}
+                  className="rounded border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  ← Trước
+                </button>
+                <span className="rounded border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700">
+                  Trang {page}/{Math.max(1, Math.ceil(total / limit))}
+                </span>
+                <button
+                  onClick={() => setPage((prev) => Math.min(Math.max(1, Math.ceil(total / limit)), prev + 1))}
+                  disabled={page >= Math.max(1, Math.ceil(total / limit))}
+                  className="rounded border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Tiếp →
+                </button>
+              </div>
+            )}
+          </div>
+        </>
       )}
 
       <ConfirmationModal
