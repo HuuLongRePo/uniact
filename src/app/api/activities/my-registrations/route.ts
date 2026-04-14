@@ -52,7 +52,15 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    return successResponse({ registrations: categorized, total: registrations.length });
+    return successResponse({
+      registrations: categorized,
+      summary: {
+        upcoming: categorized.upcoming.length,
+        completed: categorized.completed.length,
+        cancelled: categorized.cancelled.length,
+      },
+      total: registrations.length,
+    });
   } catch (error: any) {
     console.error('Get my registrations error:', error);
     return errorResponse(

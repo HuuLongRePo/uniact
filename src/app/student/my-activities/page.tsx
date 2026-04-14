@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import LoadingSpinner from '@/components/LoadingSpinner';
@@ -40,6 +40,8 @@ export default function MyActivitiesPage() {
   });
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<'upcoming' | 'completed' | 'cancelled'>('upcoming');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<'date_desc' | 'date_asc' | 'title'>('date_desc');
   const [upcomingReminders, setUpcomingReminders] = useState<number[]>([]); // Activities happening soon
   const [cancelTarget, setCancelTarget] = useState<Registration | null>(null);
   const [cancelingActivityId, setCancelingActivityId] = useState<number | null>(null);
@@ -129,7 +131,28 @@ export default function MyActivitiesPage() {
     return null;
   }
 
-  const currentList = registrations[tab];
+  const currentList = useMemo(() => {
+    const list = [...registrations[tab]];
+
+    const filtered = list.filter((reg) => {
+      if (!searchQuery.trim()) return true;
+      const query = searchQuery.trim().toLowerCase();
+      return (
+        reg.title.toLowerCase().includes(query) ||
+        reg.description.toLowerCase().includes(query) ||
+        reg.location.toLowerCase().includes(query)
+      );
+    });
+
+    filtered.sort((a, b) => {
+      if (sortBy === 'title') return a.title.localeCompare(b.title, 'vi');
+      const timeA = new Date(a.date_time).getTime();
+      const timeB = new Date(b.date_time).getTime();
+      return sortBy === 'date_asc' ? timeA - timeB : timeB - timeA;
+    });
+
+    return filtered;
+  }, [registrations, tab, searchQuery, sortBy]);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -193,10 +216,37 @@ export default function MyActivitiesPage() {
         </button>
       </div>
 
+      <div className="mb-6 rounded-lg bg-white p-4 shadow">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div>
+            <label className="mb-2 block text-sm font-medium text-gray-700">🔍 Tìm kiếm</label>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Tìm theo tên, mô tả hoặc địa điểm..."
+              className="w-full rounded-lg border px-3 py-2"
+            />
+          </div>
+          <div>
+            <label className="mb-2 block text-sm font-medium text-gray-700">↕️ Sắp xếp</label>
+            <select
+              value={sortBy}
+              onChange={(event) => setSortBy(event.target.value as 'date_desc' | 'date_asc' | 'title')}
+              className="w-full rounded-lg border px-3 py-2"
+            >
+              <option value="date_desc">Mới nhất</option>
+              <option value="date_asc">Cũ nhất</option>
+              <option value="title">Theo tên A-Z</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
       {/* List */}
       {currentList.length === 0 ? (
         <div className="text-center py-12 bg-gray-50 rounded-lg">
-          <p className="text-gray-500 text-lg">Chưa có hoạt động nào</p>
+          <p className="text-gray-500 text-lg">Chưa có hoạt động nào phù hợp</p>
         </div>
       ) : (
         <div className="space-y-4">
