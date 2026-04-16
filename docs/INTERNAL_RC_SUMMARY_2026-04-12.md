@@ -49,6 +49,17 @@ Recommended wording for the current repo state:
 3. Continue targeted dependency/security remediation from the improved baseline.
 4. Promote this into a stronger internal RC milestone note/tag once the current runtime-smoke and regression baseline stay stable together.
 
+## Verification note from latest release-prep pass
+
+A later release-prep verification pass surfaced an important operational lesson:
+- running multiple build-oriented verification jobs in parallel can destabilize `.next` artifacts and produce false-negative `ENOENT` failures during late build stages such as SSG manifest or NFT trace collection
+- a clean rebuild after removing `.next` completed successfully, which is a stronger signal that the issue was build artifact/race drift rather than an application compile/type failure
+- a backbone Vitest bundle also hit worker startup timeouts under load, but the affected test files passed when rerun in a narrower scope, suggesting pool saturation rather than route/page regression
+
+Recommended interpretation:
+- prefer serialized release verification for Next.js build gates that share `.next`
+- treat worker-timeout failures in large bundles carefully until they are reproduced as assertion failures or single-file failures
+
 ## New runtime confidence gained
 
 Since the original RC-prep summary, UniAct has also gained a stronger practical runtime signal:

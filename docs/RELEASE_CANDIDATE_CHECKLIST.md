@@ -84,3 +84,9 @@ npm test -- --reporter dot \
 3. Keep the production build + targeted production-runtime smoke for admin/teacher/student key flows green.
 4. Continue targeted dependency remediation after the smoke baseline remains stable.
 5. Tag an internal RC milestone only after docs, regression baseline, and runtime smoke remain stable together.
+
+## Latest verification caveats
+
+- Avoid overlapping `next build` or release-check jobs that share the same `.next` directory during final verification.
+- If a late-stage build fails with missing `.next` manifest/trace artifacts (`_ssgManifest`, `.nft.json`, similar ENOENTs), rerun from a clean `.next` state before treating it as an application blocker.
+- If a large Vitest bundle fails via worker startup timeout, rerun the affected files in narrower scope before classifying the result as a regression.
