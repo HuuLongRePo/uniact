@@ -182,8 +182,7 @@ export default function StudentPointsBreakdownPage() {
                       <div>
                         <h3 className="font-semibold">{activity.title}</h3>
                         <div className="text-sm text-gray-600">
-                          {new Date(activity.date_time).toLocaleDateString('vi-VN')}{' '}
-                          •
+                          {new Date(activity.date_time).toLocaleDateString('vi-VN')} •
                           {activity.activity_type} • {activity.organization_level}
                         </div>
                       </div>

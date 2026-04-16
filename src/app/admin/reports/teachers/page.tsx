@@ -120,9 +120,7 @@ export default function TeacherReportPage() {
     } catch (error) {
       console.error('Teacher report fetch error:', error);
       setTeachers([]);
-      setErrorMessage(
-        error instanceof Error ? error.message : 'Không thể tải báo cáo giảng viên.'
-      );
+      setErrorMessage(error instanceof Error ? error.message : 'Không thể tải báo cáo giảng viên.');
     } finally {
       setLoading(false);
     }
@@ -306,7 +304,9 @@ export default function TeacherReportPage() {
                       <td className="px-4 py-3 text-sm font-medium text-gray-700">{index + 1}</td>
                       <td className="px-4 py-3">
                         <div className="font-medium text-gray-900">{teacher.name}</div>
-                        <div className="text-sm text-gray-500">{teacher.email || 'Chưa cập nhật'}</div>
+                        <div className="text-sm text-gray-500">
+                          {teacher.email || 'Chưa cập nhật'}
+                        </div>
                       </td>
                       <td className="px-4 py-3 text-sm font-medium text-blue-600">
                         {teacher.totalActivitiesCreated}

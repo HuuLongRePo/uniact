@@ -133,7 +133,11 @@ export default function Sidebar() {
         { label: 'Loại hoạt động', href: '/admin/activity-types', icon: BookOpen },
         { label: 'Cấp độ tổ chức', href: '/admin/organization-levels', icon: Target },
         { label: 'Cài đặt QR', href: '/admin/system-config/qr-settings', icon: QrCode },
-        { label: 'Chính sách điểm danh', href: '/admin/system-config/attendance-policy', icon: Sliders },
+        {
+          label: 'Chính sách điểm danh',
+          href: '/admin/system-config/attendance-policy',
+          icon: Sliders,
+        },
         { label: 'Thiết kế QR', href: '/admin/system-config/qr-design', icon: Palette },
         {
           label: 'Hạn chót phê duyệt',

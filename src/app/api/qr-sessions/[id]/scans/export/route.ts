@@ -55,9 +55,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       user.role === 'teacher' &&
       !(await teacherCanAccessActivity(Number(user.id), Number(session.activity_id)))
     ) {
-      return errorResponse(
-        ApiError.forbidden('Bạn chỉ có thể xuất dữ liệu phiên QR do mình tạo')
-      );
+      return errorResponse(ApiError.forbidden('Bạn chỉ có thể xuất dữ liệu phiên QR do mình tạo'));
     }
 
     // 4. FETCH ATTENDANCE RECORDS WITH STUDENT & CLASS DATA
@@ -161,7 +159,12 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         (error && typeof error.status === 'number' && typeof error.code === 'string')
         ? error instanceof ApiError
           ? error
-          : new ApiError(error.code, error.message || 'Không thể xuất dữ liệu điểm danh', error.status, error.details)
+          : new ApiError(
+              error.code,
+              error.message || 'Không thể xuất dữ liệu điểm danh',
+              error.status,
+              error.details
+            )
         : ApiError.internalError('Không thể xuất dữ liệu điểm danh')
     );
   }

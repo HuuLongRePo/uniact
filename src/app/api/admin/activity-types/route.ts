@@ -22,7 +22,9 @@ export async function GET(request: NextRequest) {
       error instanceof ApiError ||
         (error && typeof error.status === 'number' && typeof error.code === 'string')
         ? error
-        : ApiError.internalError('Không thể tải danh sách loại hoạt động', { details: error?.message })
+        : ApiError.internalError('Không thể tải danh sách loại hoạt động', {
+            details: error?.message,
+          })
     );
   }
 }
@@ -68,7 +70,11 @@ export async function POST(request: NextRequest) {
       ]
     );
 
-    return successResponse({ id: result.lastID, name, multiplier, description }, 'Tạo loại hoạt động thành công', 201);
+    return successResponse(
+      { id: result.lastID, name, multiplier, description },
+      'Tạo loại hoạt động thành công',
+      201
+    );
   } catch (error: any) {
     console.error('Error creating activity type:', error);
     return errorResponse(

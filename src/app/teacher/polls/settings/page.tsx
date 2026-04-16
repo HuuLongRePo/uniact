@@ -480,9 +480,7 @@ export default function PollSettingsPage() {
           isOpen={templateToDelete !== null}
           title="Xóa mẫu bình chọn"
           message={
-            templateToDelete
-              ? `Bạn có chắc chắn muốn xóa mẫu "${templateToDelete.name}"?`
-              : ''
+            templateToDelete ? `Bạn có chắc chắn muốn xóa mẫu "${templateToDelete.name}"?` : ''
           }
           confirmText="Xóa mẫu"
           cancelText="Hủy"

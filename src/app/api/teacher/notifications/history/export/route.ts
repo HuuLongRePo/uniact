@@ -76,10 +76,16 @@ export async function POST(request: NextRequest) {
       if (filters.readStatus === 'read' && !Number(row.is_read)) return false;
       if (filters.readStatus === 'unread' && Number(row.is_read)) return false;
       if (filters.classId && String(row.class_name || '') !== String(filters.classId)) return false;
-      if (filters.dateStart && new Date(String(row.sent_at || '')) < new Date(String(filters.dateStart))) {
+      if (
+        filters.dateStart &&
+        new Date(String(row.sent_at || '')) < new Date(String(filters.dateStart))
+      ) {
         return false;
       }
-      if (filters.dateEnd && new Date(String(row.sent_at || '')) > new Date(String(filters.dateEnd))) {
+      if (
+        filters.dateEnd &&
+        new Date(String(row.sent_at || '')) > new Date(String(filters.dateEnd))
+      ) {
         return false;
       }
       return true;

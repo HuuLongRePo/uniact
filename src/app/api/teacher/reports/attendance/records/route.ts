@@ -99,7 +99,9 @@ export async function GET(request: NextRequest) {
         class_name: String(r.class_name || ''),
         activity_name: String(r.activity_name || ''),
         activity_date: String(r.activity_date || ''),
-        status: formatAttendanceStatus(r.attendance_status as 'attended' | 'absent' | 'registered' | null) as AttendanceReportStatus,
+        status: formatAttendanceStatus(
+          r.attendance_status as 'attended' | 'absent' | 'registered' | null
+        ) as AttendanceReportStatus,
         method,
         check_in_time: r.check_in_time ? String(r.check_in_time) : undefined,
         notes: r.notes ? String(r.notes) : undefined,

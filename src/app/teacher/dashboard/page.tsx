@@ -127,13 +127,16 @@ export default function TeacherDashboardPage() {
         </div>
       </div>
 
-      <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-5" data-testid="attendance-policy-cta">
+      <div
+        className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-5"
+        data-testid="attendance-policy-cta"
+      >
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h2 className="text-lg font-bold text-blue-900">Điều phối điểm danh theo policy</h2>
             <p className="mt-1 text-sm text-blue-800">
-              Xem activity nào đủ điều kiện pilot face attendance, kiểm tra preset QR fallback,
-              và chuẩn bị phương án chuyển sang mixed/manual khi quá tải.
+              Xem activity nào đủ điều kiện pilot face attendance, kiểm tra preset QR fallback, và
+              chuẩn bị phương án chuyển sang mixed/manual khi quá tải.
             </p>
           </div>
           <Link

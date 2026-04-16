@@ -88,9 +88,7 @@ export async function GET(request: NextRequest) {
             : '0';
 
         const excludedClause =
-          excludedIds.length > 0
-            ? `AND a.id NOT IN (${excludedIds.map(() => '?').join(',')})`
-            : '';
+          excludedIds.length > 0 ? `AND a.id NOT IN (${excludedIds.map(() => '?').join(',')})` : '';
 
         const recommendationsQuery = `SELECT 
             a.id,
@@ -120,21 +118,20 @@ export async function GET(request: NextRequest) {
 
         const recommendationsParams = [...preferredTypeIds, ...excludedIds];
 
-        const recommendations = ((
-          await dbAll(recommendationsQuery, recommendationsParams)
-        ) as RecommendationQueryRow[]).map((item) => ({
-            ...item,
-            base_points: Number(item.base_points || 0),
-            current_participants: Number(item.current_participants || 0),
-            is_preferred_type: Boolean(Number(item.is_preferred_type || 0)),
-            reason: Number(item.is_preferred_type || 0)
-              ? 'Phù hợp với lịch sử tham gia của bạn'
-              : 'Phổ biến trong nhóm hoạt động bạn thường tham gia',
-            match_reason: Number(item.is_preferred_type || 0)
-              ? 'Phù hợp với lịch sử tham gia của bạn'
-              : 'Phổ biến trong nhóm hoạt động bạn thường tham gia',
-          })
-        );
+        const recommendations = (
+          (await dbAll(recommendationsQuery, recommendationsParams)) as RecommendationQueryRow[]
+        ).map((item) => ({
+          ...item,
+          base_points: Number(item.base_points || 0),
+          current_participants: Number(item.current_participants || 0),
+          is_preferred_type: Boolean(Number(item.is_preferred_type || 0)),
+          reason: Number(item.is_preferred_type || 0)
+            ? 'Phù hợp với lịch sử tham gia của bạn'
+            : 'Phổ biến trong nhóm hoạt động bạn thường tham gia',
+          match_reason: Number(item.is_preferred_type || 0)
+            ? 'Phù hợp với lịch sử tham gia của bạn'
+            : 'Phổ biến trong nhóm hoạt động bạn thường tham gia',
+        }));
 
         // If no recommendations found (new student or no upcoming activities in preferred types),
         // fallback to most popular upcoming activities
@@ -166,17 +163,16 @@ export async function GET(request: NextRequest) {
              ORDER BY current_participants DESC, a.date_time ASC
              LIMIT 5`;
 
-          const fallbackRecommendations = ((
-            await dbAll(fallbackQuery, excludedIds)
-          ) as RecommendationQueryRow[]).map((item) => ({
-              ...item,
-              base_points: Number(item.base_points || 0),
-              current_participants: Number(item.current_participants || 0),
-              is_preferred_type: false,
-              reason: 'Hoạt động được nhiều sinh viên quan tâm',
-              match_reason: 'Hoạt động được nhiều sinh viên quan tâm',
-            })
-          );
+          const fallbackRecommendations = (
+            (await dbAll(fallbackQuery, excludedIds)) as RecommendationQueryRow[]
+          ).map((item) => ({
+            ...item,
+            base_points: Number(item.base_points || 0),
+            current_participants: Number(item.current_participants || 0),
+            is_preferred_type: false,
+            reason: 'Hoạt động được nhiều sinh viên quan tâm',
+            match_reason: 'Hoạt động được nhiều sinh viên quan tâm',
+          }));
 
           return {
             items: fallbackRecommendations,

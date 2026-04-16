@@ -123,14 +123,6 @@ export default function MyActivitiesPage() {
     }
   };
 
-  if (authLoading || loading) {
-    return <LoadingSpinner />;
-  }
-
-  if (!user || user.role !== 'student') {
-    return null;
-  }
-
   const currentList = useMemo(() => {
     const list = [...registrations[tab]];
 
@@ -153,6 +145,14 @@ export default function MyActivitiesPage() {
 
     return filtered;
   }, [registrations, tab, searchQuery, sortBy]);
+
+  if (authLoading || loading) {
+    return <LoadingSpinner />;
+  }
+
+  if (!user || user.role !== 'student') {
+    return null;
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -232,7 +232,9 @@ export default function MyActivitiesPage() {
             <label className="mb-2 block text-sm font-medium text-gray-700">↕️ Sắp xếp</label>
             <select
               value={sortBy}
-              onChange={(event) => setSortBy(event.target.value as 'date_desc' | 'date_asc' | 'title')}
+              onChange={(event) =>
+                setSortBy(event.target.value as 'date_desc' | 'date_asc' | 'title')
+              }
               className="w-full rounded-lg border px-3 py-2"
             >
               <option value="date_desc">Mới nhất</option>

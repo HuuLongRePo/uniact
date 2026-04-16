@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import React from 'react';
 import { useParams } from 'next/navigation';
@@ -74,7 +74,9 @@ export default function StudentActivityCheckInPage() {
     <div className="max-w-xl mx-auto py-6 space-y-6">
       <header>
         <h1 className="text-xl font-semibold">Điểm danh hoạt động #{activityId}</h1>
-        <p className="text-sm text-gray-600">Quét QR hoặc dán dữ liệu mã QR để xác thực tham gia.</p>
+        <p className="text-sm text-gray-600">
+          Quét QR hoặc dán dữ liệu mã QR để xác thực tham gia.
+        </p>
       </header>
       <StudentQRScanner
         onScan={async (rawValue) => {

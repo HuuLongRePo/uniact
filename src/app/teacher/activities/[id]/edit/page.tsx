@@ -77,11 +77,7 @@ function getErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
 }
 
-export default function EditActivityPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default function EditActivityPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = React.use(params);
   const { id } = resolvedParams;
   const router = useRouter();
@@ -104,7 +100,9 @@ export default function EditActivityPage({
   const [activityTypes, setActivityTypes] = useState<ActivityType[]>([]);
   const [organizationLevels, setOrganizationLevels] = useState<OrganizationLevel[]>([]);
   const [showParticipationPreview, setShowParticipationPreview] = useState(false);
-  const [participationPreview, setParticipationPreview] = useState<ParticipationPreview | null>(null);
+  const [participationPreview, setParticipationPreview] = useState<ParticipationPreview | null>(
+    null
+  );
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const selectedClasses = Array.from(new Set([...mandatoryClassIds, ...voluntaryClassIds]));
@@ -221,7 +219,9 @@ export default function EditActivityPage({
 
       if (typesRes.ok) {
         const typesData = await typesRes.json();
-        setActivityTypes(typesData.activity_types || typesData.activityTypes || typesData.types || []);
+        setActivityTypes(
+          typesData.activity_types || typesData.activityTypes || typesData.types || []
+        );
       }
 
       if (levelsRes.ok) {
@@ -287,9 +287,7 @@ export default function EditActivityPage({
       const updateData = await updateRes.json().catch(() => null);
 
       if (!updateRes.ok) {
-        throw new Error(
-          updateData?.message || updateData?.error || 'Khong the cap nhat hoat dong'
-        );
+        throw new Error(updateData?.message || updateData?.error || 'Khong the cap nhat hoat dong');
       }
 
       if (mode === 'submit') {
@@ -379,9 +377,7 @@ export default function EditActivityPage({
                 Vui lòng cập nhật hoạt động và gửi lại để duyệt.
               </p>
               {activity.rejected_reason && (
-                <p className="mt-2 text-sm text-orange-800">
-                  Lý do: {activity.rejected_reason}
-                </p>
+                <p className="mt-2 text-sm text-orange-800">Lý do: {activity.rejected_reason}</p>
               )}
             </div>
           </div>
@@ -392,7 +388,9 @@ export default function EditActivityPage({
             <h2 className="text-lg font-bold text-gray-900">Thông tin hoạt động</h2>
 
             <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700">Tên hoạt động *</label>
+              <label className="mb-2 block text-sm font-medium text-gray-700">
+                Tên hoạt động *
+              </label>
               <input
                 type="text"
                 value={title}
@@ -486,9 +484,7 @@ export default function EditActivityPage({
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700">
-                  Cấp tổ chức
-                </label>
+                <label className="mb-2 block text-sm font-medium text-gray-700">Cấp tổ chức</label>
                 <select
                   value={organizationLevelId}
                   onChange={(event) =>
@@ -544,17 +540,29 @@ export default function EditActivityPage({
             </div>
 
             <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-              <p className="font-medium">Hãy chọn rõ lớp bắt buộc và lớp tự nguyện cho hoạt động này.</p>
+              <p className="font-medium">
+                Hãy chọn rõ lớp bắt buộc và lớp tự nguyện cho hoạt động này.
+              </p>
               <ul className="mt-2 list-disc space-y-1 pl-5 text-amber-800">
-                <li><strong>Bắt buộc:</strong> sinh viên trong lớp sẽ được áp dụng bắt buộc, không cần tự đăng ký.</li>
-                <li><strong>Tự nguyện:</strong> sinh viên trong lớp được phép tự đăng ký.</li>
-                <li>Nếu một lớp xuất hiện ở cả hai nhóm, hệ thống sẽ ưu tiên <strong>bắt buộc</strong>.</li>
+                <li>
+                  <strong>Bắt buộc:</strong> sinh viên trong lớp sẽ được áp dụng bắt buộc, không cần
+                  tự đăng ký.
+                </li>
+                <li>
+                  <strong>Tự nguyện:</strong> sinh viên trong lớp được phép tự đăng ký.
+                </li>
+                <li>
+                  Nếu một lớp xuất hiện ở cả hai nhóm, hệ thống sẽ ưu tiên <strong>bắt buộc</strong>
+                  .
+                </li>
               </ul>
             </div>
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div>
-                <label className="mb-2 block text-sm font-medium text-orange-700">Lớp bắt buộc</label>
+                <label className="mb-2 block text-sm font-medium text-orange-700">
+                  Lớp bắt buộc
+                </label>
                 <select
                   multiple
                   className="h-32 w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
@@ -617,7 +625,8 @@ export default function EditActivityPage({
                 </div>
                 {selectedClasses.length === 0 ? (
                   <p className="text-sm text-gray-600">
-                    Chọn ít nhất một lớp để xem danh sách dự kiến theo phạm vi bắt buộc hoặc tự nguyện.
+                    Chọn ít nhất một lớp để xem danh sách dự kiến theo phạm vi bắt buộc hoặc tự
+                    nguyện.
                   </p>
                 ) : previewLoading ? (
                   <div className="flex items-center gap-2 text-sm text-blue-700">
@@ -643,8 +652,8 @@ export default function EditActivityPage({
                       </div>
                     </div>
                     <div className="text-xs text-gray-600">
-                      Danh sách hiện được nhóm theo lớp. Nếu một lớp xuất hiện ở cả hai nhóm,
-                      hệ thống sẽ ưu tiên bắt buộc hơn tự nguyện.
+                      Danh sách hiện được nhóm theo lớp. Nếu một lớp xuất hiện ở cả hai nhóm, hệ
+                      thống sẽ ưu tiên bắt buộc hơn tự nguyện.
                     </div>
                     <div className="space-y-2">
                       {participationPreview.groups.map((group) => (

@@ -1,8 +1,8 @@
 /**
  * SQLite PRAGMA Optimization for Concurrent Write Workloads
- * 
+ *
  * File: src/lib/db-optimization.ts
- * 
+ *
  * Tối ưu hóa SQLite để xử lý 50+ concurrent QR attendance submissions
  * - Write-Ahead Logging (WAL) mode
  * - Synchronous levels
@@ -17,7 +17,7 @@ const dbPath = path.join(process.cwd(), 'uniact.db');
 
 /**
  * Initialize SQLite with optimal PRAGMA settings for concurrent writes
- * 
+ *
  * Gọi hàm này trong db-setup.ts trước khi tạo tables
  */
 export async function initializeOptimizedDatabase(db: sqlite3.Database): Promise<void> {
@@ -115,7 +115,7 @@ export async function initializeOptimizedDatabase(db: sqlite3.Database): Promise
 
 /**
  * 📊 Performance Comparison
- * 
+ *
  * ┌─────────────────────────────────────────────────────────────┐
  * │ Before Optimization:                                        │
  * │ - Journal Mode: DELETE (default)                           │
@@ -123,7 +123,7 @@ export async function initializeOptimizedDatabase(db: sqlite3.Database): Promise
  * │ - Throughput: ~30 QR scans/sec (lock contention)          │
  * │ - p99 latency: 800ms                                       │
  * └─────────────────────────────────────────────────────────────┘
- * 
+ *
  * ┌─────────────────────────────────────────────────────────────┐
  * │ After Optimization:                                         │
  * │ - Journal Mode: WAL                                         │
@@ -136,37 +136,37 @@ export async function initializeOptimizedDatabase(db: sqlite3.Database): Promise
 
 /**
  * 🔍 PRAGMA Settings Explanation
- * 
+ *
  * WAL (Write-Ahead Logging) Mechanics:
  * ════════════════════════════════════
- * 
+ *
  * Traditional mode (DELETE):
  *   [Reader] ← locks DB
  *   [Writer] → waits (blocked)
  *   → Sequential access → Slow
- * 
+ *
  * WAL mode:
  *   [Reader 1] ← reads from DB
  *   [Reader 2] ← reads from DB (concurrent!)
  *   [Writer]   ← writes to .wal (separate file)
  *   → Concurrent read/write → Fast
- * 
+ *
  * Synchronous Levels:
  * ═══════════════════
- * 
+ *
  * FULL (safest):
  *   1. Write to journal
  *   2. Flush to disk
  *   3. Write to main DB
  *   4. Flush to disk again
  *   → Guaranteed durability, but slowest
- * 
+ *
  * NORMAL (balanced):
  *   1. Write to journal
  *   2. Write to main DB
  *   3. Flush every N transactions
  *   → Good balance, minimal data loss risk
- * 
+ *
  * OFF (fastest, risky):
  *   1. Write to DB
  *   (No sync to disk)
@@ -175,13 +175,13 @@ export async function initializeOptimizedDatabase(db: sqlite3.Database): Promise
 
 /**
  * 🧪 Testing PRAGMA Impact
- * 
+ *
  * Dapat kiểm tra hiệu năng bằng k6:
- * 
+ *
  *   # Without optimization
  *   k6 run scripts/load-test-qr.k6.js
  *   # Result: p99=800ms, errors=15%
- * 
+ *
  *   # With optimization
  *   npm run db:setup (runs initializeOptimizedDatabase)
  *   k6 run scripts/load-test-qr.k6.js
@@ -190,13 +190,10 @@ export async function initializeOptimizedDatabase(db: sqlite3.Database): Promise
 
 /**
  * 🛠️ Additional Performance Tuning
- * 
+ *
  * Trong src/lib/database-transaction.ts, sử dụng:
  */
-export async function optimizedTransaction<T>(
-  db: any,
-  callback: () => Promise<T>
-): Promise<T> {
+export async function optimizedTransaction<T>(db: any, callback: () => Promise<T>): Promise<T> {
   return new Promise((resolve, reject) => {
     db.run('BEGIN IMMEDIATE', (err) => {
       if (err) return reject(err);
@@ -222,7 +219,7 @@ export async function optimizedTransaction<T>(
 
 /**
  * 📈 Monitoring SQLite Health
- * 
+ *
  * Query để check current PRAGMA settings:
  */
 export async function checkDatabaseHealth(db: any): Promise<void> {
@@ -245,11 +242,11 @@ export async function checkDatabaseHealth(db: any): Promise<void> {
 
 /**
  * 🗑️ WAL Cleanup
- * 
+ *
  * WAL mode buat 2 file tambahan:
  * - uniact.db-wal (write-ahead log)
  * - uniact.db-shm (shared memory)
- * 
+ *
  * Chạy PRAGMA wal_checkpoint để clean up:
  */
 export async function walCheckpoint(db: any): Promise<void> {

@@ -101,9 +101,7 @@ export async function GET(_request: NextRequest) {
   } catch (error: unknown) {
     console.error('Get alerts error:', error);
     return errorResponse(
-      ApiError.internalError(
-        error instanceof Error ? error.message : 'Internal server error'
-      )
+      ApiError.internalError(error instanceof Error ? error.message : 'Internal server error')
     );
   }
 }
@@ -156,9 +154,7 @@ export async function PUT(request: NextRequest) {
   } catch (error: unknown) {
     console.error('Update alert error:', error);
     return errorResponse(
-      ApiError.internalError(
-        error instanceof Error ? error.message : 'Internal server error'
-      )
+      ApiError.internalError(error instanceof Error ? error.message : 'Internal server error')
     );
   }
 }

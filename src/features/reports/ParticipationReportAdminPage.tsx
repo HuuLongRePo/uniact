@@ -268,9 +268,7 @@ export default function ParticipationReportAdminPage() {
           <label className="mb-1 block text-sm font-medium">Loại hoạt động</label>
           <select
             value={filters.activity_type_id}
-            onChange={(event) =>
-              setFilters({ ...filters, activity_type_id: event.target.value })
-            }
+            onChange={(event) => setFilters({ ...filters, activity_type_id: event.target.value })}
             className="w-full rounded border p-2"
           >
             <option value="">Tất cả loại</option>

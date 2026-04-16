@@ -78,8 +78,9 @@ export async function GET(request: NextRequest) {
       return errorResponse(ApiError.forbidden('Không có quyền truy cập'));
     }
 
-    const notifications = ((await dbAll(
-      `
+    const notifications = (
+      (await dbAll(
+        `
       SELECT
         bn.id,
         bn.title,
@@ -101,8 +102,9 @@ export async function GET(request: NextRequest) {
       ORDER BY datetime(COALESCE(bn.sent_at, bn.created_at)) DESC, bn.id DESC
       LIMIT 100
       `,
-      [user.id]
-    )) as any[]).map((row) => {
+        [user.id]
+      )) as any[]
+    ).map((row) => {
       const recipientCount = toNumber(row.recipient_count);
       const deliveredCount = toNumber(row.delivered_count || row.recipient_count);
       const readCount = toNumber(row.read_count);
@@ -126,8 +128,9 @@ export async function GET(request: NextRequest) {
       return summary;
     });
 
-    const records = ((await dbAll(
-      `
+    const records = (
+      (await dbAll(
+        `
       SELECT
         n.id,
         bn.id as notification_id,
@@ -149,8 +152,9 @@ export async function GET(request: NextRequest) {
       ORDER BY datetime(n.created_at) DESC, n.id DESC
       LIMIT 500
       `,
-      [user.id]
-    )) as any[]).map((row) => {
+        [user.id]
+      )) as any[]
+    ).map((row) => {
       const record: NotificationHistoryRecord = {
         id: toNumber(row.id),
         notification_id: toNumber(row.notification_id),

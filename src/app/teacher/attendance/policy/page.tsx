@@ -86,7 +86,9 @@ export default function TeacherAttendancePolicyPage() {
         setError(null);
 
         const query = requestedActivityId ? `?activity_id=${requestedActivityId}` : '';
-        const response = await fetch(resolveClientFetchUrl(`/api/teacher/attendance/pilot-activities${query}`));
+        const response = await fetch(
+          resolveClientFetchUrl(`/api/teacher/attendance/pilot-activities${query}`)
+        );
         if (!response.ok) {
           throw new Error('Không tải được danh sách hoạt động');
         }
@@ -106,7 +108,10 @@ export default function TeacherAttendancePolicyPage() {
           setActivities(normalized);
           if (normalized.length > 0) {
             setSelectedActivityId((current) => {
-              if (requestedActivityId && normalized.some((activity) => activity.id === requestedActivityId)) {
+              if (
+                requestedActivityId &&
+                normalized.some((activity) => activity.id === requestedActivityId)
+              ) {
                 return requestedActivityId;
               }
               return current ?? normalized[0].id;
@@ -115,7 +120,9 @@ export default function TeacherAttendancePolicyPage() {
         }
       } catch (loadError) {
         if (!cancelled) {
-          setError(loadError instanceof Error ? loadError.message : 'Không tải được dữ liệu hoạt động');
+          setError(
+            loadError instanceof Error ? loadError.message : 'Không tải được dữ liệu hoạt động'
+          );
         }
       } finally {
         if (!cancelled) {
@@ -155,7 +162,9 @@ export default function TeacherAttendancePolicyPage() {
         }
       } catch (loadError) {
         if (!cancelled) {
-          setError(loadError instanceof Error ? loadError.message : 'Không tải được attendance policy');
+          setError(
+            loadError instanceof Error ? loadError.message : 'Không tải được attendance policy'
+          );
         }
       } finally {
         if (!cancelled) {
@@ -202,7 +211,9 @@ export default function TeacherAttendancePolicyPage() {
       const body = await response.json();
       setFallbackData(body?.data ?? body);
     } catch (fallbackError) {
-      setError(fallbackError instanceof Error ? fallbackError.message : 'Không đánh giá được fallback');
+      setError(
+        fallbackError instanceof Error ? fallbackError.message : 'Không đánh giá được fallback'
+      );
     } finally {
       setLoadingFallback(false);
     }
@@ -211,9 +222,12 @@ export default function TeacherAttendancePolicyPage() {
   return (
     <div className="space-y-6 p-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900" data-testid="attendance-policy-heading">Attendance Policy / Face Pilot</h1>
+        <h1 className="text-2xl font-bold text-gray-900" data-testid="attendance-policy-heading">
+          Attendance Policy / Face Pilot
+        </h1>
         <p className="mt-2 text-sm text-gray-600">
-          Xem activity nào đủ điều kiện pilot face attendance và kiểm tra ngưỡng fallback QR theo preset vận hành.
+          Xem activity nào đủ điều kiện pilot face attendance và kiểm tra ngưỡng fallback QR theo
+          preset vận hành.
         </p>
       </div>
 
@@ -252,7 +266,8 @@ export default function TeacherAttendancePolicyPage() {
                 >
                   <div className="text-sm font-medium">{activity.title}</div>
                   <div className="mt-1 text-xs text-gray-500">
-                    status: {activity.status ?? 'unknown'} · approval: {activity.approval_status ?? 'unknown'}
+                    status: {activity.status ?? 'unknown'} · approval:{' '}
+                    {activity.approval_status ?? 'unknown'}
                   </div>
                   <div className="mt-1 text-xs text-gray-500">
                     max participants: {activity.max_participants ?? '—'}
@@ -269,32 +284,49 @@ export default function TeacherAttendancePolicyPage() {
               <div>
                 <h2 className="text-lg font-semibold text-gray-900">Policy hiện tại</h2>
                 <p className="text-sm text-gray-500">
-                  {selectedActivity ? `Activity #${selectedActivity.id} — ${selectedActivity.title}` : 'Chưa chọn hoạt động'}
+                  {selectedActivity
+                    ? `Activity #${selectedActivity.id} — ${selectedActivity.title}`
+                    : 'Chưa chọn hoạt động'}
                 </p>
               </div>
-              {loadingPolicy ? <span className="text-xs text-gray-500">Đang tải policy…</span> : null}
+              {loadingPolicy ? (
+                <span className="text-xs text-gray-500">Đang tải policy…</span>
+              ) : null}
             </div>
 
             {policyData ? (
               <div className="space-y-4">
                 <div className="grid gap-3 md:grid-cols-4">
                   <div className="rounded-lg bg-gray-50 p-3">
-                    <div className="text-xs uppercase tracking-wide text-gray-500">Policy version</div>
-                    <div className="mt-1 text-base font-semibold text-gray-900">{policyData.policy.version}</div>
+                    <div className="text-xs uppercase tracking-wide text-gray-500">
+                      Policy version
+                    </div>
+                    <div className="mt-1 text-base font-semibold text-gray-900">
+                      {policyData.policy.version}
+                    </div>
                   </div>
                   <div className="rounded-lg bg-gray-50 p-3">
-                    <div className="text-xs uppercase tracking-wide text-gray-500">Default mode</div>
-                    <div className="mt-1 text-base font-semibold text-gray-900">{policyData.policy.defaultMode}</div>
+                    <div className="text-xs uppercase tracking-wide text-gray-500">
+                      Default mode
+                    </div>
+                    <div className="mt-1 text-base font-semibold text-gray-900">
+                      {policyData.policy.defaultMode}
+                    </div>
                   </div>
                   <div className="rounded-lg bg-gray-50 p-3">
-                    <div className="text-xs uppercase tracking-wide text-gray-500">Primary method</div>
+                    <div className="text-xs uppercase tracking-wide text-gray-500">
+                      Primary method
+                    </div>
                     <div className="mt-1 text-base font-semibold text-gray-900">
                       {policyData.policy.facePilot.preferredPrimaryMethod}
                     </div>
                   </div>
                   <div className="rounded-lg bg-gray-50 p-3">
                     <div className="text-xs uppercase tracking-wide text-gray-500">Face pilot</div>
-                    <div data-testid="face-pilot-eligibility" className={`mt-1 text-base font-semibold ${policyData.policy.facePilot.eligible ? 'text-emerald-700' : 'text-amber-700'}`}>
+                    <div
+                      data-testid="face-pilot-eligibility"
+                      className={`mt-1 text-base font-semibold ${policyData.policy.facePilot.eligible ? 'text-emerald-700' : 'text-amber-700'}`}
+                    >
                       {policyData.policy.facePilot.eligible ? 'Eligible' : 'Chưa đủ điều kiện'}
                     </div>
                   </div>
@@ -303,15 +335,21 @@ export default function TeacherAttendancePolicyPage() {
                 <div className="grid gap-3 md:grid-cols-3">
                   <div className="rounded-lg border border-gray-200 p-3 text-sm">
                     <div className="text-gray-500">Participation</div>
-                    <div className="mt-1 font-semibold text-gray-900">{policyData.counts.participation_count}</div>
+                    <div className="mt-1 font-semibold text-gray-900">
+                      {policyData.counts.participation_count}
+                    </div>
                   </div>
                   <div className="rounded-lg border border-gray-200 p-3 text-sm">
                     <div className="text-gray-500">Mandatory classes</div>
-                    <div className="mt-1 font-semibold text-gray-900">{policyData.counts.mandatory_class_count}</div>
+                    <div className="mt-1 font-semibold text-gray-900">
+                      {policyData.counts.mandatory_class_count}
+                    </div>
                   </div>
                   <div className="rounded-lg border border-gray-200 p-3 text-sm">
                     <div className="text-gray-500">Voluntary classes</div>
-                    <div className="mt-1 font-semibold text-gray-900">{policyData.counts.voluntary_class_count}</div>
+                    <div className="mt-1 font-semibold text-gray-900">
+                      {policyData.counts.voluntary_class_count}
+                    </div>
                   </div>
                 </div>
 
@@ -321,9 +359,17 @@ export default function TeacherAttendancePolicyPage() {
                     <li>preset: {policyData.policy.qrFallback.preset}</li>
                     <li>p95 response time: {policyData.policy.qrFallback.responseTimeP95Ms} ms</li>
                     <li>queue backlog: {policyData.policy.qrFallback.queueBacklog}</li>
-                    <li>scan failure rate: {(policyData.policy.qrFallback.scanFailureRate * 100).toFixed(0)}%</li>
+                    <li>
+                      scan failure rate:{' '}
+                      {(policyData.policy.qrFallback.scanFailureRate * 100).toFixed(0)}%
+                    </li>
                     <li>sample size tối thiểu: {policyData.policy.qrFallback.minSampleSize}</li>
-                    <li>manual override: {policyData.policy.qrFallback.allowTeacherManualOverride ? 'cho phép' : 'không'}</li>
+                    <li>
+                      manual override:{' '}
+                      {policyData.policy.qrFallback.allowTeacherManualOverride
+                        ? 'cho phép'
+                        : 'không'}
+                    </li>
                   </ul>
                 </div>
 
@@ -331,21 +377,35 @@ export default function TeacherAttendancePolicyPage() {
                   <div className="text-sm font-semibold text-emerald-900">Face pilot reasons</div>
                   <div className="mt-2 grid gap-3 md:grid-cols-3">
                     <div className="rounded-lg border border-emerald-200 bg-white/70 p-3 text-sm text-emerald-900">
-                      <div className="text-xs uppercase tracking-wide text-emerald-700">selection mode</div>
-                      <div className="mt-1 font-semibold">{policyData.policy.facePilot.selectionMode}</div>
+                      <div className="text-xs uppercase tracking-wide text-emerald-700">
+                        selection mode
+                      </div>
+                      <div className="mt-1 font-semibold">
+                        {policyData.policy.facePilot.selectionMode}
+                      </div>
                     </div>
                     <div className="rounded-lg border border-emerald-200 bg-white/70 p-3 text-sm text-emerald-900">
-                      <div className="text-xs uppercase tracking-wide text-emerald-700">selected by config</div>
-                      <div className="mt-1 font-semibold">{policyData.policy.facePilot.selectedByConfig ? 'có' : 'không'}</div>
+                      <div className="text-xs uppercase tracking-wide text-emerald-700">
+                        selected by config
+                      </div>
+                      <div className="mt-1 font-semibold">
+                        {policyData.policy.facePilot.selectedByConfig ? 'có' : 'không'}
+                      </div>
                     </div>
                     <div className="rounded-lg border border-emerald-200 bg-white/70 p-3 text-sm text-emerald-900">
-                      <div className="text-xs uppercase tracking-wide text-emerald-700">min confidence</div>
-                      <div className="mt-1 font-semibold">{policyData.policy.facePilot.minConfidenceScore.toFixed(2)}</div>
+                      <div className="text-xs uppercase tracking-wide text-emerald-700">
+                        min confidence
+                      </div>
+                      <div className="mt-1 font-semibold">
+                        {policyData.policy.facePilot.minConfidenceScore.toFixed(2)}
+                      </div>
                     </div>
                   </div>
                   <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-emerald-800">
                     {policyData.policy.facePilot.reasons.length > 0 ? (
-                      policyData.policy.facePilot.reasons.map((reason) => <li key={reason}>{reason}</li>)
+                      policyData.policy.facePilot.reasons.map((reason) => (
+                        <li key={reason}>{reason}</li>
+                      ))
                     ) : (
                       <li>Chưa đủ điều kiện pilot theo preset hiện tại.</li>
                     )}
@@ -361,28 +421,47 @@ export default function TeacherAttendancePolicyPage() {
 
           <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
             <div className="mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">Evaluate fallback theo runtime metrics</h2>
+              <h2 className="text-lg font-semibold text-gray-900">
+                Evaluate fallback theo runtime metrics
+              </h2>
               <p className="text-sm text-gray-500">
-                Công cụ này giúp teacher/admin ước lượng khi nào nên chuyển từ QR sang mixed/manual theo preset pilot hiện tại.
+                Công cụ này giúp teacher/admin ước lượng khi nào nên chuyển từ QR sang mixed/manual
+                theo preset pilot hiện tại.
               </p>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
               <label className="text-sm text-gray-700">
                 p95 response time (ms)
-                <input value={responseTimeP95Ms} onChange={(e) => setResponseTimeP95Ms(e.target.value)} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" />
+                <input
+                  value={responseTimeP95Ms}
+                  onChange={(e) => setResponseTimeP95Ms(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2"
+                />
               </label>
               <label className="text-sm text-gray-700">
                 queue backlog
-                <input value={queueBacklog} onChange={(e) => setQueueBacklog(e.target.value)} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" />
+                <input
+                  value={queueBacklog}
+                  onChange={(e) => setQueueBacklog(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2"
+                />
               </label>
               <label className="text-sm text-gray-700">
                 scan failure rate
-                <input value={scanFailureRate} onChange={(e) => setScanFailureRate(e.target.value)} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" />
+                <input
+                  value={scanFailureRate}
+                  onChange={(e) => setScanFailureRate(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2"
+                />
               </label>
               <label className="text-sm text-gray-700">
                 sample size
-                <input value={sampleSize} onChange={(e) => setSampleSize(e.target.value)} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" />
+                <input
+                  value={sampleSize}
+                  onChange={(e) => setSampleSize(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2"
+                />
               </label>
             </div>
 
@@ -395,7 +474,9 @@ export default function TeacherAttendancePolicyPage() {
               >
                 {loadingFallback ? 'Đang đánh giá…' : 'Đánh giá fallback'}
               </button>
-              {selectedActivityId ? <span className="text-xs text-gray-500">activity #{selectedActivityId}</span> : null}
+              {selectedActivityId ? (
+                <span className="text-xs text-gray-500">activity #{selectedActivityId}</span>
+              ) : null}
             </div>
 
             {fallbackData ? (
@@ -407,7 +488,8 @@ export default function TeacherAttendancePolicyPage() {
                   recommended target mode: {fallbackData.fallback.recommended_target_mode}
                 </div>
                 <div className="mt-1 text-gray-600">
-                  teacher manual override: {fallbackData.fallback.teacher_manual_override ? 'cho phép' : 'không'}
+                  teacher manual override:{' '}
+                  {fallbackData.fallback.teacher_manual_override ? 'cho phép' : 'không'}
                 </div>
                 <ul className="mt-2 list-disc space-y-1 pl-5 text-gray-700">
                   {fallbackData.fallback.reasons.length > 0 ? (

@@ -231,7 +231,12 @@ export async function GET(request: NextRequest) {
       isCanonicalApiError
         ? error instanceof ApiError
           ? error
-          : new ApiError(error.code, error.message || 'Không có quyền truy cập', error.status, error.details)
+          : new ApiError(
+              error.code,
+              error.message || 'Không có quyền truy cập',
+              error.status,
+              error.details
+            )
         : ApiError.internalError(error?.message || 'Không thể tải bảng điểm')
     );
   }

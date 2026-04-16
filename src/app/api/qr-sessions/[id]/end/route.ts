@@ -28,7 +28,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
 
     if (!session.is_active) {
-      return successResponse({ ended: true, already_ended: true }, 'Phiên QR đã được kết thúc trước đó');
+      return successResponse(
+        { ended: true, already_ended: true },
+        'Phiên QR đã được kết thúc trước đó'
+      );
     }
 
     await dbRun(

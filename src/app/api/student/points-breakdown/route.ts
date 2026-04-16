@@ -181,7 +181,10 @@ export async function GET(_request: NextRequest) {
       [user.id]
     )) as PointsSummaryRow[];
 
-    const totalAwardPoints = awards.reduce((sum, award) => sum + Number(award.bonus_points || 0), 0);
+    const totalAwardPoints = awards.reduce(
+      (sum, award) => sum + Number(award.bonus_points || 0),
+      0
+    );
 
     return NextResponse.json({
       success: true,

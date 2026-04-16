@@ -24,7 +24,11 @@ export async function POST(request: NextRequest) {
     const rl = rateLimit(request, 15, 60 * 1000);
     if (!rl.allowed) {
       return errorResponse(
-        new ApiError('RATE_LIMITED', 'Thử xác thực quá nhiều lần. Vui lòng thử lại sau 1 phút.', 429)
+        new ApiError(
+          'RATE_LIMITED',
+          'Thử xác thực quá nhiều lần. Vui lòng thử lại sau 1 phút.',
+          429
+        )
       );
     }
 
@@ -33,7 +37,9 @@ export async function POST(request: NextRequest) {
 
     // Validate inputs
     if (!email || !embedding || !templateType) {
-      return errorResponse(ApiError.validation('Thiếu trường bắt buộc: email, embedding, templateType'));
+      return errorResponse(
+        ApiError.validation('Thiếu trường bắt buộc: email, embedding, templateType')
+      );
     }
 
     if (!Array.isArray(embedding)) {
@@ -237,7 +243,9 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error('Biometric authentication error:', error);
     return errorResponse(
-      error instanceof ApiError ? error : ApiError.internalError('Authentication failed', error?.message)
+      error instanceof ApiError
+        ? error
+        : ApiError.internalError('Authentication failed', error?.message)
     );
   }
 }

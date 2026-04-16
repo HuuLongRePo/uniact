@@ -33,7 +33,11 @@ export async function GET(req: NextRequest) {
 
     const offset = (page - 1) * limit;
 
-    const studentFilters = ["u.role = 'student'", 'COALESCE(u.is_active, 1) = 1', 'u.class_id IS NOT NULL'];
+    const studentFilters = [
+      "u.role = 'student'",
+      'COALESCE(u.is_active, 1) = 1',
+      'u.class_id IS NOT NULL',
+    ];
     const studentParams: Array<number> = [];
 
     if (classId) {
@@ -60,7 +64,8 @@ export async function GET(req: NextRequest) {
     }
 
     const studentWhereClause = studentFilters.join(' AND ');
-    const activityWhereClause = activityFilters.length > 0 ? `WHERE ${activityFilters.join(' AND ')}` : '';
+    const activityWhereClause =
+      activityFilters.length > 0 ? `WHERE ${activityFilters.join(' AND ')}` : '';
 
     const countResult = (await dbGet(
       `
@@ -183,7 +188,10 @@ export async function GET(req: NextRequest) {
         total_points: totalPoints,
         activity_count: activityCount,
         award_count: Number(row.award_count || 0),
-        avg_points: activityCount > 0 ? Number((Number(row.activity_points || 0) / activityCount).toFixed(2)) : 0,
+        avg_points:
+          activityCount > 0
+            ? Number((Number(row.activity_points || 0) / activityCount).toFixed(2))
+            : 0,
       };
     });
 

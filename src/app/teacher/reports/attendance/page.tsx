@@ -329,7 +329,8 @@ export default function AttendanceReportsPage() {
                   Báo cáo điểm danh
                 </h1>
                 <p className="mt-2 text-gray-600">
-                  Phân tích tỷ lệ có mặt, vắng, chưa tham gia và phương thức điểm danh thực tế theo lớp.
+                  Phân tích tỷ lệ có mặt, vắng, chưa tham gia và phương thức điểm danh thực tế theo
+                  lớp.
                 </p>
               </div>
               <button
@@ -364,28 +365,40 @@ export default function AttendanceReportsPage() {
             <div className="mb-1 text-sm text-gray-600">Vắng</div>
             <div className="text-3xl font-bold text-red-600">{overallStats.absent}</div>
           </div>
-          <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm" data-testid="not-participated-card">
+          <div
+            className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm"
+            data-testid="not-participated-card"
+          >
             <div className="mb-1 text-sm text-gray-600">Chưa tham gia</div>
             <div className="text-3xl font-bold text-slate-700">{overallStats.notParticipated}</div>
           </div>
         </div>
 
         <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
-          <div className="rounded-lg border border-violet-200 bg-violet-50 p-4 shadow-sm" data-testid="method-card-qr">
+          <div
+            className="rounded-lg border border-violet-200 bg-violet-50 p-4 shadow-sm"
+            data-testid="method-card-qr"
+          >
             <div className="flex items-center gap-2 text-sm text-violet-700">
               <QrCode className="h-4 w-4" />
               QR
             </div>
             <div className="mt-2 text-2xl font-bold text-violet-900">{overallStats.qr}</div>
           </div>
-          <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 shadow-sm" data-testid="method-card-manual">
+          <div
+            className="rounded-lg border border-amber-200 bg-amber-50 p-4 shadow-sm"
+            data-testid="method-card-manual"
+          >
             <div className="flex items-center gap-2 text-sm text-amber-700">
               <SquarePen className="h-4 w-4" />
               Thủ công
             </div>
             <div className="mt-2 text-2xl font-bold text-amber-900">{overallStats.manual}</div>
           </div>
-          <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 shadow-sm" data-testid="method-card-face">
+          <div
+            className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 shadow-sm"
+            data-testid="method-card-face"
+          >
             <div className="flex items-center gap-2 text-sm text-emerald-700">
               <ScanFace className="h-4 w-4" />
               Face
@@ -628,7 +641,9 @@ export default function AttendanceReportsPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700">Phương thức</label>
+                  <label className="mb-2 block text-sm font-medium text-gray-700">
+                    Phương thức
+                  </label>
                   <select
                     value={filters.method}
                     onChange={(event) => setFilters({ ...filters, method: event.target.value })}
@@ -648,9 +663,7 @@ export default function AttendanceReportsPage() {
                   <input
                     type="date"
                     value={filters.dateStart}
-                    onChange={(event) =>
-                      setFilters({ ...filters, dateStart: event.target.value })
-                    }
+                    onChange={(event) => setFilters({ ...filters, dateStart: event.target.value })}
                     className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
                   />
                 </div>

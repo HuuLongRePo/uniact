@@ -81,7 +81,9 @@ export async function DELETE(
     const activities = await dbGet('SELECT id FROM activities WHERE activity_type_id = ?', [id]);
     if (activities) {
       return errorResponse(
-        ApiError.validation('Không thể xóa loại hoạt động đang được sử dụng, hãy gán lại hoạt động trước')
+        ApiError.validation(
+          'Không thể xóa loại hoạt động đang được sử dụng, hãy gán lại hoạt động trước'
+        )
       );
     }
 

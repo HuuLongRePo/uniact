@@ -108,11 +108,7 @@ function normalizeClassScopes(
 
   const normalizedMandatory = Array.from(
     new Set(
-      hasMandatoryClassIds
-        ? mandatoryClassIds || []
-        : hasClassIds
-          ? legacyClassIds || []
-          : []
+      hasMandatoryClassIds ? mandatoryClassIds || [] : hasClassIds ? legacyClassIds || [] : []
     )
   );
   const mandatorySet = new Set(normalizedMandatory);

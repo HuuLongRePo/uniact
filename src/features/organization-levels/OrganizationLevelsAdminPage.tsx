@@ -246,9 +246,7 @@ export default function OrganizationLevelsAdminPage() {
         isOpen={levelToDelete !== null}
         title="Xóa cấp độ tổ chức"
         message={
-          levelToDelete
-            ? `Bạn có chắc chắn muốn xóa cấp độ "${levelToDelete.name}" không?`
-            : ''
+          levelToDelete ? `Bạn có chắc chắn muốn xóa cấp độ "${levelToDelete.name}" không?` : ''
         }
         confirmText="Xóa cấp độ"
         cancelText="Hủy"

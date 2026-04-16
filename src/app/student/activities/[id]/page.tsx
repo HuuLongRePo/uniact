@@ -244,15 +244,11 @@ export default function StudentActivityDetailPage() {
               <span className="bg-white/20 px-3 py-1 rounded-full text-sm">
                 ⭐ {activity.base_points} điểm
               </span>
-                {activity.qr_enabled && (
-                  <span className="bg-white/20 px-3 py-1 rounded-full text-sm">
-                    📱 Điểm danh QR
-                  </span>
-                )}
+              {activity.qr_enabled && (
+                <span className="bg-white/20 px-3 py-1 rounded-full text-sm">📱 Điểm danh QR</span>
+              )}
               {activity.is_mandatory && (
-                <span className="bg-white/20 px-3 py-1 rounded-full text-sm">
-                  Bắt buộc với bạn
-                </span>
+                <span className="bg-white/20 px-3 py-1 rounded-full text-sm">Bắt buộc với bạn</span>
               )}
             </div>
           </div>
@@ -265,9 +261,7 @@ export default function StudentActivityDetailPage() {
 
           <div
             className={`rounded-lg border p-6 ${
-              appliesToStudent
-                ? 'border-green-200 bg-green-50'
-                : 'border-amber-200 bg-amber-50'
+              appliesToStudent ? 'border-green-200 bg-green-50' : 'border-amber-200 bg-amber-50'
             }`}
           >
             <h2 className="mb-2 text-xl font-bold">
@@ -318,7 +312,9 @@ export default function StudentActivityDetailPage() {
                 <div className="font-semibold">
                   <span className={isFull ? 'text-red-600' : 'text-green-600'}>
                     {activity.participant_count}/
-                    {activity.max_participants === null ? 'Không giới hạn' : activity.max_participants}{' '}
+                    {activity.max_participants === null
+                      ? 'Không giới hạn'
+                      : activity.max_participants}{' '}
                     người
                   </span>
                   {isFull && <span className="text-red-600 ml-2">(Đầy)</span>}
@@ -517,11 +513,16 @@ export default function StudentActivityDetailPage() {
         details={
           activity && registerConflict.length > 0 ? (
             <div className="space-y-3 text-sm">
-              <div className="font-semibold text-gray-900">Hoạt động đang đăng ký: {activity.title}</div>
+              <div className="font-semibold text-gray-900">
+                Hoạt động đang đăng ký: {activity.title}
+              </div>
               <div className="text-gray-600">Các hoạt động đang trùng giờ bắt đầu:</div>
               <div className="space-y-2">
                 {registerConflict.map((conflict) => (
-                  <div key={conflict.id} className="rounded border border-amber-200 bg-amber-50 p-3">
+                  <div
+                    key={conflict.id}
+                    className="rounded border border-amber-200 bg-amber-50 p-3"
+                  >
                     <div className="font-medium text-gray-900">{conflict.title}</div>
                     <div className="text-gray-600">
                       {new Date(conflict.date_time).toLocaleString('vi-VN')}

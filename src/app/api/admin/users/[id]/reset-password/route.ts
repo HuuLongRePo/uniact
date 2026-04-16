@@ -11,9 +11,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   try {
     const rl = rateLimit(request, 20, 60 * 1000);
     if (!rl.allowed) {
-      return errorResponse(
-        new ApiError('RATE_LIMITED', 'Too many requests', 429)
-      );
+      return errorResponse(new ApiError('RATE_LIMITED', 'Too many requests', 429));
     }
 
     const { id } = await params;
@@ -58,7 +56,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   } catch (error: any) {
     console.error('Error resetting password:', error);
     return errorResponse(
-      error instanceof ApiError ? error : ApiError.internalError(error?.message || 'Failed to reset password')
+      error instanceof ApiError
+        ? error
+        : ApiError.internalError(error?.message || 'Failed to reset password')
     );
   }
 }

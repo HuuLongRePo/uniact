@@ -11,9 +11,7 @@ export async function POST(request: NextRequest) {
   try {
     const rl = rateLimit(request, 20, 60 * 1000);
     if (!rl.allowed) {
-      return errorResponse(
-        new ApiError('RATE_LIMITED', 'Too many requests', 429)
-      );
+      return errorResponse(new ApiError('RATE_LIMITED', 'Too many requests', 429));
     }
 
     const user = await requireApiRole(request, ['teacher', 'admin']);

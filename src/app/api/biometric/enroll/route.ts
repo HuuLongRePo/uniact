@@ -133,7 +133,9 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error('Biometric enrollment error:', error);
     return errorResponse(
-      error instanceof ApiError ? error : ApiError.internalError('Enrollment failed', error?.message)
+      error instanceof ApiError
+        ? error
+        : ApiError.internalError('Enrollment failed', error?.message)
     );
   }
 }

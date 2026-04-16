@@ -80,9 +80,9 @@ function normalizeStudentActivitySummary(activity: StudentActivitySummaryRecord)
         ? 'Ban co the tu dang ky vi lop cua ban nam trong nhom duoc mo dang ky.'
         : applicabilityScope === 'class_scope_match'
           ? 'Ap dung vi lop cua ban nam trong pham vi hoat dong.'
-      : applicabilityScope === 'class_scope_mismatch'
-        ? 'Khong thuoc pham vi cua ban vi hoat dong dang danh rieng cho lop khac.'
-        : 'Hoat dong mo cho tat ca hoc vien.';
+          : applicabilityScope === 'class_scope_mismatch'
+            ? 'Khong thuoc pham vi cua ban vi hoat dong dang danh rieng cho lop khac.'
+            : 'Hoat dong mo cho tat ca hoc vien.';
 
   return {
     id: Number(activity.id),
@@ -219,17 +219,15 @@ export async function POST(request: NextRequest) {
     } = validation.data;
 
     const scopedClassIds = Array.from(
-      new Set([
-        ...class_ids,
-        ...(mandatory_class_ids || []),
-        ...(voluntary_class_ids || []),
-      ])
+      new Set([...class_ids, ...(mandatory_class_ids || []), ...(voluntary_class_ids || [])])
     );
 
     if (scopedClassIds.length > 0) {
       const classes = (await dbHelpers.getAllClasses()) as Array<{ id: number }>;
       const validClassIds = new Set((classes || []).map((item) => Number(item.id)));
-      const invalidClassIds = scopedClassIds.filter((classId) => !validClassIds.has(Number(classId)));
+      const invalidClassIds = scopedClassIds.filter(
+        (classId) => !validClassIds.has(Number(classId))
+      );
 
       if (invalidClassIds.length > 0) {
         return errorResponse(

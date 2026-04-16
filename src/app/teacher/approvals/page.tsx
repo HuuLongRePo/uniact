@@ -142,9 +142,7 @@ export default function ApprovalsPage() {
       <div className="mx-auto max-w-6xl">
         <div className="mb-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
           <h1 className="text-3xl font-bold text-gray-900">Theo dõi duyệt hoạt động</h1>
-          <p className="mt-2 text-gray-600">
-            Quản lý hoạt động của bạn trong quy trình duyệt.
-          </p>
+          <p className="mt-2 text-gray-600">Quản lý hoạt động của bạn trong quy trình duyệt.</p>
         </div>
 
         <div className="mb-6 flex gap-2 border-b">
@@ -287,9 +285,7 @@ export default function ApprovalsPage() {
               )}
               {selectedActivity.status === 'rejected' && (
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700">
-                    Ghi chú
-                  </label>
+                  <label className="mb-2 block text-sm font-medium text-gray-700">Ghi chú</label>
                   <textarea
                     value={resubmitMessage}
                     onChange={(event) => setResubmitMessage(event.target.value)}

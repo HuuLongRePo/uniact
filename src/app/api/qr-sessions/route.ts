@@ -62,9 +62,7 @@ export async function POST(request: NextRequest) {
     // SECURITY: Rate limit QR session creation (20 per minute per IP)
     const rl = rateLimit(request, 20, 60 * 1000);
     if (!rl.allowed) {
-      return errorResponse(
-        new ApiError('RATE_LIMITED', 'Too many QR session requests', 429)
-      );
+      return errorResponse(new ApiError('RATE_LIMITED', 'Too many QR session requests', 429));
     }
 
     const body = await request.json();
@@ -87,9 +85,7 @@ export async function POST(request: NextRequest) {
        FROM activities
        WHERE id = ?`,
       [activityId]
-    )) as
-      | { id: number; teacher_id: number; status: string; approval_status: string }
-      | undefined;
+    )) as { id: number; teacher_id: number; status: string; approval_status: string } | undefined;
 
     if (!activity) {
       return errorResponse(ApiError.notFound('Không tìm thấy hoạt động'));
@@ -99,12 +95,16 @@ export async function POST(request: NextRequest) {
       (user as User).role === 'teacher' &&
       !(await teacherCanAccessActivity(Number((user as User).id), activityId))
     ) {
-      return errorResponse(ApiError.forbidden('Bạn chỉ có thể tạo phiên QR cho hoạt động của mình'));
+      return errorResponse(
+        ApiError.forbidden('Bạn chỉ có thể tạo phiên QR cho hoạt động của mình')
+      );
     }
 
     if (activity.approval_status !== 'approved' || activity.status !== 'published') {
       return errorResponse(
-        ApiError.validation('Chỉ có thể tạo phiên QR cho hoạt động đã được phê duyệt và đang published')
+        ApiError.validation(
+          'Chỉ có thể tạo phiên QR cho hoạt động đã được phê duyệt và đang published'
+        )
       );
     }
 
@@ -209,8 +209,7 @@ export async function GET(request: NextRequest) {
 
     const sessionsWithParsedMetadata = (sessions || []).map((s: any) => ({
       ...s,
-      status:
-        s.is_active && new Date(s.expires_at).getTime() > Date.now() ? 'active' : 'ended',
+      status: s.is_active && new Date(s.expires_at).getTime() > Date.now() ? 'active' : 'ended',
       metadata: s.metadata
         ? (() => {
             try {

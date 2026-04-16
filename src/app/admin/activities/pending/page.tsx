@@ -186,7 +186,13 @@ export default function PendingActivitiesPage() {
         {activities.length > 0 && (
           <div className="mt-6 flex items-center justify-between rounded-lg bg-white p-4 shadow">
             <p className="text-sm text-gray-700">
-              Hiển thị <span className="font-medium">{(pagination.page - 1) * pagination.limit + 1}</span>-<span className="font-medium">{Math.min(pagination.page * pagination.limit, pagination.total)}</span> trong tổng số <span className="font-medium">{pagination.total}</span> hoạt động chờ duyệt
+              Hiển thị{' '}
+              <span className="font-medium">{(pagination.page - 1) * pagination.limit + 1}</span>-
+              <span className="font-medium">
+                {Math.min(pagination.page * pagination.limit, pagination.total)}
+              </span>{' '}
+              trong tổng số <span className="font-medium">{pagination.total}</span> hoạt động chờ
+              duyệt
             </p>
             {pagination.pages > 1 && (
               <div className="flex gap-2">

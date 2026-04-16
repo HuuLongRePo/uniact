@@ -23,11 +23,7 @@ export async function POST(request: NextRequest) {
     }
 
     const normalizedIds = Array.from(
-      new Set(
-        activityIds
-          .map((id) => Number(id))
-          .filter((id) => Number.isInteger(id) && id > 0)
-      )
+      new Set(activityIds.map((id) => Number(id)).filter((id) => Number.isInteger(id) && id > 0))
     );
 
     if (normalizedIds.length === 0) {

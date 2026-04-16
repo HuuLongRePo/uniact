@@ -197,15 +197,21 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const scopedClassIds = Array.from(
       new Set([
         ...(Array.isArray(updatePayload.class_ids) ? updatePayload.class_ids : []),
-        ...(Array.isArray(updatePayload.mandatory_class_ids) ? updatePayload.mandatory_class_ids : []),
-        ...(Array.isArray(updatePayload.voluntary_class_ids) ? updatePayload.voluntary_class_ids : []),
+        ...(Array.isArray(updatePayload.mandatory_class_ids)
+          ? updatePayload.mandatory_class_ids
+          : []),
+        ...(Array.isArray(updatePayload.voluntary_class_ids)
+          ? updatePayload.voluntary_class_ids
+          : []),
       ])
     );
 
     if (scopedClassIds.length > 0) {
       const classes = (await dbHelpers.getAllClasses()) as Array<{ id: number }>;
       const validClassIds = new Set((classes || []).map((item) => Number(item.id)));
-      const invalidClassIds = scopedClassIds.filter((classId) => !validClassIds.has(Number(classId)));
+      const invalidClassIds = scopedClassIds.filter(
+        (classId) => !validClassIds.has(Number(classId))
+      );
 
       if (invalidClassIds.length > 0) {
         return errorResponse(
@@ -259,9 +265,10 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
     try {
       if (updatePayload.status === 'cancelled' && existingActivity.status !== 'cancelled') {
-        const participants = await dbAll('SELECT student_id FROM participations WHERE activity_id = ?', [
-          activityId,
-        ]);
+        const participants = await dbAll(
+          'SELECT student_id FROM participations WHERE activity_id = ?',
+          [activityId]
+        );
         if (participants && Array.isArray(participants) && participants.length > 0) {
           for (const p of participants) {
             if (p.student_id) {
@@ -380,7 +387,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     if (user.role === 'student') {
       const studentClassId =
-        typeof user.class_id === 'number' && Number.isFinite(user.class_id) ? Number(user.class_id) : null;
+        typeof user.class_id === 'number' && Number.isFinite(user.class_id)
+          ? Number(user.class_id)
+          : null;
       const hasClassScope = classRows.length > 0;
       const mandatoryClassMatch =
         studentClassId !== null &&
@@ -397,15 +406,16 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         normalizedActivity.is_mandatory === true || mandatoryClassMatch;
 
       normalizedActivity.applies_to_student = appliesToStudent;
-      normalizedActivity.applicability_scope = normalizedActivity.is_mandatory === true
-        ? 'mandatory_class_scope'
-        : !hasClassScope
-        ? 'open_scope'
-        : mandatoryClassMatch
+      normalizedActivity.applicability_scope =
+        normalizedActivity.is_mandatory === true
           ? 'mandatory_class_scope'
-          : voluntaryClassMatch
-            ? 'voluntary_class_scope'
-          : 'class_scope_mismatch';
+          : !hasClassScope
+            ? 'open_scope'
+            : mandatoryClassMatch
+              ? 'mandatory_class_scope'
+              : voluntaryClassMatch
+                ? 'voluntary_class_scope'
+                : 'class_scope_mismatch';
       normalizedActivity.applicability_reason =
         normalizedActivity.applicability_scope === 'mandatory_class_scope'
           ? 'Ap dung vi lop cua ban nam trong nhom bat buoc cua hoat dong.'
@@ -471,9 +481,10 @@ export async function DELETE(
     );
 
     try {
-      const participants = await dbAll('SELECT student_id FROM participations WHERE activity_id = ?', [
-        activityId,
-      ]);
+      const participants = await dbAll(
+        'SELECT student_id FROM participations WHERE activity_id = ?',
+        [activityId]
+      );
       if (participants && Array.isArray(participants) && participants.length > 0) {
         for (const p of participants) {
           if (p.student_id) {

@@ -80,10 +80,10 @@ function escapeCsvValue(value: CsvValue): string {
 }
 
 function generateCsv(data: CsvRow[], columns: string[]): string {
-  const headers = columns.map((column) => escapeCsvValue(COLUMN_LABELS[column] ?? column)).join(',');
-  const rows = data.map((row) =>
-    columns.map((column) => escapeCsvValue(row[column])).join(',')
-  );
+  const headers = columns
+    .map((column) => escapeCsvValue(COLUMN_LABELS[column] ?? column))
+    .join(',');
+  const rows = data.map((row) => columns.map((column) => escapeCsvValue(row[column])).join(','));
 
   return ['\uFEFF' + headers, ...rows].join('\n');
 }
@@ -209,7 +209,9 @@ async function generateScoresReport(filters: ReportFilters): Promise<CsvRow[]> {
   const scoreDateColumn = 'COALESCE(pc.calculated_at, p.updated_at, p.created_at)';
   appendDateFilters(filters, scoreDateColumn, queryParts, params);
 
-  queryParts.push('GROUP BY u.id, u.name, c.name ORDER BY total_points DESC, activities_joined DESC');
+  queryParts.push(
+    'GROUP BY u.id, u.name, c.name ORDER BY total_points DESC, activities_joined DESC'
+  );
 
   const rows = (await dbAll(queryParts.join('\n'), params)) as CsvRow[];
   return rows.map((row, index) => ({
@@ -256,13 +258,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = (await request.json()) as ReportRequestBody;
-    const {
-      name = 'bao-cao',
-      type,
-      columns = [],
-      filters = {},
-      format = 'csv',
-    } = body;
+    const { name = 'bao-cao', type, columns = [], filters = {}, format = 'csv' } = body;
 
     if (!type || columns.length === 0) {
       return errorResponse(ApiError.validation('Loại báo cáo và danh sách cột là bắt buộc'));

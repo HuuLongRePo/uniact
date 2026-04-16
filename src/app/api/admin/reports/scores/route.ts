@@ -79,9 +79,7 @@ export async function GET(_request: NextRequest) {
   } catch (error: unknown) {
     console.error('Score report error:', error);
     return errorResponse(
-      ApiError.internalError(
-        error instanceof Error ? error.message : 'Không thể tải báo cáo điểm.'
-      )
+      ApiError.internalError(error instanceof Error ? error.message : 'Không thể tải báo cáo điểm.')
     );
   }
 }

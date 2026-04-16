@@ -92,7 +92,11 @@ export const rateLimiter = new RateLimiter();
  * @returns { allowed: boolean, remaining: number, resetAt: number }
  */
 export function rateLimit(
-  req: Request | { headers?: Headers | { get?: (name: string) => string | null | undefined } } | null | undefined,
+  req:
+    | Request
+    | { headers?: Headers | { get?: (name: string) => string | null | undefined } }
+    | null
+    | undefined,
   max: number = 100,
   windowMs: number = 15 * 60 * 1000 // 15 phút
 ): { allowed: boolean; remaining?: number; resetAt?: number } {

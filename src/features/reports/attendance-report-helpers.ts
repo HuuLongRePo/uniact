@@ -98,7 +98,9 @@ export function getSummaryFromResponse<T>(payload: unknown): T[] {
 }
 
 export function normalizeMethod(value: unknown): AttendanceMethod {
-  const normalized = String(value || '').trim().toLowerCase();
+  const normalized = String(value || '')
+    .trim()
+    .toLowerCase();
   if (normalized === 'manual' || normalized === 'qr' || normalized === 'face') {
     return normalized;
   }

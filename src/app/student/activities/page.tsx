@@ -102,11 +102,14 @@ export default function StudentActivitiesPage() {
     setRegistering(activityId);
     try {
       const selectedActivity = activities.find((activity) => activity.id === activityId);
-      const response = await fetch(resolveClientFetchUrl(`/api/activities/${activityId}/register`), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ force_register: forceRegister }),
-      });
+      const response = await fetch(
+        resolveClientFetchUrl(`/api/activities/${activityId}/register`),
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ force_register: forceRegister }),
+        }
+      );
       const data = await response.json();
 
       if (response.ok) {
@@ -137,9 +140,12 @@ export default function StudentActivitiesPage() {
   const handleCancelRegistration = async (activityId: number) => {
     setRegistering(activityId);
     try {
-      const response = await fetch(resolveClientFetchUrl(`/api/activities/${activityId}/register`), {
-        method: 'DELETE',
-      });
+      const response = await fetch(
+        resolveClientFetchUrl(`/api/activities/${activityId}/register`),
+        {
+          method: 'DELETE',
+        }
+      );
       const data = await response.json();
 
       if (response.ok) {
@@ -230,7 +236,9 @@ export default function StudentActivitiesPage() {
           type="button"
           onClick={() => setVisibilityTab('not_applicable')}
           className={`rounded-full px-4 py-2 text-sm font-medium ${
-            visibilityTab === 'not_applicable' ? 'bg-amber-600 text-white' : 'bg-gray-200 text-gray-700'
+            visibilityTab === 'not_applicable'
+              ? 'bg-amber-600 text-white'
+              : 'bg-gray-200 text-gray-700'
           }`}
         >
           Không thuộc phạm vi của bạn
@@ -306,7 +314,9 @@ export default function StudentActivitiesPage() {
 
           <div className="mt-6 flex items-center justify-between rounded-lg bg-white p-4 shadow">
             <p className="text-sm text-gray-700">
-              Hiển thị <span className="font-medium">{(page - 1) * limit + 1}</span>-<span className="font-medium">{Math.min(page * limit, total)}</span> trong tổng số <span className="font-medium">{total}</span> hoạt động
+              Hiển thị <span className="font-medium">{(page - 1) * limit + 1}</span>-
+              <span className="font-medium">{Math.min(page * limit, total)}</span> trong tổng số{' '}
+              <span className="font-medium">{total}</span> hoạt động
             </p>
             {total > limit && (
               <div className="flex gap-2">
@@ -321,7 +331,9 @@ export default function StudentActivitiesPage() {
                   Trang {page}/{Math.max(1, Math.ceil(total / limit))}
                 </span>
                 <button
-                  onClick={() => setPage((prev) => Math.min(Math.max(1, Math.ceil(total / limit)), prev + 1))}
+                  onClick={() =>
+                    setPage((prev) => Math.min(Math.max(1, Math.ceil(total / limit)), prev + 1))
+                  }
                   disabled={page >= Math.max(1, Math.ceil(total / limit))}
                   className="rounded border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >

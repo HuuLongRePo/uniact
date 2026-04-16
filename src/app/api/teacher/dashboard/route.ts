@@ -52,7 +52,9 @@ export async function GET(request: NextRequest) {
     console.error('Loi lay dashboard giang vien:', error);
     return errorResponse(
       error instanceof ApiError ||
-        (error && typeof (error as any).status === 'number' && typeof (error as any).code === 'string')
+        (error &&
+          typeof (error as any).status === 'number' &&
+          typeof (error as any).code === 'string')
         ? (error as any)
         : ApiError.internalError('Khong the lay du lieu tong quan', {
             details: error instanceof Error ? error.message : 'Unknown error',

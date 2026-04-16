@@ -431,10 +431,7 @@ export default function ParticipationReportsPage() {
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {summary.map((item) => (
-                    <tr
-                      key={item.student_id}
-                      className="transition-colors hover:bg-gray-50"
-                    >
+                    <tr key={item.student_id} className="transition-colors hover:bg-gray-50">
                       <td className="px-4 py-4 text-sm font-medium text-gray-900">
                         {item.student_name}
                       </td>
@@ -495,9 +492,7 @@ export default function ParticipationReportsPage() {
                   </label>
                   <select
                     value={filters.classId}
-                    onChange={(event) =>
-                      setFilters({ ...filters, classId: event.target.value })
-                    }
+                    onChange={(event) => setFilters({ ...filters, classId: event.target.value })}
                     className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="">-- Tất cả lớp --</option>
@@ -547,9 +542,7 @@ export default function ParticipationReportsPage() {
                   <input
                     type="date"
                     value={filters.dateStart}
-                    onChange={(event) =>
-                      setFilters({ ...filters, dateStart: event.target.value })
-                    }
+                    onChange={(event) => setFilters({ ...filters, dateStart: event.target.value })}
                     className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
                   />
                 </div>

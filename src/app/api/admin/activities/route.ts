@@ -55,8 +55,9 @@ export async function GET(request: NextRequest) {
 
     const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
 
-    const activities = ((await dbAll(
-      `SELECT
+    const activities = (
+      (await dbAll(
+        `SELECT
         a.id,
         a.title,
         a.description,
@@ -80,8 +81,9 @@ export async function GET(request: NextRequest) {
       ${whereSql}
       ORDER BY a.created_at DESC
       LIMIT ? OFFSET ?`,
-      [...bindings, limit, offset]
-    )) as any[]).map((activity) => ({
+        [...bindings, limit, offset]
+      )) as any[]
+    ).map((activity) => ({
       ...activity,
       status: getActivityDisplayStatus(activity.status, activity.approval_status),
     }));

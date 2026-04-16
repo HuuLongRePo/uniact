@@ -85,7 +85,9 @@ export default function CreateActivityPage() {
   const [submitMode, setSubmitMode] = useState<'draft' | 'submit'>('draft');
   const [currentTab, setCurrentTab] = useState<'basic' | 'details' | 'files'>('basic');
   const [showPreview, setShowPreview] = useState(false);
-  const [participationPreview, setParticipationPreview] = useState<ParticipationPreview | null>(null);
+  const [participationPreview, setParticipationPreview] = useState<ParticipationPreview | null>(
+    null
+  );
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const selectedClasses = Array.from(new Set([...mandatoryClassIds, ...voluntaryClassIds]));
@@ -296,9 +298,7 @@ export default function CreateActivityPage() {
         const uploadData = await uploadRes.json().catch(() => null);
 
         if (!uploadRes.ok) {
-          throw new Error(
-            uploadData?.error || 'Hoạt động đã được tạo nhưng tải file lên thất bại'
-          );
+          throw new Error(uploadData?.error || 'Hoạt động đã được tạo nhưng tải file lên thất bại');
         }
       }
 
@@ -309,9 +309,7 @@ export default function CreateActivityPage() {
         const submitData = await submitRes.json().catch(() => null);
 
         if (!submitRes.ok) {
-          throw new Error(
-            submitData?.error || 'Hoạt động đã được tạo nhưng gửi duyệt thất bại'
-          );
+          throw new Error(submitData?.error || 'Hoạt động đã được tạo nhưng gửi duyệt thất bại');
         }
       }
 
@@ -506,11 +504,21 @@ export default function CreateActivityPage() {
                         Phạm vi lớp áp dụng <span className="text-red-500">*</span>
                       </label>
                       <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-                        <p className="font-medium">Nếu không chọn lớp nào, bạn chưa thể lưu hoạt động.</p>
+                        <p className="font-medium">
+                          Nếu không chọn lớp nào, bạn chưa thể lưu hoạt động.
+                        </p>
                         <ul className="mt-2 list-disc space-y-1 pl-5 text-amber-800">
-                          <li><strong>Bắt buộc:</strong> sinh viên trong lớp sẽ được áp dụng bắt buộc, không cần tự đăng ký.</li>
-                          <li><strong>Tự nguyện:</strong> sinh viên trong lớp được phép tự đăng ký.</li>
-                          <li>Nếu một lớp xuất hiện ở cả hai nhóm, hệ thống sẽ ưu tiên <strong>bắt buộc</strong>.</li>
+                          <li>
+                            <strong>Bắt buộc:</strong> sinh viên trong lớp sẽ được áp dụng bắt buộc,
+                            không cần tự đăng ký.
+                          </li>
+                          <li>
+                            <strong>Tự nguyện:</strong> sinh viên trong lớp được phép tự đăng ký.
+                          </li>
+                          <li>
+                            Nếu một lớp xuất hiện ở cả hai nhóm, hệ thống sẽ ưu tiên{' '}
+                            <strong>bắt buộc</strong>.
+                          </li>
                         </ul>
                       </div>
                       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -607,8 +615,8 @@ export default function CreateActivityPage() {
                                 </div>
                               </div>
                               <div className="text-xs text-gray-600">
-                                Nếu một lớp xuất hiện ở cả hai danh sách, hệ thống sẽ ưu tiên
-                                bắt buộc hơn tự nguyện.
+                                Nếu một lớp xuất hiện ở cả hai danh sách, hệ thống sẽ ưu tiên bắt
+                                buộc hơn tự nguyện.
                               </div>
                               <div className="space-y-2">
                                 {participationPreview.groups.map((group) => (
@@ -621,7 +629,10 @@ export default function CreateActivityPage() {
                                     </summary>
                                     <div className="mt-2 space-y-1 text-sm text-gray-600">
                                       {group.students.map((student) => (
-                                        <div key={student.id} className="flex justify-between gap-3">
+                                        <div
+                                          key={student.id}
+                                          className="flex justify-between gap-3"
+                                        >
                                           <span>{student.name}</span>
                                           <span className="text-xs text-gray-500">
                                             {student.email || `ID ${student.id}`}

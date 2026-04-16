@@ -73,15 +73,21 @@ export async function DELETE(
     const { id } = await params;
     const user = await requireApiRole(request, ['admin']);
 
-    const existing = (await dbGet('SELECT id, name FROM organization_levels WHERE id = ?', [id])) as any;
+    const existing = (await dbGet('SELECT id, name FROM organization_levels WHERE id = ?', [
+      id,
+    ])) as any;
     if (!existing) {
       return errorResponse(ApiError.notFound('Không tìm thấy cấp tổ chức'));
     }
 
-    const activities = await dbGet('SELECT id FROM activities WHERE organization_level_id = ?', [id]);
+    const activities = await dbGet('SELECT id FROM activities WHERE organization_level_id = ?', [
+      id,
+    ]);
     if (activities) {
       return errorResponse(
-        ApiError.validation('Không thể xóa cấp tổ chức đang được sử dụng, hãy gán lại hoạt động trước')
+        ApiError.validation(
+          'Không thể xóa cấp tổ chức đang được sử dụng, hãy gán lại hoạt động trước'
+        )
       );
     }
 

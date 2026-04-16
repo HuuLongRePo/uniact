@@ -64,10 +64,7 @@ export async function POST(request: NextRequest) {
       [user.id, JSON.stringify({ filename, size_mb })]
     );
 
-    return successResponse(
-      { filename, size_mb },
-      'Backup created successfully'
-    );
+    return successResponse({ filename, size_mb }, 'Backup created successfully');
   } catch (error: any) {
     console.error('Backup error:', error);
     return errorResponse(

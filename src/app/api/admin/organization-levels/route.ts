@@ -68,7 +68,11 @@ export async function POST(request: NextRequest) {
       ]
     );
 
-    return successResponse({ id: result.lastID, name, multiplier, description }, 'Tạo cấp tổ chức thành công', 201);
+    return successResponse(
+      { id: result.lastID, name, multiplier, description },
+      'Tạo cấp tổ chức thành công',
+      201
+    );
   } catch (error: any) {
     console.error('Error creating organization level:', error);
     return errorResponse(

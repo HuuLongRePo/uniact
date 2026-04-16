@@ -107,7 +107,12 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         (error && typeof error.status === 'number' && typeof error.code === 'string')
         ? error instanceof ApiError
           ? error
-          : new ApiError(error.code, error.message || 'Không thể tải dữ liệu quét', error.status, error.details)
+          : new ApiError(
+              error.code,
+              error.message || 'Không thể tải dữ liệu quét',
+              error.status,
+              error.details
+            )
         : ApiError.internalError('Không thể tải dữ liệu quét')
     );
   }

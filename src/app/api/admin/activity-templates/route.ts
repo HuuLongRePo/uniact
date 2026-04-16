@@ -94,7 +94,7 @@ export async function POST(request: Request) {
         default_duration_hours || 2,
         default_max_participants || 50,
         qr_enabled ? 1 : 0,
-        user.id
+        user.id,
       ]
     );
 

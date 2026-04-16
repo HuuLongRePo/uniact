@@ -89,9 +89,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
 
     // Kiểm tra học viên có thuộc lớp được mời không (dựa vào bảng activity_classes)
-    const rows = (await dbAll('SELECT class_id, participation_mode FROM activity_classes WHERE activity_id = ?', [
-      activityId,
-    ])) as Array<{ class_id: number; participation_mode?: string | null }>;
+    const rows = (await dbAll(
+      'SELECT class_id, participation_mode FROM activity_classes WHERE activity_id = ?',
+      [activityId]
+    )) as Array<{ class_id: number; participation_mode?: string | null }>;
 
     const classIds = rows.map((r) => r.class_id);
     if (classIds.length > 0 && (!user.class_id || !classIds.includes(user.class_id))) {
@@ -134,11 +135,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     if (!policy.ok) {
       if (policy.error === 'conflict_detected') {
         return errorResponse(
-          ApiError.conflict('Bạn đã đăng ký hoạt động khác trùng giờ bắt đầu. Xác nhận để tiếp tục.', {
-            conflicts: policy.conflicts,
-            can_override: policy.can_override,
-            hint: 'Gửi lại yêu cầu với {"force_register": true} để bỏ qua cảnh báo trùng giờ bắt đầu',
-          })
+          ApiError.conflict(
+            'Bạn đã đăng ký hoạt động khác trùng giờ bắt đầu. Xác nhận để tiếp tục.',
+            {
+              conflicts: policy.conflicts,
+              can_override: policy.can_override,
+              hint: 'Gửi lại yêu cầu với {"force_register": true} để bỏ qua cảnh báo trùng giờ bắt đầu',
+            }
+          )
         );
       }
       return errorResponse(ApiError.validation(policy.error || 'Không thể đăng ký hoạt động'));
@@ -287,7 +291,9 @@ export async function DELETE(
          FROM participations
          WHERE activity_id = ? AND student_id = ? LIMIT 1`,
         [activityId, user.id]
-      )) as { id: number; attendance_status: string; participation_source?: string | null } | undefined;
+      )) as
+        | { id: number; attendance_status: string; participation_source?: string | null }
+        | undefined;
 
       if (!participation) {
         return { cancelled: false as const, reason: 'not_registered' as const };
@@ -362,7 +368,9 @@ export async function DELETE(
 
     if (error.message === 'MANDATORY_PARTICIPATION') {
       return errorResponse(
-        ApiError.validation('Ban dang nam trong danh sach tham gia bat buoc nen khong the tu huy dang ky')
+        ApiError.validation(
+          'Ban dang nam trong danh sach tham gia bat buoc nen khong the tu huy dang ky'
+        )
       );
     }
 

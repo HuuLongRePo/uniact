@@ -96,8 +96,7 @@ function getHistoryPayload(payload: unknown): {
   return {
     records: record.data?.records ?? record.records ?? [],
     notifications: record.data?.notifications ?? record.notifications ?? [],
-    summary:
-      record.data?.summary ??
+    summary: record.data?.summary ??
       record.summary ?? {
         total_notifications: 0,
         total_recipients: 0,
@@ -202,9 +201,7 @@ export default function NotificationHistoryPage() {
     }
 
     if (filters.dateEnd) {
-      filtered = filtered.filter(
-        (record) => new Date(record.sent_at) <= new Date(filters.dateEnd)
-      );
+      filtered = filtered.filter((record) => new Date(record.sent_at) <= new Date(filters.dateEnd));
     }
 
     if (searchTerm) {
@@ -265,9 +262,7 @@ export default function NotificationHistoryPage() {
   };
 
   const readRate = useMemo(() => {
-    return summary.total_recipients > 0
-      ? (summary.total_read / summary.total_recipients) * 100
-      : 0;
+    return summary.total_recipients > 0 ? (summary.total_read / summary.total_recipients) * 100 : 0;
   }, [summary.total_read, summary.total_recipients]);
 
   if (authLoading || loading) {
@@ -321,19 +316,26 @@ export default function NotificationHistoryPage() {
             <div className="mb-1 text-sm text-gray-600">Đã đọc</div>
             <div className="text-3xl font-bold text-green-600">{summary.total_read}</div>
           </div>
-          <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm" data-testid="notification-read-rate-card">
+          <div
+            className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm"
+            data-testid="notification-read-rate-card"
+          >
             <div className="mb-1 text-sm text-gray-600">Tỷ lệ đọc</div>
             <div className="text-3xl font-bold text-amber-600">{readRate.toFixed(1)}%</div>
           </div>
         </div>
 
-        <div className="mb-6 rounded-lg border border-orange-200 bg-orange-50 p-6 shadow-sm" data-testid="notification-low-read-section">
+        <div
+          className="mb-6 rounded-lg border border-orange-200 bg-orange-50 p-6 shadow-sm"
+          data-testid="notification-low-read-section"
+        >
           <div className="mb-4 flex items-start gap-3">
             <AlertTriangle className="mt-0.5 h-5 w-5 text-orange-600" />
             <div>
               <h2 className="text-lg font-semibold text-orange-900">Broadcast có tỷ lệ đọc thấp</h2>
               <p className="text-sm text-orange-800">
-                Những thông báo có read-rate thấp nhất để bạn biết cần nhắc lại, đổi kênh hoặc follow-up.
+                Những thông báo có read-rate thấp nhất để bạn biết cần nhắc lại, đổi kênh hoặc
+                follow-up.
               </p>
             </div>
           </div>
@@ -424,9 +426,7 @@ export default function NotificationHistoryPage() {
                 <input
                   type="date"
                   value={filters.dateStart}
-                  onChange={(event) =>
-                    setFilters({ ...filters, dateStart: event.target.value })
-                  }
+                  onChange={(event) => setFilters({ ...filters, dateStart: event.target.value })}
                   className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -460,7 +460,9 @@ export default function NotificationHistoryPage() {
                     Học viên {sortBy === 'student' && (sortOrder === 'asc' ? '↑' : '↓')}
                   </th>
                   <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Lớp</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Thông báo</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
+                    Thông báo
+                  </th>
                   <th
                     onClick={() => {
                       setSortBy('sent_at');
@@ -483,8 +485,12 @@ export default function NotificationHistoryPage() {
                   >
                     Đọc lúc {sortBy === 'read_at' && (sortOrder === 'asc' ? '↑' : '↓')}
                   </th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Trạng thái</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Thiết bị</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
+                    Trạng thái
+                  </th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
+                    Thiết bị
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -494,9 +500,7 @@ export default function NotificationHistoryPage() {
                       {record.student_name}
                     </td>
                     <td className="px-4 py-4 text-sm text-gray-600">{record.class_name}</td>
-                    <td className="px-4 py-4 text-sm text-blue-600">
-                      {record.notification_title}
-                    </td>
+                    <td className="px-4 py-4 text-sm text-blue-600">{record.notification_title}</td>
                     <td className="px-4 py-4 text-sm text-gray-600">
                       {new Date(record.sent_at).toLocaleString('vi-VN')}
                     </td>
@@ -517,7 +521,9 @@ export default function NotificationHistoryPage() {
                       )}
                     </td>
                     <td className="px-4 py-4 text-sm text-gray-600">
-                      {record.read_on_device === 'unknown' ? 'Không theo dõi' : record.read_on_device}
+                      {record.read_on_device === 'unknown'
+                        ? 'Không theo dõi'
+                        : record.read_on_device}
                     </td>
                   </tr>
                 ))}

@@ -34,10 +34,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return errorResponse(ApiError.notFound('Không tìm thấy hoạt động'));
     }
 
-    if (
-      user.role === 'teacher' &&
-      !(await teacherCanAccessActivity(Number(user.id), activityId))
-    ) {
+    if (user.role === 'teacher' && !(await teacherCanAccessActivity(Number(user.id), activityId))) {
       return errorResponse(ApiError.forbidden('Bạn không có quyền tải file lên hoạt động này'));
     }
 
@@ -154,10 +151,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       return errorResponse(ApiError.notFound('Không tìm thấy hoạt động'));
     }
 
-    if (
-      user.role === 'teacher' &&
-      !(await teacherCanAccessActivity(Number(user.id), activityId))
-    ) {
+    if (user.role === 'teacher' && !(await teacherCanAccessActivity(Number(user.id), activityId))) {
       return errorResponse(ApiError.forbidden('Không có quyền truy cập'));
     }
 

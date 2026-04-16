@@ -109,7 +109,9 @@ export async function POST(request: NextRequest) {
         class_name: String(r.class_name || ''),
         activity_name: String(r.activity_name || ''),
         activity_date: String(r.activity_date || ''),
-        status: formatAttendanceStatus(r.attendance_status as 'attended' | 'absent' | 'registered' | null),
+        status: formatAttendanceStatus(
+          r.attendance_status as 'attended' | 'absent' | 'registered' | null
+        ),
         method,
         check_in_time: r.check_in_time ? String(r.check_in_time) : '',
         notes: r.notes ? String(r.notes) : '',

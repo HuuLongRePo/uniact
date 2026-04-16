@@ -189,10 +189,7 @@ export default function TeacherActivitiesPage() {
     fetchActivities();
   };
 
-  const openConfirmAction = (
-    type: ConfirmActionType,
-    activity: Pick<Activity, 'id' | 'title'>
-  ) => {
+  const openConfirmAction = (type: ConfirmActionType, activity: Pick<Activity, 'id' | 'title'>) => {
     setConfirmAction({ type, id: activity.id, title: activity.title });
     setOpenMenuId(null);
   };
@@ -315,7 +312,9 @@ export default function TeacherActivitiesPage() {
           <h1 className="text-3xl font-bold text-gray-900 mb-2" data-testid="activities-heading">
             Quản lý hoạt động
           </h1>
-          <p className="text-gray-600">Danh sách hoạt động bạn tạo, gửi duyệt và theo dõi trạng thái</p>
+          <p className="text-gray-600">
+            Danh sách hoạt động bạn tạo, gửi duyệt và theo dõi trạng thái
+          </p>
         </div>
         <button
           onClick={handleCreateNew}
@@ -447,7 +446,9 @@ export default function TeacherActivitiesPage() {
 
                       <button
                         onClick={() => handleSubmitApproval(activity)}
-                        disabled={actionLoading.type === 'submit' && actionLoading.id === activity.id}
+                        disabled={
+                          actionLoading.type === 'submit' && actionLoading.id === activity.id
+                        }
                         className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition text-sm flex items-center gap-1 disabled:opacity-50"
                       >
                         {actionLoading.type === 'submit' && actionLoading.id === activity.id ? (
@@ -517,7 +518,9 @@ export default function TeacherActivitiesPage() {
 
                         <button
                           onClick={() => handleClone(activity)}
-                          disabled={actionLoading.type === 'clone' && actionLoading.id === activity.id}
+                          disabled={
+                            actionLoading.type === 'clone' && actionLoading.id === activity.id
+                          }
                           className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2 text-sm disabled:opacity-50"
                         >
                           {actionLoading.type === 'clone' && actionLoading.id === activity.id ? (
@@ -536,7 +539,9 @@ export default function TeacherActivitiesPage() {
                         {canEditAndResubmit && (
                           <button
                             onClick={() => handleDelete(activity)}
-                            disabled={actionLoading.type === 'delete' && actionLoading.id === activity.id}
+                            disabled={
+                              actionLoading.type === 'delete' && actionLoading.id === activity.id
+                            }
                             className="w-full text-left px-4 py-2 hover:bg-red-50 text-red-600 flex items-center gap-2 text-sm border-t disabled:opacity-50"
                           >
                             {actionLoading.type === 'delete' && actionLoading.id === activity.id ? (
@@ -617,7 +622,9 @@ export default function TeacherActivitiesPage() {
         />
       )}
 
-      {openMenuId !== null && <div className="fixed inset-0 z-0" onClick={() => setOpenMenuId(null)} />}
+      {openMenuId !== null && (
+        <div className="fixed inset-0 z-0" onClick={() => setOpenMenuId(null)} />
+      )}
     </div>
   );
 }

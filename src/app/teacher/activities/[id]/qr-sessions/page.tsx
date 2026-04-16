@@ -4,15 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
-import {
-  ArrowLeft,
-  CheckCircle2,
-  Clock,
-  Play,
-  QrCode,
-  StopCircle,
-  Users,
-} from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Clock, Play, QrCode, StopCircle, Users } from 'lucide-react';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useAuth } from '@/contexts/AuthContext';
@@ -49,14 +41,8 @@ async function requestQRSessionsData(activityId: string) {
 
   return {
     activity:
-      activityData.activity ??
-      activityData.data?.activity ??
-      activityData.data ??
-      activityData,
-    sessions:
-      sessionsData?.sessions ??
-      sessionsData?.data?.sessions ??
-      [],
+      activityData.activity ?? activityData.data?.activity ?? activityData.data ?? activityData,
+    sessions: sessionsData?.sessions ?? sessionsData?.data?.sessions ?? [],
   };
 }
 
@@ -383,7 +369,9 @@ export default function QRSessionsPage() {
             </h4>
             <ul className="space-y-1 text-sm text-blue-800">
               <li>• Mỗi phiên QR có mã duy nhất để học viên quét và điểm danh.</li>
-              <li>• Phiên đang hoạt động sẽ hiển thị mã QR động và cập nhật theo thời gian thực.</li>
+              <li>
+                • Phiên đang hoạt động sẽ hiển thị mã QR động và cập nhật theo thời gian thực.
+              </li>
               <li>• Kết thúc phiên khi hoàn tất điểm danh để tránh ghi nhận nhầm.</li>
               <li>• Có thể tạo nhiều phiên cho cùng một hoạt động nếu cần chia đợt.</li>
             </ul>

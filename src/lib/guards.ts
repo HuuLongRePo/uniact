@@ -103,10 +103,7 @@ export async function requireRole(req: NextRequest, roles: Array<User['role']>):
  *   // User is guaranteed to be admin
  * }
  */
-export async function requireApiRole(
-  req: NextRequest,
-  roles: Array<User['role']>
-): Promise<User> {
+export async function requireApiRole(req: NextRequest, roles: Array<User['role']>): Promise<User> {
   const user = await requireApiAuth(req);
 
   if (!roles.includes(user.role)) {

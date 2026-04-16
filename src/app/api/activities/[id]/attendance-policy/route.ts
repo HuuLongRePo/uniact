@@ -5,10 +5,7 @@ import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
 import { buildAttendancePolicy } from '@/lib/attendance-policy';
 import { loadAttendancePolicyConfig } from '@/lib/attendance-policy-config';
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     await requireApiAuth(request);
 

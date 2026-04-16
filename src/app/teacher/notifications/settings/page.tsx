@@ -475,9 +475,7 @@ export default function NotificationSettingsPage() {
           isOpen={templateToDelete !== null}
           title="Xóa mẫu thông báo"
           message={
-            templateToDelete
-              ? `Bạn có chắc chắn muốn xóa mẫu "${templateToDelete.name}"?`
-              : ''
+            templateToDelete ? `Bạn có chắc chắn muốn xóa mẫu "${templateToDelete.name}"?` : ''
           }
           confirmText="Xóa mẫu"
           cancelText="Hủy"

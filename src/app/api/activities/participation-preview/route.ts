@@ -19,9 +19,7 @@ function normalizeIds(values: unknown): number[] {
   if (!Array.isArray(values)) return [];
   return Array.from(
     new Set(
-      values
-        .map((value) => Number(value))
-        .filter((value) => Number.isInteger(value) && value > 0)
+      values.map((value) => Number(value)).filter((value) => Number.isInteger(value) && value > 0)
     )
   );
 }
@@ -72,9 +70,7 @@ export async function POST(request: NextRequest) {
 
     const placeholders = classIds.map(() => '?').join(', ');
     const bindings =
-      user.role === 'admin'
-        ? classIds
-        : [...classIds, Number(user.id), Number(user.id)];
+      user.role === 'admin' ? classIds : [...classIds, Number(user.id), Number(user.id)];
 
     const accessibleClasses = (await dbAll(
       user.role === 'admin'
@@ -94,7 +90,9 @@ export async function POST(request: NextRequest) {
 
     if (accessibleClasses.length !== classIds.length) {
       return errorResponse(
-        ApiError.forbidden('Bạn chỉ có thể xem trước danh sách của các lớp thuộc phạm vi quản lý của mình')
+        ApiError.forbidden(
+          'Bạn chỉ có thể xem trước danh sách của các lớp thuộc phạm vi quản lý của mình'
+        )
       );
     }
 
@@ -122,7 +120,9 @@ export async function POST(request: NextRequest) {
           id: Number(student.id),
           name: student.name || `Student ${student.id}`,
           email: student.email || null,
-          participation_mode: mandatoryClassSet.has(Number(classRow.id)) ? 'mandatory' : 'voluntary',
+          participation_mode: mandatoryClassSet.has(Number(classRow.id))
+            ? 'mandatory'
+            : 'voluntary',
           resolved_mode: mandatoryClassSet.has(Number(classRow.id)) ? 'mandatory' : 'voluntary',
           was_conflicted: overlappedSet.has(Number(classRow.id)),
         }));
@@ -152,12 +152,17 @@ export async function POST(request: NextRequest) {
           (total, group) => total + Number(group.voluntary_count || 0),
           0
         ),
-        conflict_count: groups.reduce((total, group) => total + Number(group.conflict_count || 0), 0),
+        conflict_count: groups.reduce(
+          (total, group) => total + Number(group.conflict_count || 0),
+          0
+        ),
         groups,
       },
     });
   } catch (error: any) {
     console.error('Participation preview error:', error);
-    return errorResponse(ApiError.internalError('Không thể tải danh sách xem trước tham gia', error?.message));
+    return errorResponse(
+      ApiError.internalError('Không thể tải danh sách xem trước tham gia', error?.message)
+    );
   }
 }

@@ -118,7 +118,8 @@ export default function ActivityStatisticsPage() {
       <div className="mb-6">
         <h1 className="mb-2 text-3xl font-bold">Thống kê hoạt động</h1>
         <p className="text-gray-600">
-          Theo dõi độ phủ tham gia, method mix điểm danh và các hotspot vận hành theo từng hoạt động.
+          Theo dõi độ phủ tham gia, method mix điểm danh và các hotspot vận hành theo từng hoạt
+          động.
         </p>
       </div>
 
@@ -213,7 +214,10 @@ export default function ActivityStatisticsPage() {
           </div>
         </div>
 
-        <div className="rounded-lg bg-gradient-to-br from-slate-600 to-slate-700 p-6 text-white shadow" data-testid="admin-not-participated-card">
+        <div
+          className="rounded-lg bg-gradient-to-br from-slate-600 to-slate-700 p-6 text-white shadow"
+          data-testid="admin-not-participated-card"
+        >
           <div className="flex items-center justify-between">
             <div>
               <div className="text-sm opacity-90">Chưa tham gia</div>
@@ -235,7 +239,10 @@ export default function ActivityStatisticsPage() {
       </div>
 
       <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <div className="rounded-lg border border-violet-200 bg-violet-50 p-5 shadow-sm" data-testid="admin-method-card-qr">
+        <div
+          className="rounded-lg border border-violet-200 bg-violet-50 p-5 shadow-sm"
+          data-testid="admin-method-card-qr"
+        >
           <div className="flex items-center gap-2 text-sm font-medium text-violet-700">
             <QrCode className="h-4 w-4" />
             QR attendance
@@ -243,34 +250,53 @@ export default function ActivityStatisticsPage() {
           <div className="mt-2 text-3xl font-bold text-violet-900">{stats.total_qr_attendance}</div>
         </div>
 
-        <div className="rounded-lg border border-amber-200 bg-amber-50 p-5 shadow-sm" data-testid="admin-method-card-manual">
+        <div
+          className="rounded-lg border border-amber-200 bg-amber-50 p-5 shadow-sm"
+          data-testid="admin-method-card-manual"
+        >
           <div className="flex items-center gap-2 text-sm font-medium text-amber-700">
             <SquarePen className="h-4 w-4" />
             Manual attendance
           </div>
-          <div className="mt-2 text-3xl font-bold text-amber-900">{stats.total_manual_attendance}</div>
+          <div className="mt-2 text-3xl font-bold text-amber-900">
+            {stats.total_manual_attendance}
+          </div>
         </div>
 
-        <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-5 shadow-sm" data-testid="admin-method-card-face">
+        <div
+          className="rounded-lg border border-emerald-200 bg-emerald-50 p-5 shadow-sm"
+          data-testid="admin-method-card-face"
+        >
           <div className="flex items-center gap-2 text-sm font-medium text-emerald-700">
             <ScanFace className="h-4 w-4" />
             Face attendance
           </div>
-          <div className="mt-2 text-3xl font-bold text-emerald-900">{stats.total_face_attendance}</div>
+          <div className="mt-2 text-3xl font-bold text-emerald-900">
+            {stats.total_face_attendance}
+          </div>
         </div>
 
-        <div className="rounded-lg border border-blue-200 bg-blue-50 p-5 shadow-sm" data-testid="admin-face-adoption-card">
+        <div
+          className="rounded-lg border border-blue-200 bg-blue-50 p-5 shadow-sm"
+          data-testid="admin-face-adoption-card"
+        >
           <div className="text-sm font-medium text-blue-700">Tỷ lệ face trên lượt đã tham gia</div>
-          <div className="mt-2 text-3xl font-bold text-blue-900">{stats.face_adoption_rate.toFixed(1)}%</div>
+          <div className="mt-2 text-3xl font-bold text-blue-900">
+            {stats.face_adoption_rate.toFixed(1)}%
+          </div>
         </div>
       </div>
 
-      <div className="mb-6 rounded-lg border border-orange-200 bg-orange-50 p-6 shadow-sm" data-testid="admin-attendance-hotspots">
+      <div
+        className="mb-6 rounded-lg border border-orange-200 bg-orange-50 p-6 shadow-sm"
+        data-testid="admin-attendance-hotspots"
+      >
         <div className="mb-4 flex items-center justify-between">
           <div>
             <h2 className="text-lg font-semibold text-orange-900">Hotspots chưa tham gia</h2>
             <p className="text-sm text-orange-800">
-              Các hoạt động có số lượt đăng ký nhưng chưa điểm danh cao nhất trong phạm vi lọc hiện tại.
+              Các hoạt động có số lượt đăng ký nhưng chưa điểm danh cao nhất trong phạm vi lọc hiện
+              tại.
             </p>
           </div>
         </div>
@@ -371,7 +397,9 @@ export default function ActivityStatisticsPage() {
                     </td>
                     <td className="px-4 py-3 text-sm">
                       <div className="text-gray-900">{activity.activity_type || '-'}</div>
-                      <div className="text-xs text-gray-500">{activity.organization_level || '-'}</div>
+                      <div className="text-xs text-gray-500">
+                        {activity.organization_level || '-'}
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-600">
                       {new Date(activity.date_time).toLocaleDateString('vi-VN')}

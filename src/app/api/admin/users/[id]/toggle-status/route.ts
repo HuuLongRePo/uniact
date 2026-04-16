@@ -9,9 +9,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   try {
     const rl = rateLimit(request, 20, 60 * 1000);
     if (!rl.allowed) {
-      return errorResponse(
-        new ApiError('RATE_LIMITED', 'Too many requests', 429)
-      );
+      return errorResponse(new ApiError('RATE_LIMITED', 'Too many requests', 429));
     }
 
     const { id } = await params;

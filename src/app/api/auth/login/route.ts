@@ -16,7 +16,9 @@ export const POST = apiHandler(async (request: NextRequest) => {
   // Bỏ qua trong UAT/test mode để tránh các lượt smoke lặp lại tự đầu độc local login state.
   const rl = isUatMode ? { allowed: true } : rateLimit(request, 10, 15 * 60 * 1000);
   if (!rl.allowed) {
-    return errorResponse(new ApiError('RATE_LIMITED', 'Quá nhiều lần thử. Vui lòng thử lại sau 15 phút.', 429));
+    return errorResponse(
+      new ApiError('RATE_LIMITED', 'Quá nhiều lần thử. Vui lòng thử lại sau 15 phút.', 429)
+    );
   }
 
   try {

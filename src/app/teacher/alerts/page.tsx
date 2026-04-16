@@ -109,37 +109,39 @@ export default function TeacherAlertsPage() {
               <p className="text-lg">Không có thông báo nào</p>
               <p className="text-sm mt-1">Hệ thống sẽ cập nhật khi có cảnh báo mới</p>
             </div>
-          ) : alerts.map((a) => (
-            <div
-              key={a.id}
-              className={`p-4 border rounded ${a.is_read ? 'bg-white' : 'bg-yellow-50'}`}
-            >
-              <div className="flex justify-between">
-                <div className="flex items-start space-x-3">
-                  <input
-                    type="checkbox"
-                    checked={selected.includes(a.id)}
-                    onChange={() => toggle(a.id)}
-                  />
-                  <div>
-                    <div className="font-medium">{getLevelLabel(a.level)}</div>
-                    <div className="text-sm text-gray-700">{a.message}</div>
-                    <div className="text-xs text-gray-500">{a.created_at}</div>
+          ) : (
+            alerts.map((a) => (
+              <div
+                key={a.id}
+                className={`p-4 border rounded ${a.is_read ? 'bg-white' : 'bg-yellow-50'}`}
+              >
+                <div className="flex justify-between">
+                  <div className="flex items-start space-x-3">
+                    <input
+                      type="checkbox"
+                      checked={selected.includes(a.id)}
+                      onChange={() => toggle(a.id)}
+                    />
+                    <div>
+                      <div className="font-medium">{getLevelLabel(a.level)}</div>
+                      <div className="text-sm text-gray-700">{a.message}</div>
+                      <div className="text-xs text-gray-500">{a.created_at}</div>
+                    </div>
+                  </div>
+                  <div className="flex flex-col space-y-2">
+                    {!a.is_read && (
+                      <button
+                        onClick={() => markRead([a.id])}
+                        className="bg-blue-600 text-white px-3 py-1 rounded"
+                      >
+                        Đã đọc
+                      </button>
+                    )}
                   </div>
                 </div>
-                <div className="flex flex-col space-y-2">
-                  {!a.is_read && (
-                    <button
-                      onClick={() => markRead([a.id])}
-                      className="bg-blue-600 text-white px-3 py-1 rounded"
-                    >
-                      Đã đọc
-                    </button>
-                  )}
-                </div>
               </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
 
         <div className="mt-4 flex justify-center items-center space-x-2">

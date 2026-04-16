@@ -6,11 +6,11 @@ import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
 
 /**
  * POST /api/attendance/validate
- * 
+ *
  * Core attendance validation endpoint for QR-based check-in.
  * Validates student identity, session status, activity state, token TTL,
  * and prevents duplicate attendance records with atomic transaction safety.
- * 
+ *
  * @request Body: { qr_token: string, session_id?: number }
  * @response 200 OK | 400 Bad Request | 403 Forbidden | 500 Internal Server Error
  */
@@ -36,7 +36,6 @@ export async function POST(request: NextRequest) {
     // ============================================
     const user = await requireApiRole(request, ['student']);
     const student = user as User;
-
 
     // ============================================
     // 3. FETCH & VALIDATE QR SESSION
@@ -98,9 +97,7 @@ export async function POST(request: NextRequest) {
       | undefined;
 
     if (!activity) {
-      return errorResponse(
-        ApiError.notFound('Hoạt động liên quan không tồn tại hoặc đã bị xóa')
-      );
+      return errorResponse(ApiError.notFound('Hoạt động liên quan không tồn tại hoặc đã bị xóa'));
     }
 
     // Activity must be approved AND published to allow check-ins
@@ -268,9 +265,7 @@ export async function POST(request: NextRequest) {
         console.warn('Failed to log transaction error:', auditErr);
       }
 
-      return errorResponse(
-        ApiError.internalError('Lỗi khi ghi nhận điểm danh. Vui lòng thử lại.')
-      );
+      return errorResponse(ApiError.internalError('Lỗi khi ghi nhận điểm danh. Vui lòng thử lại.'));
     }
 
     // ============================================

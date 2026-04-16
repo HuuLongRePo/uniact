@@ -3,11 +3,7 @@
  * Implements workflow validation and derived UI statuses.
  */
 
-export type ActivityStatus =
-  | 'draft'
-  | 'published'
-  | 'completed'
-  | 'cancelled';
+export type ActivityStatus = 'draft' | 'published' | 'completed' | 'cancelled';
 
 export type ActivityApprovalStatus = 'draft' | 'requested' | 'approved' | 'rejected';
 export type ActivityDisplayStatus = ActivityStatus | 'pending' | 'rejected';
@@ -83,9 +79,10 @@ export function canSubmitForApproval(
   return { valid: true };
 }
 
-export function canDecideApproval(
-  approvalStatus: ActivityApprovalStatus
-): { valid: boolean; error?: string } {
+export function canDecideApproval(approvalStatus: ActivityApprovalStatus): {
+  valid: boolean;
+  error?: string;
+} {
   if (approvalStatus !== 'requested') {
     return {
       valid: false,

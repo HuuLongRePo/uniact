@@ -144,7 +144,10 @@ export default function DashboardAdminPage() {
         const configBody = await configRes.json();
         const configRows = configBody?.configs || configBody?.data?.configs || [];
         const configMap = new Map<string, string>(
-          configRows.map((row: any) => [String(row?.config_key || ''), String(row?.config_value || '')])
+          configRows.map((row: any) => [
+            String(row?.config_key || ''),
+            String(row?.config_value || ''),
+          ])
         );
 
         let configuredPilotActivities = 0;
@@ -153,7 +156,9 @@ export default function DashboardAdminPage() {
             configMap.get('attendance_face_pilot_activity_ids') || '[]'
           );
           if (Array.isArray(selectedIds)) {
-            configuredPilotActivities = selectedIds.filter((id) => Number.isInteger(Number(id))).length;
+            configuredPilotActivities = selectedIds.filter((id) =>
+              Number.isInteger(Number(id))
+            ).length;
           }
         } catch {
           configuredPilotActivities = 0;
@@ -335,12 +340,16 @@ export default function DashboardAdminPage() {
           </div>
 
           {attendancePolicyOverview && (
-            <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-6 shadow" data-testid="admin-attendance-policy-overview">
+            <div
+              className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-6 shadow"
+              data-testid="admin-attendance-policy-overview"
+            >
               <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div>
                   <h2 className="text-xl font-bold text-blue-900">🎛️ Attendance policy rollout</h2>
                   <p className="mt-1 text-sm text-blue-800">
-                    Theo dõi preset đang chạy cho QR fallback / face pilot và mở nhanh màn cấu hình vận hành.
+                    Theo dõi preset đang chạy cho QR fallback / face pilot và mở nhanh màn cấu hình
+                    vận hành.
                   </p>
                 </div>
                 <Link
@@ -353,27 +362,43 @@ export default function DashboardAdminPage() {
 
               <div className="mt-4 grid gap-4 md:grid-cols-4">
                 <div className="rounded-lg bg-white/80 p-4">
-                  <div className="text-xs uppercase tracking-wide text-blue-600">policy version</div>
-                  <div className="mt-1 text-lg font-semibold text-blue-950">{attendancePolicyOverview.version}</div>
-                </div>
-                <div className="rounded-lg bg-white/80 p-4">
-                  <div className="text-xs uppercase tracking-wide text-blue-600">selection mode</div>
-                  <div className="mt-1 text-lg font-semibold text-blue-950">{attendancePolicyOverview.selectionMode}</div>
-                </div>
-                <div className="rounded-lg bg-white/80 p-4">
-                  <div className="text-xs uppercase tracking-wide text-blue-600">configured pilot activities</div>
-                  <div className="mt-1 text-lg font-semibold text-blue-950">{attendancePolicyOverview.configuredPilotActivities}</div>
-                </div>
-                <div className="rounded-lg bg-white/80 p-4">
-                  <div className="text-xs uppercase tracking-wide text-blue-600">eligible / scanned activities</div>
+                  <div className="text-xs uppercase tracking-wide text-blue-600">
+                    policy version
+                  </div>
                   <div className="mt-1 text-lg font-semibold text-blue-950">
-                    {attendancePolicyOverview.eligiblePilotActivities}/{attendancePolicyOverview.totalScannedActivities}
+                    {attendancePolicyOverview.version}
+                  </div>
+                </div>
+                <div className="rounded-lg bg-white/80 p-4">
+                  <div className="text-xs uppercase tracking-wide text-blue-600">
+                    selection mode
+                  </div>
+                  <div className="mt-1 text-lg font-semibold text-blue-950">
+                    {attendancePolicyOverview.selectionMode}
+                  </div>
+                </div>
+                <div className="rounded-lg bg-white/80 p-4">
+                  <div className="text-xs uppercase tracking-wide text-blue-600">
+                    configured pilot activities
+                  </div>
+                  <div className="mt-1 text-lg font-semibold text-blue-950">
+                    {attendancePolicyOverview.configuredPilotActivities}
+                  </div>
+                </div>
+                <div className="rounded-lg bg-white/80 p-4">
+                  <div className="text-xs uppercase tracking-wide text-blue-600">
+                    eligible / scanned activities
+                  </div>
+                  <div className="mt-1 text-lg font-semibold text-blue-950">
+                    {attendancePolicyOverview.eligiblePilotActivities}/
+                    {attendancePolicyOverview.totalScannedActivities}
                   </div>
                 </div>
               </div>
 
               <div className="mt-3 text-sm text-blue-800">
-                QR fallback preset hiện tại: <span className="font-semibold">{attendancePolicyOverview.qrFallbackPreset}</span>
+                QR fallback preset hiện tại:{' '}
+                <span className="font-semibold">{attendancePolicyOverview.qrFallbackPreset}</span>
               </div>
             </div>
           )}
@@ -495,7 +520,9 @@ export default function DashboardAdminPage() {
 
           {reportData.activities_by_month && reportData.activities_by_month.length > 0 && (
             <div className="mb-8 rounded-lg bg-white p-6 shadow">
-              <h2 className="mb-4 text-xl font-bold">Hoạt động theo tháng trong 6 tháng gần nhất</h2>
+              <h2 className="mb-4 text-xl font-bold">
+                Hoạt động theo tháng trong 6 tháng gần nhất
+              </h2>
               <div className="space-y-2">
                 {reportData.activities_by_month.map((item) => {
                   const maxMonthTotal = Math.max(
@@ -524,7 +551,9 @@ export default function DashboardAdminPage() {
 
           {reportData.participation_by_class && reportData.participation_by_class.length > 0 && (
             <div className="mb-8 rounded-lg bg-white p-6 shadow">
-              <h2 className="mb-4 text-xl font-bold">Mức độ tham gia theo lớp của 10 lớp dẫn đầu</h2>
+              <h2 className="mb-4 text-xl font-bold">
+                Mức độ tham gia theo lớp của 10 lớp dẫn đầu
+              </h2>
               <div className="space-y-2">
                 {reportData.participation_by_class.map((item) => {
                   const maxClassActivities = Math.max(

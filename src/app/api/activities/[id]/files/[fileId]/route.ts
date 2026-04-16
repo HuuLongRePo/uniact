@@ -83,10 +83,7 @@ export async function DELETE(
       return errorResponse(ApiError.notFound('Không tìm thấy hoạt động'));
     }
 
-    if (
-      user.role === 'teacher' &&
-      !(await teacherCanAccessActivity(Number(user.id), activityId))
-    ) {
+    if (user.role === 'teacher' && !(await teacherCanAccessActivity(Number(user.id), activityId))) {
       return errorResponse(ApiError.forbidden('Không có quyền truy cập'));
     }
 

@@ -160,9 +160,9 @@ export default function TeacherManualAttendancePage() {
       <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <p className="text-yellow-800">
-            <strong>Lưu ý:</strong> Chức năng này dùng khi hệ thống QR không khả dụng. Ưu tiên sử dụng
-            QR code để điểm danh tự động. Nếu cần đánh giá ngưỡng quá tải QR hoặc pilot face attendance,
-            hãy mở trang chính sách điểm danh.
+            <strong>Lưu ý:</strong> Chức năng này dùng khi hệ thống QR không khả dụng. Ưu tiên sử
+            dụng QR code để điểm danh tự động. Nếu cần đánh giá ngưỡng quá tải QR hoặc pilot face
+            attendance, hãy mở trang chính sách điểm danh.
           </p>
           <Link
             href="/teacher/attendance/policy"

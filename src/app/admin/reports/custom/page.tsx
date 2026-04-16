@@ -531,8 +531,8 @@ export default function CustomReportsPage() {
           <div className="rounded-lg bg-white p-6 shadow-lg">
             <h3 className="mb-2 text-lg font-bold">Định dạng xuất</h3>
             <p className="text-sm text-gray-600">
-              Luồng hiện tại hỗ trợ xuất CSV ổn định. Các tùy chọn Excel/PDF cũ đã được loại bỏ
-              để tránh gây hiểu nhầm.
+              Luồng hiện tại hỗ trợ xuất CSV ổn định. Các tùy chọn Excel/PDF cũ đã được loại bỏ để
+              tránh gây hiểu nhầm.
             </p>
           </div>
         </div>
@@ -578,7 +578,10 @@ export default function CustomReportsPage() {
                 <table className="w-full text-xs">
                   <tbody>
                     {previewRows.map((row, rowIndex) => (
-                      <tr key={`${rowIndex}-${row.join('-')}`} className={rowIndex === 0 ? 'border-b font-bold' : ''}>
+                      <tr
+                        key={`${rowIndex}-${row.join('-')}`}
+                        className={rowIndex === 0 ? 'border-b font-bold' : ''}
+                      >
                         {row.slice(0, 3).map((cell, cellIndex) => (
                           <td key={`${rowIndex}-${cellIndex}`} className="truncate p-1">
                             {cell}

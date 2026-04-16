@@ -137,7 +137,9 @@ function toBoolean(value: string | undefined, fallback: boolean) {
 }
 
 function toSelectionMode(value: string | undefined): FacePilotSelectionMode {
-  const normalized = String(value ?? '').trim().toLowerCase();
+  const normalized = String(value ?? '')
+    .trim()
+    .toLowerCase();
   if (
     normalized === 'heuristic_only' ||
     normalized === 'selected_only' ||
@@ -155,9 +157,7 @@ function toIdArray(value: string | undefined): number[] {
     if (!Array.isArray(parsed)) return [];
     return Array.from(
       new Set(
-        parsed
-          .map((item) => Number(item))
-          .filter((item) => Number.isInteger(item) && item > 0)
+        parsed.map((item) => Number(item)).filter((item) => Number.isInteger(item) && item > 0)
       )
     );
   } catch {
@@ -194,9 +194,7 @@ export function resolveAttendancePolicyConfig(
     version: String(configMap.get('attendance_policy_version') || defaults.version),
     defaultMode: defaults.defaultMode,
     qrFallback: {
-      preset: String(
-        configMap.get('attendance_qr_fallback_preset') || defaults.qrFallback.preset
-      ),
+      preset: String(configMap.get('attendance_qr_fallback_preset') || defaults.qrFallback.preset),
       responseTimeP95Ms: toNumber(
         configMap.get('attendance_qr_fallback_p95_ms'),
         defaults.qrFallback.responseTimeP95Ms

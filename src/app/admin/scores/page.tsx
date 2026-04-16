@@ -211,7 +211,8 @@ export default function AdminStudentScoresPage() {
     () => ({
       averagePoints:
         filteredScores.length > 0
-          ? filteredScores.reduce((sum, score) => sum + score.total_points, 0) / filteredScores.length
+          ? filteredScores.reduce((sum, score) => sum + score.total_points, 0) /
+            filteredScores.length
           : 0,
       totalBonusAdjustments: filteredScores.reduce(
         (sum, score) => sum + score.bonus_adjustment_points,
@@ -233,7 +234,8 @@ export default function AdminStudentScoresPage() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">📊 Bảng Điểm Sinh Viên</h1>
           <p className="mt-2 text-gray-600">
-            Quản lý điểm rèn luyện, theo dõi điều chỉnh thưởng/phạt và phát hiện các hotspot cần can thiệp.
+            Quản lý điểm rèn luyện, theo dõi điều chỉnh thưởng/phạt và phát hiện các hotspot cần can
+            thiệp.
           </p>
         </div>
 
@@ -310,7 +312,10 @@ export default function AdminStudentScoresPage() {
         </div>
 
         <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <div className="rounded-lg border border-red-200 bg-red-50 p-6 shadow-sm" data-testid="scores-penalty-hotspots">
+          <div
+            className="rounded-lg border border-red-200 bg-red-50 p-6 shadow-sm"
+            data-testid="scores-penalty-hotspots"
+          >
             <h2 className="text-lg font-semibold text-red-900">Hotspot bị trừ điểm</h2>
             <p className="mt-1 text-sm text-red-800">
               Những sinh viên có tổng điểm bị trừ cao nhất từ adjustment history.
@@ -324,7 +329,9 @@ export default function AdminStudentScoresPage() {
                 insights.top_penalty_students.map((student) => (
                   <div key={student.user_id} className="rounded-lg bg-white/80 p-4">
                     <div className="font-medium text-gray-900">{student.name}</div>
-                    <div className="mt-1 text-sm text-gray-500">{student.class_name || 'Chưa có lớp'}</div>
+                    <div className="mt-1 text-sm text-gray-500">
+                      {student.class_name || 'Chưa có lớp'}
+                    </div>
                     <div className="mt-2 text-sm text-red-800">
                       Tổng điểm trừ: <span className="font-semibold">{student.penalty_points}</span>
                     </div>
@@ -334,7 +341,10 @@ export default function AdminStudentScoresPage() {
             </div>
           </div>
 
-          <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-6 shadow-sm" data-testid="scores-adjustment-log">
+          <div
+            className="rounded-lg border border-emerald-200 bg-emerald-50 p-6 shadow-sm"
+            data-testid="scores-adjustment-log"
+          >
             <h2 className="text-lg font-semibold text-emerald-900">Điều chỉnh gần đây</h2>
             <p className="mt-1 text-sm text-emerald-800">
               Lịch sử cộng/trừ điểm gần nhất để đối chiếu reason và rà động thái bất thường.
@@ -350,8 +360,12 @@ export default function AdminStudentScoresPage() {
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <div className="font-medium text-gray-900">{adjustment.student_name}</div>
-                        <div className="text-sm text-gray-500">{adjustment.class_name || 'Chưa có lớp'}</div>
-                        <div className="mt-2 text-sm text-gray-700">{adjustment.reason || 'Không ghi lý do'}</div>
+                        <div className="text-sm text-gray-500">
+                          {adjustment.class_name || 'Chưa có lớp'}
+                        </div>
+                        <div className="mt-2 text-sm text-gray-700">
+                          {adjustment.reason || 'Không ghi lý do'}
+                        </div>
                       </div>
                       <span
                         className={`rounded-full px-3 py-1 text-xs font-medium ${
@@ -517,7 +531,9 @@ export default function AdminStudentScoresPage() {
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-600">{score.class_name || '-'}</td>
                       <td className="px-4 py-3">
-                        <span className="text-lg font-bold text-blue-600">{score.total_points}</span>
+                        <span className="text-lg font-bold text-blue-600">
+                          {score.total_points}
+                        </span>
                       </td>
                       <td className="px-4 py-3 text-sm font-medium text-emerald-700">
                         {score.award_points}

@@ -29,16 +29,15 @@ function uniquePositiveIds(values: unknown): number[] {
   if (!Array.isArray(values)) return [];
   return Array.from(
     new Set(
-      values
-        .map((value) => Number(value))
-        .filter((value) => Number.isInteger(value) && value > 0)
+      values.map((value) => Number(value)).filter((value) => Number.isInteger(value) && value > 0)
     )
   );
 }
 
 function buildActivityClassAssignments(activityData: any): ActivityClassAssignment[] {
   const hasExplicitScope =
-    activityData?.mandatory_class_ids !== undefined || activityData?.voluntary_class_ids !== undefined;
+    activityData?.mandatory_class_ids !== undefined ||
+    activityData?.voluntary_class_ids !== undefined;
 
   const mandatoryClassIds = hasExplicitScope
     ? uniquePositiveIds(activityData?.mandatory_class_ids)
@@ -430,7 +429,7 @@ export const dbHelpers = {
 
   /**
    * Update activity fields selectively
-   * - Supports updating: title, description, date_time, location, max_participants, 
+   * - Supports updating: title, description, date_time, location, max_participants,
    *   registration_deadline, activity_type_id, organization_level_id, status, approval_status
    * - Can update class_ids via junction table
    * @param activityId - Activity ID to update
@@ -477,7 +476,8 @@ export const dbHelpers = {
       values.push(activityData.organization_level_id);
     }
     const hasExtendedClassScope =
-      activityData.mandatory_class_ids !== undefined || activityData.voluntary_class_ids !== undefined;
+      activityData.mandatory_class_ids !== undefined ||
+      activityData.voluntary_class_ids !== undefined;
     if (hasExtendedClassScope) {
       try {
         await dbRun('DELETE FROM activity_classes WHERE activity_id = ?', [activityId]);
@@ -929,7 +929,10 @@ export const dbHelpers = {
     );
 
     try {
-      await (dbHelpers as any).computeAndSaveStudentScore?.(payload.activity_id, payload.student_id);
+      await (dbHelpers as any).computeAndSaveStudentScore?.(
+        payload.activity_id,
+        payload.student_id
+      );
     } catch {
       // best-effort only
     }

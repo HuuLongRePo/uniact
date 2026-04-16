@@ -28,7 +28,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return errorResponse(ApiError.forbidden('Bạn chỉ có thể gửi phê duyệt hoạt động của mình'));
     }
 
-    const submitCheck = canSubmitForApproval(activity.status as any, activity.approval_status as any);
+    const submitCheck = canSubmitForApproval(
+      activity.status as any,
+      activity.approval_status as any
+    );
     if (!submitCheck.valid) {
       return errorResponse(ApiError.conflict(submitCheck.error || 'Không thể gửi phê duyệt'));
     }

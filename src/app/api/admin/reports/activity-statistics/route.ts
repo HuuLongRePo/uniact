@@ -118,19 +118,21 @@ export async function GET(request: NextRequest) {
 
     query += ` GROUP BY a.id ORDER BY a.date_time DESC`;
 
-    const activities = ((await dbAll(query, params)) as ActivityStatisticsRow[]).map((activity) => ({
-      ...activity,
-      max_participants: toNumber(activity.max_participants),
-      total_participants: toNumber(activity.total_participants),
-      attended_count: toNumber(activity.attended_count),
-      registered_only: toNumber(activity.registered_only),
-      excellent_count: toNumber(activity.excellent_count),
-      good_count: toNumber(activity.good_count),
-      avg_points_per_student: toNumber(activity.avg_points_per_student),
-      manual_attendance_count: toNumber(activity.manual_attendance_count),
-      qr_attendance_count: toNumber(activity.qr_attendance_count),
-      face_attendance_count: toNumber(activity.face_attendance_count),
-    }));
+    const activities = ((await dbAll(query, params)) as ActivityStatisticsRow[]).map(
+      (activity) => ({
+        ...activity,
+        max_participants: toNumber(activity.max_participants),
+        total_participants: toNumber(activity.total_participants),
+        attended_count: toNumber(activity.attended_count),
+        registered_only: toNumber(activity.registered_only),
+        excellent_count: toNumber(activity.excellent_count),
+        good_count: toNumber(activity.good_count),
+        avg_points_per_student: toNumber(activity.avg_points_per_student),
+        manual_attendance_count: toNumber(activity.manual_attendance_count),
+        qr_attendance_count: toNumber(activity.qr_attendance_count),
+        face_attendance_count: toNumber(activity.face_attendance_count),
+      })
+    );
 
     const totalParticipants = activities.reduce(
       (sum, activity) => sum + activity.total_participants,

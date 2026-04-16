@@ -26,9 +26,10 @@ interface BroadcastNotification {
   created_by: string;
 }
 
-type PendingBroadcastAction =
-  | { type: 'send' | 'delete'; notification: BroadcastNotification }
-  | null;
+type PendingBroadcastAction = {
+  type: 'send' | 'delete';
+  notification: BroadcastNotification;
+} | null;
 
 export default function BroadcastNotificationsPage() {
   const [notifications, setNotifications] = useState<BroadcastNotification[]>([]);

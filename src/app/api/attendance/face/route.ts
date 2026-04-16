@@ -15,8 +15,7 @@ export async function POST(request: NextRequest) {
       throw new ApiError('INVALID_ACTIVITY_ID', 'ID hoạt động không hợp lệ', 400);
     }
 
-    const targetStudentId =
-      user.role === 'student' ? Number(user.id) : Number(body?.student_id);
+    const targetStudentId = user.role === 'student' ? Number(user.id) : Number(body?.student_id);
 
     if (!Number.isFinite(targetStudentId)) {
       throw new ApiError('INVALID_STUDENT_ID', 'Thiếu student_id hợp lệ cho face attendance', 400);

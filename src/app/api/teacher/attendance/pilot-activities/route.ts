@@ -8,7 +8,8 @@ import { loadAttendancePolicyConfig } from '@/lib/attendance-policy-config';
 export async function GET(request: NextRequest) {
   try {
     const user = await requireApiRole(request, ['teacher', 'admin']);
-    const requestedActivityId = Number(request.nextUrl.searchParams.get('activity_id') || '0') || null;
+    const requestedActivityId =
+      Number(request.nextUrl.searchParams.get('activity_id') || '0') || null;
 
     const activities = (await dbAll(
       user.role === 'admin'
@@ -32,7 +33,10 @@ export async function GET(request: NextRequest) {
       teacher_id: number;
     }>;
 
-    if (requestedActivityId && !activities.some((activity) => Number(activity.id) === requestedActivityId)) {
+    if (
+      requestedActivityId &&
+      !activities.some((activity) => Number(activity.id) === requestedActivityId)
+    ) {
       const requestedActivity = (await dbGet(
         user.role === 'admin'
           ? `SELECT id, title, status, approval_status, max_participants, date_time, teacher_id

@@ -1,17 +1,23 @@
 #!/usr/bin/env node
 import { spawnSync } from 'node:child_process';
 
+const cleanNextArtifacts = 'rm -rf .next';
+const coreLintTargets = 'src/app src/lib src/infrastructure';
+
 const fullChecks = [
   { name: 'Format check', cmd: 'npm run format:check' },
   {
     name: 'Lint (core runtime)',
-    cmd: 'npm run lint -- --dir src/app --dir src/lib --dir src/infrastructure',
+    cmd: `npx eslint ${coreLintTargets} --max-warnings=-1`,
   },
   {
     name: 'Type check (release config)',
     cmd: 'npx tsc --project tsconfig.release.json --noEmit --pretty false',
   },
-  { name: 'Build', cmd: 'npm run build' },
+  {
+    name: 'Build',
+    cmd: `${cleanNextArtifacts} && npm run build`,
+  },
 ];
 
 const fastChecks = [

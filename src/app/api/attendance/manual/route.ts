@@ -38,9 +38,7 @@ export async function POST(request: NextRequest) {
       user.role === 'teacher' &&
       !(await teacherCanAccessActivity(Number(user.id), Number(activity_id)))
     ) {
-      return errorResponse(
-        ApiError.forbidden('Bạn chỉ có thể điểm danh cho hoạt động của mình')
-      );
+      return errorResponse(ApiError.forbidden('Bạn chỉ có thể điểm danh cho hoạt động của mình'));
     }
 
     let successCount = 0;
@@ -110,7 +108,10 @@ export async function POST(request: NextRequest) {
             ]
           );
         } catch (notificationError) {
-          console.error(`Failed to create notification for student ${studentId}:`, notificationError);
+          console.error(
+            `Failed to create notification for student ${studentId}:`,
+            notificationError
+          );
         }
       } catch (e) {
         console.error(`Failed to mark attendance for student ${studentId}:`, e);
@@ -157,7 +158,9 @@ export async function GET(request: NextRequest) {
       return errorResponse(ApiError.validation('Vui lòng cung cấp activity_id'));
     }
 
-    const activity = await dbGet('SELECT id, teacher_id FROM activities WHERE id = ?', [activityId]);
+    const activity = await dbGet('SELECT id, teacher_id FROM activities WHERE id = ?', [
+      activityId,
+    ]);
     if (!activity) {
       return errorResponse(ApiError.notFound('Hoạt động không tồn tại'));
     }
@@ -191,9 +194,7 @@ export async function GET(request: NextRequest) {
   } catch (error: any) {
     console.error('Get attendance list error:', error);
     return errorResponse(
-      error instanceof ApiError
-        ? error
-        : ApiError.internalError('Lỗi khi lấy danh sách điểm danh')
+      error instanceof ApiError ? error : ApiError.internalError('Lỗi khi lấy danh sách điểm danh')
     );
   }
 }

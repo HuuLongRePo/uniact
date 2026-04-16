@@ -62,8 +62,8 @@ export function calculateAchievementPercentage(earnedPoints: number, maxPoints: 
  * calculateRank(85, [95, 85, 75, 65]) // 2
  */
 export function calculateRank(studentScore: number, allScores: number[]): number {
-  const validScores = allScores.filter(s => Number.isFinite(s) && s > 0);
-  const scoresHigherOrEqual = validScores.filter(s => s >= studentScore);
+  const validScores = allScores.filter((s) => Number.isFinite(s) && s > 0);
+  const scoresHigherOrEqual = validScores.filter((s) => s >= studentScore);
   return scoresHigherOrEqual.length;
 }
 
@@ -111,7 +111,7 @@ export function calculateGrowthPercentage(previousValue: number, currentValue: n
  */
 export function calculateAverage(scores: number[]): number {
   if (!scores || scores.length === 0) return 0;
-  const validScores = scores.filter(s => Number.isFinite(s));
+  const validScores = scores.filter((s) => Number.isFinite(s));
   if (validScores.length === 0) return 0;
   const sum = validScores.reduce((a, b) => a + b, 0);
   return Number((sum / validScores.length).toFixed(1));
@@ -127,11 +127,11 @@ export function calculateAverage(scores: number[]): number {
 export function calculateStandardDeviation(scores: number[]): number {
   if (!scores || scores.length < 2) return 0;
 
-  const validScores = scores.filter(s => Number.isFinite(s));
+  const validScores = scores.filter((s) => Number.isFinite(s));
   if (validScores.length < 2) return 0;
 
   const avg = calculateAverage(validScores);
-  const squareDiffs = validScores.map(score => Math.pow(score - avg, 2));
+  const squareDiffs = validScores.map((score) => Math.pow(score - avg, 2));
   const avgSquareDiff = squareDiffs.reduce((a, b) => a + b, 0) / validScores.length;
   const stdDev = Math.sqrt(avgSquareDiff);
 
@@ -168,7 +168,9 @@ export function calculateDurationHours(startTime: string | Date, endTime: string
  * calculateAchievementLevel(95) // 'excellent'
  * calculateAchievementLevel(75) // 'good'
  */
-export function calculateAchievementLevel(percentage: number): 'excellent' | 'good' | 'participated' | 'poor' {
+export function calculateAchievementLevel(
+  percentage: number
+): 'excellent' | 'good' | 'participated' | 'poor' {
   if (percentage >= 90) return 'excellent';
   if (percentage >= 75) return 'good';
   if (percentage >= 50) return 'participated';

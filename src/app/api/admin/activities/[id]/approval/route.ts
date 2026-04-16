@@ -48,7 +48,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
 
     // Try to use existing approval record (from submit-for-approval flow)
-     const pendingApproval = (await dbGet(
+    const pendingApproval = (await dbGet(
       `SELECT id FROM activity_approvals
        WHERE activity_id = ? AND status = 'requested'
        ORDER BY requested_at DESC LIMIT 1`,

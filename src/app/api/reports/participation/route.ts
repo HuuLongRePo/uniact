@@ -92,14 +92,7 @@ export async function GET(request: NextRequest) {
     )) as ParticipationReportRow[];
 
     if (exportAsCsv) {
-      const headers = [
-        'ID',
-        'Tiêu đề',
-        'Ngày',
-        'Địa điểm',
-        'Số đăng ký',
-        'Số đã điểm danh',
-      ];
+      const headers = ['ID', 'Tiêu đề', 'Ngày', 'Địa điểm', 'Số đăng ký', 'Số đã điểm danh'];
 
       const csv = ['\uFEFF' + headers.join(',')]
         .concat(

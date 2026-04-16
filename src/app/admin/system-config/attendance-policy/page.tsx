@@ -84,7 +84,10 @@ const FIELD_ORDER: FieldMeta[] = [
     section: 'face',
     description: 'Chọn heuristic, chỉ danh sách đã chọn, hoặc kết hợp cả hai.',
     options: [
-      { value: 'selected_or_heuristic', label: 'selected_or_heuristic — danh sách chọn hoặc heuristic' },
+      {
+        value: 'selected_or_heuristic',
+        label: 'selected_or_heuristic — danh sách chọn hoặc heuristic',
+      },
       { value: 'selected_only', label: 'selected_only — chỉ activity nằm trong danh sách chọn' },
       { value: 'heuristic_only', label: 'heuristic_only — chỉ theo ngưỡng heuristic' },
     ],
@@ -136,7 +139,8 @@ const FIELD_ORDER: FieldMeta[] = [
     label: 'Ngưỡng confidence tối thiểu',
     type: 'number',
     section: 'face',
-    description: 'Nếu confidence thấp hơn ngưỡng này, route face attendance sẽ trả fallback guidance.',
+    description:
+      'Nếu confidence thấp hơn ngưỡng này, route face attendance sẽ trả fallback guidance.',
   },
 ];
 
@@ -193,10 +197,7 @@ export default function AttendancePolicySystemConfigPage() {
     }
   };
 
-  const fieldLookup = useMemo(
-    () => new Map(FIELD_ORDER.map((field) => [field.key, field])),
-    []
-  );
+  const fieldLookup = useMemo(() => new Map(FIELD_ORDER.map((field) => [field.key, field])), []);
 
   const qrFields = configs.filter((item) => fieldLookup.get(item.config_key)?.section === 'qr');
   const faceFields = configs.filter((item) => fieldLookup.get(item.config_key)?.section === 'face');
@@ -240,14 +241,18 @@ export default function AttendancePolicySystemConfigPage() {
         <div className="mb-2">
           <label className="text-sm font-semibold text-gray-900">{field.label}</label>
           <p className="mt-1 text-xs text-gray-500">{field.description}</p>
-          {item.description ? <p className="mt-1 text-xs text-gray-400">DB: {item.description}</p> : null}
+          {item.description ? (
+            <p className="mt-1 text-xs text-gray-400">DB: {item.description}</p>
+          ) : null}
         </div>
 
         {field.type === 'number' ? (
           <input
             type="number"
             value={value}
-            onChange={(e) => setFormValues((prev) => ({ ...prev, [item.config_key]: e.target.value }))}
+            onChange={(e) =>
+              setFormValues((prev) => ({ ...prev, [item.config_key]: e.target.value }))
+            }
             className="w-full rounded-lg border border-gray-300 px-3 py-2"
           />
         ) : null}
@@ -256,7 +261,9 @@ export default function AttendancePolicySystemConfigPage() {
           <input
             type="text"
             value={value}
-            onChange={(e) => setFormValues((prev) => ({ ...prev, [item.config_key]: e.target.value }))}
+            onChange={(e) =>
+              setFormValues((prev) => ({ ...prev, [item.config_key]: e.target.value }))
+            }
             className="w-full rounded-lg border border-gray-300 px-3 py-2"
           />
         ) : null}
@@ -264,7 +271,9 @@ export default function AttendancePolicySystemConfigPage() {
         {field.type === 'boolean' ? (
           <select
             value={value || 'false'}
-            onChange={(e) => setFormValues((prev) => ({ ...prev, [item.config_key]: e.target.value }))}
+            onChange={(e) =>
+              setFormValues((prev) => ({ ...prev, [item.config_key]: e.target.value }))
+            }
             className="w-full rounded-lg border border-gray-300 px-3 py-2"
           >
             <option value="true">true</option>
@@ -275,7 +284,9 @@ export default function AttendancePolicySystemConfigPage() {
         {field.type === 'textarea' ? (
           <textarea
             value={value}
-            onChange={(e) => setFormValues((prev) => ({ ...prev, [item.config_key]: e.target.value }))}
+            onChange={(e) =>
+              setFormValues((prev) => ({ ...prev, [item.config_key]: e.target.value }))
+            }
             className="min-h-28 w-full rounded-lg border border-gray-300 px-3 py-2 font-mono text-sm"
           />
         ) : null}
@@ -283,7 +294,9 @@ export default function AttendancePolicySystemConfigPage() {
         {field.type === 'select' ? (
           <select
             value={value}
-            onChange={(e) => setFormValues((prev) => ({ ...prev, [item.config_key]: e.target.value }))}
+            onChange={(e) =>
+              setFormValues((prev) => ({ ...prev, [item.config_key]: e.target.value }))
+            }
             className="w-full rounded-lg border border-gray-300 px-3 py-2"
           >
             {(field.options || []).map((option) => (
@@ -306,7 +319,10 @@ export default function AttendancePolicySystemConfigPage() {
       <div className="mb-8">
         <div className="flex items-center gap-3">
           <Sliders className="h-8 w-8 text-blue-600" />
-          <h1 className="text-3xl font-bold text-gray-900" data-testid="admin-attendance-policy-heading">
+          <h1
+            className="text-3xl font-bold text-gray-900"
+            data-testid="admin-attendance-policy-heading"
+          >
             Chính sách điểm danh
           </h1>
         </div>
@@ -336,9 +352,16 @@ export default function AttendancePolicySystemConfigPage() {
       <div className="mt-8 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
         <p className="font-medium">Lưu ý vận hành</p>
         <ul className="mt-2 list-disc space-y-1 pl-5">
-          <li>`selected_only` sẽ chỉ cho phép face pilot trên activity id nằm trong danh sách JSON.</li>
-          <li>`selected_or_heuristic` giữ khả năng pilot theo activity được chọn hoặc theo heuristic quy mô.</li>
-          <li>Sau khi lưu, các route attendance policy / face attendance sẽ đọc lại config mới từ DB.</li>
+          <li>
+            `selected_only` sẽ chỉ cho phép face pilot trên activity id nằm trong danh sách JSON.
+          </li>
+          <li>
+            `selected_or_heuristic` giữ khả năng pilot theo activity được chọn hoặc theo heuristic
+            quy mô.
+          </li>
+          <li>
+            Sau khi lưu, các route attendance policy / face attendance sẽ đọc lại config mới từ DB.
+          </li>
         </ul>
       </div>
 

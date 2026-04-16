@@ -72,7 +72,8 @@ export default function QRConfigPage() {
         setConfig({
           qr_expiry_minutes: parseInt(configMap.qr_expiry_minutes || '5'),
           qr_refresh_interval_seconds: parseInt(configMap.qr_refresh_interval_seconds || '30'),
-          qr_security_level: (configMap.qr_security_level || 'medium') as QRConfig['qr_security_level'],
+          qr_security_level: (configMap.qr_security_level ||
+            'medium') as QRConfig['qr_security_level'],
           max_scan_distance_meters: parseInt(configMap.max_scan_distance_meters || '50'),
           require_location: configMap.require_location === 'true',
           allow_offline_scan: configMap.allow_offline_scan === 'true',

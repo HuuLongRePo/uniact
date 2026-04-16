@@ -35,10 +35,11 @@ export async function GET(request: NextRequest) {
   try {
     await requireApiRole(request, ['admin']);
 
-    const configs = (await dbAll(
-      'SELECT * FROM system_config WHERE category IN (?, ?, ?)',
-      ['email', 'backup', 'maintenance']
-    )) as any[];
+    const configs = (await dbAll('SELECT * FROM system_config WHERE category IN (?, ?, ?)', [
+      'email',
+      'backup',
+      'maintenance',
+    ])) as any[];
 
     const result = getDefaultConfig() as any;
 
@@ -98,10 +99,10 @@ export async function PUT(request: NextRequest) {
     ])) as any;
 
     if (existing) {
-      await dbRun('UPDATE system_config SET value = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [
-        value,
-        existing.id,
-      ]);
+      await dbRun(
+        'UPDATE system_config SET value = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+        [value, existing.id]
+      );
     } else {
       await dbRun(
         'INSERT INTO system_config (category, key, value, created_at, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)',

@@ -91,7 +91,8 @@ export default function TeacherStudentsPage() {
         (s) =>
           (s.full_name || s.name || '').toLowerCase().includes(search.toLowerCase()) ||
           (s.email || '').toLowerCase().includes(search.toLowerCase()) ||
-          ((s.student_code || '') && (s.student_code || '').toLowerCase().includes(search.toLowerCase()))
+          ((s.student_code || '') &&
+            (s.student_code || '').toLowerCase().includes(search.toLowerCase()))
       );
     }
 
@@ -110,8 +111,10 @@ export default function TeacherStudentsPage() {
         bVal = b.total_score ?? b.total_points ?? 0;
       } else {
         // attendance
-        const aAttendance = (a.attended_count || 0) / Math.max(a.activity_count || a.activities_count || 1, 1);
-        const bAttendance = (b.attended_count || 0) / Math.max(b.activity_count || b.activities_count || 1, 1);
+        const aAttendance =
+          (a.attended_count || 0) / Math.max(a.activity_count || a.activities_count || 1, 1);
+        const bAttendance =
+          (b.attended_count || 0) / Math.max(b.activity_count || b.activities_count || 1, 1);
         aVal = aAttendance;
         bVal = bAttendance;
       }

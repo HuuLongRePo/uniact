@@ -208,9 +208,7 @@ export default function StudentProfilePage() {
             <button
               key={tab.id}
               onClick={() =>
-                setActiveTab(
-                  tab.id as 'overview' | 'attendance' | 'scores' | 'timeline' | 'notes'
-                )
+                setActiveTab(tab.id as 'overview' | 'attendance' | 'scores' | 'timeline' | 'notes')
               }
               className={`py-3 px-4 font-medium flex items-center gap-2 ${
                 activeTab === tab.id ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-600'

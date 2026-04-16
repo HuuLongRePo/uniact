@@ -99,7 +99,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       error instanceof ApiError ||
         (error && typeof error.status === 'number' && typeof error.code === 'string')
         ? error
-        : ApiError.internalError('Không thể lấy danh sách người tham gia', { details: error?.message })
+        : ApiError.internalError('Không thể lấy danh sách người tham gia', {
+            details: error?.message,
+          })
     );
   }
 }

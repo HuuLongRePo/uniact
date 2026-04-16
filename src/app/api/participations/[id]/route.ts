@@ -122,13 +122,17 @@ export async function DELETE(
     }
 
     if (user.role === 'student' && user.id !== participation.student_id) {
-      return errorResponse(ApiError.forbidden('Bạn chỉ có thể hủy đăng ký hoạt động của chính mình'));
+      return errorResponse(
+        ApiError.forbidden('Bạn chỉ có thể hủy đăng ký hoạt động của chính mình')
+      );
     }
 
     const activityDateTime = new Date(participation.date_time);
     const now = new Date();
     if (activityDateTime < now && user.role === 'student') {
-      return errorResponse(new ApiError('CONFLICT', 'Không thể hủy đăng ký hoạt động đã bắt đầu', 409));
+      return errorResponse(
+        new ApiError('CONFLICT', 'Không thể hủy đăng ký hoạt động đã bắt đầu', 409)
+      );
     }
 
     await dbRun('DELETE FROM point_calculations WHERE participation_id = ?', [participationId]);

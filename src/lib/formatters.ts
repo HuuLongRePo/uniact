@@ -41,7 +41,9 @@ export function formatAttendanceStatus(
  * @example
  * formatAttendanceStatusVN('attended') // 'Có mặt'
  */
-export function formatAttendanceStatusVN(status: 'attended' | 'absent' | 'registered' | null): string {
+export function formatAttendanceStatusVN(
+  status: 'attended' | 'absent' | 'registered' | null
+): string {
   if (!status) return 'Chưa tham gia';
 
   switch (status.toLowerCase()) {
@@ -77,7 +79,10 @@ export function formatBooleanVN(value: any): string {
  * formatDateVN('2026-03-24') // '24/3/2026'
  * formatDateVN('2026-03-24T10:30:00', 'datetime') // '24/3/2026 10:30'
  */
-export function formatDateVN(date: string | Date, format: 'date' | 'time' | 'datetime' = 'datetime'): string {
+export function formatDateVN(
+  date: string | Date,
+  format: 'date' | 'time' | 'datetime' = 'datetime'
+): string {
   if (!date) return '-';
 
   const d = typeof date === 'string' ? new Date(date) : date;
@@ -103,7 +108,10 @@ export function formatDateVN(date: string | Date, format: 'date' | 'time' | 'dat
 /**
  * Alias of formatDateVN for generic usage across app
  */
-export function formatDate(date: string | Date, format: 'date' | 'time' | 'datetime' = 'datetime'): string {
+export function formatDate(
+  date: string | Date,
+  format: 'date' | 'time' | 'datetime' = 'datetime'
+): string {
   return formatDateVN(date, format);
 }
 
