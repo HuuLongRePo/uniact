@@ -14,7 +14,8 @@ export default function LoginPage() {
   const router = useRouter();
   const { user, login } = useAuth(); // Sử dụng login từ AuthContext
 
-  const showDemoAccounts = process.env.NODE_ENV !== 'production';
+  const showDemoAccounts =
+    process.env.NODE_ENV !== 'production' && process.env.NEXT_PUBLIC_ENABLE_DEMO_ACCOUNTS === '1';
 
   const handleQuickLogin = (email: string, password: string) => {
     setEmail(email);
