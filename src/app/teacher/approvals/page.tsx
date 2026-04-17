@@ -95,7 +95,7 @@ export default function ApprovalsPage() {
       }
 
       const data = await response.json();
-      setActivities(data.activities || []);
+      setActivities(data.activities || data.data?.activities || []);
     } catch (error) {
       console.error(error);
       toast.error('Không thể tải danh sách hoạt động');
@@ -125,7 +125,7 @@ export default function ApprovalsPage() {
         throw new Error(data?.message || data?.error || 'Không thể gửi lại');
       }
 
-      toast.success('Gửi duyệt thành công');
+      toast.success(data?.message || 'Gửi duyệt thành công');
       setResubmitMessage('');
       setSelectedActivity(null);
       await fetchActivities();

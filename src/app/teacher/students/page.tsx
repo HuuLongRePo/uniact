@@ -35,22 +35,19 @@ export default function TeacherStudentsPage() {
 
   const fetchData = async () => {
     try {
-      const [studentsRes, classesRes] = await Promise.all([
-        fetch('/api/teacher/students'),
-        fetch('/api/classes'),
-      ]);
+      const studentsRes = await fetch('/api/teacher/students');
 
-      if (studentsRes.ok) {
-        const studentsData = await studentsRes.json();
-        const teacherStudents = studentsData.students || studentsData.data?.students || [];
-        setStudents(teacherStudents);
-        setFilteredStudents(teacherStudents);
+      if (!studentsRes.ok) {
+        throw new Error('Không thể tải dữ liệu học viên');
       }
 
-      if (classesRes.ok) {
-        const classesData = await classesRes.json();
-        setClasses(classesData.classes || []);
-      }
+      const studentsData = await studentsRes.json();
+      const teacherStudents = studentsData.students || studentsData.data?.students || [];
+      const teacherClasses = studentsData.classes || studentsData.data?.classes || [];
+
+      setStudents(teacherStudents);
+      setFilteredStudents(teacherStudents);
+      setClasses(teacherClasses);
     } catch (error) {
       console.error('Lỗi tải dữ liệu:', error);
     } finally {
