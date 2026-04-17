@@ -67,7 +67,7 @@ export default function StudentActivitiesPage() {
       const response = await fetch(resolveClientFetchUrl('/api/activity-types'));
       const data = await response.json();
       if (response.ok) {
-        setActivityTypes(data.activityTypes || data.types || []);
+        setActivityTypes(data.activityTypes || data.types || data.data?.activityTypes || data.data?.types || []);
       }
     } catch (error) {
       console.error('Error fetching activity types:', error);
@@ -84,8 +84,8 @@ export default function StudentActivitiesPage() {
       const response = await fetch(resolveClientFetchUrl(`/api/activities?${params}`));
       const data = await response.json();
       if (response.ok) {
-        setActivities(data.activities || []);
-        setTotal(Number(data.total || 0));
+        setActivities(data.activities || data.data?.activities || []);
+        setTotal(Number(data.total || data.data?.total || 0));
       } else {
         setActivities([]);
         setTotal(0);
@@ -114,7 +114,7 @@ export default function StudentActivitiesPage() {
 
       if (response.ok) {
         setRegisterConflict(null);
-        toast.success('Đăng ký thành công!');
+        toast.success(data.message || 'Đăng ký thành công!');
         await fetchActivities();
       } else if (
         data?.code === 'CONFLICT' &&
@@ -149,7 +149,7 @@ export default function StudentActivitiesPage() {
       const data = await response.json();
 
       if (response.ok) {
-        toast.success('Hủy đăng ký thành công!');
+        toast.success(data.message || 'Hủy đăng ký thành công!');
         await fetchActivities();
       } else {
         toast.error(data.error || 'Hủy đăng ký thất bại');

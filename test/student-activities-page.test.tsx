@@ -61,45 +61,52 @@ describe('StudentActivitiesPage', () => {
       const url = String(input);
 
       if (url.endsWith('/api/activity-types')) {
-        return jsonResponse({ types: [{ id: 1, name: 'Tình nguyện', base_points: 5 }] });
+        return jsonResponse({
+          data: {
+            activityTypes: [{ id: 1, name: 'Tình nguyện', base_points: 5 }],
+          },
+        });
       }
 
       if (url.includes('/api/activities?')) {
         return jsonResponse({
-          activities: [
-            {
-              id: 1,
-              title: 'Hoạt động áp dụng',
-              description: 'Mô tả A',
-              date_time: '2099-04-12T08:00:00.000Z',
-              location: 'Hội trường A',
-              teacher_name: 'Teacher A',
-              participant_count: 5,
-              max_participants: 20,
-              status: 'published',
-              is_registered: false,
-              applies_to_student: true,
-              applicability_reason: 'Áp dụng vì lớp của bạn nằm trong phạm vi hoạt động.',
-              activity_type: 'Tình nguyện',
-              organization_level: 'Cấp trường',
-            },
-            {
-              id: 2,
-              title: 'Hoạt động lớp khác',
-              description: 'Mô tả B',
-              date_time: '2099-04-13T08:00:00.000Z',
-              location: 'Phòng B',
-              teacher_name: 'Teacher B',
-              participant_count: 3,
-              max_participants: 20,
-              status: 'published',
-              is_registered: false,
-              applies_to_student: false,
-              applicability_reason: 'Không thuộc phạm vi của bạn vì hoạt động đang dành riêng cho lớp khác.',
-              activity_type: 'Học thuật',
-              organization_level: 'Cấp khoa',
-            },
-          ],
+          data: {
+            activities: [
+              {
+                id: 1,
+                title: 'Hoạt động áp dụng',
+                description: 'Mô tả A',
+                date_time: '2099-04-12T08:00:00.000Z',
+                location: 'Hội trường A',
+                teacher_name: 'Teacher A',
+                participant_count: 5,
+                max_participants: 20,
+                status: 'published',
+                is_registered: false,
+                applies_to_student: true,
+                applicability_reason: 'Áp dụng vì lớp của bạn nằm trong phạm vi hoạt động.',
+                activity_type: 'Tình nguyện',
+                organization_level: 'Cấp trường',
+              },
+              {
+                id: 2,
+                title: 'Hoạt động lớp khác',
+                description: 'Mô tả B',
+                date_time: '2099-04-13T08:00:00.000Z',
+                location: 'Phòng B',
+                teacher_name: 'Teacher B',
+                participant_count: 3,
+                max_participants: 20,
+                status: 'published',
+                is_registered: false,
+                applies_to_student: false,
+                applicability_reason: 'Không thuộc phạm vi của bạn vì hoạt động đang dành riêng cho lớp khác.',
+                activity_type: 'Học thuật',
+                organization_level: 'Cấp khoa',
+              },
+            ],
+            total: 2,
+          },
         });
       }
 
@@ -122,30 +129,33 @@ describe('StudentActivitiesPage', () => {
   it('shows mandatory badge for assigned activities', async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
-      if (url.endsWith('/api/activity-types')) return jsonResponse({ types: [] });
+      if (url.endsWith('/api/activity-types')) return jsonResponse({ data: { activityTypes: [] } });
       if (url.includes('/api/activities?')) {
         return jsonResponse({
-          activities: [
-            {
-              id: 10,
-              title: 'Hoạt động bắt buộc',
-              description: 'Mô tả M',
-              date_time: '2099-04-20T08:00:00.000Z',
-              location: 'Hall M',
-              teacher_name: 'Teacher M',
-              participant_count: 5,
-              max_participants: 20,
-              status: 'published',
-              is_registered: true,
-              participation_source: 'assigned',
-              is_mandatory: true,
-              can_cancel: false,
-              applies_to_student: true,
-              applicability_reason: 'Áp dụng vì lớp của bạn nằm trong phạm vi hoạt động.',
-              activity_type: 'Tình nguyện',
-              organization_level: 'Cấp trường',
-            },
-          ],
+          data: {
+            activities: [
+              {
+                id: 10,
+                title: 'Hoạt động bắt buộc',
+                description: 'Mô tả M',
+                date_time: '2099-04-20T08:00:00.000Z',
+                location: 'Hall M',
+                teacher_name: 'Teacher M',
+                participant_count: 5,
+                max_participants: 20,
+                status: 'published',
+                is_registered: true,
+                participation_source: 'assigned',
+                is_mandatory: true,
+                can_cancel: false,
+                applies_to_student: true,
+                applicability_reason: 'Áp dụng vì lớp của bạn nằm trong phạm vi hoạt động.',
+                activity_type: 'Tình nguyện',
+                organization_level: 'Cấp trường',
+              },
+            ],
+            total: 1,
+          },
         });
       }
       throw new Error(`Unexpected fetch: ${url}`);
