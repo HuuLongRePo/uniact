@@ -3,6 +3,7 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { resolveClientFetchUrl } from '@/lib/client-fetch-url';
 import Link from 'next/link';
 import { formatDate } from '@/lib/utils';
 import {
@@ -20,6 +21,21 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
+
+type DashboardActivity = {
+  id: number;
+  title: string;
+  date_time: string;
+  location: string;
+  status?: string;
+  participant_count?: number;
+  activity_type?: string | null;
+  average_score?: string | number | null;
+};
+
+type DashboardUser = {
+  role?: string;
+};
 
 export default function DashboardPage() {
   const { user, loading } = useAuth();
@@ -52,98 +68,109 @@ export default function DashboardPage() {
 
   const fetchDashboardData = async () => {
     try {
-      const [classesRes, activitiesRes, usersRes] = await Promise.all([
-        fetch('/api/classes'),
-        fetch('/api/activities'),
-        fetch('/api/admin/users'),
-      ]);
+      const requests: Promise<Response>[] = [
+        fetch(resolveClientFetchUrl('/api/classes')),
+        fetch(resolveClientFetchUrl('/api/activities')),
+      ];
 
-      if (classesRes.ok && activitiesRes.ok) {
-        const classesData = await classesRes.json();
-        const activitiesData = await activitiesRes.json();
-        const usersData =
-          user?.role === 'admin' && usersRes.ok ? await usersRes.json() : { users: [], data: [] };
-
-        const classes = classesData.classes || [];
-        const activities = activitiesData.activities || [];
-        const allUsers = usersData.users || usersData.data || [];
-        const teachers = allUsers.filter((u: any) => u.role === 'teacher');
-        const students = allUsers.filter((u: any) => u.role === 'student');
-
-        const now = new Date();
-        const upcomingActs = activities.filter((a: any) => new Date(a.date_time) >= now);
-
-        // Calculate real participation data by month
-        const monthlyData = Array.from({ length: 6 }, (_, i) => {
-          const d = new Date();
-          d.setMonth(d.getMonth() - 5 + i);
-          const monthStart = new Date(d.getFullYear(), d.getMonth(), 1);
-          const monthEnd = new Date(d.getFullYear(), d.getMonth() + 1, 0);
-
-          const monthActivities = activities.filter((a: any) => {
-            const actDate = new Date(a.date_time);
-            return actDate >= monthStart && actDate <= monthEnd;
-          });
-
-          const totalParticipants = monthActivities.reduce(
-            (sum: number, a: any) => sum + (a.participant_count || 0),
-            0
-          );
-
-          return {
-            month: `Tháng ${d.getMonth() + 1}`,
-            participants: totalParticipants,
-            activities: monthActivities.length,
-          };
-        });
-
-        // Calculate activity distribution by type
-        const typeDistribution = Array.from(
-          new Set(activities.map((a: any) => a.activity_type || 'Khác'))
-        ).map((type) => ({
-          name: type,
-          value: activities.filter((a: any) => (a.activity_type || 'Khác') === type).length,
-        }));
-
-        // Calculate average score from actual data
-        const allScores = activities
-          .filter((a: any) => a.average_score)
-          .map((a: any) => parseFloat(a.average_score));
-        const avgScore =
-          allScores.length > 0
-            ? (allScores.reduce((sum: number, s: number) => sum + s, 0) / allScores.length).toFixed(
-                1
-              )
-            : 0;
-
-        setStats({
-          classCount: classes.length,
-          activityCount: activities.length,
-          upcomingActivities: upcomingActs.length,
-          studentCount: students.length,
-          teacherCount: teachers.length,
-          totalParticipations: activities.reduce(
-            (sum: number, a: any) => sum + (a.participant_count || 0),
-            0
-          ),
-          pendingApprovals: activities.filter((a: any) => a.status === 'pending').length,
-          averageScore: parseFloat(avgScore as any),
-        });
-
-        setChartData(monthlyData);
-        setParticipationData(typeDistribution);
-
-        // Lấy 5 hoạt động sắp tới
-        setRecentActivities(
-          upcomingActs
-            .sort(
-              (a: any, b: any) => new Date(a.date_time).getTime() - new Date(b.date_time).getTime()
-            )
-            .slice(0, 5)
-        );
+      if (user?.role === 'admin') {
+        requests.push(fetch(resolveClientFetchUrl('/api/admin/users')));
       }
+
+      const [classesRes, activitiesRes, usersRes] = await Promise.all(requests);
+
+      if (!classesRes.ok || !activitiesRes.ok) {
+        throw new Error('Không thể tải dữ liệu dashboard');
+      }
+
+      const classesData = await classesRes.json();
+      const activitiesData = await activitiesRes.json();
+      const usersData = user?.role === 'admin' && usersRes?.ok ? await usersRes.json() : null;
+
+      const classes = classesData?.data?.classes || classesData?.classes || [];
+      const activities: DashboardActivity[] =
+        activitiesData?.data?.activities || activitiesData?.activities || [];
+      const allUsers: DashboardUser[] = usersData?.data || usersData?.users || [];
+      const teachers = allUsers.filter((u) => u.role === 'teacher');
+      const students = allUsers.filter((u) => u.role === 'student');
+
+      const now = new Date();
+      const upcomingActs = activities.filter((a) => new Date(a.date_time) >= now);
+
+      const monthlyData = Array.from({ length: 6 }, (_, i) => {
+        const d = new Date();
+        d.setMonth(d.getMonth() - 5 + i);
+        const monthStart = new Date(d.getFullYear(), d.getMonth(), 1);
+        const monthEnd = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+
+        const monthActivities = activities.filter((a) => {
+          const actDate = new Date(a.date_time);
+          return actDate >= monthStart && actDate <= monthEnd;
+        });
+
+        const totalParticipants = monthActivities.reduce(
+          (sum, a) => sum + Number(a.participant_count || 0),
+          0
+        );
+
+        return {
+          month: `Tháng ${d.getMonth() + 1}`,
+          participants: totalParticipants,
+          activities: monthActivities.length,
+        };
+      });
+
+      const typeDistribution = Array.from(new Set(activities.map((a) => a.activity_type || 'Khác'))).map(
+        (type) => ({
+          name: type,
+          value: activities.filter((a) => (a.activity_type || 'Khác') === type).length,
+        })
+      );
+
+      const allScores = activities
+        .map((a) => Number(a.average_score))
+        .filter((score) => Number.isFinite(score) && score > 0);
+      const avgScore =
+        allScores.length > 0
+          ? Number((allScores.reduce((sum, s) => sum + s, 0) / allScores.length).toFixed(1))
+          : 0;
+
+      setStats({
+        classCount: classes.length,
+        activityCount: activities.length,
+        upcomingActivities: upcomingActs.length,
+        studentCount: students.length,
+        teacherCount: teachers.length,
+        totalParticipations: activities.reduce(
+          (sum, a) => sum + Number(a.participant_count || 0),
+          0
+        ),
+        pendingApprovals: activities.filter((a) => a.status === 'pending').length,
+        averageScore: avgScore,
+      });
+
+      setChartData(monthlyData);
+      setParticipationData(typeDistribution);
+      setRecentActivities(
+        upcomingActs
+          .sort((a, b) => new Date(a.date_time).getTime() - new Date(b.date_time).getTime())
+          .slice(0, 5)
+      );
     } catch (error) {
       console.error('Lỗi tải dashboard:', error);
+      setStats({
+        classCount: 0,
+        activityCount: 0,
+        upcomingActivities: 0,
+        studentCount: 0,
+        teacherCount: 0,
+        totalParticipations: 0,
+        pendingApprovals: 0,
+        averageScore: 0,
+      });
+      setChartData([]);
+      setParticipationData([]);
+      setRecentActivities([]);
     } finally {
       setIsLoading(false);
     }
