@@ -2,8 +2,8 @@ import { NextRequest } from 'next/server';
 import { dbAll, dbGet } from '@/lib/database';
 import { requireRole } from '@/lib/guards';
 import { ApiError, errorResponse } from '@/lib/api-response';
-import * as XLSX from 'xlsx';
 import { teacherCanAccessActivity } from '@/lib/activity-access';
+import { createWorkbookFromJsonSheets } from '@/lib/excel-export';
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -101,11 +101,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       };
     });
 
-    const ws = XLSX.utils.json_to_sheet(rows);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'DauDanh');
-
-    const buffer = XLSX.write(wb, { bookType: 'xlsx', type: 'buffer' }) as Buffer;
+    const buffer = await createWorkbookFromJsonSheets([{ name: 'DauDanh', rows }]);
     const ab = buffer.buffer.slice(
       buffer.byteOffset,
       buffer.byteOffset + buffer.byteLength

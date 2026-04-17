@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import * as XLSX from 'xlsx';
 import { dbAll, dbGet, dbReady } from '@/lib/database';
+import { createWorkbookFromJsonSheets, createWorkbookFromSheets } from '@/lib/excel-export';
 import { requireRole } from '@/lib/guards';
 import { ApiError, errorResponse } from '@/lib/api-response';
 import { calculateAttendanceRate } from '@/lib/calculations';
@@ -38,10 +38,9 @@ export async function POST(request: NextRequest) {
 
     const classIds = await getAccessibleClassIds(user);
     if (classIds.length === 0) {
-      const wb = XLSX.utils.book_new();
-      const ws = XLSX.utils.aoa_to_sheet([['Khong co du lieu']]);
-      XLSX.utils.book_append_sheet(wb, ws, 'Report');
-      const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' }) as Buffer;
+      const buf = await createWorkbookFromSheets([
+        { name: 'Report', rows: [['Khong co du lieu']] },
+      ]);
       return new NextResponse(buf as any, {
         status: 200,
         headers: {
@@ -241,18 +240,11 @@ export async function POST(request: NextRequest) {
       };
     });
 
-    const wb = XLSX.utils.book_new();
-
-    const ws1 = XLSX.utils.json_to_sheet(records);
-    XLSX.utils.book_append_sheet(wb, ws1, 'Records');
-
-    const ws2 = XLSX.utils.json_to_sheet(classSummary);
-    XLSX.utils.book_append_sheet(wb, ws2, 'Class Summary');
-
-    const ws3 = XLSX.utils.json_to_sheet(studentSummary);
-    XLSX.utils.book_append_sheet(wb, ws3, 'Student Summary');
-
-    const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' }) as Buffer;
+    const buf = await createWorkbookFromJsonSheets([
+      { name: 'Records', rows: records },
+      { name: 'Class Summary', rows: classSummary },
+      { name: 'Student Summary', rows: studentSummary },
+    ]);
 
     return new NextResponse(buf as any, {
       status: 200,

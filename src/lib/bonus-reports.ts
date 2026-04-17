@@ -6,7 +6,7 @@
  */
 
 import { dbAll, dbGet } from './db-core';
-import * as XLSX from 'xlsx';
+import { createWorkbookFromSheets } from './excel-export';
 
 export interface BonusReport {
   studentId: number;
@@ -360,10 +360,6 @@ export async function exportStudentBonusAsXLSX(studentId: number): Promise<Buffe
   const report = await getStudentBonusReport(studentId);
   if (!report) return Buffer.from('');
 
-  // Create workbook with multiple sheets
-  const wb = XLSX.utils.book_new();
-
-  // Sheet 1: Summary
   const summaryData = [
     ['Báo Cáo Cộng Điểm - UniAct'],
     [],
@@ -378,11 +374,7 @@ export async function exportStudentBonusAsXLSX(studentId: number): Promise<Buffe
     ['Đề xuất chờ duyệt', report.totalPending],
     ['Đề xuất từ chối', report.totalRejected],
   ];
-  const wsS = XLSX.utils.aoa_to_sheet(summaryData);
-  wsS['!cols'] = [{ wch: 25 }, { wch: 15 }];
-  XLSX.utils.book_append_sheet(wb, wsS, 'Tổng kết');
 
-  // Sheet 2: Details
   const detailsData = [
     ['ID', 'Điểm', 'Loại', 'Trạng thái', 'Người đề xuất', 'Ngày tạo'],
     ...report.proposals.map((p) => [
@@ -394,12 +386,11 @@ export async function exportStudentBonusAsXLSX(studentId: number): Promise<Buffe
       p.createdAt,
     ]),
   ];
-  const wsD = XLSX.utils.aoa_to_sheet(detailsData);
-  wsD['!cols'] = [{ wch: 8 }, { wch: 8 }, { wch: 15 }, { wch: 12 }, { wch: 20 }, { wch: 20 }];
-  XLSX.utils.book_append_sheet(wb, wsD, 'Chi tiết');
 
-  // Convert to buffer
-  return Buffer.from(XLSX.write(wb, { bookType: 'xlsx', type: 'array' }));
+  return createWorkbookFromSheets([
+    { name: 'Tổng kết', rows: summaryData, widths: [25, 15] },
+    { name: 'Chi tiết', rows: detailsData, widths: [8, 8, 15, 12, 20, 20] },
+  ]);
 }
 
 /**
@@ -409,9 +400,6 @@ export async function exportClassBonusAsXLSX(classId: number): Promise<Buffer> {
   const report = await getClassBonusReport(classId);
   if (!report) return Buffer.from('');
 
-  const wb = XLSX.utils.book_new();
-
-  // Sheet 1: Summary
   const summaryData = [
     ['Báo Cáo Cộng Điểm Theo Lớp - UniAct'],
     [],
@@ -428,11 +416,7 @@ export async function exportClassBonusAsXLSX(classId: number): Promise<Buffer> {
     ['Chờ duyệt', report.proposals.pending],
     ['Từ chối', report.proposals.rejected],
   ];
-  const wsS = XLSX.utils.aoa_to_sheet(summaryData);
-  wsS['!cols'] = [{ wch: 25 }, { wch: 15 }];
-  XLSX.utils.book_append_sheet(wb, wsS, 'Tổng kết');
 
-  // Sheet 2: Student details
   const students = await dbAll(
     `SELECT DISTINCT u.id, u.name, u.email
     FROM users u
@@ -458,11 +442,11 @@ export async function exportClassBonusAsXLSX(classId: number): Promise<Buffer> {
       })
     )),
   ];
-  const wsD = XLSX.utils.aoa_to_sheet(studentData);
-  wsD['!cols'] = [{ wch: 20 }, { wch: 25 }, { wch: 15 }, { wch: 12 }, { wch: 12 }];
-  XLSX.utils.book_append_sheet(wb, wsD, 'Chi tiết học viên');
 
-  return Buffer.from(XLSX.write(wb, { bookType: 'xlsx', type: 'array' }));
+  return createWorkbookFromSheets([
+    { name: 'Tổng kết', rows: summaryData, widths: [25, 15] },
+    { name: 'Chi tiết học viên', rows: studentData, widths: [20, 25, 15, 12, 12] },
+  ]);
 }
 
 /**
@@ -474,9 +458,6 @@ export async function exportSemesterBonusAsXLSX(
 ): Promise<Buffer> {
   const report = await getSemesterBonusReport(semester, academicYear);
 
-  const wb = XLSX.utils.book_new();
-
-  // Sheet 1: Summary
   const summaryData = [
     ['Báo Cáo Cộng Điểm Theo Học Kỳ - UniAct'],
     [],
@@ -487,11 +468,7 @@ export async function exportSemesterBonusAsXLSX(
     ['Tổng học viên:', report.totalStudents],
     ['Điểm bình quân/học viên:', report.averagePointsPerStudent.toFixed(2)],
   ];
-  const wsS = XLSX.utils.aoa_to_sheet(summaryData);
-  wsS['!cols'] = [{ wch: 25 }, { wch: 15 }];
-  XLSX.utils.book_append_sheet(wb, wsS, 'Tổng kết');
 
-  // Sheet 2: Class details
   const classData = [
     ['Lớp', 'Số HV', 'Tổng điểm', 'Bình quân', 'Tổng đề', 'Đã duyệt', 'Chờ duyệt', 'Từ chối'],
     ...report.classReports.map((cls) => [
@@ -505,18 +482,13 @@ export async function exportSemesterBonusAsXLSX(
       cls.proposals.rejected,
     ]),
   ];
-  const wsD = XLSX.utils.aoa_to_sheet(classData);
-  wsD['!cols'] = [
-    { wch: 15 },
-    { wch: 8 },
-    { wch: 12 },
-    { wch: 12 },
-    { wch: 10 },
-    { wch: 10 },
-    { wch: 12 },
-    { wch: 10 },
-  ];
-  XLSX.utils.book_append_sheet(wb, wsD, 'Chi tiết lớp');
 
-  return Buffer.from(XLSX.write(wb, { bookType: 'xlsx', type: 'array' }));
+  return createWorkbookFromSheets([
+    { name: 'Tổng kết', rows: summaryData, widths: [25, 15] },
+    {
+      name: 'Chi tiết lớp',
+      rows: classData,
+      widths: [15, 8, 12, 12, 10, 10, 12, 10],
+    },
+  ]);
 }
