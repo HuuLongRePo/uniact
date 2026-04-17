@@ -19,27 +19,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let mounted = true;
+
     (async () => {
-      // QUICK FIX: Set a very short timeout for mobile compatibility
-      const totalTimeout = setTimeout(() => {
-        console.warn('⏱️ Auth init timeout - forcing loading=false (mobile fast mode)');
-        setLoading(false);
-      }, 2000); // Just 2 seconds max
-
       try {
-        // Try to check auth but don't wait too long
-        const authPromise = checkAuth();
-        const timeoutPromise = new Promise((resolve) => setTimeout(resolve, 1500));
-
-        // Race between auth check and timeout
-        await Promise.race([authPromise, timeoutPromise]);
+        await checkAuth();
       } catch (error) {
         console.error('Auth init error:', error);
       } finally {
-        clearTimeout(totalTimeout);
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     })();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const checkAuth = async (): Promise<boolean> => {
@@ -49,7 +45,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const result = await retryWithBackoff(
         async () => {
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 3000);
+          const timeoutId = setTimeout(() => controller.abort(), 5000);
 
           try {
             const response = await fetch('/api/auth/me', {
@@ -66,19 +62,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               console.warn('✅ AuthContext: User authenticated:', resolvedUser?.email);
               setUser(resolvedUser);
               return Boolean(resolvedUser);
-            } else {
+            }
+
+            if (response.status === 401) {
               console.warn('❌ AuthContext: Not authenticated');
               setUser(null);
               return false;
             }
+
+            const errorPayload = await response.json().catch(() => null);
+            throw new Error(errorPayload?.error || `Auth check failed with status ${response.status}`);
           } finally {
             clearTimeout(timeoutId);
           }
         },
         {
-          maxRetries: 3,
-          initialDelayMs: 100,
-          maxDelayMs: 2000,
+          maxRetries: 2,
+          initialDelayMs: 150,
+          maxDelayMs: 1500,
           backoffMultiplier: 2,
         }
       );
