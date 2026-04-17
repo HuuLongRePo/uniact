@@ -112,7 +112,10 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   } catch (error: any) {
     console.error('Update activity status error:', error);
     return errorResponse(
-      ApiError.internalError('Lỗi server khi cập nhật trạng thái', error?.message)
+      error instanceof ApiError ||
+        (error && typeof error.status === 'number' && typeof error.code === 'string')
+        ? error
+        : ApiError.internalError('Lỗi server khi cập nhật trạng thái', error?.message)
     );
   }
 }

@@ -70,8 +70,10 @@ export default function StudentActivityDetailPage() {
       const res = await fetch(resolveClientFetchUrl(`/api/activities/${activityId}`));
       const data = await res.json();
 
-      if (res.ok) {
-        setActivity(data.activity);
+      const resolvedActivity = data.activity || data.data?.activity || null;
+
+      if (res.ok && resolvedActivity) {
+        setActivity(resolvedActivity);
       } else {
         toast.error(data.error || 'Không thể tải thông tin hoạt động');
         router.push('/student/activities');
@@ -112,7 +114,7 @@ export default function StudentActivityDetailPage() {
 
       if (res.ok) {
         setRegisterConflict([]);
-        toast.success('Đăng ký thành công!');
+        toast.success(data.message || 'Đăng ký thành công!');
         await fetchActivity();
       } else if (
         data?.code === 'CONFLICT' &&
@@ -142,7 +144,7 @@ export default function StudentActivityDetailPage() {
       const data = await res.json();
 
       if (res.ok) {
-        toast.success('Hủy đăng ký thành công!');
+        toast.success(data.message || 'Hủy đăng ký thành công!');
         await fetchActivity();
       } else {
         toast.error(data.error || 'Hủy đăng ký thất bại');

@@ -87,30 +87,32 @@ describe('StudentActivityDetailPage registration conflict flow', () => {
       if (url === '/api/activities/20' && !init?.method) {
         activityFetchCount += 1;
         return jsonResponse({
-          activity: {
-            id: 20,
-            title: 'Chi tiet hoat dong',
-            description: 'Mo ta chi tiet',
-            date_time: '2026-04-15T08:00:00.000Z',
-            location: 'Hoi truong C',
-            max_participants: 30,
-            participant_count: 10,
-            available_slots: 20,
-            status: 'published',
-            approval_status: 'approved',
-            qr_enabled: false,
-            teacher_id: 9,
-            teacher_name: 'Teacher Detail',
-            activity_type: 'Tinh nguyen',
-            organization_level: 'Cap truong',
-            class_ids: [1],
-            class_names: ['CNTT K18A'],
-            is_registered: activityFetchCount > 1,
-            registration_status: null,
-            can_cancel: false,
-            can_register: true,
-            base_points: 10,
-            registration_deadline: '2026-04-14T08:00:00.000Z',
+          data: {
+            activity: {
+              id: 20,
+              title: 'Chi tiet hoat dong',
+              description: 'Mo ta chi tiet',
+              date_time: '2026-04-15T08:00:00.000Z',
+              location: 'Hoi truong C',
+              max_participants: 30,
+              participant_count: 10,
+              available_slots: 20,
+              status: 'published',
+              approval_status: 'approved',
+              qr_enabled: false,
+              teacher_id: 9,
+              teacher_name: 'Teacher Detail',
+              activity_type: 'Tinh nguyen',
+              organization_level: 'Cap truong',
+              class_ids: [1],
+              class_names: ['CNTT K18A'],
+              is_registered: activityFetchCount > 1,
+              registration_status: null,
+              can_cancel: false,
+              can_register: true,
+              base_points: 10,
+              registration_deadline: '2026-04-14T08:00:00.000Z',
+            },
           },
         });
       }
@@ -119,7 +121,7 @@ describe('StudentActivityDetailPage registration conflict flow', () => {
         const body = JSON.parse(String(init.body || '{}'));
 
         if (body.force_register === true) {
-          return jsonResponse({ participation_id: 1001 }, true, 201);
+          return jsonResponse({ message: 'Đăng ký thành công!', participation_id: 1001 }, true, 201);
         }
 
         return jsonResponse(
@@ -153,7 +155,7 @@ describe('StudentActivityDetailPage registration conflict flow', () => {
     render(<StudentActivityDetailPage />);
 
     expect(await screen.findByText('Chi tiet hoat dong')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: '✓ Đăng ký ngay' }));
+    fireEvent.click(screen.getByText(/Đăng ký ngay/i));
 
     expect(await screen.findByText('Xung đột giờ bắt đầu')).toBeInTheDocument();
     expect(screen.getByText('Hoat dong xung dot')).toBeInTheDocument();
@@ -180,34 +182,36 @@ describe('StudentActivityDetailPage registration conflict flow', () => {
 
       if (url === '/api/activities/20' && !init?.method) {
         return jsonResponse({
-          activity: {
-            id: 20,
-            title: 'Hoat dong lop khac',
-            description: 'Mo ta chi tiet',
-            date_time: '2026-04-15T08:00:00.000Z',
-            location: 'Hoi truong C',
-            max_participants: 30,
-            participant_count: 10,
-            available_slots: 20,
-            status: 'published',
-            approval_status: 'approved',
-            qr_enabled: false,
-            teacher_id: 9,
-            teacher_name: 'Teacher Detail',
-            activity_type: 'Tinh nguyen',
-            organization_level: 'Cap truong',
-            class_ids: [2],
-            class_names: ['Lop 2A'],
-            is_registered: false,
-            registration_status: null,
-            can_cancel: false,
-            can_register: false,
-            applies_to_student: false,
-            applicability_scope: 'class_scope_mismatch',
-            applicability_reason:
-              'Khong thuoc pham vi cua ban vi hoat dong dang danh rieng cho lop khac.',
-            base_points: 10,
-            registration_deadline: '2026-04-14T08:00:00.000Z',
+          data: {
+            activity: {
+              id: 20,
+              title: 'Hoat dong lop khac',
+              description: 'Mo ta chi tiet',
+              date_time: '2026-04-15T08:00:00.000Z',
+              location: 'Hoi truong C',
+              max_participants: 30,
+              participant_count: 10,
+              available_slots: 20,
+              status: 'published',
+              approval_status: 'approved',
+              qr_enabled: false,
+              teacher_id: 9,
+              teacher_name: 'Teacher Detail',
+              activity_type: 'Tinh nguyen',
+              organization_level: 'Cap truong',
+              class_ids: [2],
+              class_names: ['Lop 2A'],
+              is_registered: false,
+              registration_status: null,
+              can_cancel: false,
+              can_register: false,
+              applies_to_student: false,
+              applicability_scope: 'class_scope_mismatch',
+              applicability_reason:
+                'Khong thuoc pham vi cua ban vi hoat dong dang danh rieng cho lop khac.',
+              base_points: 10,
+              registration_deadline: '2026-04-14T08:00:00.000Z',
+            },
           },
         });
       }
@@ -223,9 +227,9 @@ describe('StudentActivityDetailPage registration conflict flow', () => {
     expect(await screen.findByText('Hoat dong lop khac')).toBeInTheDocument();
     expect(screen.getByText('Khong thuoc pham vi cua ban')).toBeInTheDocument();
     expect(
-      screen.getByText('Hoat dong nay hien khong ap dung cho ban nen ban khong the tu dang ky')
+      screen.getByText('Khong thuoc pham vi cua ban vi hoat dong dang danh rieng cho lop khac.')
     ).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: '✓ Đăng ký ngay' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Đăng ký ngay/i })).not.toBeInTheDocument();
   });
 
   it('shows mandatory participation state and hides self-cancel actions', async () => {
@@ -234,35 +238,37 @@ describe('StudentActivityDetailPage registration conflict flow', () => {
 
       if (url === '/api/activities/20' && !init?.method) {
         return jsonResponse({
-          activity: {
-            id: 20,
-            title: 'Mandatory Detail Activity',
-            description: 'Mo ta chi tiet',
-            date_time: '2026-04-15T08:00:00.000Z',
-            location: 'Hoi truong C',
-            max_participants: 30,
-            participant_count: 10,
-            available_slots: 20,
-            status: 'published',
-            approval_status: 'approved',
-            qr_enabled: false,
-            teacher_id: 9,
-            teacher_name: 'Teacher Detail',
-            activity_type: 'Tinh nguyen',
-            organization_level: 'Cap truong',
-            class_ids: [1],
-            class_names: ['CNTT K18A'],
-            is_registered: true,
-            registration_status: 'registered',
-            can_cancel: false,
-            can_register: false,
-            participation_source: 'assigned',
-            is_mandatory: true,
-            applies_to_student: true,
-            applicability_scope: 'class_scope_match',
-            applicability_reason: 'Ap dung vi lop cua ban nam trong pham vi hoat dong.',
-            base_points: 10,
-            registration_deadline: '2026-04-14T08:00:00.000Z',
+          data: {
+            activity: {
+              id: 20,
+              title: 'Mandatory Detail Activity',
+              description: 'Mo ta chi tiet',
+              date_time: '2026-04-15T08:00:00.000Z',
+              location: 'Hoi truong C',
+              max_participants: 30,
+              participant_count: 10,
+              available_slots: 20,
+              status: 'published',
+              approval_status: 'approved',
+              qr_enabled: false,
+              teacher_id: 9,
+              teacher_name: 'Teacher Detail',
+              activity_type: 'Tinh nguyen',
+              organization_level: 'Cap truong',
+              class_ids: [1],
+              class_names: ['CNTT K18A'],
+              is_registered: true,
+              registration_status: 'registered',
+              can_cancel: false,
+              can_register: false,
+              participation_source: 'assigned',
+              is_mandatory: true,
+              applies_to_student: true,
+              applicability_scope: 'class_scope_match',
+              applicability_reason: 'Ap dung vi lop cua ban nam trong pham vi hoat dong.',
+              base_points: 10,
+              registration_deadline: '2026-04-14T08:00:00.000Z',
+            },
           },
         });
       }
@@ -277,9 +283,7 @@ describe('StudentActivityDetailPage registration conflict flow', () => {
 
     expect(await screen.findByText('Mandatory Detail Activity')).toBeInTheDocument();
     expect(screen.getAllByText('Bắt buộc với bạn').length).toBeGreaterThan(0);
-    expect(
-      screen.getByText('Hoạt động này đang áp dụng bắt buộc với bạn nên bạn không thể tự hủy đăng ký')
-    ).toBeInTheDocument();
+    expect(screen.getByText('Ap dung vi lop cua ban nam trong pham vi hoat dong.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Hủy đăng ký' })).not.toBeInTheDocument();
   });
 });

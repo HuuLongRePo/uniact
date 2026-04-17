@@ -82,9 +82,12 @@ export default function TeacherActivitiesPage() {
       }
 
       const data = await response.json();
-      setActivities(data.activities || []);
-      setTotal(data.total || 0);
-      setTotalPages(Math.ceil((data.total || 0) / limit));
+      const resolvedActivities = data.activities || data.data?.activities || [];
+      const resolvedTotal = data.total ?? data.data?.total ?? 0;
+
+      setActivities(resolvedActivities);
+      setTotal(resolvedTotal);
+      setTotalPages(Math.ceil(resolvedTotal / limit));
     } catch (error: unknown) {
       console.error('Error fetching activities:', error);
       toast.error(getErrorMessage(error, 'Không thể tải danh sách hoạt động'));
@@ -113,7 +116,7 @@ export default function TeacherActivitiesPage() {
         throw new Error(data.error || 'Không thể gửi phê duyệt');
       }
 
-      toast.success('Đã gửi hoạt động để phê duyệt');
+      toast.success(data.message || 'Đã gửi hoạt động để phê duyệt');
       await fetchActivities();
     } catch (error: unknown) {
       console.error('Error submitting approval:', error);
@@ -128,9 +131,9 @@ export default function TeacherActivitiesPage() {
     try {
       const res = await fetch(`/api/activities/${activityId}/cancel`, { method: 'POST' });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Hủy thất bại');
+      if (!res.ok) throw new Error(data.error || data.message || 'Hủy thất bại');
 
-      toast.success('Đã hủy hoạt động');
+      toast.success(data.message || 'Đã hủy hoạt động');
       await fetchActivities();
     } catch (error: unknown) {
       console.error(error);
@@ -145,9 +148,9 @@ export default function TeacherActivitiesPage() {
     try {
       const res = await fetch(`/api/activities/${activityId}/clone`, { method: 'POST' });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Nhân bản thất bại');
+      if (!res.ok) throw new Error(data.error || data.message || 'Nhân bản thất bại');
 
-      toast.success('Đã tạo bản sao hoạt động');
+      toast.success(data.message || 'Đã tạo bản sao hoạt động');
       await fetchActivities();
     } catch (error: unknown) {
       console.error(error);
@@ -162,9 +165,9 @@ export default function TeacherActivitiesPage() {
     try {
       const res = await fetch(`/api/activities/${activityId}`, { method: 'DELETE' });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Xóa thất bại');
+      if (!res.ok) throw new Error(data.error || data.message || 'Xóa thất bại');
 
-      toast.success('Đã xóa hoạt động');
+      toast.success(data.message || 'Đã xóa hoạt động');
       await fetchActivities();
     } catch (error: unknown) {
       console.error(error);
