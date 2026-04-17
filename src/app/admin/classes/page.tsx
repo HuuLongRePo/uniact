@@ -158,10 +158,10 @@ export default function AdminClassesPage() {
       const data = await response.json();
 
       if (response.ok) {
-        toast.success('Xóa lớp học thành công');
+        toast.success(data.message || 'Xóa lớp học thành công');
         fetchClasses();
       } else {
-        toast.error(data.error || 'Xóa thất bại');
+        toast.error(data.error || data.message || 'Xóa thất bại');
       }
     } catch (error) {
       console.error('Delete error:', error);

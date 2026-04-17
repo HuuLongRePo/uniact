@@ -90,7 +90,8 @@ export default function DashboardPage() {
       const classes = classesData?.data?.classes || classesData?.classes || [];
       const activities: DashboardActivity[] =
         activitiesData?.data?.activities || activitiesData?.activities || [];
-      const allUsers: DashboardUser[] = usersData?.data || usersData?.users || [];
+      const allUsers: DashboardUser[] =
+        usersData?.users || usersData?.data?.users || usersData?.data || [];
       const teachers = allUsers.filter((u) => u.role === 'teacher');
       const students = allUsers.filter((u) => u.role === 'student');
 
