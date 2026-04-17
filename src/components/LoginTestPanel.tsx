@@ -82,16 +82,9 @@ export default function LoginTestPanel({ onSelectAccount }: LoginTestPanelProps)
     ];
   };
 
-  // Static fallback accounts used when API is unreachable
-  const STATIC_FALLBACK: TestAccount[] = [
-    { email: 'admin@school.edu', password: 'admin123', role: 'admin', name: 'Admin (fallback)' },
-    {
-      email: 'admin@annd.edu.vn',
-      password: 'Admin@2025',
-      role: 'admin',
-      name: 'Admin ANND (fallback)',
-    },
-  ];
+  // Do not expose hardcoded credentials on the client.
+  // When API is unavailable, the panel should fail closed instead of leaking fallback passwords.
+  const STATIC_FALLBACK: TestAccount[] = [];
 
   const fetchTestAccounts = async () => {
     setIsLoading(true);
@@ -108,22 +101,21 @@ export default function LoginTestPanel({ onSelectAccount }: LoginTestPanelProps)
       try {
         data = await res.json();
       } catch {
-        // non-JSON response
         setAccounts(STATIC_FALLBACK);
-        setError(`Phản hồi API không hợp lệ (HTTP ${res.status}) — hiển thị tài khoản dự phòng`);
+        setError(`Phản hồi API không hợp lệ (HTTP ${res.status})`);
         return;
       }
 
       if (!res.ok) {
         setAccounts(STATIC_FALLBACK);
-        setError(`API lỗi HTTP ${res.status}: ${data.error ?? ''} — hiển thị tài khoản dự phòng`);
+        setError(`API lỗi HTTP ${res.status}: ${data.error ?? ''}`);
         return;
       }
 
       const normalizedAccounts = normalizeAccounts(data);
       if (normalizedAccounts.length === 0) {
         setAccounts(STATIC_FALLBACK);
-        setError('Database chưa có tài khoản — hiển thị tài khoản dự phòng');
+        setError('Database chưa có tài khoản demo khả dụng');
         return;
       }
 
@@ -133,7 +125,7 @@ export default function LoginTestPanel({ onSelectAccount }: LoginTestPanelProps)
       const msg = err?.name === 'AbortError' ? 'Timeout (>12s)' : (err?.message ?? String(err));
       console.error('LoginTestPanel fetch error:', msg);
       setAccounts(STATIC_FALLBACK);
-      setError(`Không thể tải từ API: ${msg} — hiển thị tài khoản dự phòng`);
+      setError(`Không thể tải từ API: ${msg}`);
     } finally {
       setIsLoading(false);
     }

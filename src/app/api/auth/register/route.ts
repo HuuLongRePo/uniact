@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { registerUser } from '@/lib/auth';
 import { rateLimit } from '@/lib/rateLimit';
 import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
+import { setAuthCookie } from '@/lib/session-cookie';
 
 // WHAT: API endpoint cho đăng ký user
 // WHY: Xử lý registration requests từ client
@@ -35,15 +36,7 @@ export async function POST(request: NextRequest) {
     });
 
     const res = successResponse({ user }, 'Đăng ký thành công', 201);
-    // WHAT: Set JWT token as HTTP-only cookie
-    // WHY: Secure token storage
-    res.cookies.set('token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      path: '/',
-      maxAge: 7 * 24 * 60 * 60, // 7 days
-    });
+    setAuthCookie(res, token);
 
     return res;
   } catch (error: any) {

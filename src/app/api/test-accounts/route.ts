@@ -9,6 +9,10 @@ import { dbGet, dbAll, dbReady } from '@/lib/database';
  * - 5 students
  */
 export async function GET() {
+  if (process.env.NODE_ENV === 'production') {
+    return NextResponse.json({ success: false, error: 'Not found' }, { status: 404 });
+  }
+
   try {
     await dbReady();
 
