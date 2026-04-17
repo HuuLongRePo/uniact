@@ -74,19 +74,21 @@ npm test -- --reporter dot \
 
 - Some long-tail admin/teacher routes still use legacy auth/session or raw `NextResponse` patterns.
 - Release candidate status currently reflects backbone stability, not full repo-wide contract cleanup.
-- Dependency/security cleanup is improved but not complete yet, with `npm audit` still reporting 14 vulnerabilities (0 critical, 9 high, 1 moderate, 4 low).
+- Dependency/security cleanup is now in a strong release state, with `npm audit` reporting 0 vulnerabilities after the final remediation batch.
 - Production-like runtime smoke now exists for three backbone actors, but broader operational gates and wider smoke coverage are still pending.
+- Face-biometric enrollment/auth is temporarily disabled in the release build to avoid shipping the obsolete `face-api.js` dependency chain while a safer replacement path is designed.
 
 ## Recommended next gates
 
 1. Run the regression baseline above and keep it green.
 2. Sweep one more high-value legacy route cluster.
 3. Keep the production build + targeted production-runtime smoke for admin/teacher/student key flows green.
-4. Continue targeted dependency remediation after the smoke baseline remains stable.
-5. Tag an internal RC milestone only after docs, regression baseline, and runtime smoke remain stable together.
+4. Design and validate a safer long-term biometric replacement or reintroduction path.
+5. Tag an internal RC milestone only after docs, regression baseline, runtime smoke, and the current product tradeoffs are all explicitly accepted.
 
 ## Latest verification caveats
 
 - Avoid overlapping `next build` or release-check jobs that share the same `.next` directory during final verification.
 - If a late-stage build fails with missing `.next` manifest/trace artifacts (`_ssgManifest`, `.nft.json`, similar ENOENTs), rerun from a clean `.next` state before treating it as an application blocker.
 - If a large Vitest bundle fails via worker startup timeout, rerun the affected files in narrower scope before classifying the result as a regression.
+- The current release baseline assumes face-biometric auth/enrollment is intentionally unavailable in production until the dependency chain is replaced safely.

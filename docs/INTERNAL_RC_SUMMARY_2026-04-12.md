@@ -69,3 +69,21 @@ Since the original RC-prep summary, UniAct has also gained a stronger practical 
   - student discovery and registration
   - teacher class-management backbone
 - production runtime verification also exposed and helped close a real configuration gap: local production smoke requires `JWT_SECRET`, and `.env.example` now documents that requirement
+
+## Release verification and security posture update
+
+The release verification baseline is now materially stronger than it was at the start of RC prep:
+- clean `npm run build` passes reliably when verification is serialized
+- full `npm run release:check` passes end-to-end
+- the stabilized local backbone test mode remains green
+- dependency remediation reduced the audited vulnerability count from 13 total findings to 0
+
+The final high-severity dependency chain came from `face-api.js`, which pulled an obsolete transitive runtime path with no safe in-place upgrade path on the public registry.
+For this release-prep cycle, UniAct now takes the safer option:
+- face biometric enrollment/auth UI remains present but is gracefully disabled for the release build
+- production no longer ships the vulnerable `face-api.js` dependency chain
+- release readiness is preserved without keeping the high-risk client bundle in production
+
+Recommended interpretation:
+- UniAct is now in a much stronger internal release-candidate state
+- the remaining notable product tradeoff is temporary unavailability of face-biometric auth/enrollment in the release build while a safer long-term replacement is designed
