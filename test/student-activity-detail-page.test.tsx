@@ -92,7 +92,7 @@ describe('StudentActivityDetailPage registration conflict flow', () => {
               id: 20,
               title: 'Chi tiet hoat dong',
               description: 'Mo ta chi tiet',
-              date_time: '2026-04-15T08:00:00.000Z',
+              date_time: '2099-04-15T08:00:00.000Z',
               location: 'Hoi truong C',
               max_participants: 30,
               participant_count: 10,
@@ -111,7 +111,7 @@ describe('StudentActivityDetailPage registration conflict flow', () => {
               can_cancel: false,
               can_register: true,
               base_points: 10,
-              registration_deadline: '2026-04-14T08:00:00.000Z',
+              registration_deadline: '2099-04-14T08:00:00.000Z',
             },
           },
         });
@@ -135,7 +135,7 @@ describe('StudentActivityDetailPage registration conflict flow', () => {
                 {
                   id: 88,
                   title: 'Hoat dong xung dot',
-                  date_time: '2026-04-15T08:00:00.000Z',
+                  date_time: '2099-04-15T08:00:00.000Z',
                   location: 'Phong D',
                 },
               ],
@@ -187,7 +187,7 @@ describe('StudentActivityDetailPage registration conflict flow', () => {
               id: 20,
               title: 'Hoat dong lop khac',
               description: 'Mo ta chi tiet',
-              date_time: '2026-04-15T08:00:00.000Z',
+              date_time: '2099-04-15T08:00:00.000Z',
               location: 'Hoi truong C',
               max_participants: 30,
               participant_count: 10,
@@ -210,7 +210,7 @@ describe('StudentActivityDetailPage registration conflict flow', () => {
               applicability_reason:
                 'Khong thuoc pham vi cua ban vi hoat dong dang danh rieng cho lop khac.',
               base_points: 10,
-              registration_deadline: '2026-04-14T08:00:00.000Z',
+              registration_deadline: '2099-04-14T08:00:00.000Z',
             },
           },
         });
@@ -243,7 +243,7 @@ describe('StudentActivityDetailPage registration conflict flow', () => {
               id: 20,
               title: 'Mandatory Detail Activity',
               description: 'Mo ta chi tiet',
-              date_time: '2026-04-15T08:00:00.000Z',
+              date_time: '2099-04-15T08:00:00.000Z',
               location: 'Hoi truong C',
               max_participants: 30,
               participant_count: 10,
@@ -267,7 +267,7 @@ describe('StudentActivityDetailPage registration conflict flow', () => {
               applicability_scope: 'class_scope_match',
               applicability_reason: 'Ap dung vi lop cua ban nam trong pham vi hoat dong.',
               base_points: 10,
-              registration_deadline: '2026-04-14T08:00:00.000Z',
+              registration_deadline: '2099-04-14T08:00:00.000Z',
             },
           },
         });
