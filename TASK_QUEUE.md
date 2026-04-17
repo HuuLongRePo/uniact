@@ -1305,6 +1305,21 @@ Quy ước trạng thái: TODO / DOING / BLOCKED / DONE
 - Cách kiểm thử: focused alerts regression + full Vitest + build
 - Tiêu chí hoàn thành: route tự chữa drift trên existing DB, fresh schema mới có `is_read`, và alerts API còn trả summary usable
 
+### T-178 - Khôi phục local test harness Windows cho Vitest/Vite resolution
+
+- Trạng thái: BLOCKED
+- Mục tiêu: sửa môi trường test cục bộ để có thể chạy lại focused regression sau các batch canonicalize admin/auth/UI
+- Phạm vi file:
+  - `package.json`
+  - `package-lock.json`
+  - cấu trúc `node_modules`/tooling cục bộ nếu cần
+- Lý do cần làm: hiện tại máy local không chạy được Vitest theo cả `npm.cmd run test` lẫn gọi trực tiếp `node node_modules\vitest\vitest.mjs`; lỗi cho thấy `.bin\vitest.cmd` bị thiếu và `vite` không resolve được `picomatch` đúng cách
+- Rủi ro: trung bình
+- Cách kiểm thử:
+  - khôi phục chạy được `npm.cmd run test -- <focused-files>`
+  - rerun focused bundle quanh admin users/classes/auth
+- Tiêu chí hoàn thành: local Windows harness chạy được Vitest ổn định, không còn lỗi thiếu `.bin` hoặc `ERR_MODULE_NOT_FOUND` cho `picomatch`
+
 ### T-177 - Đồng bộ admin scores page với backend export/filter contract
 
 - Trạng thái: DONE
