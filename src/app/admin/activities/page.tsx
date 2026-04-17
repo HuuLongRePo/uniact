@@ -61,7 +61,8 @@ export default function AdminActivitiesPage() {
       });
 
       if (response.ok) {
-        toast.success('Đã xóa hoạt động');
+        const data = await response.json().catch(() => ({}));
+        toast.success(data.message || 'Đã hủy hoạt động');
         fetchActivities();
       } else {
         const data = await response.json();
@@ -136,9 +137,9 @@ export default function AdminActivitiesPage() {
           isOpen={!!deleteActivity}
           title="Xác nhận xóa hoạt động"
           message={
-            deleteActivity ? `Bạn có chắc chắn muốn xóa hoạt động "${deleteActivity.title}"?` : ''
+            deleteActivity ? `Bạn có chắc chắn muốn hủy hoạt động "${deleteActivity.title}"?` : ''
           }
-          confirmText="Xóa"
+          confirmText="Hủy hoạt động"
           cancelText="Hủy"
           variant="danger"
           onCancel={() => setDeleteActivity(null)}
