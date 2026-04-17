@@ -154,7 +154,8 @@ export default function AdminActivityDetailPage() {
       if (!res.ok) throw new Error(data.error || 'Không thể xử lý phê duyệt');
 
       toast.success(
-        approvalAction === 'approve' ? 'Đã phê duyệt hoạt động' : 'Đã từ chối hoạt động'
+        data.message ||
+          (approvalAction === 'approve' ? 'Đã phê duyệt hoạt động' : 'Đã từ chối hoạt động')
       );
       setShowApprovalModal(false);
       fetchActivity();
@@ -195,7 +196,7 @@ export default function AdminActivityDetailPage() {
           p.user_email,
           p.class_name || '-',
           new Date(p.registered_at).toLocaleDateString('vi-VN'),
-          p.attendance_status === 'attended'
+          p.attendance_status === 'present'
             ? 'Có mặt'
             : p.attendance_status === 'absent'
               ? 'Vắng'
@@ -514,7 +515,7 @@ export default function AdminActivityDetailPage() {
                             {new Date(p.registered_at).toLocaleDateString('vi-VN')}
                           </td>
                           <td className="px-4 py-3">
-                            {p.attendance_status === 'attended' ? (
+                            {p.attendance_status === 'present' ? (
                               <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">
                                 Có mặt
                               </span>
