@@ -71,13 +71,15 @@ const nextConfig: NextConfig = {
         crypto: false,
       }
 
-      if (isBuildDebug) {
-        config.resolve.alias = {
-          ...(config.resolve.alias || {}),
-          'face-api.js': require('path').resolve(__dirname, 'src/lib/stubs/face-api-build-stub.ts'),
-          'argon2': require('path').resolve(__dirname, 'src/lib/stubs/argon2-build-stub.ts'),
-          '@simplewebauthn/server': require('path').resolve(__dirname, 'src/lib/stubs/webauthn-server-build-stub.ts'),
-        }
+      config.resolve.alias = {
+        ...(config.resolve.alias || {}),
+        'face-api.js': require('path').resolve(__dirname, 'src/lib/stubs/face-api-build-stub.ts'),
+        ...(isBuildDebug
+          ? {
+              'argon2': require('path').resolve(__dirname, 'src/lib/stubs/argon2-build-stub.ts'),
+              '@simplewebauthn/server': require('path').resolve(__dirname, 'src/lib/stubs/webauthn-server-build-stub.ts'),
+            }
+          : {}),
       }
     }
     return config

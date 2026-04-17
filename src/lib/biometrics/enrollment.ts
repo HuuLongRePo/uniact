@@ -25,7 +25,7 @@ export async function enrollBiometric(
   for (let i = 0; i < frames; i++) {
     const e = await detectSingleEmbedding(video);
     if (e) {
-      embedding = e;
+      embedding = e.embedding;
       steps.push(`Face embedding captured at frame ${i + 1}`);
       break;
     }

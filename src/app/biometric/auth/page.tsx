@@ -7,8 +7,13 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { detectSingleEmbedding, performLivenessCheck } from '@/lib/biometrics/face-enhanced';
-import type { FaceDetectionResult, LivenessCheckResult } from '@/lib/biometrics/face-enhanced';
+import {
+  detectSingleEmbedding,
+  performLivenessCheck,
+  FaceBiometricUnavailableError,
+  FACE_BIOMETRIC_RUNTIME_ENABLED,
+} from '@/lib/biometrics/face-runtime';
+import type { FaceDetectionResult, LivenessCheckResult } from '@/lib/biometrics/face-runtime';
 
 type AuthStep = 'email' | 'camera' | 'capturing' | 'liveness' | 'processing' | 'success' | 'error';
 
@@ -73,6 +78,10 @@ export default function BiometricAuth() {
     if (!videoRef.current) return;
 
     try {
+      if (!FACE_BIOMETRIC_RUNTIME_ENABLED) {
+        throw new FaceBiometricUnavailableError();
+      }
+
       setStep('capturing');
       setMessage('Đang chụp khuôn mặt...');
       setProgress(20);
@@ -144,7 +153,11 @@ export default function BiometricAuth() {
         router.push('/dashboard');
       }, 2000);
     } catch (err: any) {
-      setError(err.message);
+      if (err instanceof FaceBiometricUnavailableError) {
+        setError(err.message);
+      } else {
+        setError(err.message);
+      }
       setStep('error');
     }
   };
@@ -172,6 +185,10 @@ export default function BiometricAuth() {
         {/* Email Input */}
         {step === 'email' && (
           <div className="bg-white rounded-lg shadow-lg p-8">
+            <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+              Tính năng đăng nhập bằng khuôn mặt hiện đang tạm tắt trong bản phát hành này để đảm
+              bảo an toàn và ổn định hệ thống. Vui lòng dùng đăng nhập bằng mật khẩu.
+            </div>
             <form onSubmit={handleEmailSubmit} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
@@ -186,9 +203,10 @@ export default function BiometricAuth() {
               </div>
               <button
                 type="submit"
-                className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+                disabled
+                className="w-full px-6 py-3 bg-gray-300 text-gray-600 rounded-lg font-medium cursor-not-allowed"
               >
-                Tiếp tục với xác thực khuôn mặt
+                Xác thực khuôn mặt tạm không khả dụng
               </button>
               <button
                 type="button"

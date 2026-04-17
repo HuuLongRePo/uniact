@@ -5,8 +5,13 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { detectSingleEmbedding, performLivenessCheck } from '@/lib/biometrics/face-enhanced';
-import type { FaceDetectionResult, LivenessCheckResult } from '@/lib/biometrics/face-enhanced';
+import {
+  detectSingleEmbedding,
+  performLivenessCheck,
+  FaceBiometricUnavailableError,
+  FACE_BIOMETRIC_RUNTIME_ENABLED,
+} from '@/lib/biometrics/face-runtime';
+import type { FaceDetectionResult, LivenessCheckResult } from '@/lib/biometrics/face-runtime';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import toast from 'react-hot-toast';
 
@@ -93,6 +98,10 @@ export default function EnrollBiometric() {
     if (!videoRef.current) return;
 
     try {
+      if (!FACE_BIOMETRIC_RUNTIME_ENABLED) {
+        throw new FaceBiometricUnavailableError();
+      }
+
       setStep('capturing');
       setMessage('Đang chụp khuôn mặt...');
       setProgress(20);
@@ -167,7 +176,11 @@ export default function EnrollBiometric() {
 
       await loadEnrolledTemplates();
     } catch (err: unknown) {
-      setError(getErrorMessage(err));
+      if (err instanceof FaceBiometricUnavailableError) {
+        setError(err.message);
+      } else {
+        setError(getErrorMessage(err));
+      }
       setStep('error');
     }
   };
@@ -217,6 +230,11 @@ export default function EnrollBiometric() {
   return (
     <div className="max-w-4xl mx-auto p-6">
       <h1 className="text-3xl font-bold mb-6">Đăng ký sinh trắc học khuôn mặt</h1>
+
+      <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+        Tính năng đăng ký khuôn mặt hiện đang tạm tắt trong bản phát hành này để đảm bảo an toàn và
+        ổn định hệ thống.
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Camera View */}
@@ -285,10 +303,10 @@ export default function EnrollBiometric() {
           {/* Action Button */}
           {step === 'camera' && (
             <button
-              onClick={handleEnroll}
-              className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+              disabled
+              className="w-full px-6 py-3 bg-gray-300 text-gray-600 rounded-lg cursor-not-allowed font-medium"
             >
-              Bắt đầu đăng ký
+              Đăng ký khuôn mặt tạm không khả dụng
             </button>
           )}
         </div>
