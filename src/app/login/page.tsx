@@ -11,12 +11,6 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
-  const [demoAccounts, setDemoAccounts] = useState<{
-    admin: string | null;
-    teachers: string[];
-    students: string[];
-  } | null>(null);
-  const [demoAccountsError, setDemoAccountsError] = useState<string>('');
   const router = useRouter();
   const { user, login } = useAuth(); // Sử dụng login từ AuthContext
 
@@ -33,31 +27,6 @@ export default function LoginPage() {
       }
     }, 100);
   };
-
-  useEffect(() => {
-    if (!showDemoAccounts) return;
-
-    let cancelled = false;
-    (async () => {
-      try {
-        setDemoAccountsError('');
-        const res = await fetch('/api/auth/demo-accounts');
-        if (!res.ok) return;
-        const data = await res.json();
-        if (cancelled) return;
-        if (data?.success && data?.accounts) {
-          setDemoAccounts(data.accounts);
-        }
-      } catch (err: any) {
-        if (cancelled) return;
-        setDemoAccountsError(err?.message || 'Không thể tải danh sách tài khoản test');
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [showDemoAccounts]);
 
   // Redirect nếu đã login
   useEffect(() => {
