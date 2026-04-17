@@ -1,14 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getUserFromRequest } from '@/lib/guards';
+import { NextRequest } from 'next/server';
+import { requireApiRole } from '@/lib/guards';
 import { dbAll, dbRun } from '@/lib/database';
+import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
 
 // GET /api/admin/classes - List classes with pagination
 export async function GET(request: NextRequest) {
   try {
-    const user = await getUserFromRequest(request);
-    if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
+    await requireApiRole(request, ['admin']);
 
     const searchParams = request.nextUrl.searchParams;
     const page = parseInt(searchParams.get('page') || '1');
@@ -19,7 +17,6 @@ export async function GET(request: NextRequest) {
 
     const offset = (page - 1) * limit;
 
-    // Build query
     let query = `
       SELECT 
         c.id, c.name, c.grade, c.description, c.created_at,
@@ -51,7 +48,6 @@ export async function GET(request: NextRequest) {
 
     query += ` GROUP BY c.id`;
 
-    // Get total count
     let countQuery = `SELECT COUNT(*) as total FROM classes c LEFT JOIN users t ON c.teacher_id = t.id WHERE 1=1`;
     const countParams: any[] = [];
 
@@ -72,15 +68,13 @@ export async function GET(request: NextRequest) {
     const countResult = (await dbAll(countQuery, countParams)) as any[];
     const total = countResult[0]?.total || 0;
 
-    // Get paginated results
     query += ` ORDER BY c.created_at DESC LIMIT ? OFFSET ?`;
     params.push(limit, offset);
 
     const classes = await dbAll(query, params);
 
-    return NextResponse.json({
-      success: true,
-      data: classes,
+    return successResponse({
+      classes,
       pagination: {
         page,
         limit,
@@ -90,43 +84,34 @@ export async function GET(request: NextRequest) {
     });
   } catch (error: any) {
     console.error('Error fetching classes:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return errorResponse(
+      error instanceof ApiError ||
+        (error && typeof error.status === 'number' && typeof error.code === 'string')
+        ? error
+        : ApiError.internalError('Không thể tải danh sách lớp', { details: error?.message })
+    );
   }
 }
 
 // POST /api/admin/classes - Create new class
 export async function POST(request: NextRequest) {
   try {
-    const user = await getUserFromRequest(request);
-    if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
+    const user = await requireApiRole(request, ['admin']);
 
     const body = await request.json();
     const { name, grade, description, teacher_id } = body;
 
-    // Validation
     if (!name || !grade) {
-      return NextResponse.json(
-        {
-          error: 'Missing required fields: name, grade',
-        },
-        { status: 400 }
+      return errorResponse(
+        ApiError.validation('Thiếu trường bắt buộc', { required: ['name', 'grade'] })
       );
     }
 
-    // Check duplicates
     const existing = await dbAll('SELECT id FROM classes WHERE name = ?', [name]);
     if (existing.length > 0) {
-      return NextResponse.json(
-        {
-          error: 'Class name already exists',
-        },
-        { status: 409 }
-      );
+      return errorResponse(ApiError.conflict('Tên lớp đã tồn tại'));
     }
 
-    // Insert class
     const result = await dbRun(
       `INSERT INTO classes (name, grade, teacher_id, description, created_at)
        VALUES (?, ?, ?, ?, datetime('now'))`,
@@ -135,7 +120,6 @@ export async function POST(request: NextRequest) {
 
     const classId = result.lastID;
 
-    // Keep class_teachers in sync for primary teacher assignment
     if (teacher_id) {
       await dbRun(
         "INSERT OR IGNORE INTO class_teachers (class_id, teacher_id, role, assigned_at) VALUES (?, ?, 'primary', datetime('now'))",
@@ -143,7 +127,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Audit log
     await dbRun(
       `INSERT INTO audit_logs (actor_id, action, target_table, target_id, details, created_at)
        VALUES (?, ?, ?, ?, ?, datetime('now'))`,
@@ -156,15 +139,18 @@ export async function POST(request: NextRequest) {
       ]
     );
 
-    return NextResponse.json(
-      {
-        success: true,
-        data: { id: classId, name, grade, description, teacher_id: teacher_id || null },
-      },
-      { status: 201 }
+    return successResponse(
+      { class: { id: classId, name, grade, description, teacher_id: teacher_id || null } },
+      'Tạo lớp thành công',
+      201
     );
   } catch (error: any) {
     console.error('Error creating class:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return errorResponse(
+      error instanceof ApiError ||
+        (error && typeof error.status === 'number' && typeof error.code === 'string')
+        ? error
+        : ApiError.internalError('Không thể tạo lớp', { details: error?.message })
+    );
   }
 }

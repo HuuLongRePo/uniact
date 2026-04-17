@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getUserFromRequest } from '@/lib/guards';
+import { NextRequest } from 'next/server';
+import { requireApiRole } from '@/lib/guards';
 import { dbGet, dbRun, dbAll } from '@/lib/database';
 import bcrypt from 'bcryptjs';
+import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
 import { allowedRoles, ensureUserColumns } from '../_utils';
 
 // GET /api/admin/users/[id] - Get user by ID with lightweight stats
@@ -10,13 +11,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const { id } = await params;
     const userId = parseInt(id, 10);
     if (Number.isNaN(userId)) {
-      return NextResponse.json({ error: 'Invalid user id' }, { status: 400 });
-    }
-    const user = await getUserFromRequest(request);
-    if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return errorResponse(ApiError.validation('ID người dùng không hợp lệ'));
     }
 
+    await requireApiRole(request, ['admin']);
     await ensureUserColumns();
 
     const targetUser = await dbGet(
@@ -38,7 +36,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     );
 
     if (!targetUser) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      return errorResponse(ApiError.notFound('Không tìm thấy người dùng'));
     }
 
     const stats = (await dbGet(
@@ -70,9 +68,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       [userId]
     );
 
-    return NextResponse.json({
-      success: true,
-      data: {
+    return successResponse({
+      user: {
         ...targetUser,
         stats: {
           total_participations: stats?.total_participations || 0,
@@ -84,7 +81,12 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     });
   } catch (error: any) {
     console.error('Error fetching user:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return errorResponse(
+      error instanceof ApiError ||
+        (error && typeof error.status === 'number' && typeof error.code === 'string')
+        ? error
+        : ApiError.internalError('Không thể tải thông tin người dùng', { details: error?.message })
+    );
   }
 }
 
@@ -94,13 +96,10 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const { id } = await params;
     const userId = parseInt(id, 10);
     if (Number.isNaN(userId)) {
-      return NextResponse.json({ error: 'Invalid user id' }, { status: 400 });
-    }
-    const user = await getUserFromRequest(request);
-    if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return errorResponse(ApiError.validation('ID người dùng không hợp lệ'));
     }
 
+    const user = await requireApiRole(request, ['admin']);
     await ensureUserColumns();
 
     const body = await request.json();
@@ -131,7 +130,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
     const existing = (await dbGet('SELECT id, role FROM users WHERE id = ?', [userId])) as any;
     if (!existing) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      return errorResponse(ApiError.notFound('Không tìm thấy người dùng'));
     }
 
     const finalRole = (role ?? existing.role) as string;
@@ -139,7 +138,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     if (email) {
       const dup = await dbGet('SELECT id FROM users WHERE email = ? AND id != ?', [email, userId]);
       if (dup) {
-        return NextResponse.json({ error: 'Email already exists' }, { status: 409 });
+        return errorResponse(ApiError.conflict('Email đã tồn tại'));
       }
     }
 
@@ -149,12 +148,12 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         userId,
       ]);
       if (dup) {
-        return NextResponse.json({ error: 'Username already exists' }, { status: 409 });
+        return errorResponse(ApiError.conflict('Username đã tồn tại'));
       }
     }
 
     if (role && !allowedRoles.includes(role)) {
-      return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
+      return errorResponse(ApiError.validation('Vai trò không hợp lệ'));
     }
 
     const updates: string[] = [];
@@ -185,7 +184,6 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       updates.push('class_id = ?');
       values.push(class_id || null);
     }
-
     if (teacher_rank !== undefined) {
       updates.push('teacher_rank = ?');
       values.push(teacher_rank || null);
@@ -252,34 +250,28 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       (finalRole !== 'teacher' && existing.role === 'teacher');
 
     if (updates.length === 0 && !wantsTeacherAssignmentUpdate) {
-      return NextResponse.json({ error: 'No fields to update' }, { status: 400 });
+      return errorResponse(ApiError.validation('Không có trường nào để cập nhật'));
     }
 
     if (updates.length > 0) {
-      // Touch updated_at only when something is actually being updated
       updates.push("updated_at = datetime('now')");
       values.push(userId);
       await dbRun(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`, values);
     } else if (wantsTeacherAssignmentUpdate) {
-      // Only teacher assignment changed; still touch updated_at.
       await dbRun("UPDATE users SET updated_at = datetime('now') WHERE id = ?", [userId]);
     }
 
-    // Teacher class assignment (primary) - stored on classes.teacher_id and class_teachers
-    // If role changed away from teacher, also clear existing assignments.
     if (finalRole !== 'teacher' && existing.role === 'teacher') {
       await dbRun('UPDATE classes SET teacher_id = NULL WHERE teacher_id = ?', [userId]);
       await dbRun('DELETE FROM class_teachers WHERE teacher_id = ?', [userId]);
     }
 
     if (finalRole === 'teacher' && teaching_class_id !== undefined) {
-      // Ensure teacher is primary teacher of at most one class.
       await dbRun('UPDATE classes SET teacher_id = NULL WHERE teacher_id = ?', [userId]);
       await dbRun('DELETE FROM class_teachers WHERE teacher_id = ?', [userId]);
 
       if (teaching_class_id) {
         await dbRun('UPDATE classes SET teacher_id = ? WHERE id = ?', [userId, teaching_class_id]);
-        // Best-effort: keep class_teachers in sync
         await dbRun(
           "INSERT OR IGNORE INTO class_teachers (class_id, teacher_id, role, assigned_at) VALUES (?, ?, 'primary', datetime('now'))",
           [teaching_class_id, userId]
@@ -307,10 +299,15 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       [userId]
     );
 
-    return NextResponse.json({ success: true, data: updated });
+    return successResponse({ user: updated });
   } catch (error: any) {
     console.error('Error updating user:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return errorResponse(
+      error instanceof ApiError ||
+        (error && typeof error.status === 'number' && typeof error.code === 'string')
+        ? error
+        : ApiError.internalError('Không thể cập nhật người dùng', { details: error?.message })
+    );
   }
 }
 
@@ -323,22 +320,19 @@ export async function DELETE(
     const { id } = await params;
     const userId = parseInt(id, 10);
     if (Number.isNaN(userId)) {
-      return NextResponse.json({ error: 'Invalid user id' }, { status: 400 });
-    }
-    const user = await getUserFromRequest(request);
-    if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return errorResponse(ApiError.validation('ID người dùng không hợp lệ'));
     }
 
+    const user = await requireApiRole(request, ['admin']);
     await ensureUserColumns();
 
     if (user.id === userId) {
-      return NextResponse.json({ error: 'Cannot delete your own account' }, { status: 400 });
+      return errorResponse(ApiError.validation('Không thể tự vô hiệu hóa tài khoản của chính bạn'));
     }
 
     const existing = await dbGet('SELECT id, email, name FROM users WHERE id = ?', [userId]);
     if (!existing) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      return errorResponse(ApiError.notFound('Không tìm thấy người dùng'));
     }
 
     await dbRun('UPDATE users SET is_active = 0 WHERE id = ?', [userId]);
@@ -349,9 +343,14 @@ export async function DELETE(
       [user.id, 'DEACTIVATE_USER', 'users', userId, JSON.stringify({ email: existing.email })]
     );
 
-    return NextResponse.json({ success: true, message: 'User deactivated' });
+    return successResponse({}, 'Đã vô hiệu hóa người dùng');
   } catch (error: any) {
     console.error('Error deleting user:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return errorResponse(
+      error instanceof ApiError ||
+        (error && typeof error.status === 'number' && typeof error.code === 'string')
+        ? error
+        : ApiError.internalError('Không thể vô hiệu hóa người dùng', { details: error?.message })
+    );
   }
 }
