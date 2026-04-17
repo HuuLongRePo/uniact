@@ -49,16 +49,17 @@ export async function GET(request: NextRequest) {
       recentAttendance: snapshot.recentAttendance,
     });
   } catch (error: unknown) {
-    console.error('Loi lay dashboard giang vien:', error);
-    return errorResponse(
-      error instanceof ApiError ||
-        (error &&
-          typeof (error as any).status === 'number' &&
-          typeof (error as any).code === 'string')
-        ? (error as any)
-        : ApiError.internalError('Khong the lay du lieu tong quan', {
-            details: error instanceof Error ? error.message : 'Unknown error',
-          })
-    );
+    console.error('Lỗi lấy dashboard giảng viên:', error);
+
+    const apiError =
+      error instanceof ApiError
+        ? error
+        : error instanceof Error && typeof (error as any).status === 'number' && typeof (error as any).code === 'string'
+          ? new ApiError((error as any).code, error.message, (error as any).status, (error as any).details)
+          : ApiError.internalError('Không thể lấy dữ liệu tổng quan', {
+              details: error instanceof Error ? error.message : 'Unknown error',
+            });
+
+    return errorResponse(apiError);
   }
 }

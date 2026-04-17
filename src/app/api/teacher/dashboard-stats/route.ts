@@ -5,7 +5,7 @@ import { getTeacherDashboardSnapshot } from '@/lib/teacher-dashboard-data';
 
 /**
  * GET /api/teacher/dashboard-stats
- * Lay du lieu thong ke cho teacher dashboard
+ * Lấy dữ liệu thống kê cho teacher dashboard
  */
 export async function GET(request: NextRequest) {
   try {
@@ -40,12 +40,15 @@ export async function GET(request: NextRequest) {
       topStudents: snapshot.topStudents,
     });
   } catch (error: any) {
-    console.error('Loi lay thong ke dashboard giang vien:', error);
-    return errorResponse(
-      error instanceof ApiError ||
-        (error && typeof error.status === 'number' && typeof error.code === 'string')
+    console.error('Lỗi lấy thống kê dashboard giảng viên:', error);
+
+    const apiError =
+      error instanceof ApiError
         ? error
-        : ApiError.internalError('Khong the lay thong ke dashboard', { details: error?.message })
-    );
+        : error instanceof Error && typeof (error as any).status === 'number' && typeof (error as any).code === 'string'
+          ? new ApiError((error as any).code, error.message, (error as any).status, (error as any).details)
+          : ApiError.internalError('Không thể lấy thống kê dashboard', { details: error?.message });
+
+    return errorResponse(apiError);
   }
 }
