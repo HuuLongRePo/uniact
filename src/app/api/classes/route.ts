@@ -1,16 +1,11 @@
 import { NextRequest } from 'next/server';
 import { dbHelpers } from '@/lib/database';
-import { requireAuth, requireRole } from '@/lib/guards';
+import { requireApiAuth, requireApiRole } from '@/lib/guards';
 import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
 
 export async function GET(request: NextRequest) {
   try {
-    let user;
-    try {
-      user = await requireAuth(request);
-    } catch (err: any) {
-      return errorResponse(ApiError.unauthorized(err?.message || 'Chưa đăng nhập'));
-    }
+    const user = await requireApiAuth(request);
 
     let classes: any[] = [];
     if (user.role === 'admin') {
@@ -32,23 +27,18 @@ export async function GET(request: NextRequest) {
     return successResponse({ classes: classes || [] });
   } catch (error: any) {
     console.error('Get classes error:', error);
-    return errorResponse(ApiError.internalError('Lỗi server'));
+    return errorResponse(
+      error instanceof ApiError ||
+        (error && typeof error.status === 'number' && typeof error.code === 'string')
+        ? error
+        : ApiError.internalError('Lỗi server')
+    );
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    let user;
-    try {
-      user = await requireRole(request, ['admin', 'teacher']);
-    } catch (err: any) {
-      const message = String(err?.message || '');
-      return errorResponse(
-        message.includes('Không có quyền')
-          ? ApiError.forbidden('Không có quyền truy cập')
-          : ApiError.unauthorized('Chưa đăng nhập')
-      );
-    }
+    const user = await requireApiRole(request, ['admin', 'teacher']);
 
     const { name, grade, description, teacher_id } = await request.json();
 
@@ -75,6 +65,11 @@ export async function POST(request: NextRequest) {
     return successResponse({ class: newClass }, 'Tạo lớp học thành công', 201);
   } catch (error: any) {
     console.error('Create class error:', error);
-    return errorResponse(ApiError.internalError('Lỗi server'));
+    return errorResponse(
+      error instanceof ApiError ||
+        (error && typeof error.status === 'number' && typeof error.code === 'string')
+        ? error
+        : ApiError.internalError('Lỗi server')
+    );
   }
 }

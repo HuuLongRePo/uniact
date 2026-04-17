@@ -1,16 +1,14 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getUserFromRequest } from '@/lib/guards';
+import { NextRequest } from 'next/server';
+import { requireApiRole } from '@/lib/guards';
 import { dbAll, dbRun } from '@/lib/database';
 import bcrypt from 'bcryptjs';
+import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
 import { allowedRoles, ensureUserColumns, generateUserCode } from './_utils';
 
 // GET /api/admin/users - List users with pagination and search
 export async function GET(request: NextRequest) {
   try {
-    const user = await getUserFromRequest(request);
-    if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
+    await requireApiRole(request, ['admin']);
 
     await ensureUserColumns();
 
@@ -23,7 +21,6 @@ export async function GET(request: NextRequest) {
 
     const offset = (page - 1) * limit;
 
-    // Build query
     let query = `
       SELECT 
         u.id, u.email, u.username, u.name as full_name, u.role, u.avatar_url,
@@ -60,21 +57,17 @@ export async function GET(request: NextRequest) {
       params.push(classId);
     }
 
-    // Get total count
     const countQuery = `SELECT COUNT(*) as total FROM (${query}) t`;
-    // Pass a copy so later params mutations (limit/offset) don't affect this call.
     const countResult = (await dbAll(countQuery, [...params])) as any[];
     const total = countResult[0]?.total || 0;
 
-    // Get paginated results
     query += ` ORDER BY u.created_at DESC, u.id DESC LIMIT ? OFFSET ?`;
     params.push(limit, offset);
 
     const users = await dbAll(query, [...params]);
 
-    return NextResponse.json({
-      success: true,
-      data: users,
+    return successResponse({
+      users,
       pagination: {
         page,
         limit,
@@ -84,17 +77,19 @@ export async function GET(request: NextRequest) {
     });
   } catch (error: any) {
     console.error('Error fetching users:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return errorResponse(
+      error instanceof ApiError ||
+        (error && typeof error.status === 'number' && typeof error.code === 'string')
+        ? error
+        : ApiError.internalError('Không thể tải danh sách người dùng', { details: error?.message })
+    );
   }
 }
 
 // POST /api/admin/users - Create new user
 export async function POST(request: NextRequest) {
   try {
-    const user = await getUserFromRequest(request);
-    if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
+    const user = await requireApiRole(request, ['admin']);
 
     await ensureUserColumns();
 
@@ -122,33 +117,25 @@ export async function POST(request: NextRequest) {
       academic_degree,
     } = body;
 
-    // Validation
     if (!email || !password || !full_name || !role) {
-      return NextResponse.json(
-        {
-          error: 'Missing required fields: email, password, full_name, role',
-        },
-        { status: 400 }
+      return errorResponse(
+        ApiError.validation('Thiếu trường bắt buộc', {
+          required: ['email', 'password', 'full_name', 'role'],
+        })
       );
     }
 
     if (password.length < 6) {
-      return NextResponse.json(
-        {
-          error: 'Password must be at least 6 characters',
-        },
-        { status: 400 }
-      );
+      return errorResponse(ApiError.validation('Mật khẩu phải có ít nhất 6 ký tự'));
     }
 
     if (!allowedRoles.includes(role)) {
-      return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
+      return errorResponse(ApiError.validation('Vai trò không hợp lệ'));
     }
 
-    // Check duplicates (email + username)
     const existingEmail = await dbAll('SELECT id FROM users WHERE email = ?', [email]);
     if (existingEmail.length > 0) {
-      return NextResponse.json({ error: 'Email already exists' }, { status: 409 });
+      return errorResponse(ApiError.conflict('Email đã tồn tại'));
     }
 
     const normalizedUsername =
@@ -160,15 +147,12 @@ export async function POST(request: NextRequest) {
       normalizedUsername,
     ]);
     if (existingUsername.length > 0) {
-      return NextResponse.json({ error: 'Username already exists' }, { status: 409 });
+      return errorResponse(ApiError.conflict('Username đã tồn tại'));
     }
 
     const generatedCode = await generateUserCode(role);
-
-    // Hash password (column is password_hash)
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Insert user
     const result = await dbRun(
       `INSERT INTO users (
         email, username, name, role, password_hash,
@@ -203,9 +187,7 @@ export async function POST(request: NextRequest) {
       ]
     );
 
-    // Teacher class assignment (primary) - stored on classes.teacher_id and class_teachers
     if (role === 'teacher' && teaching_class_id) {
-      // Ensure teacher is primary teacher of at most one class.
       await dbRun('UPDATE classes SET teacher_id = NULL WHERE teacher_id = ?', [result.lastID]);
       await dbRun('DELETE FROM class_teachers WHERE teacher_id = ?', [result.lastID]);
 
@@ -219,7 +201,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Audit log
     await dbRun(
       `INSERT INTO audit_logs (actor_id, action, target_table, target_id, details, created_at)
        VALUES (?, ?, ?, ?, ?, datetime('now'))`,
@@ -232,14 +213,11 @@ export async function POST(request: NextRequest) {
       ]
     );
 
-    // Hệ thống LAN nội bộ - không gửi email
-    // Admin cần gửi mật khẩu cho user thủ công
     console.warn(`✅ User created: ${email} | Temporary password: ${password}`);
 
-    return NextResponse.json(
+    return successResponse(
       {
-        success: true,
-        data: {
+        user: {
           id: result.lastID,
           email,
           username: normalizedUsername,
@@ -249,13 +227,17 @@ export async function POST(request: NextRequest) {
           code: generatedCode,
         },
         temporaryPassword: password,
-        message:
-          'User created successfully. Please provide the temporary password to the user manually.',
       },
-      { status: 201 }
+      'Tạo người dùng thành công. Hãy gửi mật khẩu tạm thời cho người dùng theo cách thủ công.',
+      201
     );
   } catch (error: any) {
     console.error('Error creating user:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return errorResponse(
+      error instanceof ApiError ||
+        (error && typeof error.status === 'number' && typeof error.code === 'string')
+        ? error
+        : ApiError.internalError('Không thể tạo người dùng', { details: error?.message })
+    );
   }
 }
