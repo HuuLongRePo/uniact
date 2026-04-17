@@ -10,14 +10,21 @@ function createPage(options: {
   const clearCookies = vi.fn(async () => undefined);
   const addCookies = vi.fn(async () => undefined);
 
-  const requestGet = vi.fn(async () => ({
-    ok: () => Boolean(options.meRole),
-    json: async () => ({
-      data: {
-        user: options.meRole ? { role: options.meRole } : null,
-      },
-    }),
-  }));
+  let getCallCount = 0;
+  const requestGet = vi.fn(async () => {
+    getCallCount += 1;
+    const resolvedRole = options.meRole ?? (getCallCount > 1 && options.loginToken ? 'student' : null);
+
+    return {
+      ok: () => Boolean(resolvedRole),
+      status: () => (resolvedRole ? 200 : 401),
+      json: async () => ({
+        data: {
+          user: resolvedRole ? { role: resolvedRole } : null,
+        },
+      }),
+    };
+  });
 
   const requestPost = vi.fn(async () => ({
     ok: () => true,
