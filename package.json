@@ -74,7 +74,7 @@
     "react-hot-toast": "^2.6.0",
     "react-qr-code": "^2.0.18",
     "recharts": "^3.4.1",
-    "sqlite3": "^5.1.7",
+    "sqlite3": "^6.0.1",
     "tailwind-merge": "^3.3.1",
     "xlsx": "^0.18.5",
     "zod": "^4.1.12"
@@ -106,5 +106,9 @@
     "tsx": "^4.20.6",
     "typescript": "^5",
     "vitest": "^4.1.4"
+  },
+  "overrides": {
+    "brace-expansion": "^2.0.2",
+    "picomatch": "^4.0.4"
   }
 }
