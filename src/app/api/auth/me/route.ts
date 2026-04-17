@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
     const token = getTokenFromRequest(request);
 
     if (!token) {
-      return errorResponse(ApiError.unauthorized('Không tìm thấy token'));
+      return errorResponse(ApiError.unauthorized('Chưa đăng nhập'));
     }
 
     // WHAT: Xác thực token và lấy user info
@@ -27,9 +27,14 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Get user error:', error);
 
-    // WHAT: Xóa cookie nếu có lỗi
-    const response = errorResponse(ApiError.internalError('Lỗi server'));
-    clearAuthCookie(response);
+    const response = errorResponse(
+      error instanceof ApiError ? error : ApiError.internalError('Lỗi server')
+    );
+
+    if (response.status === 401) {
+      clearAuthCookie(response);
+    }
+
     return response;
   }
 }

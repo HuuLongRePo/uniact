@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { getTokenFromRequest } from '@/lib/session-cookie';
+import { verifyToken } from '@/lib/auth';
 
 /**
  * Middleware:
@@ -71,16 +73,32 @@ export function middleware(request: NextRequest) {
   const isProtectedRoute = PROTECTED_ROUTES.some((route) => pathname.startsWith(route));
 
   if (isProtectedRoute) {
-    // Check if user has auth token (cookie)
-    const token = request.cookies.get('token');
+    const token = getTokenFromRequest(request);
 
     if (!token) {
       console.warn(`🔒 Chặn truy cập không xác thực: ${pathname}`);
-      // Redirect to login page
       const url = request.nextUrl.clone();
       url.pathname = '/login';
       url.searchParams.set('redirect', pathname);
       return NextResponse.redirect(url);
+    }
+
+    try {
+      verifyToken(token);
+    } catch {
+      console.warn(`🔒 Chặn truy cập với token không hợp lệ: ${pathname}`);
+      const url = request.nextUrl.clone();
+      url.pathname = '/login';
+      url.searchParams.set('redirect', pathname);
+      const response = NextResponse.redirect(url);
+      response.cookies.set('token', '', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        path: '/',
+        maxAge: 0,
+      });
+      return response;
     }
   }
 

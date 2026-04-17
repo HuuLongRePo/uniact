@@ -5,7 +5,7 @@ import { ChevronDown, ChevronUp, Copy, Check, RefreshCw } from 'lucide-react';
 
 interface TestAccount {
   email: string;
-  password: string;
+  password?: string;
   role: string;
   name: string;
 }
@@ -48,7 +48,7 @@ export default function LoginTestPanel({ onSelectAccount }: LoginTestPanelProps)
   const normalizeAccounts = (payload: DemoAccountsPayload): TestAccount[] => {
     if (Array.isArray(payload.data)) {
       return payload.data.filter((account): account is TestAccount =>
-        Boolean(account?.email && account?.password && account?.role && account?.name)
+        Boolean(account?.email && account?.role && account?.name)
       );
     }
 
@@ -139,6 +139,10 @@ export default function LoginTestPanel({ onSelectAccount }: LoginTestPanelProps)
   };
 
   const handleQuickLogin = (account: TestAccount) => {
+    if (!account.password) {
+      return;
+    }
+
     if (onSelectAccount) {
       onSelectAccount(account.email, account.password);
     }
@@ -274,7 +278,7 @@ export default function LoginTestPanel({ onSelectAccount }: LoginTestPanelProps)
       {/* Footer */}
       <div className="p-3 bg-gray-50 border-t text-center">
         <p className="text-xs text-gray-600">
-          💡 <strong>Tip:</strong> Click vào card để tự động login
+          💡 <strong>Tip:</strong> Chỉ tài khoản có mật khẩu demo mới hỗ trợ quick login
         </p>
       </div>
     </div>
@@ -298,7 +302,11 @@ function AccountCard({ account, onCopy, copiedField, onQuickLogin }: AccountCard
   return (
     <div
       className={`mb-2 last:mb-0 p-3 border-2 rounded-lg transition-all cursor-pointer ${roleColors[account.role as keyof typeof roleColors]}`}
-      onClick={() => onQuickLogin(account)}
+      onClick={() => {
+        if (account.password) {
+          onQuickLogin(account);
+        }
+      }}
     >
       <div className="flex items-start justify-between mb-2">
         <div className="flex-1 min-w-0">
@@ -349,7 +357,9 @@ function AccountCard({ account, onCopy, copiedField, onQuickLogin }: AccountCard
       </div>
 
       <div className="mt-2 pt-2 border-t border-gray-200">
-        <p className="text-xs text-gray-500 font-mono">🔑 {account.password}</p>
+        <p className="text-xs text-gray-500 font-mono">
+          🔑 {account.password || 'Không công khai mật khẩu demo'}
+        </p>
       </div>
     </div>
   );

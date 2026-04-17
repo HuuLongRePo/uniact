@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { dbAll, dbReady } from '@/lib/database';
+import { ApiError } from '@/lib/api-response';
 
 type DemoAccountRow = {
   email: string;
@@ -8,19 +9,23 @@ type DemoAccountRow = {
   class_name?: string | null;
 };
 
-function getPasswordForAccount(email: string, role: DemoAccountRow['role']): string {
-  if (role === 'admin') {
-    return email === 'admin@annd.edu.vn' ? 'Admin@2025' : 'admin123';
-  }
-
-  return role === 'teacher' ? 'teacher123' : 'student123';
-}
 
 // GET /api/auth/demo-accounts
-// Dev-only helper for login page: returns demo emails from local SQLite.
+// Dev-only helper for login page: returns demo account metadata from local SQLite.
 export async function GET() {
-  if (process.env.NODE_ENV === 'production') {
-    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  const demoAccountsEnabled =
+    process.env.NODE_ENV !== 'production' && process.env.ENABLE_DEMO_ACCOUNTS === '1';
+
+  if (!demoAccountsEnabled) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Not found',
+        message: 'Not found',
+        code: ApiError.notFound().code,
+      },
+      { status: 404 }
+    );
   }
 
   try {
@@ -56,7 +61,6 @@ export async function GET() {
         ? [
             {
               email: admin.email,
-              password: getPasswordForAccount(admin.email, 'admin'),
               role: 'admin',
               name: admin.name || 'Administrator',
             },
@@ -64,13 +68,11 @@ export async function GET() {
         : []),
       ...teachers.map((teacher) => ({
         email: teacher.email,
-        password: getPasswordForAccount(teacher.email, 'teacher'),
         role: 'teacher',
         name: teacher.name,
       })),
       ...students.map((student) => ({
         email: student.email,
-        password: getPasswordForAccount(student.email, 'student'),
         role: 'student',
         name: student.class_name ? `${student.name} - ${student.class_name}` : student.name,
       })),
