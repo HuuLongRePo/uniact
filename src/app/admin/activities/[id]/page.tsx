@@ -171,12 +171,13 @@ export default function AdminActivityDetailPage() {
         method: 'DELETE',
       });
 
-      if (!res.ok) throw new Error('Không thể xóa hoạt động');
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Không thể hủy hoạt động');
 
-      toast.success('Đã xóa hoạt động');
+      toast.success(data.message || 'Đã hủy hoạt động');
       router.push('/admin/activities');
-    } catch (error) {
-      toast.error('Không thể xóa hoạt động');
+    } catch (error: any) {
+      toast.error(error.message || 'Không thể hủy hoạt động');
     }
   };
 
@@ -330,9 +331,9 @@ export default function AdminActivityDetailPage() {
 
           <ConfirmDialog
             isOpen={showDeleteConfirm}
-            title="Xác nhận xóa hoạt động"
-            message="Bạn có chắc chắn muốn xóa hoạt động này?"
-            confirmText="Xóa"
+            title="Xác nhận hủy hoạt động"
+            message="Bạn có chắc chắn muốn hủy hoạt động này?"
+            confirmText="Hủy hoạt động"
             cancelText="Hủy"
             variant="danger"
             onCancel={() => setShowDeleteConfirm(false)}

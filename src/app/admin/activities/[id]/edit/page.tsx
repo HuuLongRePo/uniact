@@ -53,16 +53,17 @@ export default function AdminEditActivityPage() {
     try {
       const response = await fetch(`/api/admin/activities/${activityId}`);
       const data = await response.json();
-      if (response.ok && data.activity) {
-        setActivity(data.activity);
+      const resolvedActivity = data.activity || data.data?.activity || null;
+      if (response.ok && resolvedActivity) {
+        setActivity(resolvedActivity);
         setFormData({
-          title: data.activity.title,
-          description: data.activity.description,
-          date_time: data.activity.date_time,
-          location: data.activity.location,
-          activity_type_id: data.activity.activity_type_id || 1,
-          organization_level_id: data.activity.organization_level_id || 1,
-          max_participants: data.activity.max_participants || 0,
+          title: resolvedActivity.title,
+          description: resolvedActivity.description,
+          date_time: resolvedActivity.date_time,
+          location: resolvedActivity.location,
+          activity_type_id: resolvedActivity.activity_type_id || 1,
+          organization_level_id: resolvedActivity.organization_level_id || 1,
+          max_participants: resolvedActivity.max_participants || 0,
         });
       } else {
         toast.error(data.error || 'Không thể tải hoạt động');
@@ -109,9 +110,12 @@ export default function AdminEditActivityPage() {
       });
 
       const data = await response.json();
+      const resolvedActivity = data.activity || data.data?.activity || null;
       if (response.ok) {
-        toast.success('Cập nhật hoạt động thành công');
-        setActivity(data.activity);
+        toast.success(data.message || 'Cập nhật hoạt động thành công');
+        if (resolvedActivity) {
+          setActivity(resolvedActivity);
+        }
         setChanges({});
         setTimeout(() => router.push(`/admin/activities/${activityId}`), 1000);
       } else {

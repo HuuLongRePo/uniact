@@ -119,4 +119,31 @@ describe('admin activity detail route', () => {
     expect(body.code).toBe('NOT_FOUND');
     expect(dbRun).not.toHaveBeenCalled();
   });
+
+  it('returns canonical cancel message instead of destructive delete semantics', async () => {
+    vi.doMock('@/lib/guards', () => ({
+      requireApiRole: async () => ({ id: 1, role: 'admin', name: 'Admin' }),
+    }));
+
+    const dbRun = vi.fn(async () => ({ changes: 1 }));
+
+    vi.doMock('@/lib/database', () => ({
+      dbReady: async () => undefined,
+      dbRun,
+      dbGet: async () => ({ id: 77 }),
+    }));
+
+    const route = await import('../src/app/api/admin/activities/[id]/route');
+    const res: any = await route.DELETE(
+      {} as any,
+      { params: Promise.resolve({ id: '77' }) } as any
+    );
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+    expect(body.message).toBe('Đã hủy hoạt động');
+    expect(body.data).toMatchObject({ success: true });
+    expect(dbRun).toHaveBeenCalled();
+  });
 });
