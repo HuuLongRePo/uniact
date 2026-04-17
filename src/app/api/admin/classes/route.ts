@@ -84,12 +84,14 @@ export async function GET(request: NextRequest) {
     });
   } catch (error: any) {
     console.error('Error fetching classes:', error);
-    return errorResponse(
-      error instanceof ApiError ||
-        (error && typeof error.status === 'number' && typeof error.code === 'string')
+    const apiError =
+      error instanceof ApiError
         ? error
-        : ApiError.internalError('Không thể tải danh sách lớp', { details: error?.message })
-    );
+        : error instanceof Error && typeof (error as any).status === 'number' && typeof (error as any).code === 'string'
+          ? new ApiError((error as any).code, error.message, (error as any).status, (error as any).details)
+          : ApiError.internalError('Không thể tải danh sách lớp', { details: error?.message });
+
+    return errorResponse(apiError);
   }
 }
 
@@ -146,11 +148,13 @@ export async function POST(request: NextRequest) {
     );
   } catch (error: any) {
     console.error('Error creating class:', error);
-    return errorResponse(
-      error instanceof ApiError ||
-        (error && typeof error.status === 'number' && typeof error.code === 'string')
+    const apiError =
+      error instanceof ApiError
         ? error
-        : ApiError.internalError('Không thể tạo lớp', { details: error?.message })
-    );
+        : error instanceof Error && typeof (error as any).status === 'number' && typeof (error as any).code === 'string'
+          ? new ApiError((error as any).code, error.message, (error as any).status, (error as any).details)
+          : ApiError.internalError('Không thể tạo lớp', { details: error?.message });
+
+    return errorResponse(apiError);
   }
 }
