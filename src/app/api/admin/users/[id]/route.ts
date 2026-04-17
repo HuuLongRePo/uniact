@@ -81,12 +81,14 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     });
   } catch (error: any) {
     console.error('Error fetching user:', error);
-    return errorResponse(
-      error instanceof ApiError ||
-        (error && typeof error.status === 'number' && typeof error.code === 'string')
+    const apiError =
+      error instanceof ApiError
         ? error
-        : ApiError.internalError('Không thể tải thông tin người dùng', { details: error?.message })
-    );
+        : error instanceof Error && typeof (error as any).status === 'number' && typeof (error as any).code === 'string'
+          ? new ApiError((error as any).code, error.message, (error as any).status, (error as any).details)
+          : ApiError.internalError('Không thể tải thông tin người dùng', { details: error?.message });
+
+    return errorResponse(apiError);
   }
 }
 
@@ -302,12 +304,14 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     return successResponse({ user: updated });
   } catch (error: any) {
     console.error('Error updating user:', error);
-    return errorResponse(
-      error instanceof ApiError ||
-        (error && typeof error.status === 'number' && typeof error.code === 'string')
+    const apiError =
+      error instanceof ApiError
         ? error
-        : ApiError.internalError('Không thể cập nhật người dùng', { details: error?.message })
-    );
+        : error instanceof Error && typeof (error as any).status === 'number' && typeof (error as any).code === 'string'
+          ? new ApiError((error as any).code, error.message, (error as any).status, (error as any).details)
+          : ApiError.internalError('Không thể cập nhật người dùng', { details: error?.message });
+
+    return errorResponse(apiError);
   }
 }
 
@@ -346,11 +350,13 @@ export async function DELETE(
     return successResponse({}, 'Đã vô hiệu hóa người dùng');
   } catch (error: any) {
     console.error('Error deleting user:', error);
-    return errorResponse(
-      error instanceof ApiError ||
-        (error && typeof error.status === 'number' && typeof error.code === 'string')
+    const apiError =
+      error instanceof ApiError
         ? error
-        : ApiError.internalError('Không thể vô hiệu hóa người dùng', { details: error?.message })
-    );
+        : error instanceof Error && typeof (error as any).status === 'number' && typeof (error as any).code === 'string'
+          ? new ApiError((error as any).code, error.message, (error as any).status, (error as any).details)
+          : ApiError.internalError('Không thể vô hiệu hóa người dùng', { details: error?.message });
+
+    return errorResponse(apiError);
   }
 }

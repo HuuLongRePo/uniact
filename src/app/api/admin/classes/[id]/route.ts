@@ -42,12 +42,14 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     return successResponse({ class: { ...classData, teachers } });
   } catch (error: any) {
     console.error('Error fetching class:', error);
-    return errorResponse(
-      error instanceof ApiError ||
-        (error && typeof error.status === 'number' && typeof error.code === 'string')
+    const apiError =
+      error instanceof ApiError
         ? error
-        : ApiError.internalError('Không thể tải thông tin lớp', { details: error?.message })
-    );
+        : error instanceof Error && typeof (error as any).status === 'number' && typeof (error as any).code === 'string'
+          ? new ApiError((error as any).code, error.message, (error as any).status, (error as any).details)
+          : ApiError.internalError('Không thể tải thông tin lớp', { details: error?.message });
+
+    return errorResponse(apiError);
   }
 }
 
@@ -126,12 +128,14 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     return successResponse({}, 'Cập nhật lớp thành công');
   } catch (error: any) {
     console.error('Error updating class:', error);
-    return errorResponse(
-      error instanceof ApiError ||
-        (error && typeof error.status === 'number' && typeof error.code === 'string')
+    const apiError =
+      error instanceof ApiError
         ? error
-        : ApiError.internalError('Không thể cập nhật lớp', { details: error?.message })
-    );
+        : error instanceof Error && typeof (error as any).status === 'number' && typeof (error as any).code === 'string'
+          ? new ApiError((error as any).code, error.message, (error as any).status, (error as any).details)
+          : ApiError.internalError('Không thể cập nhật lớp', { details: error?.message });
+
+    return errorResponse(apiError);
   }
 }
 
@@ -173,11 +177,13 @@ export async function DELETE(
     return successResponse({}, 'Xóa lớp thành công');
   } catch (error: any) {
     console.error('Error deleting class:', error);
-    return errorResponse(
-      error instanceof ApiError ||
-        (error && typeof error.status === 'number' && typeof error.code === 'string')
+    const apiError =
+      error instanceof ApiError
         ? error
-        : ApiError.internalError('Không thể xóa lớp', { details: error?.message })
-    );
+        : error instanceof Error && typeof (error as any).status === 'number' && typeof (error as any).code === 'string'
+          ? new ApiError((error as any).code, error.message, (error as any).status, (error as any).details)
+          : ApiError.internalError('Không thể xóa lớp', { details: error?.message });
+
+    return errorResponse(apiError);
   }
 }

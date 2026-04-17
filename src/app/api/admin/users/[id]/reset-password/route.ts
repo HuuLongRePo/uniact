@@ -11,19 +11,19 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   try {
     const rl = rateLimit(request, 20, 60 * 1000);
     if (!rl.allowed) {
-      return errorResponse(new ApiError('RATE_LIMITED', 'Too many requests', 429));
+      return errorResponse(new ApiError('RATE_LIMITED', 'Quá nhiều yêu cầu', 429));
     }
 
     const { id } = await params;
     const userId = parseInt(id, 10);
     if (Number.isNaN(userId)) {
-      return errorResponse(ApiError.validation('Invalid user id'));
+      return errorResponse(ApiError.validation('ID người dùng không hợp lệ'));
     }
     const user = await requireApiRole(request, ['admin']);
 
     const existing = await dbGet('SELECT id FROM users WHERE id = ?', [userId]);
     if (!existing) {
-      return errorResponse(ApiError.notFound('User not found'));
+      return errorResponse(ApiError.notFound('Không tìm thấy người dùng'));
     }
 
     // Generate a random temporary password (8 characters)
@@ -55,10 +55,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     );
   } catch (error: any) {
     console.error('Error resetting password:', error);
-    return errorResponse(
+    const apiError =
       error instanceof ApiError
         ? error
-        : ApiError.internalError(error?.message || 'Failed to reset password')
-    );
+        : error instanceof Error && typeof (error as any).status === 'number' && typeof (error as any).code === 'string'
+          ? new ApiError((error as any).code, error.message, (error as any).status, (error as any).details)
+          : ApiError.internalError(error?.message || 'Không thể đặt lại mật khẩu');
+
+    return errorResponse(apiError);
   }
 }
