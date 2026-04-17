@@ -8,6 +8,7 @@
 
 import { NextRequest } from 'next/server';
 import { dbGet, dbRun, dbReady, dbHelpers } from '@/lib/database';
+import { PointCalculationService } from '@/lib/scoring';
 import { requireApiRole } from '@/lib/guards';
 import { ApiError, successResponse, errorResponse } from '@/lib/api-response';
 
@@ -99,6 +100,10 @@ export async function POST(request: NextRequest) {
       [achievement_level, feedback || null, user.id, participation_id]
     );
 
+    const calculation = await PointCalculationService.autoCalculateAfterEvaluation(
+      Number(participation_id)
+    );
+
     // Tạo audit log
     await dbHelpers.createAuditLog(
       user.id,
@@ -138,6 +143,8 @@ export async function POST(request: NextRequest) {
         achievement_label: getAchievementLabel(achievement_level),
         evaluated_by: user.name,
         evaluated_at: new Date().toISOString(),
+        points: calculation.totalPoints,
+        formula: calculation.formula,
       },
       'Đánh giá thành công'
     );

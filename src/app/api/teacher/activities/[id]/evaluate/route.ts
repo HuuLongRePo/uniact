@@ -115,13 +115,18 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
             [normalizedLevel, feedback || null, user.id, participation_id]
           );
 
-          const calc = await PointCalculationService.calculatePoints({
-            participationId: participation_id,
-            bonusPoints: Number(bonus_points || 0),
-            penaltyPoints: Number(penalty_points || 0),
-          });
+          const hasCustomAdjustments = Number(bonus_points || 0) !== 0 || Number(penalty_points || 0) !== 0;
+          const calc = hasCustomAdjustments
+            ? await PointCalculationService.calculatePoints({
+                participationId: participation_id,
+                bonusPoints: Number(bonus_points || 0),
+                penaltyPoints: Number(penalty_points || 0),
+              })
+            : await PointCalculationService.autoCalculateAfterEvaluation(participation_id);
 
-          await PointCalculationService.saveCalculation(participation_id, calc);
+          if (hasCustomAdjustments) {
+            await PointCalculationService.saveCalculation(participation_id, calc);
+          }
 
           await dbRun(
             `INSERT INTO notifications (user_id, type, title, message, related_table, related_id, is_read, created_at)

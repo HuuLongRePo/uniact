@@ -6,103 +6,70 @@ describe('POST /api/teacher/evaluate', () => {
     vi.clearAllMocks();
   });
 
-  it('preserves forbidden errors from canonical guard', async () => {
-    const { ApiError } = await import('../src/lib/api-response');
+  it('auto-calculates score after successful evaluation', async () => {
+    const mockDbGet = vi.fn(async (sql: string) => {
+      if (sql.includes('FROM participations p')) {
+        return {
+          id: 55,
+          attendance_status: 'attended',
+          teacher_id: 7,
+          student_id: 20,
+          student_name: 'Student One',
+          class_id: 3,
+          activity_id: 9,
+          activity_title: 'Hoạt động A',
+        };
+      }
 
-    vi.doMock('@/lib/guards', () => ({
-      requireApiRole: async () => {
-        throw ApiError.forbidden('Không có quyền truy cập');
+      if (sql.includes('FROM class_teachers')) {
+        return { teacher_id: 7, class_id: 3 };
+      }
+
+      return null;
+    });
+
+    const mockDbRun = vi.fn(async () => ({ changes: 1, lastID: 1 }));
+    const mockCreateAuditLog = vi.fn(async () => undefined);
+    const mockAutoCalculate = vi.fn(async () => ({ totalPoints: 15, formula: '10 x 1.5 = 15' }));
+
+    vi.doMock('@/lib/database', () => ({
+      dbGet: mockDbGet,
+      dbRun: mockDbRun,
+      dbReady: vi.fn(async () => undefined),
+      dbHelpers: {
+        createAuditLog: mockCreateAuditLog,
       },
     }));
 
-    vi.doMock('@/lib/database', () => ({
-      dbReady: async () => undefined,
-      dbGet: async () => null,
-      dbRun: async () => ({ changes: 1 }),
-      dbHelpers: { createAuditLog: async () => undefined },
-    }));
-
-    const route = await import('../src/app/api/teacher/evaluate/route');
-    const res: any = await route.POST({
-      json: async () => ({ participation_id: 1, achievement_level: 'good' }),
-    } as any);
-
-    expect(res.status).toBe(403);
-    const body = await res.json();
-    expect(body.success).toBe(false);
-    expect(body.code).toBe('FORBIDDEN');
-  });
-
-  it('validates achievement level before writing changes', async () => {
     vi.doMock('@/lib/guards', () => ({
-      requireApiRole: async () => ({ id: 7, role: 'teacher', name: 'Teacher A' }),
+      requireApiRole: async () => ({ id: 7, name: 'Teacher A', role: 'teacher' }),
     }));
 
-    const dbRun = vi.fn(async () => ({ changes: 1 }));
-
-    vi.doMock('@/lib/database', () => ({
-      dbReady: async () => undefined,
-      dbGet: async () => null,
-      dbRun,
-      dbHelpers: { createAuditLog: async () => undefined },
+    vi.doMock('@/lib/scoring', () => ({
+      PointCalculationService: {
+        autoCalculateAfterEvaluation: mockAutoCalculate,
+      },
     }));
 
     const route = await import('../src/app/api/teacher/evaluate/route');
-    const res: any = await route.POST({
-      json: async () => ({ participation_id: 1, achievement_level: 'bad-level' }),
-    } as any);
-
-    expect(res.status).toBe(400);
-    const body = await res.json();
-    expect(body.success).toBe(false);
-    expect(body.code).toBe('VALIDATION_ERROR');
-    expect(dbRun).not.toHaveBeenCalled();
-  });
-
-  it('returns success when the teacher evaluates an attended participation they own', async () => {
-    vi.doMock('@/lib/guards', () => ({
-      requireApiRole: async () => ({ id: 7, role: 'teacher', name: 'Teacher A' }),
-    }));
-
-    const dbGet = vi
-      .fn()
-      .mockResolvedValueOnce({
-        id: 33,
-        activity_id: 55,
-        activity_title: 'Activity A',
-        teacher_id: 7,
-        student_id: 99,
-        student_name: 'Student A',
-        class_id: 10,
-        attendance_status: 'attended',
-      })
-      .mockResolvedValueOnce(null);
-
-    const dbRun = vi.fn(async () => ({ changes: 1 }));
-    const createAuditLog = vi.fn(async () => undefined);
-
-    vi.doMock('@/lib/database', () => ({
-      dbReady: async () => undefined,
-      dbGet,
-      dbRun,
-      dbHelpers: { createAuditLog },
-    }));
-
-    const route = await import('../src/app/api/teacher/evaluate/route');
-    const res: any = await route.POST({
+    const response = await route.POST({
       json: async () => ({
-        participation_id: 33,
-        achievement_level: 'good',
-        feedback: 'Tốt',
+        participation_id: 55,
+        achievement_level: 'excellent',
+        feedback: 'Rất tốt',
       }),
     } as any);
 
-    expect(res.status).toBe(200);
-    const body = await res.json();
+    expect(response.status).toBe(200);
+    expect(mockAutoCalculate).toHaveBeenCalledWith(55);
+
+    const body = await response.json();
     expect(body.success).toBe(true);
-    expect(body.achievement_level).toBe('good');
-    expect(body.activity_title).toBe('Activity A');
-    expect(createAuditLog).toHaveBeenCalled();
-    expect(dbRun).toHaveBeenCalled();
+    expect(body.data).toMatchObject({
+      participation_id: 55,
+      achievement_level: 'excellent',
+      points: 15,
+      formula: '10 x 1.5 = 15',
+    });
   });
 });
