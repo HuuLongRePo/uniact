@@ -132,6 +132,11 @@ Dùng bộ account này làm source of truth hiện tại:
 Lưu ý:
 - repo có thể còn một số account `school.edu` để tương thích legacy
 - với smoke, UAT, demo hiện tại, **ưu tiên bộ ANND ở trên**
+- panel tài khoản demo ở trang login và endpoint `/api/auth/demo-accounts` hiện đều bị gate bằng env, không mặc định bật sẵn
+
+Nếu cần bật panel/account demo ở local dev, đặt đồng thời:
+- `ENABLE_DEMO_ACCOUNTS=1`
+- `NEXT_PUBLIC_ENABLE_DEMO_ACCOUNTS=1`
 
 ---
 
