@@ -94,9 +94,10 @@ export default function UserDialog({
       const res = await fetch(`/api/admin/users/${userId}`);
       if (!res.ok) return;
       const data = await res.json();
-      if (!data?.success || !data?.data) return;
+      const resolvedUser = data?.user || data?.data?.user || data?.data || null;
+      if (!data?.success || !resolvedUser) return;
 
-      const u = data.data as any;
+      const u = resolvedUser as any;
       setFormData((prev) => ({
         ...prev,
         email: u.email ?? prev.email,
@@ -123,7 +124,7 @@ export default function UserDialog({
       const params = new URLSearchParams({ page: '1', limit: '1000' });
       const res = await fetch(`/api/admin/classes?${params}`);
       const data = await res.json().catch(() => ({}));
-      if (data?.success) setClasses(data.data || []);
+      if (data?.success) setClasses(data.classes || data.data?.classes || data.data || []);
     } catch (error) {
       console.error('Error fetching classes:', error);
     }
