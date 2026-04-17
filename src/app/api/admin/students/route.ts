@@ -1,19 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getUserFromRequest } from '@/lib/guards';
+import { NextRequest } from 'next/server';
+import { requireApiRole } from '@/lib/guards';
 import { dbAll, dbGet } from '@/lib/database';
-import { ApiError, errorResponse } from '@/lib/api-response';
+import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
 
 // GET /api/admin/students - List students (admin only)
-// Query params:
-//   - page: number (default 1)
-//   - limit: number (default 50)
-//   - search: string (optional) - search by name/email
-//   - class_id: number (optional)
 export async function GET(request: NextRequest) {
   try {
-    const user = await getUserFromRequest(request);
-    if (!user) return errorResponse(ApiError.unauthorized('Unauthorized'));
-    if (user.role !== 'admin') return errorResponse(ApiError.forbidden('Forbidden'));
+    await requireApiRole(request, ['admin']);
 
     const searchParams = request.nextUrl.searchParams;
     const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10) || 1);
@@ -24,7 +17,6 @@ export async function GET(request: NextRequest) {
 
     const offset = (page - 1) * limit;
 
-    // Base filter (used for whole-class summary): role + (optional active-only) + optional class_id
     let whereBase = `WHERE u.role = 'student'`;
     if (!includeInactive) {
       whereBase += ` AND (u.is_active IS NULL OR u.is_active = 1)`;
@@ -35,7 +27,6 @@ export async function GET(request: NextRequest) {
       paramsBase.push(Number(classId));
     }
 
-    // Filtered query (used for list + pagination): base + optional search
     let whereFiltered = whereBase;
     const paramsFiltered: any[] = [...paramsBase];
     if (search) {
@@ -57,8 +48,6 @@ export async function GET(request: NextRequest) {
       [...paramsFiltered]
     )) as any;
 
-    // Optional class-wide summary (ignores search). This is useful for class pages
-    // where stats should not fluctuate when searching.
     const classSummaryRow = classId
       ? ((await dbGet(
           `SELECT
@@ -99,11 +88,10 @@ export async function GET(request: NextRequest) {
       [...paramsFiltered, limit, offset]
     );
 
-    return NextResponse.json({
-      success: true,
-      data: students,
+    return successResponse({
+      students,
       summary: {
-        total: total,
+        total,
         activity_count: summaryRow?.activity_count || 0,
         attended_count: summaryRow?.attended_count || 0,
         total_points: summaryRow?.total_points || 0,
@@ -129,6 +117,11 @@ export async function GET(request: NextRequest) {
     });
   } catch (error: any) {
     console.error('Error fetching students:', error);
-    return errorResponse(ApiError.internalError(error.message || 'Failed to fetch students'));
+    return errorResponse(
+      error instanceof ApiError ||
+        (error && typeof error.status === 'number' && typeof error.code === 'string')
+        ? error
+        : ApiError.internalError('Không thể tải danh sách học viên', { details: error?.message })
+    );
   }
 }
