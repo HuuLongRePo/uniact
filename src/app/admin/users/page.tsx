@@ -214,15 +214,7 @@ export default function AdminUsersPage() {
       const data = await res.json();
 
       if (res.ok) {
-        toast.success(data.message || 'Xóa người dùng thành công');
-        if (data.details?.deletedRecords) {
-          const { participations, achievements, bonusPoints } = data.details.deletedRecords;
-          if (participations + achievements + bonusPoints > 0) {
-            toast.success(
-              `Đã xóa ${participations} tham gia, ${achievements} thành tích, ${bonusPoints} điểm thưởng`
-            );
-          }
-        }
+        toast.success(data.message || 'Đã vô hiệu hóa người dùng');
         fetchUsers();
         setShowDeleteDialog(false);
         setUserToDelete(null);
