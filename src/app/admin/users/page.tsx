@@ -96,8 +96,8 @@ export default function AdminUsersPage() {
       const data = await res.json();
 
       if (data.success) {
-        setUsers(data.data);
-        setTotalPages(data.pagination.totalPages);
+        setUsers(data.users || data.data?.users || data.data || []);
+        setTotalPages(data.pagination?.totalPages || data.data?.pagination?.totalPages || 1);
       }
     } catch (error) {
       console.error('Error fetching users:', error);
@@ -123,9 +123,9 @@ export default function AdminUsersPage() {
       ]);
 
       setTotalCounts({
-        all: allData.pagination?.total || 0,
-        teacher: teacherData.pagination?.total || 0,
-        student: studentData.pagination?.total || 0,
+        all: allData.pagination?.total || allData.data?.pagination?.total || 0,
+        teacher: teacherData.pagination?.total || teacherData.data?.pagination?.total || 0,
+        student: studentData.pagination?.total || studentData.data?.pagination?.total || 0,
       });
     } catch (error) {
       console.error('Error fetching counts:', error);

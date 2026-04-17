@@ -89,8 +89,8 @@ export default function AdminClassesPage() {
       const data = await response.json();
 
       if (response.ok) {
-        setClasses(data.data || []);
-        setTotalPages(data.pagination?.totalPages || 1);
+        setClasses(data.classes || data.data?.classes || data.data || []);
+        setTotalPages(data.pagination?.totalPages || data.data?.pagination?.totalPages || 1);
       }
     } catch (error) {
       console.error('Fetch classes error:', error);
@@ -106,7 +106,7 @@ export default function AdminClassesPage() {
       const data = await response.json();
 
       if (response.ok) {
-        const list = (data.data || []) as any[];
+        const list = (data.users || data.data?.users || data.data || []) as any[];
         setTeachers(
           list.map((t) => ({
             id: t.id,
