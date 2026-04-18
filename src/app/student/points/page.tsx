@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import toast from 'react-hot-toast';
 
 type TabKey = 'activities' | 'types' | 'levels' | 'achievements' | 'awards';
 
@@ -97,11 +98,16 @@ export default function StudentPointsBreakdownPage() {
       const res = await fetch('/api/student/points-breakdown');
       const json = await res.json();
 
-      if (json.success) {
-        setData(json.data);
+      if (!res.ok || !json?.success) {
+        throw new Error(json?.error || json?.message || 'Không thể tải chi tiết điểm rèn luyện');
       }
+
+      const payload = json?.data || json;
+      setData(payload);
     } catch (error) {
       console.error('Error fetching breakdown:', error);
+      toast.error(error instanceof Error ? error.message : 'Không thể tải chi tiết điểm rèn luyện');
+      setData(null);
     } finally {
       setLoading(false);
     }
