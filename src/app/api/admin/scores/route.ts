@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { dbAll } from '@/lib/database';
 import { requireApiRole } from '@/lib/guards';
 import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
+import { getFinalScoreLedgerByStudentIds } from '@/lib/score-ledger';
 
 type StudentScoreRow = {
   user_id: number;
@@ -49,9 +50,6 @@ export async function GET(request: NextRequest) {
         u.email as email,
         u.class_id as class_id,
         c.name as class_name,
-        COALESCE(SUM(CASE WHEN p.attendance_status = 'attended' THEN pc.total_points ELSE 0 END), 0)
-          + COALESCE((SELECT SUM(ss.points) FROM student_scores ss WHERE ss.student_id = u.id AND ss.source LIKE 'adjustment:%'), 0)
-          as total_points,
         COUNT(DISTINCT CASE WHEN p.attendance_status IN ('registered', 'attended') THEN p.activity_id END) as activities_count,
         COUNT(DISTINCT CASE WHEN p.attendance_status = 'attended' THEN p.activity_id END) as participated_count,
         COUNT(DISTINCT CASE WHEN p.attendance_status = 'attended' AND p.achievement_level = 'excellent' THEN p.activity_id END) as excellent_count,
@@ -65,7 +63,6 @@ export async function GET(request: NextRequest) {
       FROM users u
       LEFT JOIN classes c ON u.class_id = c.id
       LEFT JOIN participations p ON u.id = p.student_id
-      LEFT JOIN point_calculations pc ON pc.participation_id = p.id
       WHERE u.role = 'student'
         AND (u.is_active IS NULL OR u.is_active = 1)
     `;
@@ -84,16 +81,8 @@ export async function GET(request: NextRequest) {
 
     query += ` GROUP BY u.id, u.name, u.email, u.class_id, c.name`;
 
-    if (minPoints) {
-      query += ` HAVING total_points >= ?`;
-      params.push(parseInt(minPoints));
-    }
-
-    query += ` ORDER BY total_points DESC, u.name ASC`;
-
-    const scores = ((await dbAll(query, params)) as StudentScoreRow[]).map((score, index) => ({
+    const rawScores = ((await dbAll(query, params)) as StudentScoreRow[]).map((score) => ({
       ...score,
-      total_points: toNumber(score.total_points),
       activities_count: toNumber(score.activities_count),
       participated_count: toNumber(score.participated_count),
       excellent_count: toNumber(score.excellent_count),
@@ -104,8 +93,26 @@ export async function GET(request: NextRequest) {
       adjustment_points: toNumber(score.adjustment_points),
       bonus_adjustment_points: toNumber(score.bonus_adjustment_points),
       penalty_points: toNumber(score.penalty_points),
-      rank: index + 1,
     }));
+
+    const ledgers = await getFinalScoreLedgerByStudentIds(rawScores.map((score) => Number(score.user_id)));
+
+    const scores = rawScores
+      .map((score) => ({
+        ...score,
+        total_points: ledgers.get(Number(score.user_id))?.final_total || 0,
+      }))
+      .filter((score) => !minPoints || score.total_points >= parseInt(minPoints))
+      .sort((left, right) => {
+        if (right.total_points !== left.total_points) {
+          return right.total_points - left.total_points;
+        }
+        return String(left.name).localeCompare(String(right.name));
+      })
+      .map((score, index) => ({
+        ...score,
+        rank: index + 1,
+      }));
 
     const summary = {
       total_students: scores.length,

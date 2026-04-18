@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { requireApiRole } from '@/lib/guards';
 import { dbAll } from '@/lib/database';
 import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
+import { getFinalScoreLedgerByStudentIds } from '@/lib/score-ledger';
 
 type PointsByActivityRow = {
   id: number;
@@ -183,6 +184,8 @@ export async function GET(request: NextRequest) {
       (sum, award) => sum + Number(award.bonus_points || 0),
       0
     );
+    const scoreLedger = await getFinalScoreLedgerByStudentIds([Number(user.id)]);
+    const finalLedger = scoreLedger.get(Number(user.id));
 
     return successResponse({
       byActivity,
@@ -193,7 +196,8 @@ export async function GET(request: NextRequest) {
       summary: {
         ...(summary[0] || {}),
         total_award_points: totalAwardPoints,
-        final_total: (summary[0]?.grand_total || 0) + totalAwardPoints,
+        total_adjustment_points: finalLedger?.adjustment_points || 0,
+        final_total: finalLedger?.final_total || 0,
       },
     });
   } catch (error: any) {

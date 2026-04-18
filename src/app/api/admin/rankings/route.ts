@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { dbAll, dbGet } from '@/lib/database';
 import { requireApiRole } from '@/lib/guards';
 import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
+import { getFinalScoreLedgerByStudentIds } from '@/lib/score-ledger';
 
 interface RankingRecord {
   rank: number;
@@ -123,11 +124,7 @@ export async function GET(req: NextRequest) {
       award_stats AS (
         SELECT
           u.id AS student_id,
-          COALESCE((SELECT COUNT(*) FROM student_awards sa WHERE sa.student_id = u.id), 0) AS award_count,
-          COALESCE(
-            (SELECT SUM(ss.points) FROM student_scores ss WHERE ss.student_id = u.id AND ss.source LIKE 'award:%'),
-            0
-          ) AS award_points
+          COALESCE((SELECT COUNT(*) FROM student_awards sa WHERE sa.student_id = u.id), 0) AS award_count
         FROM users u
         WHERE u.role = 'student'
       )
@@ -139,27 +136,17 @@ export async function GET(req: NextRequest) {
         sb.class_name,
         COALESCE(ast.activity_points, 0) AS activity_points,
         COALESCE(ast.activity_count, 0) AS activity_count,
-        COALESCE(aw.award_count, 0) AS award_count,
-        COALESCE(aw.award_points, 0) AS award_points
+        COALESCE(aw.award_count, 0) AS award_count
       FROM student_base sb
       LEFT JOIN activity_stats ast ON sb.student_id = ast.student_id
       LEFT JOIN award_stats aw ON sb.student_id = aw.student_id
-      ORDER BY
-        CASE WHEN ? = 'activity_count' THEN COALESCE(ast.activity_count, 0) END DESC,
-        CASE WHEN ? = 'award_count' THEN COALESCE(aw.award_count, 0) END DESC,
-        CASE
-          WHEN ? = 'total_points' THEN COALESCE(ast.activity_points, 0) + COALESCE(aw.award_points, 0)
-        END DESC,
-        sb.student_name ASC
+      ORDER BY sb.student_name ASC
       LIMIT ? OFFSET ?
     `;
 
     const rankingRows = (await dbAll(rankingQuery, [
       ...studentParams,
       ...activityParams,
-      sortBy,
-      sortBy,
-      sortBy,
       limit,
       offset,
     ])) as Array<{
@@ -171,29 +158,50 @@ export async function GET(req: NextRequest) {
       activity_points: number;
       activity_count: number;
       award_count: number;
-      award_points: number;
     }>;
 
-    const rankedResults: RankingRecord[] = rankingRows.map((row, index) => {
-      const totalPoints = Number(row.activity_points || 0) + Number(row.award_points || 0);
-      const activityCount = Number(row.activity_count || 0);
+    const ledgers = await getFinalScoreLedgerByStudentIds(
+      rankingRows.map((row) => Number(row.student_id))
+    );
 
-      return {
+    const rankedResults: RankingRecord[] = rankingRows
+      .map((row) => {
+        const activityCount = Number(row.activity_count || 0);
+        const ledger = ledgers.get(Number(row.student_id));
+        const totalPoints = ledger?.final_total || 0;
+
+        return {
+          rank: 0,
+          student_id: row.student_id,
+          student_name: row.student_name,
+          student_email: row.student_email,
+          class_id: row.class_id,
+          class_name: row.class_name || 'N/A',
+          total_points: totalPoints,
+          activity_count: activityCount,
+          award_count: Number(row.award_count || 0),
+          avg_points:
+            activityCount > 0
+              ? Number((Number(row.activity_points || 0) / activityCount).toFixed(2))
+              : 0,
+        };
+      })
+      .sort((left, right) => {
+        if (sortBy === 'activity_count' && right.activity_count !== left.activity_count) {
+          return right.activity_count - left.activity_count;
+        }
+        if (sortBy === 'award_count' && right.award_count !== left.award_count) {
+          return right.award_count - left.award_count;
+        }
+        if (right.total_points !== left.total_points) {
+          return right.total_points - left.total_points;
+        }
+        return String(left.student_name).localeCompare(String(right.student_name));
+      })
+      .map((row, index) => ({
+        ...row,
         rank: offset + index + 1,
-        student_id: row.student_id,
-        student_name: row.student_name,
-        student_email: row.student_email,
-        class_id: row.class_id,
-        class_name: row.class_name || 'N/A',
-        total_points: totalPoints,
-        activity_count: activityCount,
-        award_count: Number(row.award_count || 0),
-        avg_points:
-          activityCount > 0
-            ? Number((Number(row.activity_points || 0) / activityCount).toFixed(2))
-            : 0,
-      };
-    });
+      }));
 
     return successResponse({
       rankings: rankedResults,

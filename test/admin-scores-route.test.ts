@@ -20,56 +20,66 @@ describe('GET /api/admin/scores', () => {
   })
 
   it('returns score summary and insights with bonus/penalty breakdown', async () => {
-    mockDbAll
-      .mockResolvedValueOnce([
-        {
-          user_id: 10,
-          name: 'Nguyen Van A',
-          email: 'a@example.com',
-          class_id: 1,
-          class_name: 'CTK42',
-          total_points: 520,
-          activities_count: 8,
-          participated_count: 7,
-          excellent_count: 3,
-          good_count: 2,
-          average_count: 2,
-          awards_count: 1,
-          award_points: 20,
-          adjustment_points: -15,
-          bonus_adjustment_points: 5,
-          penalty_points: 20,
-        },
-        {
-          user_id: 11,
-          name: 'Tran Thi B',
-          email: 'b@example.com',
-          class_id: 1,
-          class_name: 'CTK42',
-          total_points: 450,
-          activities_count: 7,
-          participated_count: 6,
-          excellent_count: 2,
-          good_count: 2,
-          average_count: 2,
-          awards_count: 0,
-          award_points: 0,
-          adjustment_points: 10,
-          bonus_adjustment_points: 10,
-          penalty_points: 0,
-        },
-      ])
-      .mockResolvedValueOnce([
-        {
-          id: 100,
-          student_id: 10,
-          student_name: 'Nguyen Van A',
-          class_name: 'CTK42',
-          points: -10,
-          source: 'adjustment:late submission',
-          calculated_at: '2027-01-10T08:00:00.000Z',
-        },
-      ])
+    mockDbAll.mockImplementation(async (sql: string) => {
+      if (sql.includes('FROM users u') && sql.includes('GROUP BY u.id')) {
+        return [
+          {
+            user_id: 10,
+            name: 'Nguyen Van A',
+            email: 'a@example.com',
+            class_id: 1,
+            class_name: 'CTK42',
+            activities_count: 8,
+            participated_count: 7,
+            excellent_count: 3,
+            good_count: 2,
+            average_count: 2,
+            awards_count: 1,
+            award_points: 20,
+            adjustment_points: -15,
+            bonus_adjustment_points: 5,
+            penalty_points: 20,
+          },
+          {
+            user_id: 11,
+            name: 'Tran Thi B',
+            email: 'b@example.com',
+            class_id: 1,
+            class_name: 'CTK42',
+            activities_count: 7,
+            participated_count: 6,
+            excellent_count: 2,
+            good_count: 2,
+            average_count: 2,
+            awards_count: 0,
+            award_points: 0,
+            adjustment_points: 10,
+            bonus_adjustment_points: 10,
+            penalty_points: 0,
+          },
+        ]
+      }
+      if (sql.includes('WITH participation_totals AS')) {
+        return [
+          { student_id: 10, participation_points: 515, award_points: 20, adjustment_points: -15, final_total: 520 },
+          { student_id: 11, participation_points: 440, award_points: 0, adjustment_points: 10, final_total: 450 },
+        ]
+      }
+      if (sql.includes('FROM student_scores ss')) {
+        return [
+          {
+            id: 100,
+            student_id: 10,
+            student_name: 'Nguyen Van A',
+            class_name: 'CTK42',
+            points: -10,
+            source: 'adjustment:late submission',
+            calculated_at: '2027-01-10T08:00:00.000Z',
+          },
+        ]
+      }
+      return []
+    })
 
     const route = await import('../src/app/api/admin/scores/route')
     const response = await route.GET({ nextUrl: { searchParams: new URLSearchParams() } } as any)
@@ -103,7 +113,18 @@ describe('GET /api/admin/scores', () => {
   })
 
   it('applies search, class, and min-points filters in the scores query', async () => {
-    mockDbAll.mockResolvedValueOnce([]).mockResolvedValueOnce([])
+    mockDbAll.mockImplementation(async (sql: string) => {
+      if (sql.includes('FROM users u') && sql.includes('GROUP BY u.id')) {
+        return []
+      }
+      if (sql.includes('WITH participation_totals AS')) {
+        return []
+      }
+      if (sql.includes('FROM student_scores ss')) {
+        return []
+      }
+      return []
+    })
 
     const route = await import('../src/app/api/admin/scores/route')
     const response = await route.GET({
@@ -120,10 +141,10 @@ describe('GET /api/admin/scores', () => {
     const [query, params] = mockDbAll.mock.calls[0] as [string, any[]]
     expect(query).toContain('u.name LIKE ? OR u.email LIKE ?')
     expect(query).toContain('u.class_id = ?')
-    expect(query).toContain('HAVING total_points >= ?')
+    expect(query).not.toContain('HAVING total_points >= ?')
     expect(query).toContain("p.attendance_status = 'attended'")
     expect(query).not.toContain("p.attendance_status IN ('present', 'attended')")
-    expect(params).toEqual(['%Nguyen%', '%Nguyen%', '3', 200])
+    expect(params).toEqual(['%Nguyen%', '%Nguyen%', '3'])
   })
 
   it('preserves canonical forbidden errors from guard', async () => {
@@ -138,28 +159,38 @@ describe('GET /api/admin/scores', () => {
   })
 
   it('exports csv with new bonus/penalty columns', async () => {
-    mockDbAll
-      .mockResolvedValueOnce([
-        {
-          user_id: 10,
-          name: 'Nguyen Van A',
-          email: 'a@example.com',
-          class_id: 1,
-          class_name: 'CTK42',
-          total_points: 520,
-          activities_count: 8,
-          participated_count: 7,
-          excellent_count: 3,
-          good_count: 2,
-          average_count: 2,
-          awards_count: 1,
-          award_points: 20,
-          adjustment_points: -15,
-          bonus_adjustment_points: 5,
-          penalty_points: 20,
-        },
-      ])
-      .mockResolvedValueOnce([])
+    mockDbAll.mockImplementation(async (sql: string) => {
+      if (sql.includes('FROM users u') && sql.includes('GROUP BY u.id')) {
+        return [
+          {
+            user_id: 10,
+            name: 'Nguyen Van A',
+            email: 'a@example.com',
+            class_id: 1,
+            class_name: 'CTK42',
+            activities_count: 8,
+            participated_count: 7,
+            excellent_count: 3,
+            good_count: 2,
+            average_count: 2,
+            awards_count: 1,
+            award_points: 20,
+            adjustment_points: -15,
+            bonus_adjustment_points: 5,
+            penalty_points: 20,
+          },
+        ]
+      }
+      if (sql.includes('WITH participation_totals AS')) {
+        return [
+          { student_id: 10, participation_points: 515, award_points: 20, adjustment_points: -15, final_total: 520 },
+        ]
+      }
+      if (sql.includes('FROM student_scores ss')) {
+        return []
+      }
+      return []
+    })
 
     const route = await import('../src/app/api/admin/scores/route')
     const response = await route.GET({ nextUrl: { searchParams: new URLSearchParams([['export', 'csv']]) } } as any)
