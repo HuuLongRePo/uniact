@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { dbRun, dbGet, withTransaction } from '@/lib/database';
 import { PointCalculationService } from '@/lib/scoring';
-import { getUserFromSession } from '@/lib/auth';
+import { requireApiRole } from '@/lib/guards';
+import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
 
 /**
  * POST /api/participations/[id]/evaluate
@@ -11,15 +12,7 @@ import { getUserFromSession } from '@/lib/auth';
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const user = await getUserFromSession();
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Chỉ teacher và admin mới được evaluate
-    if (!['admin', 'teacher', 'department_head'].includes(user.role)) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
+    const user = await requireApiRole(request, ['admin', 'teacher']);
 
     const participationId = parseInt(id);
     const body = await request.json();
@@ -29,34 +22,26 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const penaltyPoints = body?.penaltyPoints ?? body?.penalty_points;
     const awardType = body?.awardType ?? body?.award_type;
 
-    // Validate achievement level
     const validLevels = ['excellent', 'good', 'participated'];
     if (!achievementLevel || !validLevels.includes(achievementLevel)) {
-      return NextResponse.json(
-        { error: 'Invalid achievement level. Must be: excellent, good, or participated' },
-        { status: 400 }
+      return errorResponse(
+        ApiError.validation('Mức đánh giá không hợp lệ. Phải là: excellent, good, hoặc participated')
       );
     }
 
-    // Check participation exists và đã attended
     const participation = await dbGet('SELECT * FROM participations WHERE id = ?', [
       participationId,
     ]);
 
     if (!participation) {
-      return NextResponse.json({ error: 'Participation not found' }, { status: 404 });
+      return errorResponse(ApiError.notFound('Không tìm thấy bản ghi tham gia'));
     }
 
     if (participation.attendance_status !== 'attended') {
-      return NextResponse.json(
-        { error: 'Can only evaluate attended participations' },
-        { status: 400 }
-      );
+      return errorResponse(ApiError.validation('Chỉ có thể đánh giá các lượt tham gia đã điểm danh'));
     }
 
-    // 🔒 TRANSACTION: All evaluation operations must succeed together
     const result = await withTransaction(async () => {
-      // Update participation với achievement level
       await dbRun(
         `UPDATE participations 
          SET achievement_level = ?,
@@ -67,7 +52,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         [achievementLevel, feedback || null, user.id, participationId]
       );
 
-      // Xử lý award nếu có
       let totalBonusPoints = bonusPoints || 0;
       if (awardType) {
         const awardBonus = (await dbGet(
@@ -78,14 +62,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         if (awardBonus) {
           totalBonusPoints += awardBonus.bonus_points;
 
-          // Ensure award_types row exists for this award_bonuses entry (best-effort)
           const awardTypeName = (awardBonus.description ||
             awardBonus.award_type ||
             awardType) as string;
-          await dbRun(
-            'INSERT OR IGNORE INTO award_types (name, description, min_points) VALUES (?, ?, 0)',
-            [awardTypeName, `Award bonus (${awardType})`]
-          );
+          await dbRun('INSERT OR IGNORE INTO award_types (name, description, min_points) VALUES (?, ?, 0)', [
+            awardTypeName,
+            `Award bonus (${awardType})`,
+          ]);
 
           const resolvedAwardType = (await dbGet(
             'SELECT id FROM award_types WHERE name = ? LIMIT 1',
@@ -111,18 +94,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         }
       }
 
-      // 🔥 AUTO-TRIGGER CALCULATE POINTS
-      console.warn(`🎯 Evaluating participation ${participationId} as ${achievementLevel}`);
       const calculationResult = await PointCalculationService.calculatePoints({
         participationId,
         bonusPoints: totalBonusPoints,
         penaltyPoints: penaltyPoints || 0,
       });
 
-      // Save calculation
       await PointCalculationService.saveCalculation(participationId, calculationResult);
 
-      // Send notification to student
       await dbRun(
         `INSERT INTO notifications (user_id, type, title, message, related_table, related_id, is_read)
          VALUES (?, 'achievement', ?, ?, 'participations', ?, 0)`,
@@ -134,7 +113,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         ]
       );
 
-      // Audit log
       await dbRun(
         `INSERT INTO audit_logs (actor_id, action, target_table, target_id, details)
          VALUES (?, 'evaluate_achievement', 'participations', ?, ?)`,
@@ -148,26 +126,33 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return calculationResult;
     });
 
-    return NextResponse.json({
-      success: true,
-      data: {
+    const evaluatedAt = new Date().toISOString();
+
+    return successResponse(
+      {
         participation: {
           id: participationId,
           achievementLevel,
+          achievement_level: achievementLevel,
           feedback,
           awardType: awardType || null,
-          evaluatedAt: new Date().toISOString(),
+          award_type: awardType || null,
+          evaluatedAt,
+          evaluated_at: evaluatedAt,
           evaluatedBy: user.id,
+          evaluated_by: user.id,
         },
         points: result,
       },
-      message: `Evaluated as ${achievementLevel}. Calculated ${result.totalPoints} points.`,
-    });
+      `Đã đánh giá ${achievementLevel} và tính ${result.totalPoints} điểm.`
+    );
   } catch (error: any) {
     console.error('Error evaluating participation:', error);
-    return NextResponse.json(
-      { error: error.message || 'Failed to evaluate participation' },
-      { status: 500 }
+    return errorResponse(
+      error instanceof ApiError ||
+        (error && typeof error.status === 'number' && typeof error.code === 'string')
+        ? error
+        : ApiError.internalError('Không thể đánh giá lượt tham gia', { details: error?.message })
     );
   }
 }
@@ -178,12 +163,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
  */
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = await params;
-    const user = await getUserFromSession();
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    await requireApiRole(request, ['admin', 'teacher', 'student']);
 
+    const { id } = await params;
     const participationId = parseInt(id);
 
     const participation = await dbGet(
@@ -202,18 +184,17 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     );
 
     if (!participation) {
-      return NextResponse.json({ error: 'Participation not found' }, { status: 404 });
+      return errorResponse(ApiError.notFound('Không tìm thấy bản ghi tham gia'));
     }
 
-    return NextResponse.json({
-      success: true,
-      data: participation,
-    });
+    return successResponse({ participation });
   } catch (error: any) {
     console.error('Error getting evaluation:', error);
-    return NextResponse.json(
-      { error: error.message || 'Failed to get evaluation' },
-      { status: 500 }
+    return errorResponse(
+      error instanceof ApiError ||
+        (error && typeof error.status === 'number' && typeof error.code === 'string')
+        ? error
+        : ApiError.internalError('Không thể lấy thông tin đánh giá', { details: error?.message })
     );
   }
 }
