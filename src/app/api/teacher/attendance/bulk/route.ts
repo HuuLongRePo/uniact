@@ -92,16 +92,15 @@ export async function POST(request: NextRequest) {
           );
         }
 
-        // Tự động tính điểm
-        await PointCalculationService.calculatePoints({
-          participationId: participation.id,
-          bonusPoints: 0,
-          penaltyPoints: 0,
-        });
+        // Tự động tính và lưu điểm khi attendance đã được xác nhận
+        const calculation = await PointCalculationService.autoCalculateAfterEvaluation(
+          participation.id
+        );
 
         results.success.push({
           student_id: studentId,
           participation_id: participation.id,
+          points: calculation.totalPoints,
         });
       } catch (error: any) {
         results.failed.push({
@@ -135,6 +134,11 @@ export async function POST(request: NextRequest) {
     );
   } catch (error: any) {
     console.error('Lỗi điểm danh hàng loạt:', error);
-    return errorResponse(ApiError.internalError(error.message || 'Lỗi máy chủ'));
+    return errorResponse(
+      error instanceof ApiError ||
+        (error && typeof error.status === 'number' && typeof error.code === 'string')
+        ? error
+        : ApiError.internalError(error.message || 'Lỗi máy chủ')
+    );
   }
 }
