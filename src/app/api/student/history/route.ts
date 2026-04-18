@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getUserFromSession } from '@/lib/auth';
+import { NextRequest } from 'next/server';
+import { requireApiRole } from '@/lib/guards';
 import { dbAll } from '@/lib/database';
+import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
 
 type StudentHistoryRow = {
   id: number;
@@ -49,10 +50,7 @@ type StudentHistorySummaryRow = {
 // GET /api/student/history - Get student's participation history
 export async function GET(request: NextRequest) {
   try {
-    const user = await getUserFromSession();
-    if (!user || user.role !== 'student') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
+    const user = await requireApiRole(request, ['student']);
 
     const searchParams = request.nextUrl.searchParams;
     const status = searchParams.get('status') || ''; // registered, attended, absent
@@ -137,40 +135,26 @@ export async function GET(request: NextRequest) {
       [user.id]
     )) as StudentHistorySummaryRow[];
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        history,
-        summary: summary[0] || {
-          total_participations: 0,
-          registered_count: 0,
-          attended_count: 0,
-          absent_count: 0,
-          excellent_count: 0,
-          good_count: 0,
-          participated_count: 0,
-          total_points_earned: 0,
-        },
+    return successResponse({
+      history,
+      summary: summary[0] || {
+        total_participations: 0,
+        registered_count: 0,
+        attended_count: 0,
+        absent_count: 0,
+        excellent_count: 0,
+        good_count: 0,
+        participated_count: 0,
+        total_points_earned: 0,
       },
     });
-  } catch (error: unknown) {
+  } catch (error: any) {
     console.error('Error fetching student history:', error);
-    // Trả về mặc định rỗng để tránh 500 trong smoke test
-    return NextResponse.json({
-      success: true,
-      data: {
-        history: [],
-        summary: {
-          total_participations: 0,
-          registered_count: 0,
-          attended_count: 0,
-          absent_count: 0,
-          excellent_count: 0,
-          good_count: 0,
-          participated_count: 0,
-          total_points_earned: 0,
-        },
-      },
-    });
+    return errorResponse(
+      error instanceof ApiError ||
+        (error && typeof error.status === 'number' && typeof error.code === 'string')
+        ? error
+        : ApiError.internalError('Không thể tải lịch sử tham gia', { details: error?.message })
+    );
   }
 }
