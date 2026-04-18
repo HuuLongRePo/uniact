@@ -12,22 +12,39 @@ describe('GET /api/teacher/students', () => {
     }));
 
     vi.doMock('@/lib/database', () => ({
-      dbAll: vi
-        .fn()
-        .mockResolvedValueOnce([{ class_id: 10 }])
-        .mockResolvedValueOnce([
-          {
-            id: 201,
-            email: 'student@example.com',
-            name: 'Nguyen Van A',
-            avatar_url: null,
-            class_id: 10,
-            class_name: 'CTK42A',
-            total_points: 25,
-            activities_count: 4,
-          },
-        ])
-        .mockResolvedValueOnce([{ id: 10, name: 'CTK42A', grade: 'K42' }]),
+      dbAll: vi.fn(async (sql: string) => {
+        if (sql.includes('SELECT DISTINCT c.id as class_id')) {
+          return [{ class_id: 10 }];
+        }
+        if (sql.includes('FROM users u') && sql.includes('GROUP BY u.id')) {
+          return [
+            {
+              id: 201,
+              email: 'student@example.com',
+              name: 'Nguyen Van A',
+              avatar_url: null,
+              class_id: 10,
+              class_name: 'CTK42A',
+              activities_count: 4,
+            },
+          ];
+        }
+        if (sql.includes('WITH participation_totals AS')) {
+          return [
+            {
+              student_id: 201,
+              participation_points: 20,
+              award_points: 3,
+              adjustment_points: 2,
+              final_total: 25,
+            },
+          ];
+        }
+        if (sql.includes('SELECT c.id, c.name, c.grade')) {
+          return [{ id: 10, name: 'CTK42A', grade: 'K42' }];
+        }
+        return [];
+      }),
     }));
 
     const route = await import('../src/app/api/teacher/students/route');

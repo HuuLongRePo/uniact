@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { requireApiRole } from '@/lib/guards';
 import { dbAll, dbGet } from '@/lib/database';
 import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
+import { getFinalScoreLedgerByStudentIds } from '@/lib/score-ledger';
 
 // GET /api/admin/students - List students (admin only)
 export async function GET(request: NextRequest) {
@@ -35,37 +36,12 @@ export async function GET(request: NextRequest) {
       paramsFiltered.push(p, p, p, p, p);
     }
 
-    const summaryRow = (await dbGet(
-      `SELECT
-        COUNT(*) as total,
-        COALESCE(SUM((SELECT COUNT(*) FROM participations p WHERE p.student_id = u.id)), 0) as activity_count,
-        COALESCE(SUM((SELECT COUNT(*) FROM participations p WHERE p.student_id = u.id AND p.attendance_status = 'attended')), 0) as attended_count,
-        COALESCE(SUM(COALESCE((SELECT SUM(points) FROM student_scores ss WHERE ss.student_id = u.id), 0)), 0) as total_points,
-        COALESCE(AVG(COALESCE((SELECT SUM(points) FROM student_scores ss WHERE ss.student_id = u.id), 0)), 0) as avg_points,
-        COALESCE(SUM((SELECT COUNT(*) FROM student_awards sa WHERE sa.student_id = u.id)), 0) as award_count
-      FROM users u
-      ${whereFiltered}`,
+    const total = (await dbGet(
+      `SELECT COUNT(*) as total FROM users u ${whereFiltered}`,
       [...paramsFiltered]
-    )) as any;
+    )) as { total?: number } | undefined;
 
-    const classSummaryRow = classId
-      ? ((await dbGet(
-          `SELECT
-            COUNT(*) as total,
-            COALESCE(SUM((SELECT COUNT(*) FROM participations p WHERE p.student_id = u.id)), 0) as activity_count,
-            COALESCE(SUM((SELECT COUNT(*) FROM participations p WHERE p.student_id = u.id AND p.attendance_status = 'attended')), 0) as attended_count,
-            COALESCE(SUM(COALESCE((SELECT SUM(points) FROM student_scores ss WHERE ss.student_id = u.id), 0)), 0) as total_points,
-            COALESCE(AVG(COALESCE((SELECT SUM(points) FROM student_scores ss WHERE ss.student_id = u.id), 0)), 0) as avg_points,
-            COALESCE(SUM((SELECT COUNT(*) FROM student_awards sa WHERE sa.student_id = u.id)), 0) as award_count
-          FROM users u
-          ${whereBase}`,
-          [...paramsBase]
-        )) as any)
-      : null;
-
-    const total = summaryRow?.total || 0;
-
-    const students = await dbAll(
+    const students = (await dbAll(
       `SELECT 
         u.id,
         u.email,
@@ -78,36 +54,62 @@ export async function GET(request: NextRequest) {
         u.created_at,
         (SELECT COUNT(*) FROM participations WHERE student_id = u.id) as activity_count,
         (SELECT COUNT(*) FROM participations WHERE student_id = u.id AND attendance_status = 'attended') as attended_count,
-        (SELECT COUNT(*) FROM student_awards WHERE student_id = u.id) as award_count,
-        COALESCE((SELECT SUM(points) FROM student_scores WHERE student_id = u.id), 0) as total_points
+        (SELECT COUNT(*) FROM student_awards WHERE student_id = u.id) as award_count
       FROM users u
       LEFT JOIN classes c ON u.class_id = c.id
       ${whereFiltered}
       ORDER BY u.created_at DESC, u.id DESC
       LIMIT ? OFFSET ?`,
       [...paramsFiltered, limit, offset]
+    )) as Array<any>;
+
+    const ledgers = await getFinalScoreLedgerByStudentIds(students.map((student) => Number(student.id)));
+    const studentsWithTotals = students.map((student) => ({
+      ...student,
+      total_points: ledgers.get(Number(student.id))?.final_total || 0,
+    }));
+
+    const filteredStudentIds = (await dbAll(
+      `SELECT u.id FROM users u ${whereFiltered}`,
+      [...paramsFiltered]
+    )) as Array<{ id: number }>;
+    const filteredLedgers = await getFinalScoreLedgerByStudentIds(filteredStudentIds.map((student) => Number(student.id)));
+
+    const filteredTotals = filteredStudentIds.map(
+      (student) => filteredLedgers.get(Number(student.id))?.final_total || 0
     );
 
+    const filteredAwardCounts = studentsWithTotals.reduce(
+      (sum, student) => sum + Number(student.award_count || 0),
+      0
+    );
+
+    const classSummary = classId
+      ? (() => {
+          const classIds = filteredStudentIds.map((student) => Number(student.id));
+          const classTotals = classIds.map((id) => filteredLedgers.get(id)?.final_total || 0);
+          return {
+            total: classIds.length,
+            activity_count: studentsWithTotals.reduce((sum, student) => sum + Number(student.activity_count || 0), 0),
+            attended_count: studentsWithTotals.reduce((sum, student) => sum + Number(student.attended_count || 0), 0),
+            total_points: classTotals.reduce((sum, points) => sum + points, 0),
+            avg_points: classTotals.length > 0 ? classTotals.reduce((sum, points) => sum + points, 0) / classTotals.length : 0,
+            award_count: filteredAwardCounts,
+          };
+        })()
+      : null;
+
     return successResponse({
-      students,
+      students: studentsWithTotals,
       summary: {
-        total,
-        activity_count: summaryRow?.activity_count || 0,
-        attended_count: summaryRow?.attended_count || 0,
-        total_points: summaryRow?.total_points || 0,
-        avg_points: summaryRow?.avg_points || 0,
-        award_count: summaryRow?.award_count || 0,
+        total: total?.total || 0,
+        activity_count: studentsWithTotals.reduce((sum, student) => sum + Number(student.activity_count || 0), 0),
+        attended_count: studentsWithTotals.reduce((sum, student) => sum + Number(student.attended_count || 0), 0),
+        total_points: filteredTotals.reduce((sum, points) => sum + points, 0),
+        avg_points: filteredTotals.length > 0 ? filteredTotals.reduce((sum, points) => sum + points, 0) / filteredTotals.length : 0,
+        award_count: filteredAwardCounts,
       },
-      classSummary: classSummaryRow
-        ? {
-            total: classSummaryRow?.total || 0,
-            activity_count: classSummaryRow?.activity_count || 0,
-            attended_count: classSummaryRow?.attended_count || 0,
-            total_points: classSummaryRow?.total_points || 0,
-            avg_points: classSummaryRow?.avg_points || 0,
-            award_count: classSummaryRow?.award_count || 0,
-          }
-        : null,
+      classSummary,
       pagination: {
         page,
         limit,

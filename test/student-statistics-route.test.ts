@@ -14,9 +14,6 @@ describe('GET /api/student/statistics', () => {
       if (sql.includes("attendance_status = 'attended'")) {
         return { count: 4 };
       }
-      if (sql.includes('SELECT COALESCE(SUM(points), 0) as total')) {
-        return { total: 35 };
-      }
       if (sql.includes('SELECT points')) {
         return { points: 12 };
       }
@@ -29,11 +26,19 @@ describe('GET /api/student/statistics', () => {
       return { count: 0 };
     });
 
-    const mockDbAll = vi.fn(async () => [
-      { id: 10, total_points: 50 },
-      { id: 11, total_points: 35 },
-      { id: 12, total_points: 10 },
-    ]);
+    const mockDbAll = vi.fn(async (sql: string) => {
+      if (sql.includes("SELECT id FROM users WHERE role = 'student'")) {
+        return [{ id: 10 }, { id: 11 }, { id: 12 }];
+      }
+      if (sql.includes('WITH participation_totals AS')) {
+        return [
+          { student_id: 10, participation_points: 45, award_points: 5, adjustment_points: 0, final_total: 50 },
+          { student_id: 11, participation_points: 30, award_points: 10, adjustment_points: -5, final_total: 35 },
+          { student_id: 12, participation_points: 10, award_points: 0, adjustment_points: 0, final_total: 10 },
+        ];
+      }
+      return [];
+    });
 
     vi.doMock('@/lib/guards', () => ({
       requireApiRole: async () => ({ id: 11, role: 'student' }),

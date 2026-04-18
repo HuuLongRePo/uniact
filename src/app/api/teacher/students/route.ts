@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { dbAll } from '@/lib/database';
 import { ApiError, successResponse, errorResponse } from '@/lib/api-response';
 import { requireApiRole } from '@/lib/guards';
+import { getFinalScoreLedgerByStudentIds } from '@/lib/score-ledger';
 
 /**
  * GET /api/teacher/students
@@ -57,8 +58,8 @@ export async function GET(request: NextRequest) {
       params.push(searchPattern, searchPattern);
     }
 
-    // Query students with scores
-    const students = (await dbAll(
+    // Query students with activity counts, then overlay canonical final totals
+    const studentRows = (await dbAll(
       `
       SELECT 
         u.id,
@@ -67,17 +68,15 @@ export async function GET(request: NextRequest) {
         u.avatar_url,
         u.class_id,
         c.name as class_name,
-        COALESCE(SUM(ss.points), 0) as total_points,
         COUNT(DISTINCT p.id) as activities_count
       FROM users u
       LEFT JOIN classes c ON c.id = u.class_id
       LEFT JOIN participations p ON p.student_id = u.id 
         AND p.attendance_status IN ('attended', 'registered')
-      LEFT JOIN student_scores ss ON ss.student_id = u.id
       WHERE u.role = 'student'
         AND ${whereClause}
       GROUP BY u.id, u.email, u.name, u.avatar_url, u.class_id, c.name
-      ORDER BY total_points DESC, u.name ASC
+      ORDER BY u.name ASC
       `,
       params
     )) as Array<{
@@ -87,9 +86,21 @@ export async function GET(request: NextRequest) {
       avatar_url?: string;
       class_id: number;
       class_name: string;
-      total_points: number;
       activities_count: number;
     }>;
+
+    const ledgers = await getFinalScoreLedgerByStudentIds(studentRows.map((student) => student.id));
+    const students = studentRows
+      .map((student) => ({
+        ...student,
+        total_points: ledgers.get(Number(student.id))?.final_total || 0,
+      }))
+      .sort((left, right) => {
+        if (right.total_points !== left.total_points) {
+          return right.total_points - left.total_points;
+        }
+        return String(left.name).localeCompare(String(right.name));
+      });
 
     // Lấy danh sách classes để làm filter dropdown
     const classes = (await dbAll(

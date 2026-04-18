@@ -3,6 +3,7 @@ import { requireApiRole } from '@/lib/guards';
 import { dbAll, dbGet } from '@/lib/database';
 import { calculateRank } from '@/lib/calculations';
 import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
+import { getFinalScoreLedgerByStudentIds } from '@/lib/score-ledger';
 
 /**
  * GET /api/student/statistics
@@ -35,16 +36,9 @@ export async function GET(request: NextRequest) {
       )) as { count: number };
     } catch {}
 
-    // Tổng điểm từ bảng student_scores
-    let scoreResult: { total: number } = { total: 0 };
-    try {
-      scoreResult = (await dbGet(
-        `SELECT COALESCE(SUM(points), 0) as total 
-         FROM student_scores 
-         WHERE student_id = ?`,
-        [user.id]
-      )) as { total: number };
-    } catch {}
+    const scoreLedger = await getFinalScoreLedgerByStudentIds([Number(user.id)]);
+    const currentStudentLedger = scoreLedger.get(Number(user.id));
+    const currentStudentScore = currentStudentLedger?.final_total || 0;
 
     // Điểm gần nhất (từ student_scores)
     let recentScoreResult: { points: number } | null = null;
@@ -84,24 +78,21 @@ export async function GET(request: NextRequest) {
       )) as { count: number };
     } catch {}
 
-    // Xếp hạng theo tổng điểm (từ student_scores)
+    // Xếp hạng theo tổng điểm cuối cùng (participation + award + adjustment)
     let allStudentsScores: Array<{ id: number; total_points: number }>;
     try {
-      allStudentsScores = (await dbAll(
-        `SELECT 
-          u.id,
-          COALESCE(SUM(ss.points), 0) as total_points
-         FROM users u
-         LEFT JOIN student_scores ss ON u.id = ss.student_id
-         WHERE u.role = 'student'
-         GROUP BY u.id
-         ORDER BY total_points DESC`
-      )) as Array<{ id: number; total_points: number }>;
+      const studentRows = (await dbAll(
+        `SELECT id FROM users WHERE role = 'student' ORDER BY id ASC`
+      )) as Array<{ id: number }>;
+      const allLedgers = await getFinalScoreLedgerByStudentIds(studentRows.map((student) => student.id));
+      allStudentsScores = studentRows.map((student) => ({
+        id: student.id,
+        total_points: allLedgers.get(Number(student.id))?.final_total || 0,
+      }));
     } catch {
       allStudentsScores = [];
     }
 
-    const currentStudentScore = scoreResult.total;
     let rank = null;
     const totalStudents = allStudentsScores.length;
 

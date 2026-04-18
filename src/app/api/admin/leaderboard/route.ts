@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { dbAll } from '@/lib/database';
 import { requireApiRole } from '@/lib/guards';
 import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
+import { getFinalScoreLedgerByStudentIds } from '@/lib/score-ledger';
 
 export async function GET(request: NextRequest) {
   try {
@@ -11,27 +12,51 @@ export async function GET(request: NextRequest) {
     const rawLimit = Number(searchParams.get('limit') || '20');
     const limit = Number.isFinite(rawLimit) ? Math.min(Math.max(Math.trunc(rawLimit), 1), 100) : 20;
 
-    const leaderboard = await dbAll(
+    const studentRows = (await dbAll(
       `
       SELECT 
-        ROW_NUMBER() OVER (ORDER BY COALESCE(SUM(COALESCE(pc.total_points, p.points_earned, 0)), 0) DESC) as rank,
         u.id as user_id,
         u.name,
         u.email,
         c.name as class_name,
-        COALESCE(SUM(COALESCE(pc.total_points, p.points_earned, 0)), 0) as total_points,
         COUNT(DISTINCT CASE WHEN p.attendance_status = 'attended' THEN p.activity_id END) as activities_count
       FROM users u
       LEFT JOIN classes c ON u.class_id = c.id
-      LEFT JOIN participations p ON u.id = p.student_id AND p.attendance_status = 'attended'
-      LEFT JOIN point_calculations pc ON pc.participation_id = p.id
+      LEFT JOIN participations p ON u.id = p.student_id
       WHERE u.role = 'student'
       GROUP BY u.id, u.name, u.email, c.name
-      ORDER BY total_points DESC, u.name ASC
-      LIMIT ?
-    `,
-      [limit]
-    );
+      ORDER BY u.name ASC
+    `
+    )) as Array<{
+      user_id: number;
+      name: string;
+      email: string;
+      class_name: string | null;
+      activities_count: number;
+    }>;
+
+    const ledgers = await getFinalScoreLedgerByStudentIds(studentRows.map((student) => student.user_id));
+
+    const leaderboard = studentRows
+      .map((student) => ({
+        user_id: student.user_id,
+        name: student.name,
+        email: student.email,
+        class_name: student.class_name,
+        total_points: ledgers.get(Number(student.user_id))?.final_total || 0,
+        activities_count: Number(student.activities_count || 0),
+      }))
+      .sort((left, right) => {
+        if (right.total_points !== left.total_points) {
+          return right.total_points - left.total_points;
+        }
+        return String(left.name).localeCompare(String(right.name));
+      })
+      .slice(0, limit)
+      .map((student, index) => ({
+        rank: index + 1,
+        ...student,
+      }));
 
     return successResponse({ leaderboard, limit });
   } catch (error: any) {

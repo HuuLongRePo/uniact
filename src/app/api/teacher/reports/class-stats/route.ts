@@ -3,6 +3,7 @@ import { dbAll, dbReady } from '@/lib/database';
 import { requireApiRole } from '@/lib/guards';
 import { ApiError, successResponse, errorResponse } from '@/lib/api-response';
 import { calculateAttendanceRate } from '@/lib/calculations';
+import { getFinalScoreLedgerByStudentIds } from '@/lib/score-ledger';
 
 async function getAccessibleClassIds(user: { id: number; role: string }): Promise<number[]> {
   if (user.role === 'admin') {
@@ -52,14 +53,7 @@ export async function GET(request: NextRequest) {
 
     const base = await dbAll(
       `
-      WITH student_points AS (
-        SELECT u.class_id, u.id as student_id, COALESCE(SUM(ss.points), 0) as total_points
-        FROM users u
-        LEFT JOIN student_scores ss ON ss.student_id = u.id
-        WHERE u.role = 'student' AND u.class_id IN (${inClause})
-        GROUP BY u.class_id, u.id
-      ),
-      class_activities AS (
+      WITH class_activities AS (
         SELECT ac.class_id, COUNT(DISTINCT a.id) as total_activities
         FROM activity_classes ac
         JOIN activities a ON a.id = ac.activity_id
@@ -82,7 +76,6 @@ export async function GET(request: NextRequest) {
         c.name as class_name,
         (SELECT COUNT(*) FROM users u WHERE u.role = 'student' AND u.class_id = c.id) as total_students,
         COALESCE(ca.total_activities, 0) as total_activities,
-        COALESCE((SELECT SUM(sp.total_points) FROM student_points sp WHERE sp.class_id = c.id), 0) as total_points,
         COALESCE(cp.attended_count, 0) as attended_count
       FROM classes c
       LEFT JOIN class_activities ca ON ca.class_id = c.id
@@ -90,8 +83,14 @@ export async function GET(request: NextRequest) {
       WHERE c.id IN (${inClause})
       ORDER BY c.grade ASC, c.name ASC
       `,
-      [...classIds, ...classIds, ...classIds, ...classIds]
+      [...classIds, ...classIds, ...classIds]
     );
+
+    const studentRows = (await dbAll(
+      `SELECT id, class_id FROM users WHERE role = 'student' AND class_id IN (${inClause})`,
+      [...classIds]
+    )) as Array<{ id: number; class_id: number }>;
+    const ledgers = await getFinalScoreLedgerByStudentIds(studentRows.map((student) => Number(student.id)));
 
     const stats = [] as any[];
 
@@ -99,8 +98,14 @@ export async function GET(request: NextRequest) {
       const classId = Number(row.class_id);
       const totalStudents = Number(row.total_students || 0);
       const totalActivities = Number(row.total_activities || 0);
-      const totalPoints = Number(row.total_points || 0);
       const attendedCount = Number(row.attended_count || 0);
+      const classStudentIds = studentRows
+        .filter((student) => Number(student.class_id) === classId)
+        .map((student) => Number(student.id));
+      const totalPoints = classStudentIds.reduce(
+        (sum, studentId) => sum + (ledgers.get(studentId)?.final_total || 0),
+        0
+      );
 
       const denom = totalStudents * totalActivities;
       const participationRate = calculateAttendanceRate(attendedCount, denom);
@@ -132,17 +137,7 @@ export async function GET(request: NextRequest) {
       });
 
       // Score distribution (total points per student)
-      const pointRows = await dbAll(
-        `
-        SELECT COALESCE(SUM(ss.points), 0) as total_points
-        FROM users u
-        LEFT JOIN student_scores ss ON ss.student_id = u.id
-        WHERE u.role = 'student' AND u.class_id = ?
-        GROUP BY u.id
-        `,
-        [classId]
-      );
-      const totals = (pointRows as any[]).map((p) => Number(p.total_points || 0));
+      const totals = classStudentIds.map((studentId) => ledgers.get(studentId)?.final_total || 0);
 
       stats.push({
         class_id: classId,
