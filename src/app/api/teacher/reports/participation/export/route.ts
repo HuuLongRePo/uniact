@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { dbAll, dbReady } from '@/lib/database';
-import { requireRole } from '@/lib/guards';
+import { requireApiRole } from '@/lib/guards';
 import { ApiError, errorResponse } from '@/lib/api-response';
 import { createSimplePdf } from '@/lib/reports/simple-pdf';
 import { calculateParticipationRate } from '@/lib/calculations';
@@ -29,12 +29,7 @@ export async function POST(request: NextRequest) {
   try {
     await dbReady();
 
-    let user;
-    try {
-      user = await requireRole(request, ['teacher', 'admin']);
-    } catch {
-      return errorResponse(ApiError.unauthorized('Chưa đăng nhập'));
-    }
+    const user = await requireApiRole(request, ['teacher', 'admin']);
 
     const classIds = await getAccessibleClassIds(user);
     if (classIds.length === 0) {
@@ -114,7 +109,8 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error('Participation report export error:', error);
     return errorResponse(
-      error instanceof ApiError
+      error instanceof ApiError ||
+        (error && typeof error.status === 'number' && typeof error.code === 'string')
         ? error
         : ApiError.internalError('Không thể xuất báo cáo', { details: error?.message })
     );

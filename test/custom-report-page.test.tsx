@@ -1,7 +1,7 @@
 import React from 'react'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type { User } from '@/types/database'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import CustomReportsPage from '@/app/admin/reports/custom/page'
 import { useAuth } from '@/contexts/AuthContext'
 
@@ -81,6 +81,11 @@ function installFetchMock(response: MockResponse | Promise<MockResponse>) {
 }
 
 describe('CustomReportsPage', () => {
+  beforeAll(() => {
+    global.URL.createObjectURL = vi.fn(() => 'blob:mock-url') as any
+    global.URL.revokeObjectURL = vi.fn() as any
+  })
+
   beforeEach(() => {
     vi.mocked(useAuth).mockReturnValue(createAuthState())
     pushMock.mockReset()
@@ -144,5 +149,36 @@ describe('CustomReportsPage', () => {
 
     expect(await screen.findByText('Preview fetch failed')).toBeInTheDocument()
     expect(container.querySelector('.max-h-48')).toBeNull()
+  })
+
+  it('shows export error from canonical api payload', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(createTextResponse('id,title\n1,Alpha report'))
+      .mockResolvedValueOnce(createErrorResponse('Không có quyền truy cập'))
+
+    vi.stubGlobal('fetch', fetchMock)
+    window.fetch = fetchMock as typeof fetch
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+
+    const { container } = render(<CustomReportsPage />)
+
+    fireEvent.click(screen.getAllByRole('button')[0])
+    await waitFor(() => {
+      expect(container.querySelector('button.bg-purple-600')).not.toBeNull()
+    })
+
+    fireEvent.click(container.querySelector('button.bg-purple-600') as HTMLButtonElement)
+    await screen.findByText('Alpha report')
+
+    const nameInput = container.querySelector('input[type="text"]') as HTMLInputElement
+    fireEvent.change(nameInput, { target: { value: 'Bao-cao-test' } })
+
+    const exportButton = screen.getByRole('button', { name: /xuất báo cáo/i })
+    fireEvent.click(exportButton)
+
+    await waitFor(() => {
+      expect(toastErrorMock).toHaveBeenCalledWith('Không có quyền truy cập')
+    })
   })
 })

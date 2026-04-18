@@ -265,7 +265,14 @@ export default function ParticipationReportsPage() {
       });
 
       if (!response.ok) {
-        throw new Error('Export failed');
+        let errorMessage = 'Không thể xuất báo cáo';
+        try {
+          const error = await response.json();
+          errorMessage = error.error || error.message || errorMessage;
+        } catch {
+          // ignore json parse failure for non-json error payloads
+        }
+        throw new Error(errorMessage);
       }
 
       const blob = await response.blob();
@@ -277,7 +284,7 @@ export default function ParticipationReportsPage() {
       toast.success('Đã xuất báo cáo thành công');
     } catch (error) {
       console.error('Error exporting:', error);
-      toast.error('Không thể xuất báo cáo');
+      toast.error(error instanceof Error ? error.message : 'Không thể xuất báo cáo');
     }
   };
 
