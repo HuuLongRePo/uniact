@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserFromSession } from '@/lib/auth';
+import { requireApiRole } from '@/lib/guards';
 import { dbAll } from '@/lib/database';
 import { ApiError, errorResponse } from '@/lib/api-response';
 
@@ -252,10 +252,7 @@ async function generateAwardsReport(filters: ReportFilters): Promise<CsvRow[]> {
 
 export async function POST(request: NextRequest) {
   try {
-    const user = await getUserFromSession();
-    if (!user || user.role !== 'admin') {
-      return errorResponse(ApiError.forbidden('Không có quyền truy cập'));
-    }
+    await requireApiRole(request, ['admin']);
 
     const body = (await request.json()) as ReportRequestBody;
     const { name = 'bao-cao', type, columns = [], filters = {}, format = 'csv' } = body;
@@ -300,9 +297,12 @@ export async function POST(request: NextRequest) {
   } catch (error: unknown) {
     console.error('Generate custom report error:', error);
     return errorResponse(
-      ApiError.internalError(
-        error instanceof Error ? error.message : 'Không thể tạo báo cáo tùy chỉnh'
-      )
+      error instanceof ApiError ||
+        (error && typeof error.status === 'number' && typeof error.code === 'string')
+        ? error
+        : ApiError.internalError(
+            error instanceof Error ? error.message : 'Không thể tạo báo cáo tùy chỉnh'
+          )
     );
   }
 }
