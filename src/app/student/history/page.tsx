@@ -51,11 +51,15 @@ export default function StudentHistoryPage() {
       const res = await fetch('/api/student/history');
       const json = await res.json();
 
-      if (json.success) {
-        setHistory(json.history || json.data?.history || []);
+      if (!res.ok || !json?.success) {
+        throw new Error(json?.error || json?.message || 'Không thể tải lịch sử tham gia');
       }
+
+      setHistory(json?.data?.history || json?.history || []);
     } catch (error) {
       console.error('Error fetching history:', error);
+      toast.error(error instanceof Error ? error.message : 'Không thể tải lịch sử tham gia');
+      setHistory([]);
     } finally {
       setLoading(false);
     }
