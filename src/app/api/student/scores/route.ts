@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getUserFromSession } from '@/lib/auth';
+import { NextRequest } from 'next/server';
+import { requireApiRole } from '@/lib/guards';
 import { dbAll } from '@/lib/database';
 import { cache, CACHE_TTL } from '@/lib/cache';
-import { ApiError, errorResponse } from '@/lib/api-response';
+import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
 
 /**
  * GET /api/student/scores
@@ -10,9 +10,7 @@ import { ApiError, errorResponse } from '@/lib/api-response';
  */
 export async function GET(request: NextRequest) {
   try {
-    const user = await getUserFromSession();
-    if (!user) return errorResponse(ApiError.unauthorized('Unauthorized'));
-    if (user.role !== 'student') return errorResponse(ApiError.forbidden('Forbidden'));
+    const user = await requireApiRole(request, ['student']);
 
     // Cache với key theo student_id
     const cacheKey = `scores:${user.id}`;
@@ -68,12 +66,14 @@ export async function GET(request: NextRequest) {
       }
     );
 
-    return NextResponse.json({
-      success: true,
-      data: result,
-    });
+    return successResponse(result);
   } catch (error: any) {
     console.error('Error fetching student scores:', error);
-    return errorResponse(ApiError.internalError(error.message || 'Internal server error'));
+    return errorResponse(
+      error instanceof ApiError ||
+        (error && typeof error.status === 'number' && typeof error.code === 'string')
+        ? error
+        : ApiError.internalError(error.message || 'Không thể tải điểm học viên')
+    );
   }
 }

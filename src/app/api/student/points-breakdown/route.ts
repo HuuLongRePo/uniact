@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getUserFromSession } from '@/lib/auth';
+import { NextRequest } from 'next/server';
+import { requireApiRole } from '@/lib/guards';
 import { dbAll } from '@/lib/database';
+import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
 
 type PointsByActivityRow = {
   id: number;
@@ -41,12 +42,9 @@ type PointsSummaryRow = {
 };
 
 // GET /api/student/points-breakdown - Get detailed points breakdown
-export async function GET(_request: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
-    const user = await getUserFromSession();
-    if (!user || user.role !== 'student') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
+    const user = await requireApiRole(request, ['student']);
 
     // Points by activity
     const byActivity = (await dbAll(
@@ -186,26 +184,27 @@ export async function GET(_request: NextRequest) {
       0
     );
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        byActivity,
-        byType,
-        byLevel,
-        byAchievement,
-        awards,
-        summary: {
-          ...(summary[0] || {}),
-          total_award_points: totalAwardPoints,
-          final_total: (summary[0]?.grand_total || 0) + totalAwardPoints,
-        },
+    return successResponse({
+      byActivity,
+      byType,
+      byLevel,
+      byAchievement,
+      awards,
+      summary: {
+        ...(summary[0] || {}),
+        total_award_points: totalAwardPoints,
+        final_total: (summary[0]?.grand_total || 0) + totalAwardPoints,
       },
     });
-  } catch (error: unknown) {
+  } catch (error: any) {
     console.error('Error fetching points breakdown:', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Khong the tai chi tiet diem ren luyen' },
-      { status: 500 }
+    return errorResponse(
+      error instanceof ApiError ||
+        (error && typeof error.status === 'number' && typeof error.code === 'string')
+        ? error
+        : ApiError.internalError(
+            error instanceof Error ? error.message : 'Không thể tải chi tiết điểm rèn luyện'
+          )
     );
   }
 }
