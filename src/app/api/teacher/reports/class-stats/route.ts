@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { dbAll, dbReady } from '@/lib/database';
-import { requireRole } from '@/lib/guards';
+import { requireApiRole } from '@/lib/guards';
 import { ApiError, successResponse, errorResponse } from '@/lib/api-response';
 import { calculateAttendanceRate } from '@/lib/calculations';
 
@@ -41,12 +41,7 @@ export async function GET(request: NextRequest) {
   try {
     await dbReady();
 
-    let user;
-    try {
-      user = await requireRole(request, ['teacher', 'admin']);
-    } catch {
-      return errorResponse(ApiError.unauthorized('Chưa đăng nhập'));
-    }
+    const user = await requireApiRole(request, ['teacher', 'admin']);
 
     const classIds = await getAccessibleClassIds(user);
     if (classIds.length === 0) {
@@ -166,7 +161,8 @@ export async function GET(request: NextRequest) {
   } catch (error: any) {
     console.error('Teacher class-stats report error:', error);
     return errorResponse(
-      error instanceof ApiError
+      error instanceof ApiError ||
+        (error && typeof error.status === 'number' && typeof error.code === 'string')
         ? error
         : ApiError.internalError('Không thể tải báo cáo', { details: error?.message })
     );
