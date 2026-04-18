@@ -71,17 +71,18 @@ describe('Admin report routes', () => {
   });
 
   it('scores route rejects non-admin users', async () => {
-    mocks.mockGetUserFromSession.mockResolvedValue({ id: 2, role: 'teacher' });
+    const { ApiError } = await import('../src/lib/api-response');
+    mocks.mockRequireApiRole.mockRejectedValue(ApiError.forbidden('Không có quyền truy cập'));
 
     const response = await scoresRoute.GET(makeEmptyRequest());
 
-    expect(response.status).toBe(401);
+    expect(response.status).toBe(403);
 
     const body = await response.json();
 
     expect(body.success).toBe(false);
-    expect(body.code).toBe('UNAUTHORIZED');
-    expect(body.error).toBeTruthy();
+    expect(body.code).toBe('FORBIDDEN');
+    expect(body.error).toBe('Không có quyền truy cập');
   });
 
   it('teachers route returns numeric metrics', async () => {
