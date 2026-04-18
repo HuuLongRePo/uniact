@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getUserFromSession } from '@/lib/auth';
+import { NextRequest } from 'next/server';
+import { requireApiRole } from '@/lib/guards';
 import { dbAll, dbGet } from '@/lib/database';
 import { calculateRank } from '@/lib/calculations';
+import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
 
 /**
  * GET /api/student/statistics
@@ -10,17 +11,7 @@ import { calculateRank } from '@/lib/calculations';
  */
 export async function GET(request: NextRequest) {
   try {
-    const user = await getUserFromSession();
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    if (user.role !== 'student') {
-      return NextResponse.json(
-        { error: 'Only students can access this endpoint' },
-        { status: 403 }
-      );
-    }
+    const user = await requireApiRole(request, ['student']);
 
     // Tổng số hoạt động đã đăng ký (đăng ký hoặc đã tham dự)
     let registeredResult: { count: number } = { count: 0 };
@@ -140,12 +131,14 @@ export async function GET(request: NextRequest) {
       totalStudents,
     };
 
-    return NextResponse.json({
-      success: true,
-      statistics,
-    });
-  } catch (error) {
+    return successResponse({ statistics });
+  } catch (error: any) {
     console.error('Student statistics error:', error);
-    return NextResponse.json({ error: 'Failed to fetch student statistics' }, { status: 500 });
+    return errorResponse(
+      error instanceof ApiError ||
+        (error && typeof error.status === 'number' && typeof error.code === 'string')
+        ? error
+        : ApiError.internalError('Không thể lấy thống kê học viên', { details: error?.message })
+    );
   }
 }
