@@ -49,8 +49,11 @@ export default function StudentScoresPage() {
       if (!res.ok) throw new Error('Failed to fetch scores');
 
       const data = await res.json();
-      setScores(data.data.scores || []);
-      setSummary(data.data.summary);
+      const resolvedScores = data.data?.scores || data.scores || [];
+      const resolvedSummary = data.data?.summary || data.summary || null;
+
+      setScores(resolvedScores);
+      setSummary(resolvedSummary);
     } catch (error) {
       console.error('Error fetching scores:', error);
       toast.error('Không thể tải điểm số');
