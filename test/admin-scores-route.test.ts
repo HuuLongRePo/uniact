@@ -77,7 +77,7 @@ describe('GET /api/admin/scores', () => {
     expect(response.status).toBe(200)
     const body = await response.json()
     expect(body.success).toBe(true)
-    expect(body.summary).toMatchObject({
+    expect(body.data.summary).toMatchObject({
       total_students: 2,
       average_points: 485,
       total_award_points: 20,
@@ -87,15 +87,15 @@ describe('GET /api/admin/scores', () => {
       penalized_students_count: 1,
       rewarded_students_count: 2,
     })
-    expect(body.insights.top_penalty_students[0]).toMatchObject({
+    expect(body.data.insights.top_penalty_students[0]).toMatchObject({
       user_id: 10,
       penalty_points: 20,
     })
-    expect(body.insights.top_bonus_students[0]).toMatchObject({
+    expect(body.data.insights.top_bonus_students[0]).toMatchObject({
       user_id: 11,
       bonus_adjustment_points: 10,
     })
-    expect(body.insights.recent_adjustments[0]).toMatchObject({
+    expect(body.data.insights.recent_adjustments[0]).toMatchObject({
       student_id: 10,
       adjustment_type: 'penalty',
       reason: 'late submission',

@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { getUserFromSession } from '@/lib/auth';
+import { requireApiRole } from '@/lib/guards';
 import { dbAll } from '@/lib/database';
 import { ApiError, successResponse, errorResponse } from '@/lib/api-response';
 
@@ -14,12 +14,9 @@ function toNumber(value: unknown): number {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-export async function GET(_request: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
-    const user = await getUserFromSession();
-    if (!user || user.role !== 'admin') {
-      return errorResponse(ApiError.unauthorized('Bạn không có quyền truy cập báo cáo điểm.'));
-    }
+    await requireApiRole(request, ['admin']);
 
     const rows = (await dbAll(
       `
@@ -76,10 +73,13 @@ export async function GET(_request: NextRequest) {
     };
 
     return successResponse({ stats });
-  } catch (error: unknown) {
+  } catch (error: any) {
     console.error('Score report error:', error);
     return errorResponse(
-      ApiError.internalError(error instanceof Error ? error.message : 'Không thể tải báo cáo điểm.')
+      error instanceof ApiError ||
+        (error && typeof error.status === 'number' && typeof error.code === 'string')
+        ? error
+        : ApiError.internalError(error instanceof Error ? error.message : 'Không thể tải báo cáo điểm.')
     );
   }
 }
