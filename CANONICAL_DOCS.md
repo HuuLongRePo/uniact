@@ -1,148 +1,108 @@
-# TÀI LIỆU CANONICAL - UNIACT
+# CANONICAL DOCS - UNIACT
 
-Ngày cập nhật: 2026-04-13
-Trạng thái: nguồn điều hướng tài liệu hiện tại
+Updated status: consolidated active-doc structure
 
-## 1. Mục đích
+This file is the map of what should be treated as active source-of-truth versus archive/reference material.
 
-File này là bản đồ tài liệu chuẩn để giảm tình trạng:
+---
 
-- nhiều README nói khác nhau
-- tài liệu kế hoạch, audit và docs lịch sử bị trộn lẫn
-- người tiếp quản không biết nên đọc file nào trước
+## 1. Active canonical doc set
+Read these first.
 
-Nếu có mâu thuẫn giữa các tài liệu, ưu tiên thứ tự ở mục 2.
-
-## 2. Thứ tự ưu tiên tài liệu
-
-### Nhóm A - Nguồn sự thật hiện tại cho tiếp quản và thực thi
-
-Đây là nhóm phải ưu tiên đọc trước khi sửa code hoặc đánh giá trạng thái dự án:
-
-1. `PROJECT_AUDIT.md`
-2. `CORE_PRODUCT_FLOW.md`
-3. `BUSINESS_DECISIONS.md`
-4. `TASK_QUEUE.md`
-5. `docs/RELEASE_CANDIDATE_CHECKLIST.md`
-6. `docs/SMOKE_EXECUTION_PLAN_2026-04-12.md`
-7. `docs/INTERNAL_RC_SUMMARY_2026-04-12.md`
-8. `docs/archive/root-legacy/MASTER_PLAN.md` (tham khảo chiến lược cũ nếu còn cần)
-9. `docs/archive/root-legacy/CHANGELOG_PROGRESS.md` (tham khảo tiến độ lịch sử nếu còn cần)
-10. `docs/archive/root-legacy/BUGS_BOTTLENECKS.md` (tham khảo backlog drift cũ nếu còn cần)
-
-Vai trò từng file:
-
-- `PROJECT_AUDIT.md`: ảnh chụp hiện trạng repo, rủi ro và tín hiệu sức khỏe codebase
-- `CORE_PRODUCT_FLOW.md`: định nghĩa xương sống sản phẩm và các luồng sống còn
-- `BUSINESS_DECISIONS.md`: nguồn sự thật cho quyết định nghiệp vụ đã chốt
-- `TASK_QUEUE.md`: hàng đợi công việc đang hoạt động, dùng để quyết định làm gì tiếp theo
-- `docs/RELEASE_CANDIDATE_CHECKLIST.md`: baseline release/internal RC đang còn active
-- `docs/SMOKE_EXECUTION_PLAN_2026-04-12.md`: kế hoạch smoke runtime đang còn active
-- `docs/INTERNAL_RC_SUMMARY_2026-04-12.md`: snapshot milestone internal RC gần nhất
-- các file trong `docs/archive/root-legacy/`: chỉ còn giá trị lịch sử/tham khảo
-
-### Nhóm B - Tài liệu cài đặt và vận hành gần với repo hiện tại
-
-- `README.md`
-- `.env.example`
-- `package.json`
-- `test/uat/README.md`
-
-Quy tắc:
-
-- `README.md` là điểm vào duy nhất cho cài đặt, env, migrate, seed, test, demo và release-prep
-- khi lệnh trong tài liệu khác với script thật, ưu tiên `package.json`
-- `INSTALL.md` cũ nếu còn cần chỉ được xem là tài liệu historical sau cleanup
-
-### Nhóm C - Tài liệu tổng quan và tham khảo kỹ thuật
-
-- `README.md`
-- `docs/SYSTEM_FLOWS_DIAGRAM.md`
-- `test/uat/README.md`
-
-Quy tắc:
-
-- nhóm này dùng để hiểu bối cảnh, kiến trúc, execution path và tài liệu tham khảo kỹ thuật còn active
-- không dùng nhóm này làm nguồn sự thật duy nhất cho trạng thái task hoặc mức độ hoàn thành hiện tại
-
-### Nhóm D - Tài liệu học thuật và báo cáo đề tài
-
-- `de-tai/README.md`
-- toàn bộ `de-tai/00-*` đến `de-tai/12-*`
-- các file nghiệp vụ/thuyết minh trong thư mục `de-tai/`
-
-Quy tắc:
-
-- đây là nhánh tài liệu học thuật, thuyết minh và báo cáo đề tài
-- hữu ích để hiểu domain, nghiệp vụ, cấu trúc phân tích, nhưng không phản ánh chắc chắn trạng thái code mới nhất
-
-### Nhóm E - Tài liệu lịch sử, snapshot, báo cáo theo đợt
-
-- phần lớn các file còn lại trong `docs/`
-- các file historical/report đã được gom về `docs/archive/root-legacy/`, ví dụ `AUDIT_REPORT_SECURITY_UX_v1.0.md`, `MANUAL_TEST_CHECKLIST_v1.0.md`, `UX_FIXES_IMPLEMENTATION_GUIDE.md`
-
-Quy tắc:
-
-- dùng để tra cứu lịch sử, quyết định cũ, hoặc chứng cứ kiểm thử từng giai đoạn
-- không xem là canonical mặc định
-
-## 3. Các tài liệu hiện có nhưng không còn nên coi là “nguồn sự thật duy nhất”
-
-### `README.md`
-
-- hiện là entrypoint chính cho onboarding kỹ thuật, setup, seed, test, demo và release-prep
-- nếu có mâu thuẫn giữa README và tài liệu historical, ưu tiên README + `package.json`
-
-### `docs/01-README.md`
-
-- là snapshot tài liệu cũ
-- hiện chứa khẳng định không còn đúng hoàn toàn, ví dụ nói chỉ còn “8 file chuẩn” và `docs/` đã được gộp/xóa
-- chỉ dùng làm tài liệu lịch sử/tham khảo
-
-### `de-tai/README.md`
-
-- là index cho nhánh tài liệu học thuật
-- không nên dùng để suy ra task queue, script hiện hành hoặc trạng thái sửa lỗi mới nhất
-
-## 4. Luồng đọc đề xuất cho người tiếp quản
-
-### Nếu mục tiêu là tiếp quản và sửa dự án
-
-Đọc theo thứ tự:
-
+### A. Repo entry and setup
 1. `README.md`
 2. `CANONICAL_DOCS.md`
-3. `PROJECT_AUDIT.md`
-4. `CORE_PRODUCT_FLOW.md`
-5. `BUSINESS_DECISIONS.md`
-6. `TASK_QUEUE.md`
 
-### Nếu mục tiêu là hiểu nghiệp vụ và bài toán sản phẩm
+### B. Product and business source-of-truth
+3. `PRODUCT_AND_BUSINESS.md`
 
-Đọc theo thứ tự:
+### C. Active engineering execution state
+4. `ENGINEERING_STATE.md`
 
+### D. Release, QA, blocker, and issue-triage source-of-truth
+5. `RELEASE_AND_QA.md`
+
+### E. Internal release communication reference
+6. `RELEASE_COMMS.md`
+
+### F. Diagram support
+7. `docs/SYSTEM_FLOWS_DIAGRAM.md`
+
+---
+
+## 2. Reading order by objective
+
+### If you want to take over and continue execution
 1. `README.md`
-2. `CORE_PRODUCT_FLOW.md`
+2. `CANONICAL_DOCS.md`
+3. `PRODUCT_AND_BUSINESS.md`
+4. `ENGINEERING_STATE.md`
+5. `RELEASE_AND_QA.md`
+
+### If you want to understand the product and business logic
+1. `README.md`
+2. `PRODUCT_AND_BUSINESS.md`
 3. `docs/SYSTEM_FLOWS_DIAGRAM.md`
-4. `de-tai/README.md`
-5. các file trọng yếu trong `de-tai/`
 
-### Nếu mục tiêu là nghiên cứu, báo cáo hoặc bảo vệ đề tài
+### If you want to make release or QA decisions
+1. `README.md`
+2. `RELEASE_AND_QA.md`
+3. `RELEASE_COMMS.md`
 
-Đọc theo thứ tự:
+---
 
-1. `de-tai/README.md`
-2. `de-tai/00-MUC-LUC.md`
-3. chuỗi `de-tai/01-*` đến `de-tai/12-*`
+## 3. What is no longer primary source-of-truth
+These may still contain useful information, but should not be treated as the active canonical set anymore once consolidation is adopted.
 
-## 5. Quy tắc cập nhật tài liệu từ nay
+### Older active-doc fragments now superseded by the consolidated structure
+- `CORE_PRODUCT_FLOW.md`
+- `BUSINESS_QUESTIONS.md`
+- `BUSINESS_DECISIONS.md`
+- `PROJECT_AUDIT.md`
+- `TASK_QUEUE.md`
+- `docs/decision-implementation-matrix.md`
+- `docs/web-release-readiness-report.md`
+- `docs/manual-qa-checklist-web-rc.md`
+- `docs/release-blocker-matrix.md`
+- `docs/qa-issue-intake-template.md`
+- `docs/deep-system-flow-and-manual-test-scenarios.md`
+- `docs/RELEASE_CANDIDATE_CHECKLIST.md`
+- `docs/TARGETED_MANUAL_SMOKE_CHECKLIST.md`
+- `docs/SMOKE_EXECUTION_PLAN_2026-04-12.md`
+- `docs/INTERNAL_RC_SUMMARY_2026-04-12.md`
+- `docs/INTERNAL_RELEASE_NOTE_2026-04-12.md`
+- `docs/INTERNAL_RC_TAGGING_PLAN_2026-04-12.md`
+- `docs/INTERNAL_RC_ANNOUNCEMENT_TEMPLATE_2026-04-12.md`
 
-- Khi thay đổi task hoặc trạng thái thực thi, cập nhật `TASK_QUEUE.md` và/hoặc nhóm docs RC/smoke đang active nếu liên quan release gate
-- Khi phát hiện rủi ro mới hoặc contract drift mới, cập nhật `PROJECT_AUDIT.md` và tài liệu nghiệp vụ/liên quan nếu cần
-- Không tự tạo thêm README/index mới nếu nội dung chỉ lặp lại file canonical đã có
-- Nếu buộc phải tạo tài liệu snapshot theo đợt, ghi rõ đó là `historical` hoặc `report`, không gắn nhãn canonical
-- Tài liệu historical/report ở root nên được chuyển vào `docs/archive/root-legacy/` để giữ root gọn và tránh nhầm với tài liệu active
+These should either be archived or retained only as historical fragments during the consolidation transition.
 
-## 6. Kết luận
+---
 
-Nguồn sự thật hiện tại của repo này không nằm ở một README cũ duy nhất, mà nằm ở bộ tài liệu điều hành ở root repo. File này tồn tại để chốt lại điều đó và giúp người tiếp quản vào đúng tài liệu ngay từ đầu.
+## 4. Archive and side tracks
+
+### Archive
+- `docs/archive/**`
+- historical snapshots, reports, plans, bug logs, and previous checklists
+- useful for archaeology only
+
+### Academic / thesis track
+- `de-tai/**`
+- separate audience and lifecycle
+- not part of the active operational source-of-truth for the web product
+
+### Local/special-purpose notes that may remain separate
+- `test/uat/README.md`
+- `quarantine/**`
+- narrowly scoped feature or local operational notes that are not core source-of-truth
+
+---
+
+## 5. Update rule from now on
+- Update the consolidated active docs first.
+- Do not create a new active top-level status doc if the content belongs in one of the canonical files above.
+- If a document is just a snapshot, report, or one-off plan, label it clearly as historical/report or move it into archive.
+
+---
+
+## 6. Practical summary
+The active UniAct operational doc system should now be treated as a **small consolidated set**, not a large fragmented collection of overlapping markdown files.
