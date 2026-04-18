@@ -40,9 +40,9 @@ Baseline đã xác nhận gần đây:
 - canonical QA/demo accounts đã chuyển sang bộ **ANND**
 
 Tài liệu liên quan:
-- `docs/RELEASE_CANDIDATE_CHECKLIST.md`
-- `docs/SMOKE_EXECUTION_PLAN_2026-04-12.md`
-- `docs/INTERNAL_RC_SUMMARY_2026-04-12.md`
+- `RELEASE_AND_QA.md`
+- `RELEASE_COMMS.md`
+- `docs/SYSTEM_FLOWS_DIAGRAM.md`
 
 ---
 
@@ -301,8 +301,8 @@ Sau đó chạy subset UAT backbone phù hợp.
 
 Tài liệu ngắn liên quan:
 - `test/uat/README.md`
-- `docs/SMOKE_EXECUTION_PLAN_2026-04-12.md`
-- `docs/TARGETED_MANUAL_SMOKE_CHECKLIST.md`
+- `RELEASE_AND_QA.md`
+- `docs/SYSTEM_FLOWS_DIAGRAM.md`
 
 Subset backbone có giá trị cao hiện tại:
 - admin approval
@@ -318,11 +318,8 @@ Nguyên tắc hiện tại:
 ## 10. Internal RC / release prep
 
 Khi cần đánh giá mốc internal RC, xem:
-- `docs/RELEASE_CANDIDATE_CHECKLIST.md`
-- `docs/INTERNAL_RC_SUMMARY_2026-04-12.md`
-- `docs/INTERNAL_RC_TAGGING_PLAN_2026-04-12.md`
-- `docs/INTERNAL_RC_ANNOUNCEMENT_TEMPLATE_2026-04-12.md`
-- `docs/INTERNAL_RELEASE_NOTE_2026-04-12.md`
+- `RELEASE_AND_QA.md`
+- `RELEASE_COMMS.md`
 
 Lưu ý trạng thái hiện tại:
 - internal RC prep / stronger internal RC milestone
@@ -378,10 +375,9 @@ npm run cleanup:soft
 
 1. `README.md`
 2. `CANONICAL_DOCS.md`
-3. `PROJECT_AUDIT.md`
-4. `CORE_PRODUCT_FLOW.md`
-5. `BUSINESS_DECISIONS.md`
-6. `TASK_QUEUE.md`
+3. `PRODUCT_AND_BUSINESS.md`
+4. `ENGINEERING_STATE.md`
+5. `RELEASE_AND_QA.md`
 
 ---
 
@@ -391,5 +387,6 @@ Các tài liệu roadmap/progress/changelog/report/prompt cũ đã được gom 
 - `docs/archive/root-legacy/`
 - `docs/archive/docs-legacy-2026-04-13/`
 - `docs/archive/docs-reports-legacy-2026-04-13/`
+- `docs/archive/post-consolidation-2026-04-18/`
 
 Mục tiêu là giữ repo gọn hơn và tránh nhầm tài liệu historical với source of truth hiện tại.
