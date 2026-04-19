@@ -444,7 +444,12 @@ export default function TeacherActivitiesPage() {
                 </span>
               </div>
               <div className="space-y-3">
-                {archivedActivities.map((activity) => (
+                {archivedActivities.map((activity) => {
+                  const activityTime = new Date(activity.date_time).getTime();
+                  const isStalePublished =
+                    activity.status === 'published' && Number.isFinite(activityTime) && activityTime <= now;
+
+                  return (
                   <div
                     key={`archived-${activity.id}`}
                     className="rounded-lg border border-slate-200 bg-white p-4"
@@ -456,11 +461,18 @@ export default function TeacherActivitiesPage() {
                         <div className="mt-1 text-sm text-gray-500">
                           {new Date(activity.date_time).toLocaleString('vi-VN')}
                         </div>
+                        <div className="mt-2 text-xs font-medium text-slate-600">
+                          {isStalePublished
+                            ? 'Đã quá thời điểm diễn ra, cần xác nhận hoàn thành hoặc cập nhật trạng thái.'
+                            : activity.status === 'completed'
+                              ? 'Hoạt động đã được khép lại ở trạng thái hoàn thành.'
+                              : 'Hoạt động đã được khép lại ở trạng thái hủy.'}
+                        </div>
                       </div>
                       {getStatusBadge(activity.status)}
                     </div>
                   </div>
-                ))}
+                );})}
               </div>
             </div>
           )}

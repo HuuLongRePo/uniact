@@ -107,7 +107,13 @@ export default function ActivityTable({ activities, loading, onDelete }: Activit
                         {activity.description}
                       </div>
                       {isArchived ? (
-                        <div className="mt-1 text-xs font-medium text-slate-600">Đã qua hoặc đã khép lại</div>
+                        <div className="mt-1 text-xs font-medium text-slate-600">
+                          {activity.status === 'published'
+                            ? 'Đã qua hoặc đã khép lại, cần rà lại việc hoàn thành thực tế.'
+                            : activity.status === 'completed'
+                              ? 'Đã khép lại ở trạng thái hoàn thành.'
+                              : 'Đã khép lại ở trạng thái hủy.'}
+                        </div>
                       ) : null}
                     </div>
                   </td>

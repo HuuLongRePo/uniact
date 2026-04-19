@@ -149,7 +149,7 @@ describe('Admin activities page', () => {
     });
 
     expect(screen.getByText('Đã khép lại')).toBeInTheDocument();
-    expect(screen.getByText('Đã qua hoặc đã khép lại')).toBeInTheDocument();
+    expect(screen.getByText('Đã qua hoặc đã khép lại, cần rà lại việc hoàn thành thực tế.')).toBeInTheDocument();
   });
 
   it('allows admin to refresh the activities list manually', async () => {

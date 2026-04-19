@@ -166,6 +166,9 @@ describe('TeacherActivitiesPage', () => {
     expect(screen.getByText('Hoạt động sắp diễn ra')).toBeInTheDocument();
     expect(screen.getByText('Đã qua hoặc đã khép lại')).toBeInTheDocument();
     expect(screen.getByText('Hoạt động đã qua hạn')).toBeInTheDocument();
+    expect(
+      screen.getByText('Đã quá thời điểm diễn ra, cần xác nhận hoàn thành hoặc cập nhật trạng thái.')
+    ).toBeInTheDocument();
     expect(screen.getByText('Hoạt động nháp')).toBeInTheDocument();
   });
 
