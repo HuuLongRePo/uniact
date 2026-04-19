@@ -150,6 +150,7 @@ describe('Admin activities page', () => {
 
     expect(screen.getByText('Đã khép lại')).toBeInTheDocument();
     expect(screen.getByText('Đã qua hoặc đã khép lại, cần rà lại việc hoàn thành thực tế.')).toBeInTheDocument();
+    expect(screen.getByText('Trong toàn bộ danh sách hiện có 1 hoạt động đã qua hoặc đã khép lại.')).toBeInTheDocument();
   });
 
   it('allows admin to refresh the activities list manually', async () => {
@@ -178,6 +179,8 @@ describe('Admin activities page', () => {
 
     const selects = screen.getAllByRole('combobox');
     fireEvent.change(selects[0], { target: { value: 'pending' } });
+
+    expect(screen.getByDisplayValue('Đã gửi duyệt')).toBeInTheDocument();
 
     await waitFor(() => {
       expect(screen.getByText('Pending Activity')).toBeInTheDocument();

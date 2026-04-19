@@ -43,7 +43,7 @@ export default function ActivityFilters({
           >
             <option value="all">Tất cả workflow</option>
             <option value="draft">Nháp</option>
-            <option value="pending">Chờ duyệt</option>
+            <option value="pending">Đã gửi duyệt</option>
             <option value="published">Đã công bố</option>
             <option value="completed">Hoàn thành</option>
             <option value="cancelled">Đã hủy</option>

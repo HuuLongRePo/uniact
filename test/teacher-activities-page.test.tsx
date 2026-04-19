@@ -163,6 +163,11 @@ describe('TeacherActivitiesPage', () => {
     render(<TeacherActivitiesPage />);
 
     expect(await screen.findByText('Sắp diễn ra')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Hiển thị 3 hoạt động, gồm 1 sắp diễn ra, 1 đã qua hoặc đã khép lại và 1 hoạt động còn đang cần theo dõi xử lý.'
+      )
+    ).toBeInTheDocument();
     expect(screen.getByText('Hoạt động sắp diễn ra')).toBeInTheDocument();
     expect(screen.getByText('Đã qua hoặc đã khép lại')).toBeInTheDocument();
     expect(screen.getByText('Hoạt động đã qua hạn')).toBeInTheDocument();

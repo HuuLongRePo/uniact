@@ -34,7 +34,7 @@ type ConfirmActionType = 'submit' | 'cancel' | 'clone' | 'delete';
 const FILTER_OPTIONS: Array<{ value: ActivityFilter; label: string }> = [
   { value: 'all', label: 'Tất cả' },
   { value: 'draft', label: 'Nháp' },
-  { value: 'pending', label: 'Chờ duyệt' },
+  { value: 'pending', label: 'Đã gửi duyệt' },
   { value: 'rejected', label: 'Bị từ chối' },
   { value: 'published', label: 'Đã phát hành' },
   { value: 'completed', label: 'Hoàn thành' },
@@ -313,7 +313,7 @@ export default function TeacherActivitiesPage() {
   const getStatusBadge = (status: Activity['status']) => {
     const badges: Record<Activity['status'], { className: string; label: string }> = {
       draft: { className: 'bg-gray-100 text-gray-800', label: 'Nháp' },
-      pending: { className: 'bg-yellow-100 text-yellow-800', label: 'Chờ duyệt' },
+      pending: { className: 'bg-yellow-100 text-yellow-800', label: 'Đã gửi duyệt' },
       rejected: { className: 'bg-red-100 text-red-800', label: 'Bị từ chối' },
       published: { className: 'bg-green-100 text-green-800', label: 'Đã phát hành' },
       cancelled: { className: 'bg-red-100 text-red-800', label: 'Đã hủy' },
@@ -342,7 +342,7 @@ export default function TeacherActivitiesPage() {
             Quản lý hoạt động
           </h1>
           <p className="text-gray-600">
-            Danh sách hoạt động bạn tạo, gửi duyệt và theo dõi trạng thái
+            Danh sách hoạt động bạn tạo, gửi duyệt và theo dõi theo từng giai đoạn xử lý
           </p>
         </div>
         <button
@@ -395,6 +395,9 @@ export default function TeacherActivitiesPage() {
         />
       ) : (
         <div className="space-y-6">
+          <div className="rounded-lg border border-gray-200 bg-white p-4 text-sm text-gray-600">
+            Hiển thị {sortedActivities.length} hoạt động, gồm {upcomingActivities.length} sắp diễn ra, {archivedActivities.length} đã qua hoặc đã khép lại và {remainingActivities.length} hoạt động còn đang cần theo dõi xử lý.
+          </div>
           {upcomingActivities.length > 0 && (
             <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
               <div className="mb-3 flex items-center justify-between gap-3">
