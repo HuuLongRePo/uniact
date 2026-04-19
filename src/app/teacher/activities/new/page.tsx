@@ -1117,7 +1117,7 @@ export default function CreateActivityPage() {
                   </>
                 )}
 
-                <div className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
+                <div className="sticky bottom-0 z-10 flex items-center justify-between gap-3 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 shadow-sm">
                   <button
                     type="button"
                     onClick={() =>
@@ -1152,7 +1152,7 @@ export default function CreateActivityPage() {
                 </div>
 
                 {/* Action Buttons */}
-                <div className="pt-6 flex gap-3 border-t border-gray-200">
+                <div className="flex gap-3 border-t border-gray-200 bg-white pt-6">
                   <button
                     type="button"
                     onClick={(e) => {
@@ -1160,14 +1160,14 @@ export default function CreateActivityPage() {
                       handleSubmit(e as any, 'draft');
                     }}
                     className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-semibold disabled:opacity-60 transition-all shadow-md"
-                    disabled={submitting || uploading}
+                    disabled={submitting || uploading || currentTab !== 'files'}
                   >
                     {submitting ? (
                       <Loader2 className="animate-spin w-5 h-5" />
                     ) : (
                       <Save className="w-5 h-5" />
                     )}
-                    {submitting ? 'Đang xử lý...' : 'Lưu nháp'}
+                    {submitting ? 'Đang xử lý...' : currentTab !== 'files' ? 'Đến bước 3 để lưu nháp' : 'Lưu nháp'}
                   </button>
                   <button
                     type="button"
@@ -1176,14 +1176,14 @@ export default function CreateActivityPage() {
                       handleSubmit(e as any, 'submit');
                     }}
                     className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg font-semibold disabled:opacity-60 transition-all shadow-lg"
-                    disabled={submitting || uploading}
+                    disabled={submitting || uploading || currentTab !== 'files'}
                   >
                     {submitting ? (
                       <Loader2 className="animate-spin w-5 h-5" />
                     ) : (
                       <Send className="w-5 h-5" />
                     )}
-                    {submitting ? 'Đang xử lý...' : 'Gửi duyệt'}
+                    {submitting ? 'Đang xử lý...' : currentTab !== 'files' ? 'Đến bước 3 để gửi duyệt' : 'Gửi duyệt'}
                   </button>
                 </div>
                 {success && (

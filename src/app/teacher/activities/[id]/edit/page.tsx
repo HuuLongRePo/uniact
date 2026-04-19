@@ -483,7 +483,7 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
         )}
 
         <form onSubmit={handleFormSubmit} className="space-y-6">
-          <div className="rounded-lg border border-gray-200 bg-white p-3 shadow">
+          <div className="sticky top-4 z-10 rounded-lg border border-gray-200 bg-white p-3 shadow">
             <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
               {[
                 { key: 'basic', label: 'Bước 1: Thông tin' },
@@ -1037,24 +1037,24 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
           </div>
 
           {canEdit && (
-            <div className="flex gap-3">
+            <div className="sticky bottom-0 z-10 flex gap-3 rounded-lg border border-gray-200 bg-white p-3 shadow">
               <button
                 type="button"
                 onClick={() => void submitActivity('draft')}
-                disabled={submitting}
+                disabled={submitting || currentStep !== 'submit'}
                 className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-gray-200 px-6 py-3 font-bold text-gray-700 transition hover:bg-gray-300 disabled:opacity-50"
               >
                 <Save className="h-5 w-5" />
-                Lưu nháp
+                {currentStep !== 'submit' ? 'Đến bước 3 để lưu nháp' : 'Lưu nháp'}
               </button>
               <button
                 type="button"
                 onClick={() => void submitActivity('submit')}
-                disabled={submitting}
+                disabled={submitting || currentStep !== 'submit'}
                 className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-blue-600 px-6 py-3 font-bold text-white transition hover:bg-blue-700 disabled:opacity-50"
               >
                 <Send className="h-5 w-5" />
-                Gửi duyệt
+                {currentStep !== 'submit' ? 'Đến bước 3 để gửi duyệt' : 'Gửi duyệt'}
               </button>
             </div>
           )}

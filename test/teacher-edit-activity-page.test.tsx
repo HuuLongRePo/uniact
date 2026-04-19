@@ -122,6 +122,7 @@ describe('EditActivityPage', () => {
     const numberInput = document.querySelector('input[type="number"]') as HTMLInputElement;
     fireEvent.change(numberInput, { target: { value: '' } });
 
+    fireEvent.click(screen.getByRole('button', { name: 'Bước 3: Kiểm tra và gửi' }));
     fireEvent.click(screen.getByRole('button', { name: 'Gửi duyệt' }));
 
     await waitFor(() => {
