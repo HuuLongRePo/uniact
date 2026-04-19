@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { resolveClientFetchUrl } from '@/lib/client-fetch-url';
+import { FACE_BIOMETRIC_RUNTIME_ENABLED } from '@/lib/biometrics/face-runtime';
 
 type ActivityOption = {
   id: number;
@@ -230,6 +231,14 @@ export default function TeacherAttendancePolicyPage() {
           preset vận hành.
         </p>
       </div>
+
+      {!FACE_BIOMETRIC_RUNTIME_ENABLED ? (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          Runtime nhận diện khuôn mặt hiện chưa được bật trong bản phát hành này. Trang này giúp
+          xác nhận pilot policy và điều kiện readiness trước khi mở luồng training ảnh học viên và
+          face attendance production.
+        </div>
+      ) : null}
 
       {error ? (
         <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
