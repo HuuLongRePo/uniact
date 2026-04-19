@@ -21,6 +21,7 @@ export default function TeacherFaceAttendancePage() {
   const [deviceId, setDeviceId] = useState('cam-a1');
   const [preview, setPreview] = useState<any>(null);
   const [submitResult, setSubmitResult] = useState<any>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [capturing, setCapturing] = useState(false);
@@ -104,6 +105,8 @@ export default function TeacherFaceAttendancePage() {
         throw new Error(data?.error || data?.message || 'Không thể tạo candidate preview');
       }
       setPreview(data?.data || null);
+      setSubmitResult(null);
+      setSubmitError(null);
       toast.success('Đã tạo candidate preview');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Không thể tạo candidate preview');
@@ -135,9 +138,12 @@ export default function TeacherFaceAttendancePage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data?.error || data?.message || 'Không thể gửi face attendance');
+        const message = data?.error || data?.message || 'Không thể gửi face attendance';
+        setSubmitError(message);
+        throw new Error(message);
       }
       setSubmitResult(data?.data || null);
+      setSubmitError(null);
       toast.success('Đã gửi face attendance thành công');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Không thể gửi face attendance');
@@ -262,6 +268,27 @@ export default function TeacherFaceAttendancePage() {
         </div>
       </div>
 
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="rounded-lg border border-slate-200 bg-white p-4">
+          <div className="text-sm text-slate-500">Preview status</div>
+          <div className="mt-2 text-lg font-semibold text-slate-900">
+            {preview ? 'Sẵn sàng gửi verify' : 'Chưa tạo preview'}
+          </div>
+        </div>
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+          <div className="text-sm text-emerald-700">Verification branch</div>
+          <div className="mt-2 text-lg font-semibold text-emerald-900">
+            {submitResult?.verification_method || preview?.verification_method || 'Chưa có'}
+          </div>
+        </div>
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+          <div className="text-sm text-amber-700">Submit status</div>
+          <div className="mt-2 text-lg font-semibold text-amber-900">
+            {submitResult ? 'Đã verify' : submitError ? 'Verify thất bại' : 'Chưa submit'}
+          </div>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="rounded-lg bg-slate-900 p-6 text-white">
           <h2 className="text-lg font-semibold mb-3">Payload preview</h2>
@@ -277,9 +304,21 @@ export default function TeacherFaceAttendancePage() {
         <div className="rounded-lg bg-emerald-950 p-6 text-white">
           <h2 className="text-lg font-semibold mb-3">Kết quả face attendance</h2>
           {submitResult ? (
-            <pre className="text-xs overflow-x-auto whitespace-pre-wrap">
-              {JSON.stringify(submitResult, null, 2)}
-            </pre>
+            <div className="space-y-4">
+              <div className="rounded border border-emerald-800 bg-emerald-900/40 p-4 text-sm">
+                <div>Recorded: {String(Boolean(submitResult.recorded))}</div>
+                <div>Verification source: {submitResult.verification_source || 'N/A'}</div>
+                <div>Verification method: {submitResult.verification_method || 'N/A'}</div>
+                <div>Runtime mode: {submitResult.runtime_mode || 'N/A'}</div>
+              </div>
+              <pre className="text-xs overflow-x-auto whitespace-pre-wrap">
+                {JSON.stringify(submitResult, null, 2)}
+              </pre>
+            </div>
+          ) : submitError ? (
+            <div className="rounded border border-red-800 bg-red-950/40 p-4 text-sm text-red-200">
+              {submitError}
+            </div>
           ) : (
             <p className="text-sm text-emerald-200">Chưa có kết quả submit face attendance.</p>
           )}

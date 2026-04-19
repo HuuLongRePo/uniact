@@ -65,7 +65,7 @@ describe('TeacherFaceAttendancePage', () => {
       expect(toastSuccessMock).toHaveBeenCalledWith('Đã tạo candidate preview');
     });
 
-    expect(screen.getByText(/candidate_embedding/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/candidate_embedding/i).length).toBeGreaterThan(0);
     expect(fetchMock).toHaveBeenCalledWith('/api/biometric/candidate-preview', expect.objectContaining({ method: 'POST' }));
   });
 
@@ -87,6 +87,46 @@ describe('TeacherFaceAttendancePage', () => {
     });
 
     expect(screen.getByDisplayValue(/0.4, 0.5, 0.6/)).toBeInTheDocument();
+  });
+
+  it('surfaces verification failure state on the face attendance page', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          data: {
+            candidate_embedding: [0.1, 0.2, 0.3],
+            quality_score: 75,
+            liveness_score: 0.91,
+            verification_method: 'candidate_embedding',
+            upstream_verified: false,
+          },
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: false,
+        json: async () => ({ error: 'Biometric template không khớp để tự động xác nhận face attendance' }),
+      }) as any;
+
+    vi.stubGlobal('fetch', fetchMock);
+    window.fetch = fetchMock as typeof fetch;
+
+    const Page = (await import('../src/app/teacher/attendance/face/page')).default;
+    render(<Page />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Tạo candidate preview' }));
+    await waitFor(() => {
+      expect(toastSuccessMock).toHaveBeenCalledWith('Đã tạo candidate preview');
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Gửi face attendance' }));
+    await waitFor(() => {
+      expect(toastErrorMock).toHaveBeenCalledWith('Biometric template không khớp để tự động xác nhận face attendance');
+    });
+
+    expect(screen.getByText('Verify thất bại')).toBeInTheDocument();
+    expect(screen.getByText('Biometric template không khớp để tự động xác nhận face attendance')).toBeInTheDocument();
   });
 
   it('submits face attendance after candidate preview is ready', async () => {
@@ -133,6 +173,7 @@ describe('TeacherFaceAttendancePage', () => {
     });
 
     expect(screen.getByText(/verification_source/i)).toBeInTheDocument();
+    expect(screen.getByText('Đã verify')).toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledWith('/api/attendance/face', expect.objectContaining({ method: 'POST' }));
   });
 });
