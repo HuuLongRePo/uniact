@@ -85,6 +85,7 @@ export default function CreateActivityPage() {
   const [mandatoryStudentIds, setMandatoryStudentIds] = useState<number[]>([]);
   const [voluntaryStudentIds, setVoluntaryStudentIds] = useState<number[]>([]);
   const [studentOptions, setStudentOptions] = useState<StudentOption[]>([]);
+  const [studentSearch, setStudentSearch] = useState('');
   const [studentsLoaded, setStudentsLoaded] = useState(false);
   const [studentsLoading, setStudentsLoading] = useState(false);
   const [appliesToAllStudents, setAppliesToAllStudents] = useState(false);
@@ -110,6 +111,18 @@ export default function CreateActivityPage() {
     () => Array.from(new Set([...mandatoryClassIds, ...voluntaryClassIds])),
     [mandatoryClassIds, voluntaryClassIds]
   );
+  const filteredStudentOptions = useMemo(() => {
+    const keyword = studentSearch.trim().toLowerCase();
+    if (!keyword) return studentOptions;
+
+    return studentOptions.filter((student) => {
+      const haystack = [student.name, student.email, student.class_name]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      return haystack.includes(keyword);
+    });
+  }, [studentOptions, studentSearch]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -726,8 +739,20 @@ export default function CreateActivityPage() {
                           {studentsLoaded ? (
                             <>
                               <p className="mt-2 text-xs text-blue-800">
-                                Đã nạp {studentOptions.length} học viên. Có thể chọn trực tiếp để quản lý theo phạm vi activity.
+                                Đã nạp {studentOptions.length} học viên. Đang chọn {mandatoryStudentIds.length} bắt buộc và {voluntaryStudentIds.length} tự nguyện.
                               </p>
+                              <div className="mt-3">
+                                <input
+                                  type="text"
+                                  value={studentSearch}
+                                  onChange={(event) => setStudentSearch(event.target.value)}
+                                  placeholder="Lọc theo tên, email hoặc lớp"
+                                  className="w-full rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:ring-blue-200"
+                                />
+                                <p className="mt-1 text-xs text-blue-800">
+                                  Hiển thị {filteredStudentOptions.length}/{studentOptions.length} học viên phù hợp.
+                                </p>
+                              </div>
                               <div className="mt-3 grid grid-cols-1 gap-4 lg:grid-cols-2">
                                 <div>
                                   <label className="mb-1 block text-sm font-medium text-orange-700">
@@ -740,7 +765,7 @@ export default function CreateActivityPage() {
                                     onChange={handleMandatoryStudentSelect}
                                     disabled={submitting}
                                   >
-                                    {studentOptions.map((student) => (
+                                    {filteredStudentOptions.map((student) => (
                                       <option key={`mandatory-student-${student.id}`} value={student.id}>
                                         {student.name}
                                         {student.class_name ? ` - ${student.class_name}` : ''}
@@ -759,7 +784,7 @@ export default function CreateActivityPage() {
                                     onChange={handleVoluntaryStudentSelect}
                                     disabled={submitting}
                                   >
-                                    {studentOptions.map((student) => (
+                                    {filteredStudentOptions.map((student) => (
                                       <option
                                         key={`voluntary-student-${student.id}`}
                                         value={student.id}
