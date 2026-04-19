@@ -86,6 +86,14 @@ export default function ApprovalsPage() {
     void fetchActivities();
   }, [filter]);
 
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      void fetchActivities();
+    }, 30000);
+
+    return () => window.clearInterval(intervalId);
+  }, [filter]);
+
   const fetchActivities = async () => {
     try {
       setLoading(true);
@@ -143,6 +151,9 @@ export default function ApprovalsPage() {
         <div className="mb-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
           <h1 className="text-3xl font-bold text-gray-900">Theo dõi duyệt hoạt động</h1>
           <p className="mt-2 text-gray-600">Quản lý hoạt động của bạn trong quy trình duyệt.</p>
+          <p className="mt-2 text-sm text-gray-500">
+            Danh sách tự làm mới định kỳ để bạn nhận thay đổi phê duyệt sớm hơn.
+          </p>
         </div>
 
         <div className="mb-6 flex gap-2 border-b">
