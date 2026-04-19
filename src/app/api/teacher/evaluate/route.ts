@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
   try {
     await dbReady();
 
-    const user = await requireApiRole(request, ['teacher']);
+    const user = await requireApiRole(request, ['teacher', 'admin']);
 
     const { participation_id, achievement_level, feedback } = await request.json();
 
@@ -64,25 +64,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Kiểm tra hoạt động có thuộc giảng viên hay không
-    if (participation.teacher_id !== user.id) {
+    // Teacher chỉ được đánh giá hoạt động của mình, admin có quyền can thiệp toàn cục.
+    if (user.role === 'teacher' && participation.teacher_id !== user.id) {
       return errorResponse(ApiError.forbidden('Bạn chỉ có thể đánh giá hoạt động của mình'));
     }
 
     // (Tuỳ chọn) Kiểm tra giảng viên có được phân công lớp của học viên hay không
-    const teacherClass = await dbGet(
-      `
-      SELECT * FROM class_teachers 
-      WHERE teacher_id = ? AND class_id = ?
-    `,
-      [user.id, participation.class_id]
-    );
-
-    if (!teacherClass) {
-      console.warn(
-        `Giảng viên ${user.id} đang đánh giá học viên thuộc lớp ${participation.class_id} nhưng chưa được phân công lớp này`
+    if (user.role === 'teacher') {
+      const teacherClass = await dbGet(
+        `
+        SELECT * FROM class_teachers 
+        WHERE teacher_id = ? AND class_id = ?
+      `,
+        [user.id, participation.class_id]
       );
-      // Allow anyway since they own the activity
+
+      if (!teacherClass) {
+        console.warn(
+          `Giảng viên ${user.id} đang đánh giá học viên thuộc lớp ${participation.class_id} nhưng chưa được phân công lớp này`
+        );
+        // Allow anyway since they own the activity
+      }
     }
 
     // Cập nhật đánh giá
