@@ -105,6 +105,8 @@ describe('CreateActivityPage', () => {
     mandatorySelect.options[0].selected = true;
     fireEvent.change(mandatorySelect);
 
+    expect(screen.getByRole('button', { name: 'Đến bước 3 để gửi duyệt' })).toBeDisabled();
+
     fireEvent.click(screen.getByRole('button', { name: 'Bước 3: Tài liệu và gửi' }));
 
     const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement;

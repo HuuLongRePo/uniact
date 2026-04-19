@@ -513,12 +513,21 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
               >
                 Quay lại bước trước
               </button>
-              <div className="text-gray-600">
-                {currentStep === 'basic'
-                  ? 'Cập nhật thông tin chính của hoạt động.'
-                  : currentStep === 'scope'
-                    ? 'Điều chỉnh phạm vi lớp, học viên và phân loại.'
-                    : 'Kiểm tra lại thay đổi rồi lưu nháp hoặc gửi duyệt.'}
+              <div className="text-center text-gray-600">
+                <div className="font-medium text-gray-800">
+                  {currentStep === 'basic'
+                    ? 'Tiến độ 1/3, đang cập nhật thông tin chính.'
+                    : currentStep === 'scope'
+                      ? 'Tiến độ 2/3, đang điều chỉnh phạm vi và phân loại.'
+                      : 'Tiến độ 3/3, đã sẵn sàng kiểm tra và gửi lại hoạt động.'}
+                </div>
+                <div className="text-xs text-gray-500">
+                  {currentStep === 'basic'
+                    ? 'Đi tiếp sang bước 2 để rà lại lớp, học viên và phân loại áp dụng.'
+                    : currentStep === 'scope'
+                      ? 'Sau khi chốt phạm vi, sang bước 3 để bật các hành động lưu nháp hoặc gửi duyệt.'
+                      : 'Bạn đang ở bước cuối, có thể lưu nháp hoặc gửi duyệt ngay.'}
+                </div>
               </div>
               <button
                 type="button"

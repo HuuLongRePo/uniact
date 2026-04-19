@@ -1130,12 +1130,21 @@ export default function CreateActivityPage() {
                   >
                     Quay lại bước trước
                   </button>
-                  <div className="text-sm text-gray-600">
-                    {currentTab === 'basic'
-                      ? 'Bước 1/3, hoàn thiện thông tin chính của hoạt động.'
-                      : currentTab === 'details'
-                        ? 'Bước 2/3, chọn phạm vi lớp, học viên và phân loại.'
-                        : 'Bước 3/3, kiểm tra tài liệu và gửi hoạt động.'}
+                  <div className="text-center text-sm text-gray-600">
+                    <div className="font-medium text-gray-800">
+                      {currentTab === 'basic'
+                        ? 'Tiến độ 1/3, đang hoàn thiện thông tin chính.'
+                        : currentTab === 'details'
+                          ? 'Tiến độ 2/3, đang chọn phạm vi và phân loại.'
+                          : 'Tiến độ 3/3, đã sẵn sàng kiểm tra và gửi.'}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {currentTab === 'basic'
+                        ? 'Hãy đi tiếp sang bước 2 để chọn lớp, học viên và phạm vi áp dụng.'
+                        : currentTab === 'details'
+                          ? 'Sau khi chốt phạm vi, sang bước 3 để rà file và bật nút lưu hoặc gửi duyệt.'
+                          : 'Bạn đang ở bước cuối, có thể lưu nháp hoặc gửi duyệt ngay.'}
+                    </div>
                   </div>
                   <button
                     type="button"

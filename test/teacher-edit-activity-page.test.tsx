@@ -122,6 +122,8 @@ describe('EditActivityPage', () => {
     const numberInput = document.querySelector('input[type="number"]') as HTMLInputElement;
     fireEvent.change(numberInput, { target: { value: '' } });
 
+    expect(screen.getByRole('button', { name: 'Đến bước 3 để gửi duyệt' })).toBeDisabled();
+
     fireEvent.click(screen.getByRole('button', { name: 'Bước 3: Kiểm tra và gửi' }));
     fireEvent.click(screen.getByRole('button', { name: 'Gửi duyệt' }));
 
