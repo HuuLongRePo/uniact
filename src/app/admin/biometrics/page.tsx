@@ -15,8 +15,12 @@ type StudentBiometricRow = {
     runtime_enabled: boolean;
     enrollment_status: string;
     training_status: string;
+    sample_image_count?: number;
+    notes?: string | null;
+    training_version?: string | null;
+    last_trained_at?: string | null;
     face_attendance_ready: boolean;
-    blocker: string;
+    blocker: string | null;
   };
 };
 
@@ -101,8 +105,9 @@ export default function AdminBiometricsPage() {
                 <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Lớp</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Enrollment</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Training</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Sample ảnh</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Face attendance</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Blocker</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Blocker / note</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
@@ -114,13 +119,28 @@ export default function AdminBiometricsPage() {
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-700">{student.class_name || '-'}</td>
                   <td className="px-4 py-3 text-sm text-amber-700">{student.biometric_readiness.enrollment_status}</td>
-                  <td className="px-4 py-3 text-sm text-amber-700">{student.biometric_readiness.training_status}</td>
+                  <td className="px-4 py-3 text-sm text-amber-700">
+                    <div>{student.biometric_readiness.training_status}</div>
+                    {student.biometric_readiness.training_version ? (
+                      <div className="text-xs text-gray-500">
+                        v{student.biometric_readiness.training_version}
+                      </div>
+                    ) : null}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-700">
+                    {student.biometric_readiness.sample_image_count || 0}
+                  </td>
                   <td className="px-4 py-3 text-sm">
                     <span className={student.biometric_readiness.face_attendance_ready ? 'text-green-600 font-medium' : 'text-amber-700 font-medium'}>
                       {student.biometric_readiness.face_attendance_ready ? 'ready' : 'blocked'}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{student.biometric_readiness.blocker}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">
+                    <div>{student.biometric_readiness.blocker || '-'}</div>
+                    {student.biometric_readiness.notes ? (
+                      <div className="text-xs text-gray-500 mt-1">{student.biometric_readiness.notes}</div>
+                    ) : null}
+                  </td>
                 </tr>
               ))}
             </tbody>
