@@ -232,6 +232,62 @@ describe('StudentActivityDetailPage registration conflict flow', () => {
     expect(screen.queryByRole('button', { name: /Đăng ký ngay/i })).not.toBeInTheDocument();
   });
 
+  it('shows open-scope reason and still allows registration for globally open activities', async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = normalizeUrl(input);
+
+      if (url === '/api/activities/20' && !init?.method) {
+        return jsonResponse({
+          data: {
+            activity: {
+              id: 20,
+              title: 'Hoạt động mở toàn cục',
+              description: 'Mô tả chi tiết',
+              date_time: '2099-04-15T08:00:00.000Z',
+              location: 'Hội trường mở',
+              max_participants: 50,
+              participant_count: 10,
+              available_slots: 40,
+              status: 'published',
+              approval_status: 'approved',
+              qr_enabled: false,
+              teacher_id: 9,
+              teacher_name: 'Teacher Detail',
+              activity_type: 'Tình nguyện',
+              organization_level: 'Cấp trường',
+              class_ids: [],
+              class_names: [],
+              is_registered: false,
+              registration_status: null,
+              can_cancel: false,
+              can_register: true,
+              applies_to_student: true,
+              applicability_scope: 'open_scope',
+              applicability_reason: 'Hoạt động mở cho tất cả học viên.',
+              base_points: 10,
+              registration_deadline: '2099-04-14T08:00:00.000Z',
+            },
+          },
+        });
+      }
+
+      if (url === '/api/activities/20/register' && init?.method === 'POST') {
+        return jsonResponse({ message: 'Đăng ký thành công!' }, true, 201);
+      }
+
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
+
+    vi.stubGlobal('fetch', fetchMock);
+    window.fetch = fetchMock as typeof fetch;
+
+    render(<StudentActivityDetailPage />);
+
+    expect(await screen.findByText('Hoạt động mở toàn cục')).toBeInTheDocument();
+    expect(screen.getByText('Hoạt động mở cho tất cả học viên.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Đăng ký ngay/i })).toBeInTheDocument();
+  });
+
   it('shows mandatory participation state and hides self-cancel actions', async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = normalizeUrl(input);
