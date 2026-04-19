@@ -94,6 +94,7 @@ describe('attendance runtime bridge', () => {
       verified: true,
       runtimeMode: 'runtime_ready',
       verificationSource: 'upstream',
+      verificationMethod: 'upstream_verified',
     });
   });
 
@@ -187,6 +188,7 @@ describe('attendance runtime bridge', () => {
     ).resolves.toMatchObject({
       verified: true,
       verificationSource: 'runtime_bridge',
+      verificationMethod: 'candidate_embedding',
       runtimeMode: 'runtime_ready',
     });
   });

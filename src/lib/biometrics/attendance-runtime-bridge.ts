@@ -18,6 +18,7 @@ export type FaceAttendanceVerificationResult = {
   verified: boolean;
   confidenceScore: number;
   verificationSource: 'upstream' | 'runtime_bridge';
+  verificationMethod: 'upstream_verified' | 'candidate_embedding';
   runtimeMode: string;
 };
 
@@ -112,6 +113,7 @@ export async function verifyFaceAttendanceRuntime(
       verified: true,
       confidenceScore: input.confidenceScore,
       verificationSource: 'runtime_bridge',
+      verificationMethod: 'candidate_embedding',
       runtimeMode: capability.mode,
     };
   }
@@ -132,6 +134,7 @@ export async function verifyFaceAttendanceRuntime(
     verified: true,
     confidenceScore: input.confidenceScore,
     verificationSource: 'upstream',
+    verificationMethod: 'upstream_verified',
     runtimeMode: capability.mode,
   };
 }

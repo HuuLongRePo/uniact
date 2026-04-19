@@ -93,6 +93,7 @@ describe('POST /api/attendance/face', () => {
       verified: true,
       confidenceScore: 0.91,
       verificationSource: 'upstream',
+      verificationMethod: 'upstream_verified',
       runtimeMode: 'runtime_ready',
     });
     mockDbGet.mockImplementation(async (sql: string) => {
@@ -143,6 +144,9 @@ describe('POST /api/attendance/face', () => {
       activity_id: 91,
       student_id: 3001,
       confidence_score: 0.91,
+      verification_source: 'upstream',
+      verification_method: 'upstream_verified',
+      runtime_mode: 'runtime_ready',
     });
     expect(mockDbRun).toHaveBeenCalled();
   });
@@ -206,6 +210,7 @@ describe('POST /api/attendance/face', () => {
       verified: true,
       confidenceScore: 0.6,
       verificationSource: 'upstream',
+      verificationMethod: 'upstream_verified',
       runtimeMode: 'runtime_ready',
     });
     mockDbGet.mockImplementation(async (sql: string) => {
@@ -255,6 +260,7 @@ describe('POST /api/attendance/face', () => {
       verified: true,
       confidenceScore: 0.93,
       verificationSource: 'upstream',
+      verificationMethod: 'upstream_verified',
       runtimeMode: 'runtime_ready',
     });
     mockDbGet.mockImplementation(async (sql: string) => {
@@ -301,6 +307,68 @@ describe('POST /api/attendance/face', () => {
       method: 'face',
       activity_id: 93,
       student_id: 3003,
+      verification_source: 'upstream',
+      verification_method: 'upstream_verified',
+      runtime_mode: 'runtime_ready',
     });
+  });
+
+  it('returns runtime-bridge verification metadata when candidate embedding branch succeeds', async () => {
+    mockVerifyFaceAttendanceRuntime.mockResolvedValue({
+      verified: true,
+      confidenceScore: 0.95,
+      verificationSource: 'runtime_bridge',
+      verificationMethod: 'candidate_embedding',
+      runtimeMode: 'runtime_ready',
+    });
+    mockDbGet.mockImplementation(async (sql: string) => {
+      if (sql.includes('FROM activities')) {
+        return {
+          id: 94,
+          title: 'Candidate Embedding Activity',
+          status: 'published',
+          approval_status: 'approved',
+          max_participants: 120,
+          date_time: '2027-01-13T08:00:00.000Z',
+        };
+      }
+      if (sql.includes('COUNT(*) as count FROM participations')) {
+        return { count: 80 };
+      }
+      if (sql.includes('FROM participations')) {
+        return { id: 901, attendance_status: 'registered' };
+      }
+      if (sql.includes('FROM attendance_records')) {
+        return null;
+      }
+      return null;
+    });
+
+    mockDbAll.mockResolvedValue([{ participation_mode: 'mandatory' }]);
+
+    const route = await import('../src/app/api/attendance/face/route');
+    const response = await route.POST({
+      json: async () => ({
+        activity_id: 94,
+        student_id: 3004,
+        confidence_score: 0.95,
+        upstream_verified: false,
+        candidate_embedding: [0.1, 0.2, 0.3],
+      }),
+    } as any);
+
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.data).toMatchObject({
+      verification_source: 'runtime_bridge',
+      verification_method: 'candidate_embedding',
+      runtime_mode: 'runtime_ready',
+    });
+    expect(mockVerifyFaceAttendanceRuntime).toHaveBeenCalledWith(
+      expect.objectContaining({
+        candidateEmbedding: [0.1, 0.2, 0.3],
+        upstreamVerified: false,
+      })
+    );
   });
 });

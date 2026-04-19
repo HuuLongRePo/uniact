@@ -153,6 +153,9 @@ export async function POST(request: NextRequest) {
         activity_id: activityId,
         student_id: targetStudentId,
         confidence_score: confidenceScore,
+        verification_source: runtimeVerification.verificationSource,
+        verification_method: runtimeVerification.verificationMethod,
+        runtime_mode: runtimeVerification.runtimeMode,
       });
     }
 
@@ -177,6 +180,7 @@ export async function POST(request: NextRequest) {
           upstream_verified: true,
           runtime_mode: runtimeVerification.runtimeMode,
           verification_source: runtimeVerification.verificationSource,
+          verification_method: runtimeVerification.verificationMethod,
         }),
       ]
     );
@@ -201,6 +205,9 @@ export async function POST(request: NextRequest) {
       activity_id: activityId,
       student_id: targetStudentId,
       confidence_score: confidenceScore,
+      verification_source: runtimeVerification.verificationSource,
+      verification_method: runtimeVerification.verificationMethod,
+      runtime_mode: runtimeVerification.runtimeMode,
       policy: {
         preferred_primary_method: policy.facePilot.preferredPrimaryMethod,
         min_confidence_score: policy.facePilot.minConfidenceScore,
