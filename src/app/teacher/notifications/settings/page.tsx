@@ -80,14 +80,16 @@ export default function NotificationSettingsPage() {
     try {
       setLoading(true);
       const response = await fetch('/api/teacher/notifications/settings');
-      if (response.ok) {
-        const data = await response.json();
-        setSettings(data.settings);
-        setTemplates(data.settings.templates || []);
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error((data && (data.error || data.message)) || 'Không thể tải cài đặt');
       }
+      const nextSettings = data?.settings || data?.data?.settings || null;
+      setSettings(nextSettings);
+      setTemplates(nextSettings?.templates || []);
     } catch (error: unknown) {
       console.error('Error fetching settings:', error);
-      toast.error('Không thể tải cài đặt');
+      toast.error(error instanceof Error ? error.message : 'Không thể tải cài đặt');
     } finally {
       setLoading(false);
     }
@@ -104,14 +106,15 @@ export default function NotificationSettingsPage() {
         body: JSON.stringify(settings),
       });
 
+      const data = await response.json().catch(() => null);
       if (response.ok) {
-        toast.success('Đã lưu cài đặt');
+        toast.success(data?.message || 'Đã lưu cài đặt');
       } else {
-        toast.error('Không thể lưu cài đặt');
+        toast.error(data?.error || data?.message || 'Không thể lưu cài đặt');
       }
     } catch (error) {
       console.error('Error saving settings:', error);
-      toast.error('Lỗi khi lưu cài đặt');
+      toast.error(error instanceof Error ? error.message : 'Không thể lưu cài đặt');
     } finally {
       setSaving(false);
     }
@@ -130,18 +133,18 @@ export default function NotificationSettingsPage() {
         body: JSON.stringify(newTemplate),
       });
 
+      const data = await response.json().catch(() => null);
       if (response.ok) {
-        const data = await response.json();
-        setTemplates([...templates, data.template]);
+        setTemplates([...templates, data?.template || data?.data?.template]);
         setNewTemplate({ name: '', subject: '', body: '', category: '' });
         setShowTemplateForm(false);
-        toast.success('Đã thêm mẫu thông báo');
+        toast.success(data?.message || 'Đã thêm mẫu thông báo');
       } else {
-        toast.error('Không thể thêm mẫu');
+        toast.error(data?.error || data?.message || 'Không thể thêm mẫu');
       }
     } catch (error) {
       console.error('Error adding template:', error);
-      toast.error('Lỗi khi thêm mẫu');
+      toast.error(error instanceof Error ? error.message : 'Không thể thêm mẫu');
     }
   };
 
@@ -151,15 +154,16 @@ export default function NotificationSettingsPage() {
         method: 'DELETE',
       });
 
+      const data = await response.json().catch(() => null);
       if (response.ok) {
         setTemplates(templates.filter((t) => t.id !== id));
-        toast.success('Đã xóa mẫu');
+        toast.success(data?.message || 'Đã xóa mẫu');
       } else {
-        toast.error('Không thể xóa mẫu');
+        toast.error(data?.error || data?.message || 'Không thể xóa mẫu');
       }
     } catch (error) {
       console.error('Error deleting template:', error);
-      toast.error('Lỗi khi xóa mẫu');
+      toast.error(error instanceof Error ? error.message : 'Không thể xóa mẫu');
     }
   };
 

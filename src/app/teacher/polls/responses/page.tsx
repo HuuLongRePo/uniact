@@ -57,9 +57,9 @@ export default function PollResponsesPage() {
   const fetchPolls = async () => {
     try {
       const response = await fetch('/api/teacher/polls');
-      if (!response.ok) throw new Error('Failed to fetch polls');
-      const data = await response.json();
-      const pollsList: any[] = Array.isArray(data) ? data : data.polls || [];
+      const data = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(data?.error || data?.message || 'Không thể tải danh sách bình chọn');
+      const pollsList: any[] = Array.isArray(data) ? data : data?.polls || data?.data?.polls || [];
       setPolls(pollsList);
       // Select first poll with active status
       const activePoll = pollsList.find((p: any) => p.status === 'active' || p.status === 'closed');
@@ -80,13 +80,13 @@ export default function PollResponsesPage() {
     try {
       setLoading(true);
       const response = await fetch(`/api/teacher/polls/${pollId}/responses`);
-      if (!response.ok) throw new Error('Failed to fetch responses');
-      const data = await response.json();
-      setResponses(Array.isArray(data) ? data : data.responses || []);
-      setPollOptions(data.options || []);
+      const data = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(data?.error || data?.message || 'Không thể tải phản hồi');
+      setResponses(Array.isArray(data) ? data : data?.responses || data?.data?.responses || []);
+      setPollOptions(data?.options || data?.data?.options || []);
     } catch (error) {
       console.error('Error fetching responses:', error);
-      toast.error('Không thể tải phản hồi');
+      toast.error(error instanceof Error ? error.message : 'Không thể tải phản hồi');
       setResponses([]);
       setPollOptions([]);
     } finally {
@@ -158,6 +158,10 @@ export default function PollResponsesPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ filters }),
       });
+
+      if (!response.ok) {
+        throw new Error('Không thể xuất phản hồi');
+      }
 
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);

@@ -57,12 +57,12 @@ export default function PollSettingsPage() {
     try {
       setLoading(true);
       const response = await fetch('/api/teacher/polls/settings');
-      if (!response.ok) throw new Error('Failed to fetch settings');
-      const data = await response.json();
-      setSettings(data);
+      const data = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(data?.error || data?.message || 'Không thể tải cấu hình');
+      setSettings(data?.settings || data?.data?.settings || data);
     } catch (error) {
       console.error('Error fetching settings:', error);
-      toast.error('Không thể tải cấu hình');
+      toast.error(error instanceof Error ? error.message : 'Không thể tải cấu hình');
     } finally {
       setLoading(false);
     }
@@ -83,11 +83,12 @@ export default function PollSettingsPage() {
         }),
       });
 
-      if (!response.ok) throw new Error('Failed to save settings');
-      toast.success('Lưu cấu hình thành công');
+      const data = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(data?.error || data?.message || 'Không thể lưu cấu hình');
+      toast.success(data?.message || 'Lưu cấu hình thành công');
     } catch (error) {
       console.error('Error saving settings:', error);
-      toast.error('Không thể lưu cấu hình');
+      toast.error(error instanceof Error ? error.message : 'Không thể lưu cấu hình');
     } finally {
       setSaving(false);
     }
@@ -118,12 +119,13 @@ export default function PollSettingsPage() {
         }),
       });
 
-      if (!response.ok) throw new Error('Failed to create template');
-      const data = await response.json();
+      const data = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(data?.error || data?.message || 'Không thể tạo mẫu');
 
+      const createdTemplate = data?.template || data?.data?.template || data;
       setSettings({
         ...settings,
-        templates: [...settings.templates, data],
+        templates: [...settings.templates, createdTemplate],
       });
 
       setNewTemplate({
@@ -134,10 +136,10 @@ export default function PollSettingsPage() {
         defaultOptions: ['', '', ''],
       });
       setShowTemplateForm(false);
-      toast.success('Tạo mẫu thành công');
+      toast.success(data?.message || 'Tạo mẫu thành công');
     } catch (error) {
       console.error('Error creating template:', error);
-      toast.error('Không thể tạo mẫu');
+      toast.error(error instanceof Error ? error.message : 'Không thể tạo mẫu');
     }
   };
 
@@ -147,16 +149,17 @@ export default function PollSettingsPage() {
         method: 'DELETE',
       });
 
-      if (!response.ok) throw new Error('Failed to delete template');
+      const data = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(data?.error || data?.message || 'Không thể xóa mẫu');
 
       setSettings({
         ...settings,
         templates: settings.templates.filter((t) => t.id !== id),
       });
-      toast.success('Xóa mẫu thành công');
+      toast.success(data?.message || 'Xóa mẫu thành công');
     } catch (error) {
       console.error('Error deleting template:', error);
-      toast.error('Không thể xóa mẫu');
+      toast.error(error instanceof Error ? error.message : 'Không thể xóa mẫu');
     }
   };
 
