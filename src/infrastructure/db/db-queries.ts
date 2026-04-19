@@ -16,6 +16,7 @@ import {
 import { cache, CACHE_TTL } from '../../lib/cache';
 import { dbRun, dbGet, dbAll, withTransaction } from './db-core';
 import { ensureActivityClassParticipationMode } from './activity-class-schema';
+import { ensureActivityStudentScope } from './activity-student-scope-schema';
 import { ensureParticipationColumns } from './participation-schema';
 
 type ActivityClassParticipationMode = 'mandatory' | 'voluntary';
@@ -33,6 +34,13 @@ function uniquePositiveIds(values: unknown): number[] {
     )
   );
 }
+
+type ActivityStudentParticipationMode = 'mandatory' | 'voluntary';
+
+type ActivityStudentAssignment = {
+  student_id: number;
+  participation_mode: ActivityStudentParticipationMode;
+};
 
 function buildActivityClassAssignments(activityData: any): ActivityClassAssignment[] {
   const hasExplicitScope =
@@ -54,6 +62,25 @@ function buildActivityClassAssignments(activityData: any): ActivityClassAssignme
     })),
     ...voluntaryClassIds.map((class_id) => ({
       class_id,
+      participation_mode: 'voluntary' as const,
+    })),
+  ];
+}
+
+function buildActivityStudentAssignments(activityData: any): ActivityStudentAssignment[] {
+  const mandatoryStudentIds = uniquePositiveIds(activityData?.mandatory_student_ids);
+  const mandatorySet = new Set(mandatoryStudentIds);
+  const voluntaryStudentIds = uniquePositiveIds(activityData?.voluntary_student_ids).filter(
+    (studentId) => !mandatorySet.has(studentId)
+  );
+
+  return [
+    ...mandatoryStudentIds.map((student_id) => ({
+      student_id,
+      participation_mode: 'mandatory' as const,
+    })),
+    ...voluntaryStudentIds.map((student_id) => ({
+      student_id,
       participation_mode: 'voluntary' as const,
     })),
   ];
@@ -362,6 +389,7 @@ export const dbHelpers = {
    */
   createActivity: async (activityData: any) => {
     await ensureActivityClassParticipationMode();
+    await ensureActivityStudentScope();
 
     const result = await dbRun(
       `INSERT INTO activities (
@@ -411,6 +439,18 @@ export const dbHelpers = {
       }
     }
 
+    for (const assignment of buildActivityStudentAssignments(activityData)) {
+      try {
+        await dbRun(
+          `INSERT OR IGNORE INTO activity_students (activity_id, student_id, participation_mode)
+           VALUES (?, ?, ?)`,
+          [result.lastID, assignment.student_id, assignment.participation_mode]
+        );
+      } catch (err) {
+        console.warn(`⚠️  Failed to insert activity-student mapping: ${err}`);
+      }
+    }
+
     try {
       await dbRun(
         'INSERT INTO audit_logs (actor_id, action, target_table, target_id, details) VALUES (?, ?, ?, ?, ?)',
@@ -440,6 +480,7 @@ export const dbHelpers = {
    */
   updateActivity: async (activityId: number, activityData: any) => {
     await ensureActivityClassParticipationMode();
+    await ensureActivityStudentScope();
 
     const updates: string[] = [];
     const values: any[] = [];
@@ -481,6 +522,9 @@ export const dbHelpers = {
       activityData.mandatory_class_ids !== undefined ||
       activityData.voluntary_class_ids !== undefined ||
       activityData.applies_to_all_students !== undefined;
+    const hasDirectStudentScope =
+      activityData.mandatory_student_ids !== undefined ||
+      activityData.voluntary_student_ids !== undefined;
     if (hasExtendedClassScope) {
       try {
         await dbRun('DELETE FROM activity_classes WHERE activity_id = ?', [activityId]);
@@ -519,6 +563,23 @@ export const dbHelpers = {
         classMappingsUpdated = true;
       } catch (err) {
         console.warn(`⚠️  Failed to update activity-class mappings: ${err}`);
+      }
+    }
+    if (hasDirectStudentScope) {
+      try {
+        await dbRun('DELETE FROM activity_students WHERE activity_id = ?', [activityId]);
+
+        for (const assignment of buildActivityStudentAssignments(activityData)) {
+          await dbRun(
+            `INSERT OR IGNORE INTO activity_students (activity_id, student_id, participation_mode)
+             VALUES (?, ?, ?)`,
+            [activityId, assignment.student_id, assignment.participation_mode]
+          );
+        }
+
+        classMappingsUpdated = true;
+      } catch (err) {
+        console.warn(`⚠️  Failed to update activity-student mappings: ${err}`);
       }
     }
     if (activityData.status !== undefined) {

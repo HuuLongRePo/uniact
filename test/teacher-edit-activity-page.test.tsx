@@ -90,6 +90,9 @@ describe('EditActivityPage', () => {
           activity_type_id: 5,
           organization_level_id: 7,
           class_ids: [1],
+          mandatory_class_ids: [1],
+          voluntary_class_ids: [],
+          applies_to_all_students: false,
         });
         expect(body).not.toHaveProperty('status');
         return jsonResponse({ activity: { id: 55, title: body.title } });

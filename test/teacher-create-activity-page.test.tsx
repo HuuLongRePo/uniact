@@ -59,6 +59,9 @@ describe('CreateActivityPage', () => {
           class_ids: [1],
           mandatory_class_ids: [1],
           voluntary_class_ids: [],
+          mandatory_student_ids: [],
+          voluntary_student_ids: [],
+          applies_to_all_students: false,
         });
         expect(body.end_time).toBeUndefined();
         expect(body).not.toHaveProperty('files');

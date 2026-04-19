@@ -292,6 +292,8 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
         class_ids: appliesToAllStudents ? [] : selectedClasses,
         mandatory_class_ids: appliesToAllStudents ? [] : mandatoryClassIds,
         voluntary_class_ids: appliesToAllStudents ? [] : voluntaryClassIds,
+        mandatory_student_ids: [],
+        voluntary_student_ids: [],
         applies_to_all_students: appliesToAllStudents,
         ...(activityTypeId ? { activity_type_id: Number(activityTypeId) } : {}),
         ...(organizationLevelId ? { organization_level_id: Number(organizationLevelId) } : {}),

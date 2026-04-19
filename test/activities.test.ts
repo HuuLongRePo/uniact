@@ -137,6 +137,8 @@ describe('Activities API (unit)', () => {
     expect(mocks.mockUpdateActivity).toHaveBeenCalledWith(1, {
       title: 'Updated Title',
       applies_to_all_students: false,
+      mandatory_student_ids: [],
+      voluntary_student_ids: [],
     });
   });
 
