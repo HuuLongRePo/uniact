@@ -45,6 +45,10 @@ describe('POST /api/teacher/evaluate', () => {
       requireApiRole: async () => ({ id: 7, name: 'Teacher A', role: 'teacher' }),
     }));
 
+    vi.doMock('@/lib/activity-access', () => ({
+      teacherCanAccessActivity: async () => true,
+    }));
+
     vi.doMock('@/lib/scoring', () => ({
       PointCalculationService: {
         autoCalculateAfterEvaluation: mockAutoCalculate,
@@ -108,6 +112,10 @@ describe('POST /api/teacher/evaluate', () => {
       requireApiRole: async () => ({ id: 1, name: 'Admin', role: 'admin' }),
     }));
 
+    vi.doMock('@/lib/activity-access', () => ({
+      teacherCanAccessActivity: async () => true,
+    }));
+
     vi.doMock('@/lib/scoring', () => ({
       PointCalculationService: {
         autoCalculateAfterEvaluation: mockAutoCalculate,
@@ -135,5 +143,56 @@ describe('POST /api/teacher/evaluate', () => {
       formula: '8',
       evaluated_by: 'Admin',
     });
+  });
+
+  it('blocks teacher evaluation when the activity is outside activity-scoped access', async () => {
+    vi.doMock('@/lib/database', () => ({
+      dbGet: vi.fn(async (sql: string) => {
+        if (sql.includes('FROM participations p')) {
+          return {
+            id: 88,
+            attendance_status: 'attended',
+            teacher_id: 12,
+            student_id: 30,
+            student_name: 'Blocked Student',
+            class_id: 8,
+            activity_id: 33,
+            activity_title: 'Hoạt động C',
+          };
+        }
+        return null;
+      }),
+      dbRun: vi.fn(async () => ({ changes: 1, lastID: 1 })),
+      dbReady: vi.fn(async () => undefined),
+      dbHelpers: {
+        createAuditLog: vi.fn(async () => undefined),
+      },
+    }));
+
+    vi.doMock('@/lib/guards', () => ({
+      requireApiRole: async () => ({ id: 7, name: 'Teacher A', role: 'teacher' }),
+    }));
+
+    vi.doMock('@/lib/activity-access', () => ({
+      teacherCanAccessActivity: async () => false,
+    }));
+
+    vi.doMock('@/lib/scoring', () => ({
+      PointCalculationService: {
+        autoCalculateAfterEvaluation: vi.fn(async () => ({ totalPoints: 0, formula: '0' })),
+      },
+    }));
+
+    const route = await import('../src/app/api/teacher/evaluate/route');
+    const response = await route.POST({
+      json: async () => ({
+        participation_id: 88,
+        achievement_level: 'good',
+      }),
+    } as any);
+
+    expect(response.status).toBe(403);
+    const body = await response.json();
+    expect(body.error).toContain('thuộc phạm vi quản lý');
   });
 });

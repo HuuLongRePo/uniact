@@ -11,6 +11,7 @@ import { dbGet, dbRun, dbReady, dbHelpers } from '@/lib/database';
 import { PointCalculationService } from '@/lib/scoring';
 import { requireApiRole } from '@/lib/guards';
 import { ApiError, successResponse, errorResponse } from '@/lib/api-response';
+import { teacherCanAccessActivity } from '@/lib/activity-access';
 
 export async function POST(request: NextRequest) {
   try {
@@ -64,27 +65,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Teacher chỉ được đánh giá hoạt động của mình, admin có quyền can thiệp toàn cục.
-    if (user.role === 'teacher' && participation.teacher_id !== user.id) {
-      return errorResponse(ApiError.forbidden('Bạn chỉ có thể đánh giá hoạt động của mình'));
-    }
-
-    // (Tuỳ chọn) Kiểm tra giảng viên có được phân công lớp của học viên hay không
-    if (user.role === 'teacher') {
-      const teacherClass = await dbGet(
-        `
-        SELECT * FROM class_teachers 
-        WHERE teacher_id = ? AND class_id = ?
-      `,
-        [user.id, participation.class_id]
+    // Teacher được phép đánh giá nếu có activity-scoped access, admin có quyền can thiệp toàn cục.
+    if (
+      user.role === 'teacher' &&
+      !(await teacherCanAccessActivity(Number(user.id), Number(participation.activity_id)))
+    ) {
+      return errorResponse(
+        ApiError.forbidden('Bạn chỉ có thể đánh giá người tham gia của hoạt động thuộc phạm vi quản lý')
       );
-
-      if (!teacherClass) {
-        console.warn(
-          `Giảng viên ${user.id} đang đánh giá học viên thuộc lớp ${participation.class_id} nhưng chưa được phân công lớp này`
-        );
-        // Allow anyway since they own the activity
-      }
     }
 
     // Cập nhật đánh giá
