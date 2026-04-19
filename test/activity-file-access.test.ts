@@ -282,6 +282,38 @@ describe('activity file access routes', () => {
     });
   });
 
+  it('blocks out-of-scope teachers from listing legacy upload metadata', async () => {
+    mockFs();
+
+    const mockTeacherAccess = vi.fn(async () => false);
+    const mockDbAll = vi.fn();
+
+    vi.doMock('@/lib/guards', () => ({
+      requireAuth: async () => ({ id: 21, role: 'teacher' }),
+      requireRole: async () => ({ id: 21, role: 'teacher' }),
+    }));
+
+    vi.doMock('@/lib/activity-access', () => ({
+      teacherCanAccessActivity: mockTeacherAccess,
+    }));
+
+    vi.doMock('@/lib/database', () => ({
+      dbGet: vi.fn(async () => ({ id: 71 })),
+      dbAll: mockDbAll,
+      dbRun: vi.fn(),
+    }));
+
+    const route = await import('../src/app/api/activities/[id]/upload/route');
+    const response = await route.GET({} as any, {
+      params: Promise.resolve({ id: '71' }),
+    } as any);
+
+    expect(response.status).toBe(403);
+    const body = await response.json();
+    expect(body.error).toContain('xem file của hoạt động thuộc phạm vi quản lý');
+    expect(mockDbAll).not.toHaveBeenCalled();
+  });
+
   it('allows a support teacher to list attachments for a related activity on the common detail page', async () => {
     mockFs({ exists: false });
     const mockTeacherAccess = vi.fn(async () => true);
@@ -313,6 +345,38 @@ describe('activity file access routes', () => {
     expect(body.success).toBe(true);
     expect(body.attachments).toEqual([]);
     expect(mockTeacherAccess).toHaveBeenCalledWith(12, 71);
+  });
+
+  it('blocks out-of-scope teachers from listing attachments on the common detail page', async () => {
+    mockFs({ exists: false });
+
+    const mockTeacherAccess = vi.fn(async () => false);
+
+    vi.doMock('@/lib/guards', () => ({
+      requireAuth: async () => ({ id: 21, role: 'teacher' }),
+      requireRole: async () => ({ id: 21, role: 'teacher' }),
+    }));
+
+    vi.doMock('@/lib/activity-access', () => ({
+      teacherCanAccessActivity: mockTeacherAccess,
+    }));
+
+    vi.doMock('@/lib/database', () => ({
+      dbGet: vi.fn(),
+      dbRun: vi.fn(),
+      dbHelpers: {
+        getActivityById: vi.fn(async () => ({ id: 71, teacher_id: 99 })),
+      },
+    }));
+
+    const route = await import('../src/app/api/activities/[id]/attachments/route');
+    const response = await route.GET({} as any, {
+      params: Promise.resolve({ id: '71' }),
+    } as any);
+
+    expect(response.status).toBe(403);
+    const body = await response.json();
+    expect(body.error).toContain('xem file của hoạt động thuộc phạm vi quản lý');
   });
 
   it('keeps attachment listing accessible to authenticated students', async () => {

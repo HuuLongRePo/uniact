@@ -35,7 +35,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
 
     if (user.role === 'teacher' && !(await teacherCanAccessActivity(Number(user.id), activityId))) {
-      return errorResponse(ApiError.forbidden('Bạn không có quyền tải file lên hoạt động này'));
+      return errorResponse(ApiError.forbidden('Bạn không có quyền tải file lên hoạt động thuộc phạm vi quản lý'));
     }
 
     const formData = await request.formData();
@@ -152,7 +152,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     if (user.role === 'teacher' && !(await teacherCanAccessActivity(Number(user.id), activityId))) {
-      return errorResponse(ApiError.forbidden('Không có quyền truy cập'));
+      return errorResponse(ApiError.forbidden('Bạn chỉ có thể xem file của hoạt động thuộc phạm vi quản lý'));
     }
 
     // List files in upload directory

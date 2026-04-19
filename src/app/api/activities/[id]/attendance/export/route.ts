@@ -36,7 +36,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       !(await teacherCanAccessActivity(Number(user.id), Number(activityId)))
     ) {
       return errorResponse(
-        ApiError.forbidden('Bạn chỉ có thể xuất dữ liệu của hoạt động do mình tổ chức')
+        ApiError.forbidden('Bạn chỉ có thể xuất dữ liệu của hoạt động thuộc phạm vi quản lý')
       );
     }
 
