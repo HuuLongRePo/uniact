@@ -4,6 +4,7 @@ const mockDbGet = vi.fn();
 const mockDbAll = vi.fn();
 const mockDbRun = vi.fn();
 const mockRequireApiAuth = vi.fn();
+const mockVerifyFaceAttendanceRuntime = vi.fn();
 
 vi.mock('@/lib/database', () => ({
   dbGet: (...args: any[]) => mockDbGet(...args),
@@ -15,6 +16,10 @@ vi.mock('@/lib/guards', () => ({
   requireApiAuth: (...args: any[]) => mockRequireApiAuth(...args),
 }));
 
+vi.mock('@/lib/biometrics/attendance-runtime-bridge', () => ({
+  verifyFaceAttendanceRuntime: (...args: any[]) => mockVerifyFaceAttendanceRuntime(...args),
+}));
+
 describe('POST /api/attendance/face', () => {
   beforeEach(() => {
     vi.resetModules();
@@ -24,9 +29,19 @@ describe('POST /api/attendance/face', () => {
     mockRequireApiAuth.mockReset();
     mockRequireApiAuth.mockResolvedValue({ id: 12, role: 'teacher' });
     mockDbRun.mockResolvedValue({ changes: 1, lastID: 1 });
+    mockVerifyFaceAttendanceRuntime.mockReset();
   });
 
   it('fails closed when runtime capability is still unavailable', async () => {
+    const { ApiError } = await import('../src/lib/api-response');
+    mockVerifyFaceAttendanceRuntime.mockRejectedValueOnce(
+      new ApiError(
+        'FACE_RUNTIME_UNAVAILABLE',
+        'Runtime face attendance hiện chưa sẵn sàng để xác thực production',
+        409,
+        { runtime_mode: 'stubbed', recommended_fallback: 'manual' }
+      )
+    );
     mockDbGet.mockImplementation(async (sql: string) => {
       if (sql.includes('FROM activities')) {
         return {
@@ -73,7 +88,13 @@ describe('POST /api/attendance/face', () => {
     expect(attendanceWriteCalls).toHaveLength(0);
   });
 
-  it.skip('records face attendance when pilot is eligible and biometric check passes', async () => {
+  it('records face attendance when pilot is eligible and biometric check passes', async () => {
+    mockVerifyFaceAttendanceRuntime.mockResolvedValue({
+      verified: true,
+      confidenceScore: 0.91,
+      verificationSource: 'upstream',
+      runtimeMode: 'runtime_ready',
+    });
     mockDbGet.mockImplementation(async (sql: string) => {
       if (sql.includes('FROM activities')) {
         return {
@@ -126,7 +147,13 @@ describe('POST /api/attendance/face', () => {
     expect(mockDbRun).toHaveBeenCalled();
   });
 
-  it.skip('returns low-confidence fallback guidance instead of auto-recording', async () => {
+  it('returns low-confidence fallback guidance instead of auto-recording', async () => {
+    mockVerifyFaceAttendanceRuntime.mockResolvedValue({
+      verified: true,
+      confidenceScore: 0.6,
+      verificationSource: 'upstream',
+      runtimeMode: 'runtime_ready',
+    });
     mockDbGet.mockImplementation(async (sql: string) => {
       if (sql.includes('FROM activities')) {
         return {
@@ -169,7 +196,13 @@ describe('POST /api/attendance/face', () => {
     expect(attendanceWriteCalls).toHaveLength(0);
   });
 
-  it.skip('returns already_recorded when attendance record already exists', async () => {
+  it('returns already_recorded when attendance record already exists', async () => {
+    mockVerifyFaceAttendanceRuntime.mockResolvedValue({
+      verified: true,
+      confidenceScore: 0.93,
+      verificationSource: 'upstream',
+      runtimeMode: 'runtime_ready',
+    });
     mockDbGet.mockImplementation(async (sql: string) => {
       if (sql.includes('FROM activities')) {
         return {

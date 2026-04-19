@@ -4,7 +4,7 @@ import { requireApiAuth } from '@/lib/guards';
 import { dbAll, dbGet, dbRun } from '@/lib/database';
 import { buildAttendancePolicy } from '@/lib/attendance-policy';
 import { loadAttendancePolicyConfig } from '@/lib/attendance-policy-config';
-import { getFaceRuntimeCapability } from '@/lib/biometrics/runtime-capability';
+import { verifyFaceAttendanceRuntime } from '@/lib/biometrics/attendance-runtime-bridge';
 
 export async function POST(request: NextRequest) {
   try {
@@ -25,7 +25,6 @@ export async function POST(request: NextRequest) {
     const confidenceScore = Number(body?.confidence_score ?? body?.confidenceScore ?? 0);
     const upstreamVerified = Boolean(body?.upstream_verified ?? body?.upstreamVerified);
     const deviceId = body?.device_id ?? body?.deviceId ?? null;
-    const runtimeCapability = getFaceRuntimeCapability();
 
     const activity = await dbGet(
       `SELECT id, title, status, approval_status, max_participants, date_time
@@ -82,18 +81,6 @@ export async function POST(request: NextRequest) {
       config
     );
 
-    if (!runtimeCapability.attendance_api_accepting_runtime_verification) {
-      throw new ApiError(
-        'FACE_RUNTIME_UNAVAILABLE',
-        'Runtime face attendance hiện chưa sẵn sàng để xác thực production',
-        409,
-        {
-          runtime_mode: runtimeCapability.mode,
-          blockers: runtimeCapability.blockers,
-          recommended_fallback: 'manual',
-        }
-      );
-    }
 
     if (!policy.facePilot.eligible) {
       throw new ApiError(
@@ -108,17 +95,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!upstreamVerified) {
-      throw new ApiError(
-        'FACE_NOT_VERIFIED',
-        'Face attendance chưa được upstream biometric layer xác thực',
-        409,
-        {
-          recommended_fallback: 'manual',
-          teacher_manual_override: policy.facePilot.teacherManualOverride,
-        }
-      );
-    }
+    const runtimeVerification = await verifyFaceAttendanceRuntime({
+      activityId,
+      studentId: targetStudentId,
+      confidenceScore,
+      upstreamVerified,
+      deviceId,
+    });
 
     if (confidenceScore < policy.facePilot.minConfidenceScore) {
       throw new ApiError(
@@ -188,6 +171,8 @@ export async function POST(request: NextRequest) {
           device_id: deviceId,
           source: 'face-pilot',
           upstream_verified: true,
+          runtime_mode: runtimeVerification.runtimeMode,
+          verification_source: runtimeVerification.verificationSource,
         }),
       ]
     );
