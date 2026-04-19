@@ -1,9 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
+import {
+  detectSingleEmbedding,
+  performLivenessCheck,
+  FaceBiometricUnavailableError,
+  FACE_BIOMETRIC_RUNTIME_ENABLED,
+} from '@/lib/biometrics/face-runtime';
 
 export default function TeacherFaceAttendancePage() {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const [activityId, setActivityId] = useState('94');
   const [studentId, setStudentId] = useState('3004');
   const [confidenceScore, setConfidenceScore] = useState('0.95');
@@ -15,6 +23,63 @@ export default function TeacherFaceAttendancePage() {
   const [submitResult, setSubmitResult] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [capturing, setCapturing] = useState(false);
+
+  useEffect(() => {
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+        streamRef.current = null;
+      }
+    };
+  }, []);
+
+  const startCamera = async () => {
+    if (!navigator?.mediaDevices?.getUserMedia) {
+      throw new Error('Trình duyệt không hỗ trợ camera');
+    }
+
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        width: { ideal: 1280 },
+        height: { ideal: 720 },
+        facingMode: 'user',
+      },
+    });
+
+    if (videoRef.current) {
+      videoRef.current.srcObject = stream;
+    }
+    streamRef.current = stream;
+  };
+
+  const handleCaptureFromCamera = async () => {
+    try {
+      if (!FACE_BIOMETRIC_RUNTIME_ENABLED) {
+        throw new FaceBiometricUnavailableError();
+      }
+      setCapturing(true);
+      await startCamera();
+      if (!videoRef.current) {
+        throw new Error('Camera chưa sẵn sàng');
+      }
+
+      const result = await detectSingleEmbedding(videoRef.current);
+      if (!result) {
+        throw new Error('Không thể tạo candidate embedding từ camera');
+      }
+
+      const liveness = await performLivenessCheck(videoRef.current, 5, 80);
+      setEmbeddingInput(result.embedding.join(', '));
+      setQualityScore(String(result.qualityScore));
+      setLivenessScore(String(liveness.score));
+      toast.success('Đã lấy candidate embedding từ camera');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Không thể lấy candidate từ camera');
+    } finally {
+      setCapturing(false);
+    }
+  };
 
   const handlePreview = async () => {
     try {
@@ -92,6 +157,30 @@ export default function TeacherFaceAttendancePage() {
       </div>
 
       <div className="rounded-lg bg-white shadow p-6 space-y-4">
+        <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 space-y-3">
+          <div>
+            <h2 className="text-base font-semibold text-slate-900">Camera candidate capture</h2>
+            <p className="text-sm text-slate-600">
+              Dùng camera để bơm candidate embedding thử nghiệm, vẫn giữ fallback nhập tay để QA.
+            </p>
+          </div>
+          <div className="relative bg-black rounded-lg overflow-hidden aspect-video max-w-xl">
+            <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
+          </div>
+          <button
+            type="button"
+            onClick={() => void handleCaptureFromCamera()}
+            disabled={capturing}
+            className="rounded bg-violet-600 px-4 py-2 text-white hover:bg-violet-700 disabled:bg-gray-400"
+          >
+            {capturing ? 'Đang lấy candidate từ camera...' : 'Lấy candidate từ camera'}
+          </button>
+          {!FACE_BIOMETRIC_RUNTIME_ENABLED ? (
+            <p className="text-sm text-amber-700">
+              Runtime camera hiện vẫn đang ở chế độ gated, nên đây là groundwork để nối flow thật ở batch sau.
+            </p>
+          ) : null}
+        </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Candidate embedding</label>
           <textarea

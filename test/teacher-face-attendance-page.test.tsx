@@ -2,6 +2,16 @@ import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+const detectSingleEmbeddingMock = vi.fn();
+const performLivenessCheckMock = vi.fn();
+
+vi.mock('@/lib/biometrics/face-runtime', () => ({
+  detectSingleEmbedding: detectSingleEmbeddingMock,
+  performLivenessCheck: performLivenessCheckMock,
+  FaceBiometricUnavailableError: class FaceBiometricUnavailableError extends Error {},
+  FACE_BIOMETRIC_RUNTIME_ENABLED: true,
+}));
+
 const toastSuccessMock = vi.fn();
 const toastErrorMock = vi.fn();
 
@@ -16,6 +26,15 @@ describe('TeacherFaceAttendancePage', () => {
   beforeEach(() => {
     toastSuccessMock.mockReset();
     toastErrorMock.mockReset();
+    detectSingleEmbeddingMock.mockReset();
+    performLivenessCheckMock.mockReset();
+    vi.stubGlobal('navigator', {
+      mediaDevices: {
+        getUserMedia: vi.fn(async () => ({
+          getTracks: () => [{ stop: vi.fn() }],
+        })),
+      },
+    } as any);
   });
 
   it('creates candidate preview payload for face attendance', async () => {
@@ -48,6 +67,26 @@ describe('TeacherFaceAttendancePage', () => {
 
     expect(screen.getByText(/candidate_embedding/i)).toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledWith('/api/biometric/candidate-preview', expect.objectContaining({ method: 'POST' }));
+  });
+
+  it('captures candidate embedding from camera and pushes it into the form', async () => {
+    detectSingleEmbeddingMock.mockResolvedValue({ embedding: [0.4, 0.5, 0.6], qualityScore: 88 });
+    performLivenessCheckMock.mockResolvedValue({ score: 0.94, passed: true, details: [] });
+
+    const fetchMock = vi.fn() as any;
+    vi.stubGlobal('fetch', fetchMock);
+    window.fetch = fetchMock as typeof fetch;
+
+    const Page = (await import('../src/app/teacher/attendance/face/page')).default;
+    render(<Page />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Lấy candidate từ camera' }));
+
+    await waitFor(() => {
+      expect(toastSuccessMock).toHaveBeenCalledWith('Đã lấy candidate embedding từ camera');
+    });
+
+    expect(screen.getByDisplayValue(/0.4, 0.5, 0.6/)).toBeInTheDocument();
   });
 
   it('submits face attendance after candidate preview is ready', async () => {
