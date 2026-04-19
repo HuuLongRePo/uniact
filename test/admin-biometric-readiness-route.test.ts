@@ -28,10 +28,17 @@ describe('GET /api/admin/biometrics/readiness', () => {
     expect(response.status).toBe(200);
     expect(body.data.readiness).toMatchObject({
       runtime_enabled: false,
+      runtime_mode: 'stubbed',
+      model_loading_ready: false,
+      embedding_detection_ready: false,
+      liveness_check_ready: false,
+      attendance_api_accepting_runtime_verification: false,
       face_attendance_route_ready: true,
-      training_route_ready: false,
+      training_route_ready: true,
+      enrollment_flow_ready: true,
+      embedding_storage_ready: true,
       total_students: 1200,
-      recommended_next_batch: 'student_image_enrollment_and_training_groundwork',
+      recommended_next_batch: 'face_runtime_enablement',
     });
   });
 });

@@ -4,6 +4,7 @@ import { requireApiAuth } from '@/lib/guards';
 import { dbAll, dbGet, dbRun } from '@/lib/database';
 import { buildAttendancePolicy } from '@/lib/attendance-policy';
 import { loadAttendancePolicyConfig } from '@/lib/attendance-policy-config';
+import { getFaceRuntimeCapability } from '@/lib/biometrics/runtime-capability';
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,6 +25,7 @@ export async function POST(request: NextRequest) {
     const confidenceScore = Number(body?.confidence_score ?? body?.confidenceScore ?? 0);
     const upstreamVerified = Boolean(body?.upstream_verified ?? body?.upstreamVerified);
     const deviceId = body?.device_id ?? body?.deviceId ?? null;
+    const runtimeCapability = getFaceRuntimeCapability();
 
     const activity = await dbGet(
       `SELECT id, title, status, approval_status, max_participants, date_time
@@ -79,6 +81,19 @@ export async function POST(request: NextRequest) {
       },
       config
     );
+
+    if (!runtimeCapability.attendance_api_accepting_runtime_verification) {
+      throw new ApiError(
+        'FACE_RUNTIME_UNAVAILABLE',
+        'Runtime face attendance hiện chưa sẵn sàng để xác thực production',
+        409,
+        {
+          runtime_mode: runtimeCapability.mode,
+          blockers: runtimeCapability.blockers,
+          recommended_fallback: 'manual',
+        }
+      );
+    }
 
     if (!policy.facePilot.eligible) {
       throw new ApiError(

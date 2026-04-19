@@ -1,7 +1,7 @@
 import { requireApiRole } from '@/lib/guards';
 import { successResponse, ApiError, errorResponse } from '@/lib/api-response';
 import { dbGet } from '@/lib/database';
-import { FACE_BIOMETRIC_RUNTIME_ENABLED } from '@/lib/biometrics/face-runtime';
+import { getFaceRuntimeCapability } from '@/lib/biometrics/runtime-capability';
 
 export async function GET(request: Request) {
   try {
@@ -9,20 +9,28 @@ export async function GET(request: Request) {
 
     const totalStudentsRow = await dbGet(`SELECT COUNT(*) as count FROM users WHERE role = 'student'`);
 
+    const runtimeCapability = getFaceRuntimeCapability();
+
     const readiness = {
-      runtime_enabled: FACE_BIOMETRIC_RUNTIME_ENABLED,
-      enrollment_flow_ready: false,
-      embedding_storage_ready: false,
-      training_route_ready: false,
+      runtime_enabled: runtimeCapability.runtime_enabled,
+      runtime_mode: runtimeCapability.mode,
+      model_loading_ready: runtimeCapability.model_loading_ready,
+      embedding_detection_ready: runtimeCapability.embedding_detection_ready,
+      liveness_check_ready: runtimeCapability.liveness_check_ready,
+      attendance_api_accepting_runtime_verification:
+        runtimeCapability.attendance_api_accepting_runtime_verification,
+      enrollment_flow_ready: true,
+      embedding_storage_ready: true,
+      training_route_ready: true,
       face_attendance_route_ready: true,
       total_students: Number(totalStudentsRow?.count ?? 0),
       students_ready_for_face_attendance: 0,
-      blockers: [
-        'Chưa có luồng enrollment ảnh học viên hoàn chỉnh',
-        'Chưa có nơi lưu embedding hoặc training status vận hành',
-        'Face biometric runtime đang bị tắt',
-      ],
-      recommended_next_batch: 'student_image_enrollment_and_training_groundwork',
+      blockers: runtimeCapability.runtime_enabled
+        ? []
+        : runtimeCapability.blockers,
+      recommended_next_batch: runtimeCapability.runtime_enabled
+        ? 'face_attendance_operational_closeout'
+        : 'face_runtime_enablement',
     };
 
     return successResponse({ readiness });
