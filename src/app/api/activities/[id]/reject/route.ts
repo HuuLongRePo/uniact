@@ -1,8 +1,9 @@
 import { NextRequest } from 'next/server';
 import { requireApiRole } from '@/lib/guards';
-import { dbGet, dbHelpers } from '@/lib/database';
+import { dbGet } from '@/lib/database';
 import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
 import { canDecideApproval } from '@/lib/activity-workflow';
+import { decideActivityApproval } from '@/lib/approval-lifecycle';
 
 /**
  * POST /api/activities/[id]/reject
@@ -40,43 +41,29 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return errorResponse(ApiError.validation(approvalCheck.error || 'Không thể từ chối'));
     }
 
-    let pendingApproval = (await dbGet(
+    const pendingApproval = (await dbGet(
       `SELECT id FROM activity_approvals
        WHERE activity_id = ? AND status = 'requested'
        ORDER BY requested_at DESC LIMIT 1`,
       [activityId]
     )) as { id: number } | undefined;
 
-    if (!pendingApproval) {
-      const submitRes = await dbHelpers.submitActivityForApproval(
-        activityId,
-        activity.teacher_id,
-        activity.approval_notes || null
-      );
-      pendingApproval = submitRes.lastID ? { id: Number(submitRes.lastID) } : undefined;
-    }
-
     if (!pendingApproval?.id) {
       return errorResponse(ApiError.conflict('Không tìm thấy yêu cầu phê duyệt đang chờ xử lý'));
     }
 
-    try {
-      await dbHelpers.decideApproval(pendingApproval.id, user.id, 'rejected', reason);
-    } catch (error: any) {
-      if (String(error?.message || '').includes('already processed')) {
-        return errorResponse(ApiError.conflict('Yêu cầu phê duyệt đã được xử lý trước đó'));
-      }
-      if (String(error?.message || '').includes('not found')) {
-        return errorResponse(ApiError.notFound('Không tìm thấy yêu cầu phê duyệt'));
-      }
-      throw error;
-    }
+    const decision = await decideActivityApproval({
+      activityId,
+      actorId: user.id,
+      action: 'reject',
+      notes: reason,
+    });
 
     return successResponse(
       {
         activity_id: activityId,
-        approval_status: 'rejected',
-        new_status: 'draft',
+        approval_status: decision.approval_status,
+        new_status: decision.status,
         reason,
       },
       'Đã từ chối hoạt động'
