@@ -1,5 +1,6 @@
 'use client';
 
+import { toast } from 'react-hot-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -50,6 +51,7 @@ export default function TeacherStudentsPage() {
       setClasses(teacherClasses);
     } catch (error) {
       console.error('Lỗi tải dữ liệu:', error);
+      toast.error(error instanceof Error ? error.message : 'Không thể tải dữ liệu học viên');
     } finally {
       setIsLoading(false);
     }
@@ -154,7 +156,7 @@ export default function TeacherStudentsPage() {
             Quay lại
           </Link>
           <h1 className="text-3xl font-bold text-gray-900">👥 Danh sách học viên</h1>
-          <p className="text-gray-600 mt-2">Quản lý học viên trong các lớp của bạn</p>
+          <p className="text-gray-600 mt-2">Theo dõi học viên trên các lớp và phạm vi hoạt động bạn đang quản lý</p>
         </div>
 
         {/* Filters */}
