@@ -49,11 +49,14 @@ export default function StudentNotifications() {
       const data = await res.json();
 
       if (res.ok) {
-        setNotifications(data.notifications || []);
-        setUnreadCount(data.meta?.total_unread || 0);
+        setNotifications(data.notifications || data.data?.notifications || []);
+        setUnreadCount(data.meta?.total_unread || data.data?.meta?.total_unread || 0);
+      } else {
+        throw new Error(data.error || data.message || 'Không thể tải thông báo');
       }
     } catch (error) {
       console.error('Fetch notifications error:', error);
+      toast.error(error instanceof Error ? error.message : 'Không thể tải thông báo');
     } finally {
       setLoading(false);
     }
@@ -64,16 +67,20 @@ export default function StudentNotifications() {
       const res = await fetch('/api/notifications/settings');
       const data = await res.json();
 
-      if (res.ok && data.settings) {
+      const nextSettings = data.settings || data.data?.settings;
+      if (res.ok && nextSettings) {
         setSettings({
-          email_enabled: !!data.settings.email_enabled,
-          new_activity_enabled: !!data.settings.new_activity_enabled,
-          reminder_enabled: !!data.settings.reminder_enabled,
-          reminder_days: data.settings.reminder_days || 1,
+          email_enabled: !!nextSettings.email_enabled,
+          new_activity_enabled: !!nextSettings.new_activity_enabled,
+          reminder_enabled: !!nextSettings.reminder_enabled,
+          reminder_days: nextSettings.reminder_days || 1,
         });
+      } else if (!res.ok) {
+        throw new Error(data.error || data.message || 'Không thể tải cài đặt thông báo');
       }
     } catch (error) {
       console.error('Fetch settings error:', error);
+      toast.error(error instanceof Error ? error.message : 'Không thể tải cài đặt thông báo');
     }
   });
 
@@ -190,13 +197,16 @@ export default function StudentNotifications() {
         body: JSON.stringify(settings),
       });
 
+      const data = await res.json().catch(() => null);
       if (res.ok) {
-        toast.success('Đã lưu cài đặt thông báo');
+        toast.success(data?.message || 'Đã lưu cài đặt thông báo');
         setShowSettings(false);
+      } else {
+        throw new Error(data?.error || data?.message || 'Không thể lưu cài đặt thông báo');
       }
     } catch (error) {
       console.error('Save settings error:', error);
-      toast.error('Lỗi khi lưu cài đặt');
+      toast.error(error instanceof Error ? error.message : 'Lỗi khi lưu cài đặt');
     }
   };
 

@@ -73,23 +73,19 @@ export default function TeacherNotifyStudentsPage() {
   const fetchStudents = async () => {
     try {
       setLoading(true);
-      // Lấy danh sách lớp của giảng viên
-      const classRes = await fetch('/api/classes?teacher_id=me');
-      const classData = await classRes.json();
+      const studentsRes = await fetch('/api/teacher/students');
+      const studentsData = await studentsRes.json().catch(() => null);
 
-      if (classData.classes && classData.classes.length > 0) {
-        const classId = classData.classes[0].id;
-
-        // Lấy danh sách học viên
-        const studentsRes = await fetch(`/api/classes/${classId}/students`);
-        const studentsData = await studentsRes.json();
-
-        if (studentsRes.ok) {
-          setStudents(studentsData.students || []);
-        }
+      if (!studentsRes.ok) {
+        throw new Error(
+          studentsData?.error || studentsData?.message || 'Không thể tải danh sách học viên'
+        );
       }
+
+      setStudents(studentsData?.students || studentsData?.data?.students || []);
     } catch (e) {
       console.error('Fetch students error:', e);
+      toast.error(e instanceof Error ? e.message : 'Không thể tải danh sách học viên');
     } finally {
       setLoading(false);
     }
@@ -99,12 +95,15 @@ export default function TeacherNotifyStudentsPage() {
     try {
       setHistoryLoading(true);
       const res = await fetch('/api/teacher/notifications/history');
-      const data = await res.json();
+      const data = await res.json().catch(() => null);
       if (res.ok) {
-        setHistory(data.notifications || []);
+        setHistory(data?.notifications || data?.data?.notifications || []);
+      } else {
+        throw new Error(data?.error || data?.message || 'Không thể tải lịch sử thông báo');
       }
     } catch (e) {
       console.error('Fetch history error:', e);
+      toast.error(e instanceof Error ? e.message : 'Không thể tải lịch sử thông báo');
     } finally {
       setHistoryLoading(false);
     }
@@ -114,12 +113,15 @@ export default function TeacherNotifyStudentsPage() {
     try {
       setScheduledLoading(true);
       const res = await fetch('/api/teacher/notifications/scheduled');
-      const data = await res.json();
+      const data = await res.json().catch(() => null);
       if (res.ok) {
-        setScheduled(data.notifications || []);
+        setScheduled(data?.notifications || data?.data?.notifications || []);
+      } else {
+        throw new Error(data?.error || data?.message || 'Không thể tải lịch gửi thông báo');
       }
     } catch (e) {
       console.error('Fetch scheduled error:', e);
+      toast.error(e instanceof Error ? e.message : 'Không thể tải lịch gửi thông báo');
     } finally {
       setScheduledLoading(false);
     }
@@ -166,9 +168,9 @@ export default function TeacherNotifyStudentsPage() {
             type: 'info',
           }),
         });
-        const data = await res.json();
+        const data = await res.json().catch(() => null);
         if (res.ok) {
-          toast.success('Đã lên lịch gửi thông báo');
+          toast.success(data?.message || 'Đã lên lịch gửi thông báo');
           setTitle('');
           setMessage('');
           setSelectedIds([]);
@@ -177,7 +179,7 @@ export default function TeacherNotifyStudentsPage() {
           setUseSchedule(false);
           await fetchScheduled();
         } else {
-          toast.error(data.error || 'Lên lịch gửi thất bại');
+          toast.error(data?.error || data?.message || 'Lên lịch gửi thất bại');
         }
       } else {
         // Send now
@@ -191,21 +193,21 @@ export default function TeacherNotifyStudentsPage() {
             type: 'info',
           }),
         });
-        const data = await res.json();
+        const data = await res.json().catch(() => null);
         if (res.ok) {
-          toast.success(data.message || 'Đã gửi thông báo thành công');
+          toast.success(data?.message || 'Đã gửi thông báo thành công');
           setTitle('');
           setMessage('');
           setSelectedIds([]);
           // Refresh history
           await fetchHistory();
         } else {
-          toast.error(data.error || 'Gửi thông báo thất bại');
+          toast.error(data?.error || data?.message || 'Gửi thông báo thất bại');
         }
       }
     } catch (e) {
       console.error('Send notification error:', e);
-      toast.error('Lỗi khi gửi thông báo');
+      toast.error(e instanceof Error ? e.message : 'Lỗi khi gửi thông báo');
     } finally {
       setSending(false);
     }
@@ -217,15 +219,16 @@ export default function TeacherNotifyStudentsPage() {
         method: 'DELETE',
       });
 
+      const data = await res.json().catch(() => null);
       if (res.ok) {
-        toast.success('Đã hủy thông báo');
+        toast.success(data?.message || 'Đã hủy thông báo');
         await fetchScheduled();
       } else {
-        toast.error('Hủy thông báo thất bại');
+        toast.error(data?.error || data?.message || 'Hủy thông báo thất bại');
       }
     } catch (e) {
       console.error('Cancel scheduled error:', e);
-      toast.error('Lỗi khi hủy thông báo');
+      toast.error(e instanceof Error ? e.message : 'Lỗi khi hủy thông báo');
     }
   };
   if (authLoading || loading) return <LoadingSpinner />;
