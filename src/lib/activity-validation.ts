@@ -7,6 +7,7 @@ export type CreateActivityPayload = {
   class_ids: number[];
   mandatory_class_ids: number[];
   voluntary_class_ids: number[];
+  applies_to_all_students?: boolean;
   registration_deadline?: string;
   activity_type_id?: number;
   organization_level_id?: number;
@@ -21,6 +22,7 @@ export type UpdateActivityPayload = {
   class_ids?: number[];
   mandatory_class_ids?: number[];
   voluntary_class_ids?: number[];
+  applies_to_all_students?: boolean;
   registration_deadline?: string | null;
   activity_type_id?: number | null;
   organization_level_id?: number | null;
@@ -232,7 +234,16 @@ function validateActivityBody(
     normalized.max_participants = 30;
   }
 
+  const appliesToAllStudents = Boolean(input.applies_to_all_students);
+  normalized.applies_to_all_students = appliesToAllStudents;
+
   Object.assign(normalized, normalizeClassScopes(input, errors, isCreate));
+
+  if (appliesToAllStudents) {
+    normalized.class_ids = [];
+    normalized.mandatory_class_ids = [];
+    normalized.voluntary_class_ids = [];
+  }
 
   const hasRegistrationDeadline = hasOwn(input, 'registration_deadline');
   if (hasRegistrationDeadline) {

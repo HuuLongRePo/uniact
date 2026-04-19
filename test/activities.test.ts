@@ -134,7 +134,10 @@ describe('Activities API (unit)', () => {
     expect(body).toHaveProperty('activity');
     expect(body).toHaveProperty('message');
     expect(mocks.mockRequireApiRole).toHaveBeenCalled();
-    expect(mocks.mockUpdateActivity).toHaveBeenCalledWith(1, { title: 'Updated Title' });
+    expect(mocks.mockUpdateActivity).toHaveBeenCalledWith(1, {
+      title: 'Updated Title',
+      applies_to_all_students: false,
+    });
   });
 
   it('PUT returns 404 when the activity does not exist', async () => {

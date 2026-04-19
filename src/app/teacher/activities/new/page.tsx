@@ -73,6 +73,7 @@ export default function CreateActivityPage() {
   const [maxParticipants, setMaxParticipants] = useState<number | ''>('');
   const [mandatoryClassIds, setMandatoryClassIds] = useState<number[]>([]);
   const [voluntaryClassIds, setVoluntaryClassIds] = useState<number[]>([]);
+  const [appliesToAllStudents, setAppliesToAllStudents] = useState(false);
   const [activityTypeId, setActivityTypeId] = useState<number | ''>('');
   const [organizationLevelId, setOrganizationLevelId] = useState<number | ''>('');
   const [classes, setClasses] = useState<Class[]>([]);
@@ -162,7 +163,7 @@ export default function CreateActivityPage() {
   useEffect(() => {
     if (!showPreview) return;
 
-    if (selectedClasses.length === 0) {
+    if (appliesToAllStudents || selectedClasses.length === 0) {
       setParticipationPreview(null);
       setPreviewError(null);
       return;
@@ -208,7 +209,7 @@ export default function CreateActivityPage() {
     return () => {
       active = false;
     };
-  }, [showPreview, selectedClasses, mandatoryClassIds, voluntaryClassIds]);
+  }, [showPreview, selectedClasses, mandatoryClassIds, voluntaryClassIds, appliesToAllStudents]);
 
   // Drag & drop file reorder
   const handleDragStart = (idx: number) => setDraggedIdx(idx);
@@ -252,7 +253,7 @@ export default function CreateActivityPage() {
 
   const handleSubmit = async (e: React.FormEvent, mode: 'draft' | 'submit') => {
     e.preventDefault();
-    if (!title.trim() || !date || !location.trim() || selectedClasses.length === 0) {
+    if (!title.trim() || !date || !location.trim() || (!appliesToAllStudents && selectedClasses.length === 0)) {
       toast.error('Vui lòng nhập đầy đủ thông tin bắt buộc');
       return;
     }
@@ -266,9 +267,10 @@ export default function CreateActivityPage() {
         ...(endTime ? { end_time: `${date}T${endTime}` } : {}),
         location: location.trim(),
         max_participants: maxParticipants ? Number(maxParticipants) : 30,
-        class_ids: selectedClasses,
-        mandatory_class_ids: mandatoryClassIds,
-        voluntary_class_ids: voluntaryClassIds,
+        class_ids: appliesToAllStudents ? [] : selectedClasses,
+        mandatory_class_ids: appliesToAllStudents ? [] : mandatoryClassIds,
+        voluntary_class_ids: appliesToAllStudents ? [] : voluntaryClassIds,
+        applies_to_all_students: appliesToAllStudents,
         ...(activityTypeId ? { activity_type_id: Number(activityTypeId) } : {}),
         ...(organizationLevelId ? { organization_level_id: Number(organizationLevelId) } : {}),
       };
@@ -547,8 +549,33 @@ export default function CreateActivityPage() {
                         Phạm vi lớp áp dụng <span className="text-red-500">*</span>
                       </label>
                       <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                        <label className="mb-3 flex items-start gap-3 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-emerald-900">
+                          <input
+                            type="checkbox"
+                            checked={appliesToAllStudents}
+                            onChange={(e) => {
+                              const checked = e.target.checked;
+                              setAppliesToAllStudents(checked);
+                              if (checked) {
+                                setMandatoryClassIds([]);
+                                setVoluntaryClassIds([]);
+                                setShowPreview(false);
+                              }
+                            }}
+                            disabled={submitting}
+                            className="mt-1"
+                          />
+                          <span>
+                            <span className="block font-medium">Mở đăng ký cho tất cả học viên</span>
+                            <span className="block text-xs text-emerald-800">
+                              Khi bật, hoạt động sẽ không giới hạn theo lớp và sinh viên đủ điều kiện có thể nhìn thấy để đăng ký.
+                            </span>
+                          </span>
+                        </label>
                         <p className="font-medium">
-                          Nếu không chọn lớp nào, bạn chưa thể lưu hoạt động.
+                          {appliesToAllStudents
+                            ? 'Hoạt động này đang mở cho tất cả học viên, không cần chọn lớp áp dụng.'
+                            : 'Nếu không chọn lớp nào, bạn chưa thể lưu hoạt động.'}
                         </p>
                         <ul className="mt-2 list-disc space-y-1 pl-5 text-amber-800">
                           <li>
@@ -574,8 +601,8 @@ export default function CreateActivityPage() {
                             className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-200 h-32"
                             value={mandatoryClassIds.map(String)}
                             onChange={handleMandatoryClassSelect}
-                            required={selectedClasses.length === 0}
-                            disabled={submitting}
+                            required={!appliesToAllStudents && selectedClasses.length === 0}
+                            disabled={submitting || appliesToAllStudents}
                           >
                             {classes.map((cls: any) => (
                               <option key={cls.id} value={cls.id}>
@@ -596,7 +623,7 @@ export default function CreateActivityPage() {
                             className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-200 h-32"
                             value={voluntaryClassIds.map(String)}
                             onChange={handleVoluntaryClassSelect}
-                            disabled={submitting}
+                            disabled={submitting || appliesToAllStudents}
                           >
                             {classes.map((cls: any) => (
                               <option
@@ -613,7 +640,7 @@ export default function CreateActivityPage() {
                           </p>
                         </div>
                       </div>
-                      {showPreview && (
+                      {!appliesToAllStudents && showPreview && (
                         <div className="mt-4 rounded-lg border border-blue-200 bg-blue-50 p-4">
                           <div className="mb-2 text-sm font-semibold text-blue-900">
                             Xem trước danh sách tham gia hiện tại

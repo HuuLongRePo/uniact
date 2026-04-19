@@ -96,6 +96,7 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
   const [organizationLevelId, setOrganizationLevelId] = useState<number | ''>('');
   const [mandatoryClassIds, setMandatoryClassIds] = useState<number[]>([]);
   const [voluntaryClassIds, setVoluntaryClassIds] = useState<number[]>([]);
+  const [appliesToAllStudents, setAppliesToAllStudents] = useState(false);
 
   const [classes, setClasses] = useState<Class[]>([]);
   const [activityTypes, setActivityTypes] = useState<ActivityType[]>([]);
@@ -118,7 +119,7 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
   useEffect(() => {
     if (!showParticipationPreview) return;
 
-    if (selectedClasses.length === 0) {
+    if (appliesToAllStudents || selectedClasses.length === 0) {
       setParticipationPreview(null);
       setPreviewError(null);
       return;
@@ -164,7 +165,7 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
     return () => {
       active = false;
     };
-  }, [showParticipationPreview, selectedClasses, mandatoryClassIds, voluntaryClassIds]);
+  }, [showParticipationPreview, selectedClasses, mandatoryClassIds, voluntaryClassIds, appliesToAllStudents]);
 
   const fetchAllData = async () => {
     try {
@@ -220,6 +221,10 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
         [];
       setMandatoryClassIds(fetchedMandatoryClassIds);
       setVoluntaryClassIds(fetchedVoluntaryClassIds);
+      setAppliesToAllStudents(
+        Boolean((nextActivity as any).applies_to_all_students) ||
+          (fetchedMandatoryClassIds.length === 0 && fetchedVoluntaryClassIds.length === 0)
+      );
 
       if (classesRes.ok) {
         const classesData = await classesRes.json();
@@ -269,8 +274,8 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
       return;
     }
 
-    if (selectedClasses.length === 0) {
-      toast.error('Vui lòng chọn ít nhất một lớp');
+    if (!appliesToAllStudents && selectedClasses.length === 0) {
+      toast.error('Vui lòng chọn ít nhất một lớp hoặc bật mở đăng ký cho tất cả học viên');
       return;
     }
 
@@ -284,7 +289,10 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
         end_time: endTime ? `${date}T${endTime}` : null,
         location: location.trim(),
         max_participants: maxParticipants ? parseInt(String(maxParticipants), 10) : 30,
-        class_ids: selectedClasses,
+        class_ids: appliesToAllStudents ? [] : selectedClasses,
+        mandatory_class_ids: appliesToAllStudents ? [] : mandatoryClassIds,
+        voluntary_class_ids: appliesToAllStudents ? [] : voluntaryClassIds,
+        applies_to_all_students: appliesToAllStudents,
         ...(activityTypeId ? { activity_type_id: Number(activityTypeId) } : {}),
         ...(organizationLevelId ? { organization_level_id: Number(organizationLevelId) } : {}),
       };
@@ -587,8 +595,33 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
             </div>
 
             <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+              <label className="mb-3 flex items-start gap-3 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-emerald-900">
+                <input
+                  type="checkbox"
+                  checked={appliesToAllStudents}
+                  onChange={(event) => {
+                    const checked = event.target.checked;
+                    setAppliesToAllStudents(checked);
+                    if (checked) {
+                      setMandatoryClassIds([]);
+                      setVoluntaryClassIds([]);
+                      setShowParticipationPreview(false);
+                    }
+                  }}
+                  disabled={!canEdit}
+                  className="mt-1"
+                />
+                <span>
+                  <span className="block font-medium">Mở đăng ký cho tất cả học viên</span>
+                  <span className="block text-xs text-emerald-800">
+                    Khi bật, hoạt động sẽ không giới hạn theo lớp và sinh viên đủ điều kiện có thể nhìn thấy để đăng ký.
+                  </span>
+                </span>
+              </label>
               <p className="font-medium">
-                Hãy chọn rõ lớp bắt buộc và lớp tự nguyện cho hoạt động này.
+                {appliesToAllStudents
+                  ? 'Hoạt động này đang mở cho tất cả học viên, không cần chọn lớp áp dụng.'
+                  : 'Hãy chọn rõ lớp bắt buộc và lớp tự nguyện cho hoạt động này.'}
               </p>
               <ul className="mt-2 list-disc space-y-1 pl-5 text-amber-800">
                 <li>
@@ -623,7 +656,7 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
                       current.filter((classId) => !values.includes(classId))
                     );
                   }}
-                  disabled={!canEdit}
+                  disabled={!canEdit || appliesToAllStudents}
                 >
                   {classes.map((item) => (
                     <option key={item.id} value={item.id}>
@@ -648,7 +681,7 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
                       .filter((classId) => !mandatoryClassIds.includes(classId));
                     setVoluntaryClassIds(values);
                   }}
-                  disabled={!canEdit}
+                  disabled={!canEdit || appliesToAllStudents}
                 >
                   {classes.map((item) => (
                     <option
@@ -665,7 +698,7 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
                 </p>
               </div>
             </div>
-            {showParticipationPreview && (
+            {!appliesToAllStudents && showParticipationPreview && (
               <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
                 <div className="mb-2 text-sm font-semibold text-blue-900">
                   Xem trước danh sách tham gia hiện tại

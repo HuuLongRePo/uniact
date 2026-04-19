@@ -383,28 +383,30 @@ export const dbHelpers = {
       ]
     );
 
-    // Insert class relationships into activity_classes junction table
-    for (const assignment of buildActivityClassAssignments(activityData)) {
-      try {
-        await dbRun(
-          `INSERT OR IGNORE INTO activity_classes (activity_id, class_id, participation_mode)
-           VALUES (?, ?, ?)`,
-          [result.lastID, assignment.class_id, assignment.participation_mode]
-        );
-      } catch (err) {
-        console.warn(`âš ï¸  Failed to insert activity-class mapping: ${err}`);
-      }
-    }
-
-    if (activityData.class_ids && Array.isArray(activityData.class_ids)) {
-      for (const classId of activityData.class_ids) {
+    if (!activityData.applies_to_all_students) {
+      // Insert class relationships into activity_classes junction table
+      for (const assignment of buildActivityClassAssignments(activityData)) {
         try {
           await dbRun(
-            'INSERT OR IGNORE INTO activity_classes (activity_id, class_id) VALUES (?, ?)',
-            [result.lastID, classId]
+            `INSERT OR IGNORE INTO activity_classes (activity_id, class_id, participation_mode)
+             VALUES (?, ?, ?)`,
+            [result.lastID, assignment.class_id, assignment.participation_mode]
           );
         } catch (err) {
-          console.warn(`⚠️  Failed to insert activity-class mapping: ${err}`);
+          console.warn(`âš ï¸  Failed to insert activity-class mapping: ${err}`);
+        }
+      }
+
+      if (activityData.class_ids && Array.isArray(activityData.class_ids)) {
+        for (const classId of activityData.class_ids) {
+          try {
+            await dbRun(
+              'INSERT OR IGNORE INTO activity_classes (activity_id, class_id) VALUES (?, ?)',
+              [result.lastID, classId]
+            );
+          } catch (err) {
+            console.warn(`⚠️  Failed to insert activity-class mapping: ${err}`);
+          }
         }
       }
     }
@@ -477,17 +479,20 @@ export const dbHelpers = {
     }
     const hasExtendedClassScope =
       activityData.mandatory_class_ids !== undefined ||
-      activityData.voluntary_class_ids !== undefined;
+      activityData.voluntary_class_ids !== undefined ||
+      activityData.applies_to_all_students !== undefined;
     if (hasExtendedClassScope) {
       try {
         await dbRun('DELETE FROM activity_classes WHERE activity_id = ?', [activityId]);
 
-        for (const assignment of buildActivityClassAssignments(activityData)) {
-          await dbRun(
-            `INSERT OR IGNORE INTO activity_classes (activity_id, class_id, participation_mode)
-             VALUES (?, ?, ?)`,
-            [activityId, assignment.class_id, assignment.participation_mode]
-          );
+        if (!activityData.applies_to_all_students) {
+          for (const assignment of buildActivityClassAssignments(activityData)) {
+            await dbRun(
+              `INSERT OR IGNORE INTO activity_classes (activity_id, class_id, participation_mode)
+               VALUES (?, ?, ?)`,
+              [activityId, assignment.class_id, assignment.participation_mode]
+            );
+          }
         }
 
         classMappingsUpdated = true;
