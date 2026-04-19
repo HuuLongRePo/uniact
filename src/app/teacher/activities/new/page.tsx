@@ -26,6 +26,14 @@ interface Class {
   name: string;
 }
 
+interface StudentOption {
+  id: number;
+  name: string;
+  email?: string | null;
+  class_id?: number | null;
+  class_name?: string | null;
+}
+
 interface ActivityType {
   id: number;
   name: string;
@@ -73,6 +81,11 @@ export default function CreateActivityPage() {
   const [maxParticipants, setMaxParticipants] = useState<number | ''>('');
   const [mandatoryClassIds, setMandatoryClassIds] = useState<number[]>([]);
   const [voluntaryClassIds, setVoluntaryClassIds] = useState<number[]>([]);
+  const [mandatoryStudentIds, setMandatoryStudentIds] = useState<number[]>([]);
+  const [voluntaryStudentIds, setVoluntaryStudentIds] = useState<number[]>([]);
+  const [studentOptions, setStudentOptions] = useState<StudentOption[]>([]);
+  const [studentsLoaded, setStudentsLoaded] = useState(false);
+  const [studentsLoading, setStudentsLoading] = useState(false);
   const [appliesToAllStudents, setAppliesToAllStudents] = useState(false);
   const [activityTypeId, setActivityTypeId] = useState<number | ''>('');
   const [organizationLevelId, setOrganizationLevelId] = useState<number | ''>('');
@@ -160,6 +173,26 @@ export default function CreateActivityPage() {
       });
   }, []);
 
+  const ensureStudentOptionsLoaded = async () => {
+    if (studentsLoaded || studentsLoading) return;
+
+    try {
+      setStudentsLoading(true);
+      const response = await fetch('/api/teacher/students');
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(data?.error || 'Không thể tải danh sách học viên');
+      }
+
+      setStudentOptions(data?.students || data?.data?.students || []);
+      setStudentsLoaded(true);
+    } catch (error: any) {
+      toast.error(error?.message || 'Không thể tải danh sách học viên');
+    } finally {
+      setStudentsLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (!showPreview) return;
 
@@ -183,6 +216,8 @@ export default function CreateActivityPage() {
             class_ids: selectedClasses,
             mandatory_class_ids: mandatoryClassIds,
             voluntary_class_ids: voluntaryClassIds,
+            mandatory_student_ids: mandatoryStudentIds,
+            voluntary_student_ids: voluntaryStudentIds,
           }),
         });
         const data = await response.json().catch(() => null);
@@ -209,7 +244,15 @@ export default function CreateActivityPage() {
     return () => {
       active = false;
     };
-  }, [showPreview, selectedClasses, mandatoryClassIds, voluntaryClassIds, appliesToAllStudents]);
+  }, [
+    showPreview,
+    selectedClasses,
+    mandatoryClassIds,
+    voluntaryClassIds,
+    mandatoryStudentIds,
+    voluntaryStudentIds,
+    appliesToAllStudents,
+  ]);
 
   // Drag & drop file reorder
   const handleDragStart = (idx: number) => setDraggedIdx(idx);
@@ -270,8 +313,8 @@ export default function CreateActivityPage() {
         class_ids: appliesToAllStudents ? [] : selectedClasses,
         mandatory_class_ids: appliesToAllStudents ? [] : mandatoryClassIds,
         voluntary_class_ids: appliesToAllStudents ? [] : voluntaryClassIds,
-        mandatory_student_ids: [],
-        voluntary_student_ids: [],
+        mandatory_student_ids: appliesToAllStudents ? [] : mandatoryStudentIds,
+        voluntary_student_ids: appliesToAllStudents ? [] : voluntaryStudentIds,
         applies_to_all_students: appliesToAllStudents,
         ...(activityTypeId ? { activity_type_id: Number(activityTypeId) } : {}),
         ...(organizationLevelId ? { organization_level_id: Number(organizationLevelId) } : {}),
@@ -561,6 +604,8 @@ export default function CreateActivityPage() {
                               if (checked) {
                                 setMandatoryClassIds([]);
                                 setVoluntaryClassIds([]);
+                                setMandatoryStudentIds([]);
+                                setVoluntaryStudentIds([]);
                                 setShowPreview(false);
                               }
                             }}
@@ -642,6 +687,35 @@ export default function CreateActivityPage() {
                           </p>
                         </div>
                       </div>
+                      {!appliesToAllStudents && (
+                        <div className="mt-4 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
+                          <div className="flex items-center justify-between gap-3">
+                            <div>
+                              <p className="font-medium">Chuẩn bị chọn học viên trực tiếp</p>
+                              <p className="text-xs text-blue-800">
+                                Tải danh sách học viên theo yêu cầu để bước chọn trực tiếp không làm chậm form ngay từ đầu.
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => void ensureStudentOptionsLoaded()}
+                              disabled={studentsLoading}
+                              className="rounded border border-blue-300 bg-white px-3 py-1.5 text-xs font-medium hover:bg-blue-100 disabled:opacity-50"
+                            >
+                              {studentsLoading
+                                ? 'Đang tải...'
+                                : studentsLoaded
+                                  ? 'Đã tải danh sách học viên'
+                                  : 'Tải danh sách học viên'}
+                            </button>
+                          </div>
+                          {studentsLoaded ? (
+                            <p className="mt-2 text-xs text-blue-800">
+                              Đã nạp {studentOptions.length} học viên cho bước chọn trực tiếp ở batch UI tiếp theo.
+                            </p>
+                          ) : null}
+                        </div>
+                      )}
                       {!appliesToAllStudents && showPreview && (
                         <div className="mt-4 rounded-lg border border-blue-200 bg-blue-50 p-4">
                           <div className="mb-2 text-sm font-semibold text-blue-900">

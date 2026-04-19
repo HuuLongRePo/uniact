@@ -46,6 +46,8 @@ describe('CreateActivityPage participation preview', () => {
           class_ids: [1],
           mandatory_class_ids: [1],
           voluntary_class_ids: [],
+          mandatory_student_ids: [],
+          voluntary_student_ids: [],
         });
         return jsonResponse({
           preview: {

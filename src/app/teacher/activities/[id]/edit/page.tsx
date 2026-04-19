@@ -20,6 +20,14 @@ interface Class {
   name: string;
 }
 
+interface StudentOption {
+  id: number;
+  name: string;
+  email?: string | null;
+  class_id?: number | null;
+  class_name?: string | null;
+}
+
 interface ParticipationPreviewStudent {
   id: number;
   name: string;
@@ -96,6 +104,11 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
   const [organizationLevelId, setOrganizationLevelId] = useState<number | ''>('');
   const [mandatoryClassIds, setMandatoryClassIds] = useState<number[]>([]);
   const [voluntaryClassIds, setVoluntaryClassIds] = useState<number[]>([]);
+  const [mandatoryStudentIds, setMandatoryStudentIds] = useState<number[]>([]);
+  const [voluntaryStudentIds, setVoluntaryStudentIds] = useState<number[]>([]);
+  const [studentOptions, setStudentOptions] = useState<StudentOption[]>([]);
+  const [studentsLoaded, setStudentsLoaded] = useState(false);
+  const [studentsLoading, setStudentsLoading] = useState(false);
   const [appliesToAllStudents, setAppliesToAllStudents] = useState(false);
 
   const [classes, setClasses] = useState<Class[]>([]);
@@ -115,6 +128,26 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
   useEffect(() => {
     void fetchAllData();
   }, [id]);
+
+  const ensureStudentOptionsLoaded = async () => {
+    if (studentsLoaded || studentsLoading) return;
+
+    try {
+      setStudentsLoading(true);
+      const response = await fetch('/api/teacher/students');
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(data?.error || 'Không thể tải danh sách học viên');
+      }
+
+      setStudentOptions(data?.students || data?.data?.students || []);
+      setStudentsLoaded(true);
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Không thể tải danh sách học viên'));
+    } finally {
+      setStudentsLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!showParticipationPreview) return;
@@ -139,6 +172,8 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
             class_ids: selectedClasses,
             mandatory_class_ids: mandatoryClassIds,
             voluntary_class_ids: voluntaryClassIds,
+            mandatory_student_ids: mandatoryStudentIds,
+            voluntary_student_ids: voluntaryStudentIds,
           }),
         });
         const data = await response.json().catch(() => null);
@@ -165,7 +200,15 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
     return () => {
       active = false;
     };
-  }, [showParticipationPreview, selectedClasses, mandatoryClassIds, voluntaryClassIds, appliesToAllStudents]);
+  }, [
+    showParticipationPreview,
+    selectedClasses,
+    mandatoryClassIds,
+    voluntaryClassIds,
+    mandatoryStudentIds,
+    voluntaryStudentIds,
+    appliesToAllStudents,
+  ]);
 
   const fetchAllData = async () => {
     try {
@@ -292,8 +335,8 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
         class_ids: appliesToAllStudents ? [] : selectedClasses,
         mandatory_class_ids: appliesToAllStudents ? [] : mandatoryClassIds,
         voluntary_class_ids: appliesToAllStudents ? [] : voluntaryClassIds,
-        mandatory_student_ids: [],
-        voluntary_student_ids: [],
+        mandatory_student_ids: appliesToAllStudents ? [] : mandatoryStudentIds,
+        voluntary_student_ids: appliesToAllStudents ? [] : voluntaryStudentIds,
         applies_to_all_students: appliesToAllStudents,
         ...(activityTypeId ? { activity_type_id: Number(activityTypeId) } : {}),
         ...(organizationLevelId ? { organization_level_id: Number(organizationLevelId) } : {}),
@@ -607,6 +650,8 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
                     if (checked) {
                       setMandatoryClassIds([]);
                       setVoluntaryClassIds([]);
+                      setMandatoryStudentIds([]);
+                      setVoluntaryStudentIds([]);
                       setShowParticipationPreview(false);
                     }
                   }}
@@ -700,6 +745,36 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
                 </p>
               </div>
             </div>
+            {!appliesToAllStudents && (
+              <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="font-medium">Chuẩn bị chọn học viên trực tiếp</p>
+                    <p className="text-xs text-blue-800">
+                      Tải danh sách học viên theo yêu cầu để bước chọn trực tiếp không làm chậm form chỉnh sửa ngay từ đầu.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => void ensureStudentOptionsLoaded()}
+                    disabled={studentsLoading}
+                    className="rounded border border-blue-300 bg-white px-3 py-1.5 text-xs font-medium hover:bg-blue-100 disabled:opacity-50"
+                  >
+                    {studentsLoading
+                      ? 'Đang tải...'
+                      : studentsLoaded
+                        ? 'Đã tải danh sách học viên'
+                        : 'Tải danh sách học viên'}
+                  </button>
+                </div>
+                {studentsLoaded ? (
+                  <p className="mt-2 text-xs text-blue-800">
+                    Đã nạp {studentOptions.length} học viên cho bước chọn trực tiếp ở batch UI tiếp theo.
+                  </p>
+                ) : null}
+              </div>
+            )}
+
             {!appliesToAllStudents && showParticipationPreview && (
               <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
                 <div className="mb-2 text-sm font-semibold text-blue-900">
