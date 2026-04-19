@@ -294,6 +294,19 @@ export default function CreateActivityPage() {
     setVoluntaryClassIds(values);
   };
 
+  const handleMandatoryStudentSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const values = Array.from(e.target.selectedOptions).map((opt) => Number(opt.value));
+    setMandatoryStudentIds(values);
+    setVoluntaryStudentIds((current) => current.filter((studentId) => !values.includes(studentId)));
+  };
+
+  const handleVoluntaryStudentSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const values = Array.from(e.target.selectedOptions)
+      .map((opt) => Number(opt.value))
+      .filter((studentId) => !mandatoryStudentIds.includes(studentId));
+    setVoluntaryStudentIds(values);
+  };
+
   const handleSubmit = async (e: React.FormEvent, mode: 'draft' | 'submit') => {
     e.preventDefault();
     if (!title.trim() || !date || !location.trim() || (!appliesToAllStudents && selectedClasses.length === 0)) {
@@ -691,9 +704,9 @@ export default function CreateActivityPage() {
                         <div className="mt-4 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
                           <div className="flex items-center justify-between gap-3">
                             <div>
-                              <p className="font-medium">Chuẩn bị chọn học viên trực tiếp</p>
+                              <p className="font-medium">Chọn học viên trực tiếp</p>
                               <p className="text-xs text-blue-800">
-                                Tải danh sách học viên theo yêu cầu để bước chọn trực tiếp không làm chậm form ngay từ đầu.
+                                Tải danh sách học viên theo yêu cầu để bổ sung học viên ngoài phạm vi lớp mà không cần reload trang.
                               </p>
                             </div>
                             <button
@@ -705,14 +718,60 @@ export default function CreateActivityPage() {
                               {studentsLoading
                                 ? 'Đang tải...'
                                 : studentsLoaded
-                                  ? 'Đã tải danh sách học viên'
+                                  ? 'Làm mới danh sách học viên'
                                   : 'Tải danh sách học viên'}
                             </button>
                           </div>
                           {studentsLoaded ? (
-                            <p className="mt-2 text-xs text-blue-800">
-                              Đã nạp {studentOptions.length} học viên cho bước chọn trực tiếp ở batch UI tiếp theo.
-                            </p>
+                            <>
+                              <p className="mt-2 text-xs text-blue-800">
+                                Đã nạp {studentOptions.length} học viên. Có thể chọn trực tiếp để quản lý theo phạm vi activity.
+                              </p>
+                              <div className="mt-3 grid grid-cols-1 gap-4 lg:grid-cols-2">
+                                <div>
+                                  <label className="mb-1 block text-sm font-medium text-orange-700">
+                                    Học viên bắt buộc
+                                  </label>
+                                  <select
+                                    multiple
+                                    className="h-32 w-full rounded-lg border px-3 py-2 focus:ring-2 focus:ring-blue-200"
+                                    value={mandatoryStudentIds.map(String)}
+                                    onChange={handleMandatoryStudentSelect}
+                                    disabled={submitting}
+                                  >
+                                    {studentOptions.map((student) => (
+                                      <option key={`mandatory-student-${student.id}`} value={student.id}>
+                                        {student.name}
+                                        {student.class_name ? ` - ${student.class_name}` : ''}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+                                <div>
+                                  <label className="mb-1 block text-sm font-medium text-sky-700">
+                                    Học viên tự nguyện
+                                  </label>
+                                  <select
+                                    multiple
+                                    className="h-32 w-full rounded-lg border px-3 py-2 focus:ring-2 focus:ring-blue-200"
+                                    value={voluntaryStudentIds.map(String)}
+                                    onChange={handleVoluntaryStudentSelect}
+                                    disabled={submitting}
+                                  >
+                                    {studentOptions.map((student) => (
+                                      <option
+                                        key={`voluntary-student-${student.id}`}
+                                        value={student.id}
+                                        disabled={mandatoryStudentIds.includes(student.id)}
+                                      >
+                                        {student.name}
+                                        {student.class_name ? ` - ${student.class_name}` : ''}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+                              </div>
+                            </>
                           ) : null}
                         </div>
                       )}

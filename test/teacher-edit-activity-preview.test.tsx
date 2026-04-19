@@ -77,6 +77,9 @@ describe('EditActivityPage participation preview', () => {
       if (url === '/api/classes') return jsonResponse({ classes: [{ id: 1, name: 'CNTT K18A' }] });
       if (url === '/api/activity-types') return jsonResponse({ types: [{ id: 5, name: 'Tình nguyện' }] });
       if (url === '/api/organization-levels') return jsonResponse({ levels: [{ id: 7, name: 'Cấp trường' }] });
+      if (url === '/api/teacher/students') {
+        return jsonResponse({ students: [{ id: 201, name: 'Student Direct', class_name: 'CNTT K18B' }] });
+      }
 
       if (url === '/api/activities/participation-preview' && init?.method === 'POST') {
         expect(JSON.parse(String(init.body || '{}'))).toEqual({
