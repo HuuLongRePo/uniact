@@ -20,8 +20,8 @@ export default function AdminActivitiesPage() {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [isListLoading, setIsListLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [approvalFilter, setApprovalFilter] = useState<string>('all');
+  const [workflowFilter, setWorkflowFilter] = useState<string>('all');
+  const [reviewFilter, setReviewFilter] = useState<string>('all');
   const [deleteActivity, setDeleteActivity] = useState<Activity | null>(null);
 
   const debouncedSearch = useDebounce(search, 400);
@@ -81,10 +81,10 @@ export default function AdminActivitiesPage() {
       activity.description.toLowerCase().includes(effectiveSearch) ||
       activity.teacher_name.toLowerCase().includes(effectiveSearch);
 
-    const matchStatus = statusFilter === 'all' || activity.status === statusFilter;
-    const matchApproval = approvalFilter === 'all' || activity.approval_status === approvalFilter;
+    const matchWorkflow = workflowFilter === 'all' || activity.status === workflowFilter;
+    const matchReview = reviewFilter === 'all' || activity.approval_status === reviewFilter;
 
-    return matchSearch && matchStatus && matchApproval;
+    return matchSearch && matchWorkflow && matchReview;
   });
 
   if (authLoading) return <LoadingSpinner />;
@@ -112,10 +112,10 @@ export default function AdminActivitiesPage() {
         <ActivityFilters
           search={search}
           onSearchChange={setSearch}
-          statusFilter={statusFilter}
-          onStatusFilterChange={setStatusFilter}
-          approvalFilter={approvalFilter}
-          onApprovalFilterChange={setApprovalFilter}
+          workflowFilter={workflowFilter}
+          onWorkflowFilterChange={setWorkflowFilter}
+          reviewFilter={reviewFilter}
+          onReviewFilterChange={setReviewFilter}
         />
 
         {/* Stats Summary */}

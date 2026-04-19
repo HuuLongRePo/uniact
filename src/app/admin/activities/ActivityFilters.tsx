@@ -5,19 +5,19 @@ import { Search } from 'lucide-react';
 interface ActivityFiltersProps {
   search: string;
   onSearchChange: (value: string) => void;
-  statusFilter: string;
-  onStatusFilterChange: (value: string) => void;
-  approvalFilter: string;
-  onApprovalFilterChange: (value: string) => void;
+  workflowFilter: string;
+  onWorkflowFilterChange: (value: string) => void;
+  reviewFilter: string;
+  onReviewFilterChange: (value: string) => void;
 }
 
 export default function ActivityFilters({
   search,
   onSearchChange,
-  statusFilter,
-  onStatusFilterChange,
-  approvalFilter,
-  onApprovalFilterChange,
+  workflowFilter,
+  onWorkflowFilterChange,
+  reviewFilter,
+  onReviewFilterChange,
 }: ActivityFiltersProps) {
   return (
     <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
@@ -37,11 +37,11 @@ export default function ActivityFilters({
 
         <div>
           <select
-            value={statusFilter}
-            onChange={(e) => onStatusFilterChange(e.target.value)}
+            value={workflowFilter}
+            onChange={(e) => onWorkflowFilterChange(e.target.value)}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            <option value="all">Tất cả trạng thái</option>
+            <option value="all">Tất cả workflow</option>
             <option value="draft">Nháp</option>
             <option value="pending">Chờ duyệt</option>
             <option value="published">Đã công bố</option>
@@ -52,11 +52,12 @@ export default function ActivityFilters({
 
         <div>
           <select
-            value={approvalFilter}
-            onChange={(e) => onApprovalFilterChange(e.target.value)}
+            value={reviewFilter}
+            onChange={(e) => onReviewFilterChange(e.target.value)}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            <option value="all">Tất cả phê duyệt</option>
+            <option value="all">Tất cả review</option>
+            <option value="draft">Chưa gửi duyệt</option>
             <option value="requested">Chờ phê duyệt</option>
             <option value="approved">Đã duyệt</option>
             <option value="rejected">Từ chối</option>
