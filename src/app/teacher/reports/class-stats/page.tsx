@@ -154,12 +154,14 @@ export default function ClassStatsPage() {
 
     try {
       const response = await fetch(`/api/teacher/reports/class-stats/${classId}`);
-      if (response.ok) {
-        const data = await response.json();
-        setStudentStats(getStudentStatsFromResponse(data));
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(getErrorMessage(data?.error || data?.message, 'Không thể tải chi tiết lớp'));
       }
+      setStudentStats(getStudentStatsFromResponse(data));
     } catch (error) {
       console.error('Error fetching class details:', error);
+      toast.error(getErrorMessage(error, 'Không thể tải chi tiết lớp'));
     }
   };
 

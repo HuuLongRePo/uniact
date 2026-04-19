@@ -246,7 +246,7 @@ export default function AttendanceReportsPage() {
       });
 
       if (!response.ok) {
-        throw new Error('Export failed');
+        throw new Error('Không thể xuất báo cáo');
       }
 
       const blob = await response.blob();
