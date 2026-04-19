@@ -103,6 +103,51 @@ describe('activity access routes', () => {
     expect(mockDbAll).not.toHaveBeenCalled();
   });
 
+  it('blocks unrelated teachers from saving attendance on another activity', async () => {
+    vi.doMock('@/lib/guards', () => ({
+      requireRole: async () => ({ id: 21, role: 'teacher' }),
+    }));
+
+    vi.doMock('@/lib/activity-access', () => ({
+      teacherCanAccessActivity: async () => false,
+    }));
+
+    const mockDbRun = vi.fn();
+
+    vi.doMock('@/lib/database', () => ({
+      dbGet: vi.fn(async (sql: string) => {
+        if (sql.includes('SELECT id, teacher_id, title FROM activities')) {
+          return { id: 57, teacher_id: 99, title: 'Attendance Activity' };
+        }
+        return null;
+      }),
+      dbAll: vi.fn(),
+      dbRun: mockDbRun,
+      ensureParticipationColumns: vi.fn(async () => undefined),
+      withTransaction: vi.fn(async (callback: any) => callback()),
+    }));
+
+    const route = await import('../src/app/api/activities/[id]/attendance/route');
+    const response = await route.POST(
+      {
+        json: async () => ({
+          records: [
+            {
+              student_id: 301,
+              status: 'present',
+            },
+          ],
+        }),
+      } as any,
+      { params: Promise.resolve({ id: '57' }) } as any
+    );
+
+    expect(response.status).toBe(403);
+    const body = await response.json();
+    expect(body.error).toContain('thuộc phạm vi quản lý');
+    expect(mockDbRun).not.toHaveBeenCalled();
+  });
+
   it('allows a support teacher to save bulk attendance for a related activity', async () => {
     const mockDbGet = vi.fn(async (sql: string) => {
       if (sql.includes('SELECT id, teacher_id FROM activities')) {
@@ -160,6 +205,45 @@ describe('activity access routes', () => {
     expect(body.success).toBe(true);
     expect(body.saved_count).toBe(1);
     expect(mockWithTransaction).toHaveBeenCalledTimes(1);
+  });
+
+  it('blocks unrelated teachers from saving compat bulk attendance on another activity', async () => {
+    vi.doMock('@/lib/guards', () => ({
+      requireRole: async () => ({ id: 21, role: 'teacher' }),
+    }));
+
+    vi.doMock('@/lib/activity-access', () => ({
+      teacherCanAccessActivity: async () => false,
+    }));
+
+    const mockDbRun = vi.fn();
+
+    vi.doMock('@/lib/database', () => ({
+      dbGet: vi.fn(async (sql: string) => {
+        if (sql.includes('SELECT id, teacher_id FROM activities')) {
+          return { id: 55, teacher_id: 99 };
+        }
+        return null;
+      }),
+      dbRun: mockDbRun,
+      withTransaction: vi.fn(async (callback: any) => callback()),
+      ensureParticipationColumns: vi.fn(async () => undefined),
+    }));
+
+    const route = await import('../src/app/api/activities/[id]/attendance/bulk/route');
+    const response = await route.POST(
+      {
+        json: async () => ({
+          attendance: [{ student_id: 300, status: 'present' }],
+        }),
+      } as any,
+      { params: Promise.resolve({ id: '55' }) } as any
+    );
+
+    expect(response.status).toBe(403);
+    const body = await response.json();
+    expect(body.error).toContain('thuộc phạm vi quản lý');
+    expect(mockDbRun).not.toHaveBeenCalled();
   });
 
   it('blocks teacher batch evaluation when the activity is outside activity-scoped access', async () => {
