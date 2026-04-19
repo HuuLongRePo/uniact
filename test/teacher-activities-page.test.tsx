@@ -136,6 +136,17 @@ describe('TeacherActivitiesPage', () => {
                 participant_count: 0,
                 attended_count: 0,
               },
+              {
+                id: 23,
+                title: 'Hoạt động đã qua hạn',
+                description: 'Đã diễn ra xong nhưng chưa đánh dấu hoàn thành',
+                date_time: '2020-04-21T08:00:00.000Z',
+                location: 'Sân trường',
+                max_participants: 30,
+                status: 'published',
+                participant_count: 18,
+                attended_count: 15,
+              },
             ],
             total: 2,
           }),
@@ -153,6 +164,8 @@ describe('TeacherActivitiesPage', () => {
 
     expect(await screen.findByText('Sắp diễn ra')).toBeInTheDocument();
     expect(screen.getByText('Hoạt động sắp diễn ra')).toBeInTheDocument();
+    expect(screen.getByText('Đã qua hoặc đã khép lại')).toBeInTheDocument();
+    expect(screen.getByText('Hoạt động đã qua hạn')).toBeInTheDocument();
     expect(screen.getByText('Hoạt động nháp')).toBeInTheDocument();
   });
 

@@ -28,7 +28,7 @@ interface Activity {
   organization_level_id?: number;
 }
 
-type ActivityFilter = 'all' | 'draft' | 'pending' | 'rejected' | 'published' | 'completed';
+type ActivityFilter = 'all' | 'draft' | 'pending' | 'rejected' | 'published' | 'completed' | 'cancelled';
 type ConfirmActionType = 'submit' | 'cancel' | 'clone' | 'delete';
 
 const FILTER_OPTIONS: Array<{ value: ActivityFilter; label: string }> = [
@@ -38,6 +38,7 @@ const FILTER_OPTIONS: Array<{ value: ActivityFilter; label: string }> = [
   { value: 'rejected', label: 'Bị từ chối' },
   { value: 'published', label: 'Đã phát hành' },
   { value: 'completed', label: 'Hoàn thành' },
+  { value: 'cancelled', label: 'Đã hủy' },
 ];
 
 export default function TeacherActivitiesPage() {
@@ -290,9 +291,23 @@ export default function TeacherActivitiesPage() {
     return activity.status === 'published' && Number.isFinite(activityTime) && activityTime > now;
   });
 
+  const archivedActivities = sortedActivities.filter((activity) => {
+    const activityTime = new Date(activity.date_time).getTime();
+    const isPastPublished =
+      activity.status === 'published' && Number.isFinite(activityTime) && activityTime <= now;
+    return isPastPublished || activity.status === 'completed' || activity.status === 'cancelled';
+  });
+
   const remainingActivities = sortedActivities.filter((activity) => {
     const activityTime = new Date(activity.date_time).getTime();
-    return !(activity.status === 'published' && Number.isFinite(activityTime) && activityTime > now);
+    const isUpcomingPublished =
+      activity.status === 'published' && Number.isFinite(activityTime) && activityTime > now;
+    const isArchived =
+      (activity.status === 'published' && Number.isFinite(activityTime) && activityTime <= now) ||
+      activity.status === 'completed' ||
+      activity.status === 'cancelled';
+
+    return !isUpcomingPublished && !isArchived;
   });
 
   const getStatusBadge = (status: Activity['status']) => {
@@ -398,6 +413,41 @@ export default function TeacherActivitiesPage() {
                   <div
                     key={`upcoming-${activity.id}`}
                     className="rounded-lg border border-amber-200 bg-white p-4"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <div className="text-base font-semibold text-gray-900">{activity.title}</div>
+                        <div className="mt-1 text-sm text-gray-600">{activity.location}</div>
+                        <div className="mt-1 text-sm text-gray-500">
+                          {new Date(activity.date_time).toLocaleString('vi-VN')}
+                        </div>
+                      </div>
+                      {getStatusBadge(activity.status)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {archivedActivities.length > 0 && (
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-lg font-semibold text-slate-900">Đã qua hoặc đã khép lại</h2>
+                  <p className="text-sm text-slate-700">
+                    Gom các hoạt động đã hết thời gian diễn ra, đã hoàn thành hoặc đã hủy để danh sách chính đỡ lẫn với việc đang xử lý.
+                  </p>
+                </div>
+                <span className="rounded-full bg-white px-3 py-1 text-sm font-medium text-slate-800">
+                  {archivedActivities.length} hoạt động
+                </span>
+              </div>
+              <div className="space-y-3">
+                {archivedActivities.map((activity) => (
+                  <div
+                    key={`archived-${activity.id}`}
+                    className="rounded-lg border border-slate-200 bg-white p-4"
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div>
