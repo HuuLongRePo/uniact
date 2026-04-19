@@ -147,6 +147,60 @@ describe('POST /api/attendance/face', () => {
     expect(mockDbRun).toHaveBeenCalled();
   });
 
+  it('blocks when student biometric profile is not ready', async () => {
+    const { ApiError } = await import('../src/lib/api-response');
+    mockVerifyFaceAttendanceRuntime.mockRejectedValueOnce(
+      new ApiError(
+        'FACE_BIOMETRIC_NOT_READY',
+        'Học viên chưa sẵn sàng biometric cho face attendance',
+        409,
+        {
+          enrollment_status: 'captured',
+          training_status: 'pending',
+          sample_image_count: 2,
+          recommended_fallback: 'manual',
+        }
+      )
+    );
+    mockDbGet.mockImplementation(async (sql: string) => {
+      if (sql.includes('FROM activities')) {
+        return {
+          id: 92,
+          title: 'Readiness Gap Activity',
+          status: 'published',
+          approval_status: 'approved',
+          max_participants: 120,
+          date_time: '2027-01-11T08:00:00.000Z',
+        };
+      }
+      if (sql.includes('COUNT(*) as count FROM participations')) {
+        return { count: 55 };
+      }
+      return null;
+    });
+
+    mockDbAll.mockResolvedValue([{ participation_mode: 'mandatory' }]);
+
+    const route = await import('../src/app/api/attendance/face/route');
+    const response = await route.POST({
+      json: async () => ({
+        activity_id: 92,
+        student_id: 3002,
+        confidence_score: 0.91,
+        upstream_verified: true,
+      }),
+    } as any);
+
+    expect(response.status).toBe(409);
+    const body = await response.json();
+    expect(body.code).toBe('FACE_BIOMETRIC_NOT_READY');
+    expect(body.details).toMatchObject({
+      enrollment_status: 'captured',
+      training_status: 'pending',
+      recommended_fallback: 'manual',
+    });
+  });
+
   it('returns low-confidence fallback guidance instead of auto-recording', async () => {
     mockVerifyFaceAttendanceRuntime.mockResolvedValue({
       verified: true,

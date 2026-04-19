@@ -1,4 +1,6 @@
 import { ApiError } from '@/lib/api-response';
+import { dbGet } from '@/lib/database';
+import { ensureStudentBiometricSchema } from '@/infrastructure/db/student-biometric-schema';
 import { getFaceRuntimeCapability } from './runtime-capability';
 
 export type FaceAttendanceVerificationInput = {
@@ -21,6 +23,8 @@ export async function verifyFaceAttendanceRuntime(
 ): Promise<FaceAttendanceVerificationResult> {
   const capability = getFaceRuntimeCapability();
 
+  await ensureStudentBiometricSchema();
+
   if (!capability.attendance_api_accepting_runtime_verification) {
     throw new ApiError(
       'FACE_RUNTIME_UNAVAILABLE',
@@ -29,6 +33,31 @@ export async function verifyFaceAttendanceRuntime(
       {
         runtime_mode: capability.mode,
         blockers: capability.blockers,
+        recommended_fallback: 'manual',
+      }
+    );
+  }
+
+  const profile = await dbGet(
+    `SELECT enrollment_status, training_status, sample_image_count
+     FROM student_biometric_profiles
+     WHERE student_id = ?`,
+    [input.studentId]
+  );
+
+  const enrollmentStatus = String(profile?.enrollment_status || 'missing');
+  const trainingStatus = String(profile?.training_status || 'not_started');
+  const sampleImageCount = Number(profile?.sample_image_count || 0);
+
+  if (enrollmentStatus !== 'ready' || trainingStatus !== 'trained' || sampleImageCount <= 0) {
+    throw new ApiError(
+      'FACE_BIOMETRIC_NOT_READY',
+      'Học viên chưa sẵn sàng biometric cho face attendance',
+      409,
+      {
+        enrollment_status: enrollmentStatus,
+        training_status: trainingStatus,
+        sample_image_count: sampleImageCount,
         recommended_fallback: 'manual',
       }
     );
