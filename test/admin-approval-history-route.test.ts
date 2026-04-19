@@ -34,6 +34,8 @@ describe('GET /api/admin/activities/[id]/approval-history', () => {
     expect(body.history[0]).toMatchObject({
       id: 1,
       status: 'requested',
+      status_label: 'Đã gửi duyệt',
+      is_pending_request: true,
       changed_by_name: 'Teacher One',
     });
   });

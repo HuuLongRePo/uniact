@@ -61,6 +61,8 @@ interface Participant {
 interface ApprovalHistory {
   id: number;
   status: string;
+  status_label?: string;
+  is_pending_request?: boolean;
   notes: string | null;
   changed_by: number;
   changed_by_name: string;
@@ -250,9 +252,30 @@ export default function AdminActivityDetailPage() {
     draft: 'Nháp',
     pending: 'Chờ duyệt',
     published: 'Đã công bố',
-    rejected: 'Từ chối',
+    rejected: 'Bị từ chối',
     completed: 'Hoàn thành',
     cancelled: 'Đã hủy',
+  };
+
+  const getHistoryPresentation = (entry: ApprovalHistory) => {
+    if (entry.status === 'approved') {
+      return {
+        icon: <CheckCircle className="w-5 h-5 text-green-600" />,
+        label: entry.status_label || 'Đã phê duyệt',
+      };
+    }
+
+    if (entry.status === 'rejected') {
+      return {
+        icon: <XCircle className="w-5 h-5 text-red-600" />,
+        label: entry.status_label || 'Đã từ chối',
+      };
+    }
+
+    return {
+      icon: <AlertCircle className="w-5 h-5 text-yellow-600" />,
+      label: entry.status_label || 'Đã gửi duyệt',
+    };
   };
 
   return (
@@ -291,7 +314,7 @@ export default function AdminActivityDetailPage() {
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6 flex items-center justify-between">
             <div className="flex items-center gap-2 text-yellow-800">
               <AlertCircle className="w-5 h-5" />
-              <span className="font-medium">Hoạt động này đang chờ phê duyệt</span>
+              <span className="font-medium">Hoạt động này đang ở trạng thái chờ duyệt</span>
             </div>
             <div className="flex gap-2">
               <button
@@ -557,19 +580,9 @@ export default function AdminActivityDetailPage() {
                   {approvalHistory.map((h) => (
                     <div key={h.id} className="border-l-4 border-blue-500 pl-4 py-2">
                       <div className="flex items-center gap-2 mb-1">
-                        {h.status === 'approved' ? (
-                          <CheckCircle className="w-5 h-5 text-green-600" />
-                        ) : h.status === 'rejected' ? (
-                          <XCircle className="w-5 h-5 text-red-600" />
-                        ) : (
-                          <AlertCircle className="w-5 h-5 text-yellow-600" />
-                        )}
+                        {getHistoryPresentation(h).icon}
                         <span className="font-medium text-gray-900">
-                          {h.status === 'approved'
-                            ? 'Đã phê duyệt'
-                            : h.status === 'rejected'
-                              ? 'Đã từ chối'
-                              : 'Thay đổi trạng thái'}
+                          {getHistoryPresentation(h).label}
                         </span>
                       </div>
                       <p className="text-sm text-gray-600">

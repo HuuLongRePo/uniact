@@ -3,6 +3,21 @@ import { requireApiRole } from '@/lib/guards';
 import { dbAll } from '@/lib/database';
 import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
 
+function getApprovalHistoryStatusLabel(status: string) {
+  switch (status) {
+    case 'requested':
+      return 'Đã gửi duyệt';
+    case 'approved':
+      return 'Đã phê duyệt';
+    case 'rejected':
+      return 'Đã từ chối';
+    case 'draft':
+      return 'Bản nháp';
+    default:
+      return 'Cập nhật trạng thái duyệt';
+  }
+}
+
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     await requireApiRole(request, ['admin']);
@@ -10,7 +25,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const { id } = await params;
     const activityId = id;
 
-    const history = await dbAll(
+    const history = ((await dbAll(
       `
       SELECT 
         h.id,
@@ -25,7 +40,11 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       ORDER BY h.changed_at DESC
     `,
       [activityId]
-    );
+    )) as Array<any>).map((item) => ({
+      ...item,
+      status_label: getApprovalHistoryStatusLabel(item.status),
+      is_pending_request: item.status === 'requested',
+    }));
 
     return successResponse({ history });
   } catch (error: any) {
