@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter, useParams } from 'next/navigation';
 import LoadingSpinner from '@/components/LoadingSpinner';
@@ -19,6 +19,8 @@ import {
   Edit,
   Trash2,
   ArrowLeft,
+  Search,
+  Filter,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
@@ -81,11 +83,16 @@ export default function AdminActivityDetailPage() {
   const [approvalHistory, setApprovalHistory] = useState<ApprovalHistory[]>([]);
   const [activeTab, setActiveTab] = useState<'details' | 'participants' | 'history'>('details');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [participantSearch, setParticipantSearch] = useState('');
+  const [participantStatusFilter, setParticipantStatusFilter] = useState<string>('all');
+  const [participantClassFilter, setParticipantClassFilter] = useState<string>('all');
+  const [participantPage, setParticipantPage] = useState(1);
 
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [approvalAction, setApprovalAction] = useState<'approve' | 'reject'>('approve');
   const [approvalNotes, setApprovalNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const participantsPerPage = 10;
 
   useEffect(() => {
     if (!authLoading && (!user || user.role !== 'admin')) {
@@ -96,6 +103,10 @@ export default function AdminActivityDetailPage() {
       fetchActivity();
     }
   }, [user, authLoading, activityId]);
+
+  useEffect(() => {
+    setParticipantPage(1);
+  }, [participantSearch, participantStatusFilter, participantClassFilter, activeTab]);
 
   const fetchActivity = async () => {
     try {
@@ -256,6 +267,48 @@ export default function AdminActivityDetailPage() {
     completed: 'Hoàn thành',
     cancelled: 'Đã hủy',
   };
+
+  const participantClasses = useMemo(
+    () =>
+      Array.from(
+        new Set(participants.map((participant) => participant.class_name).filter(Boolean))
+      ) as string[],
+    [participants]
+  );
+
+  const filteredParticipants = useMemo(() => {
+    const normalizedSearch = participantSearch.trim().toLowerCase();
+
+    return participants.filter((participant) => {
+      const matchesSearch =
+        normalizedSearch.length === 0 ||
+        participant.user_name.toLowerCase().includes(normalizedSearch) ||
+        participant.user_email.toLowerCase().includes(normalizedSearch);
+
+      const normalizedAttendance =
+        participant.attendance_status === 'present'
+          ? 'present'
+          : participant.attendance_status === 'absent'
+            ? 'absent'
+            : 'registered';
+
+      const matchesStatus =
+        participantStatusFilter === 'all' || normalizedAttendance === participantStatusFilter;
+      const matchesClass =
+        participantClassFilter === 'all' || participant.class_name === participantClassFilter;
+
+      return matchesSearch && matchesStatus && matchesClass;
+    });
+  }, [participants, participantSearch, participantStatusFilter, participantClassFilter]);
+
+  const totalParticipantPages = Math.max(
+    1,
+    Math.ceil(filteredParticipants.length / participantsPerPage)
+  );
+  const paginatedParticipants = filteredParticipants.slice(
+    (participantPage - 1) * participantsPerPage,
+    participantPage * participantsPerPage
+  );
 
   const getHistoryPresentation = (entry: ApprovalHistory) => {
     if (entry.status === 'approved') {
@@ -482,10 +535,15 @@ export default function AdminActivityDetailPage() {
 
           {activeTab === 'participants' && (
             <div>
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="font-semibold text-gray-900">
-                  Danh sách người tham gia ({participants.length})
-                </h3>
+              <div className="flex flex-col gap-4 mb-4 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                  <h3 className="font-semibold text-gray-900">
+                    Danh sách người tham gia ({participants.length})
+                  </h3>
+                  <p className="text-sm text-gray-500">
+                    Hiển thị {filteredParticipants.length} kết quả phù hợp
+                  </p>
+                </div>
                 <button
                   onClick={exportParticipants}
                   disabled={participants.length === 0}
@@ -499,70 +557,155 @@ export default function AdminActivityDetailPage() {
               {participants.length === 0 ? (
                 <p className="text-gray-500 text-center py-8">Chưa có người đăng ký</p>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">
-                          Tên
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">
-                          Email
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">
-                          Lớp
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">
-                          Đăng ký
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">
-                          Điểm danh
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">
-                          Thành tích
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">
-                          Điểm
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200">
-                      {participants.map((p) => (
-                        <tr key={p.id}>
-                          <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                            {p.user_name}
-                          </td>
-                          <td className="px-4 py-3 text-sm text-gray-600">{p.user_email}</td>
-                          <td className="px-4 py-3 text-sm text-gray-600">{p.class_name || '-'}</td>
-                          <td className="px-4 py-3 text-sm text-gray-600">
-                            {new Date(p.registered_at).toLocaleDateString('vi-VN')}
-                          </td>
-                          <td className="px-4 py-3">
-                            {p.attendance_status === 'present' ? (
-                              <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">
-                                Có mặt
-                              </span>
-                            ) : p.attendance_status === 'absent' ? (
-                              <span className="px-2 py-1 bg-red-100 text-red-700 rounded text-xs">
-                                Vắng
-                              </span>
-                            ) : (
-                              <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs">
-                                Đã đăng ký / chưa điểm danh
-                              </span>
-                            )}
-                          </td>
-                          <td className="px-4 py-3 text-sm text-gray-600">
-                            {p.achievement_level || '-'}
-                          </td>
-                          <td className="px-4 py-3 text-sm font-semibold text-blue-600">
-                            {p.points_earned || 0}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                <>
+                  <div className="mb-4 grid grid-cols-1 gap-4 rounded-lg border border-gray-200 bg-gray-50 p-4 md:grid-cols-3">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                      <input
+                        type="text"
+                        value={participantSearch}
+                        onChange={(e) => setParticipantSearch(e.target.value)}
+                        placeholder="Tìm theo tên hoặc email"
+                        className="w-full rounded-lg border border-gray-300 py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    <div className="relative">
+                      <Filter className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                      <select
+                        value={participantStatusFilter}
+                        onChange={(e) => setParticipantStatusFilter(e.target.value)}
+                        className="w-full rounded-lg border border-gray-300 py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="all">Tất cả điểm danh</option>
+                        <option value="present">Có mặt</option>
+                        <option value="absent">Vắng</option>
+                        <option value="registered">Chưa điểm danh</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <select
+                        value={participantClassFilter}
+                        onChange={(e) => setParticipantClassFilter(e.target.value)}
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="all">Tất cả lớp</option>
+                        {participantClasses.map((className) => (
+                          <option key={className} value={className}>
+                            {className}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {filteredParticipants.length === 0 ? (
+                    <p className="text-gray-500 text-center py-8">
+                      Không có người tham gia phù hợp với bộ lọc hiện tại
+                    </p>
+                  ) : (
+                    <>
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full divide-y divide-gray-200">
+                          <thead className="bg-gray-50">
+                            <tr>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">
+                                Tên
+                              </th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">
+                                Email
+                              </th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">
+                                Lớp
+                              </th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">
+                                Đăng ký
+                              </th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">
+                                Điểm danh
+                              </th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">
+                                Thành tích
+                              </th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">
+                                Điểm
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-200">
+                            {paginatedParticipants.map((p) => (
+                              <tr key={p.id}>
+                                <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                                  {p.user_name}
+                                </td>
+                                <td className="px-4 py-3 text-sm text-gray-600">{p.user_email}</td>
+                                <td className="px-4 py-3 text-sm text-gray-600">{p.class_name || '-'}</td>
+                                <td className="px-4 py-3 text-sm text-gray-600">
+                                  {new Date(p.registered_at).toLocaleDateString('vi-VN')}
+                                </td>
+                                <td className="px-4 py-3">
+                                  {p.attendance_status === 'present' ? (
+                                    <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">
+                                      Có mặt
+                                    </span>
+                                  ) : p.attendance_status === 'absent' ? (
+                                    <span className="px-2 py-1 bg-red-100 text-red-700 rounded text-xs">
+                                      Vắng
+                                    </span>
+                                  ) : (
+                                    <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs">
+                                      Đã đăng ký / chưa điểm danh
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="px-4 py-3 text-sm text-gray-600">
+                                  {p.achievement_level || '-'}
+                                </td>
+                                <td className="px-4 py-3 text-sm font-semibold text-blue-600">
+                                  {p.points_earned || 0}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      <div className="mt-4 flex flex-col gap-3 text-sm text-gray-600 md:flex-row md:items-center md:justify-between">
+                        <div>
+                          Hiển thị {(participantPage - 1) * participantsPerPage + 1}-
+                          {Math.min(participantPage * participantsPerPage, filteredParticipants.length)} /{' '}
+                          {filteredParticipants.length} người tham gia phù hợp
+                        </div>
+                        {totalParticipantPages > 1 && (
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setParticipantPage((page) => Math.max(1, page - 1))}
+                              disabled={participantPage === 1}
+                              className="rounded border border-gray-300 px-3 py-1.5 hover:bg-gray-50 disabled:opacity-50"
+                            >
+                              ← Trước
+                            </button>
+                            <span>
+                              Trang {participantPage}/{totalParticipantPages}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setParticipantPage((page) => Math.min(totalParticipantPages, page + 1))
+                              }
+                              disabled={participantPage === totalParticipantPages}
+                              className="rounded border border-gray-300 px-3 py-1.5 hover:bg-gray-50 disabled:opacity-50"
+                            >
+                              Tiếp →
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </>
               )}
             </div>
           )}
