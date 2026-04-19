@@ -6,6 +6,17 @@ import { useAuth } from '@/contexts/AuthContext';
 import LoadingSpinner from '@/components/LoadingSpinner';
 
 interface HealthData {
+  biometric_readiness?: {
+    runtime_enabled: boolean;
+    enrollment_flow_ready: boolean;
+    embedding_storage_ready: boolean;
+    training_route_ready: boolean;
+    face_attendance_route_ready: boolean;
+    total_students: number;
+    students_ready_for_face_attendance: number;
+    blockers: string[];
+    recommended_next_batch: string;
+  };
   database: {
     size_mb: string;
     table_count: number;
@@ -94,10 +105,19 @@ export default function SystemHealthPage() {
   const fetchHealth = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/admin/system-health');
-      const healthData = await res.json();
-      if (res.ok) {
-        setData(healthData);
+      const [healthRes, readinessRes] = await Promise.all([
+        fetch('/api/admin/system-health'),
+        fetch('/api/admin/biometrics/readiness'),
+      ]);
+      const healthData = await healthRes.json();
+      const readinessData = await readinessRes.json().catch(() => null);
+      if (healthRes.ok) {
+        setData({
+          ...healthData,
+          biometric_readiness: readinessRes.ok
+            ? readinessData?.data?.readiness || readinessData?.readiness || null
+            : null,
+        });
       }
     } catch (e) {
       console.error('Fetch health error:', e);
@@ -234,6 +254,49 @@ export default function SystemHealthPage() {
               </div>
             </div>
           </div>
+
+          {data.biometric_readiness && (
+            <div className="bg-white rounded-lg shadow p-6 mb-6">
+              <h2 className="text-lg font-bold mb-4">🧠 Biometric readiness</h2>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                <div>
+                  <div className="text-sm text-gray-600">Runtime</div>
+                  <div className={`font-bold ${data.biometric_readiness.runtime_enabled ? 'text-green-600' : 'text-amber-600'}`}>
+                    {data.biometric_readiness.runtime_enabled ? 'Enabled' : 'Disabled'}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-sm text-gray-600">Enrollment flow</div>
+                  <div className={`font-bold ${data.biometric_readiness.enrollment_flow_ready ? 'text-green-600' : 'text-amber-600'}`}>
+                    {data.biometric_readiness.enrollment_flow_ready ? 'Ready' : 'Missing'}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-sm text-gray-600">Training route</div>
+                  <div className={`font-bold ${data.biometric_readiness.training_route_ready ? 'text-green-600' : 'text-amber-600'}`}>
+                    {data.biometric_readiness.training_route_ready ? 'Ready' : 'Missing'}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-sm text-gray-600">Students ready</div>
+                  <div className="font-bold text-blue-600">
+                    {data.biometric_readiness.students_ready_for_face_attendance}/{data.biometric_readiness.total_students}
+                  </div>
+                </div>
+              </div>
+              <div className="rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                <div className="font-medium mb-2">Blockers hiện tại</div>
+                <ul className="list-disc pl-5 space-y-1">
+                  {data.biometric_readiness.blockers.map((blocker) => (
+                    <li key={blocker}>{blocker}</li>
+                  ))}
+                </ul>
+                <div className="mt-3 text-xs text-amber-900">
+                  Next batch: {data.biometric_readiness.recommended_next_batch}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Additional Stats */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
