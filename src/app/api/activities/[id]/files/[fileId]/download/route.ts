@@ -78,7 +78,7 @@ export async function GET(
     }
 
     if (user.role === 'teacher' && !(await teacherCanAccessActivity(Number(user.id), activityId))) {
-      return errorResponse(ApiError.forbidden('Không có quyền truy cập'));
+      return errorResponse(ApiError.forbidden('Bạn chỉ có thể tải file của hoạt động thuộc phạm vi quản lý'));
     }
 
     const attachment = await dbGet(

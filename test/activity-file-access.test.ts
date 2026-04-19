@@ -186,6 +186,66 @@ describe('activity file access routes', () => {
     expect(mockDbRun).toHaveBeenCalledTimes(2);
   });
 
+  it('blocks out-of-scope teachers from downloading a file', async () => {
+    mockFs({ exists: true });
+
+    vi.doMock('@/lib/guards', () => ({
+      requireRole: async () => ({ id: 21, role: 'teacher' }),
+    }));
+
+    vi.doMock('@/lib/activity-access', () => ({
+      teacherCanAccessActivity: async () => false,
+    }));
+
+    vi.doMock('@/lib/database', () => ({
+      dbGet: vi.fn(async (sql: string) => {
+        if (sql.includes('SELECT id, teacher_id FROM activities')) {
+          return { id: 71, teacher_id: 99 };
+        }
+        return null;
+      }),
+    }));
+
+    const route = await import('../src/app/api/activities/[id]/files/[fileId]/download/route');
+    const response = await route.GET({} as any, {
+      params: Promise.resolve({ id: '71', fileId: '501' }),
+    } as any);
+
+    expect(response.status).toBe(403);
+    const body = await response.json();
+    expect(body.error).toContain('tải file của hoạt động thuộc phạm vi quản lý');
+  });
+
+  it('blocks out-of-scope teachers from previewing a file', async () => {
+    mockFs({ exists: true });
+
+    vi.doMock('@/lib/guards', () => ({
+      requireRole: async () => ({ id: 21, role: 'teacher' }),
+    }));
+
+    vi.doMock('@/lib/activity-access', () => ({
+      teacherCanAccessActivity: async () => false,
+    }));
+
+    vi.doMock('@/lib/database', () => ({
+      dbGet: vi.fn(async (sql: string) => {
+        if (sql.includes('SELECT id, teacher_id FROM activities')) {
+          return { id: 71, teacher_id: 99 };
+        }
+        return null;
+      }),
+    }));
+
+    const route = await import('../src/app/api/activities/[id]/files/[fileId]/preview/route');
+    const response = await route.GET({} as any, {
+      params: Promise.resolve({ id: '71', fileId: '501' }),
+    } as any);
+
+    expect(response.status).toBe(403);
+    const body = await response.json();
+    expect(body.error).toContain('xem trước file của hoạt động thuộc phạm vi quản lý');
+  });
+
   it('allows a support teacher to delete a file from a related activity', async () => {
     mockFs({ exists: false });
 
@@ -235,6 +295,37 @@ describe('activity file access routes', () => {
     expect(body.deleted).toBe(true);
     expect(mockDbRun).toHaveBeenCalledTimes(1);
     expect(mockCreateAuditLog).toHaveBeenCalledTimes(1);
+  });
+
+  it('blocks out-of-scope teachers from deleting an attachment', async () => {
+    mockFs({ exists: true });
+
+    vi.doMock('@/lib/guards', () => ({
+      requireRole: async () => ({ id: 21, role: 'teacher' }),
+    }));
+
+    vi.doMock('@/lib/activity-access', () => ({
+      teacherCanAccessActivity: async () => false,
+    }));
+
+    const mockCreateAuditLog = vi.fn(async () => {});
+
+    vi.doMock('@/lib/database', () => ({
+      dbHelpers: {
+        getActivityById: vi.fn(async () => ({ id: 71, teacher_id: 99 })),
+        createAuditLog: mockCreateAuditLog,
+      },
+    }));
+
+    const route = await import('../src/app/api/activities/[id]/attachments/[fileName]/route');
+    const response = await route.DELETE({} as any, {
+      params: Promise.resolve({ id: '71', fileName: 'guide.pdf' }),
+    } as any);
+
+    expect(response.status).toBe(403);
+    const body = await response.json();
+    expect(body.error).toContain('xóa file trong hoạt động thuộc phạm vi quản lý');
+    expect(mockCreateAuditLog).not.toHaveBeenCalled();
   });
 
   it('allows a support teacher to load legacy upload metadata for a related activity', async () => {
