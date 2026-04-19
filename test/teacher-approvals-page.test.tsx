@@ -155,6 +155,9 @@ describe('ApprovalsPage', () => {
       expect(toastSuccessMock).toHaveBeenCalledWith('Gui duyet thanh cong');
     });
 
+    expect(screen.getAllByText('Đã gửi duyệt').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Bị từ chối').length).toBeGreaterThan(0);
+
     expect(
       fetchMock.mock.calls.some(
         ([url, init]) =>

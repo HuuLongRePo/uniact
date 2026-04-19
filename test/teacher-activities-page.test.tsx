@@ -136,7 +136,7 @@ describe('TeacherActivitiesPage', () => {
       if (url === '/api/activities/11/submit-approval' && init?.method === 'POST') {
         return {
           ok: true,
-          json: async () => ({ message: 'Đã gửi lên ban quản trị để phê duyệt' }),
+          json: async () => ({ message: 'Đã gửi duyệt hoạt động lên ban quản trị' }),
         } as Response;
       }
 
@@ -154,7 +154,7 @@ describe('TeacherActivitiesPage', () => {
     fireEvent.click(await screen.findByText('Confirm action'));
 
     await waitFor(() => {
-      expect(toast.success).toHaveBeenCalledWith('Đã gửi lên ban quản trị để phê duyệt');
+      expect(toast.success).toHaveBeenCalledWith('Đã gửi duyệt hoạt động lên ban quản trị');
     });
   });
 });

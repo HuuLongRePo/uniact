@@ -55,14 +55,14 @@ function statusBadge(status: Activity['status']) {
       return (
         <span className="inline-flex items-center gap-1 rounded-full bg-yellow-100 px-3 py-1 text-sm font-medium text-yellow-700">
           <Clock className="h-4 w-4" />
-          Chờ duyệt
+          Đã gửi duyệt
         </span>
       );
     case 'rejected':
       return (
         <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-3 py-1 text-sm font-medium text-red-700">
           <XCircle className="h-4 w-4" />
-          Từ chối
+          Bị từ chối
         </span>
       );
     default:
@@ -125,7 +125,7 @@ export default function ApprovalsPage() {
         throw new Error(data?.message || data?.error || 'Không thể gửi lại');
       }
 
-      toast.success(data?.message || 'Gửi duyệt thành công');
+      toast.success(data?.message || 'Đã gửi duyệt hoạt động');
       setResubmitMessage('');
       setSelectedActivity(null);
       await fetchActivities();
@@ -157,9 +157,9 @@ export default function ApprovalsPage() {
               }`}
             >
               {tab === 'all' && 'Tất cả'}
-              {tab === 'pending' && 'Chờ duyệt'}
+              {tab === 'pending' && 'Đã gửi duyệt'}
               {tab === 'approved' && 'Đã duyệt'}
-              {tab === 'rejected' && 'Từ chối'}
+              {tab === 'rejected' && 'Bị từ chối'}
             </button>
           ))}
         </div>
@@ -218,7 +218,7 @@ export default function ApprovalsPage() {
                         )}
                         {activity.status === 'rejected' && activity.rejected_at && (
                           <div className="text-red-600">
-                            Từ chối: {formatDateTime(activity.rejected_at)}
+                            Bị từ chối: {formatDateTime(activity.rejected_at)}
                             {activity.rejection_reason && (
                               <div className="mt-1">Lý do: {activity.rejection_reason}</div>
                             )}
