@@ -6,6 +6,52 @@ import { buildAttendancePolicy } from '@/lib/attendance-policy';
 import { loadAttendancePolicyConfig } from '@/lib/attendance-policy-config';
 import { verifyFaceAttendanceRuntime } from '@/lib/biometrics/attendance-runtime-bridge';
 
+const MIN_CANDIDATE_EMBEDDING_LENGTH = 3;
+const MAX_CANDIDATE_EMBEDDING_LENGTH = 2048;
+
+function normalizeCandidateEmbedding(input: unknown): number[] | null {
+  if (input == null) return null;
+  if (!Array.isArray(input)) {
+    throw new ApiError(
+      'INVALID_CANDIDATE_EMBEDDING',
+      'candidate_embedding phải là mảng số hợp lệ',
+      400
+    );
+  }
+
+  const normalized = input
+    .map((value) => Number(value))
+    .filter((value) => Number.isFinite(value));
+
+  if (normalized.length !== input.length) {
+    throw new ApiError(
+      'INVALID_CANDIDATE_EMBEDDING',
+      'candidate_embedding chứa giá trị không hợp lệ',
+      400
+    );
+  }
+
+  if (normalized.length < MIN_CANDIDATE_EMBEDDING_LENGTH) {
+    throw new ApiError(
+      'INVALID_CANDIDATE_EMBEDDING',
+      'candidate_embedding quá ngắn để xác thực',
+      400,
+      { min_length: MIN_CANDIDATE_EMBEDDING_LENGTH }
+    );
+  }
+
+  if (normalized.length > MAX_CANDIDATE_EMBEDDING_LENGTH) {
+    throw new ApiError(
+      'INVALID_CANDIDATE_EMBEDDING',
+      'candidate_embedding vượt quá kích thước cho phép',
+      400,
+      { max_length: MAX_CANDIDATE_EMBEDDING_LENGTH }
+    );
+  }
+
+  return normalized;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const user = await requireApiAuth(request);
@@ -25,9 +71,7 @@ export async function POST(request: NextRequest) {
     const confidenceScore = Number(body?.confidence_score ?? body?.confidenceScore ?? 0);
     const upstreamVerified = Boolean(body?.upstream_verified ?? body?.upstreamVerified);
     const deviceId = body?.device_id ?? body?.deviceId ?? null;
-    const candidateEmbedding = Array.isArray(body?.candidate_embedding)
-      ? body.candidate_embedding.map((value: unknown) => Number(value)).filter((value: number) => Number.isFinite(value))
-      : null;
+    const candidateEmbedding = normalizeCandidateEmbedding(body?.candidate_embedding);
 
     const activity = await dbGet(
       `SELECT id, title, status, approval_status, max_participants, date_time

@@ -205,6 +205,42 @@ describe('POST /api/attendance/face', () => {
     });
   });
 
+  it('rejects invalid candidate embedding payloads before verification', async () => {
+    mockDbGet.mockImplementation(async (sql: string) => {
+      if (sql.includes('FROM activities')) {
+        return {
+          id: 95,
+          title: 'Invalid Embedding Activity',
+          status: 'published',
+          approval_status: 'approved',
+          max_participants: 120,
+          date_time: '2027-01-14T08:00:00.000Z',
+        };
+      }
+      if (sql.includes('COUNT(*) as count FROM participations')) {
+        return { count: 60 };
+      }
+      return null;
+    });
+
+    mockDbAll.mockResolvedValue([{ participation_mode: 'mandatory' }]);
+
+    const route = await import('../src/app/api/attendance/face/route');
+    const response = await route.POST({
+      json: async () => ({
+        activity_id: 95,
+        student_id: 3005,
+        confidence_score: 0.95,
+        candidate_embedding: [0.1, 'bad-value', 0.3],
+      }),
+    } as any);
+
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body.code).toBe('INVALID_CANDIDATE_EMBEDDING');
+    expect(mockVerifyFaceAttendanceRuntime).not.toHaveBeenCalled();
+  });
+
   it('returns low-confidence fallback guidance instead of auto-recording', async () => {
     mockVerifyFaceAttendanceRuntime.mockResolvedValue({
       verified: true,
