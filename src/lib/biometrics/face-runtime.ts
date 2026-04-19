@@ -1,6 +1,14 @@
 export type FaceEmbedding = number[];
 
-export const FACE_BIOMETRIC_RUNTIME_ENABLED = false;
+function isRuntimeEnvEnabled() {
+  const value = process.env.ENABLE_FACE_BIOMETRIC_RUNTIME;
+  return ['1', 'true', 'yes', 'on'].includes(String(value ?? '').trim().toLowerCase());
+}
+
+export const FACE_BIOMETRIC_RUNTIME_ENABLED = isRuntimeEnvEnabled();
+export const FACE_BIOMETRIC_RUNTIME_MODE = FACE_BIOMETRIC_RUNTIME_ENABLED
+  ? 'config_enabled_stubbed'
+  : 'stubbed';
 
 export class FaceBiometricUnavailableError extends Error {
   constructor(

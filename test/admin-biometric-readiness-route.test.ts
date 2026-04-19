@@ -41,4 +41,25 @@ describe('GET /api/admin/biometrics/readiness', () => {
       recommended_next_batch: 'face_runtime_enablement',
     });
   });
+
+  it('reports config-enabled stubbed mode when runtime flag is on', async () => {
+    vi.resetModules();
+    process.env.ENABLE_FACE_BIOMETRIC_RUNTIME = '1';
+    requireApiRoleMock.mockResolvedValue({ id: 1, role: 'admin' });
+    dbGetMock.mockResolvedValue({ count: 1200 });
+
+    const route = await import('../src/app/api/admin/biometrics/readiness/route');
+    const response = await route.GET(new Request('http://localhost/api/admin/biometrics/readiness'));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.data.readiness).toMatchObject({
+      runtime_enabled: true,
+      runtime_mode: 'config_enabled_stubbed',
+      attendance_api_accepting_runtime_verification: false,
+      recommended_next_batch: 'face_runtime_enablement',
+    });
+
+    delete process.env.ENABLE_FACE_BIOMETRIC_RUNTIME;
+  });
 });

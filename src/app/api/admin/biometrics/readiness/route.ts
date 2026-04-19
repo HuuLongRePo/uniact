@@ -28,7 +28,7 @@ export async function GET(request: Request) {
       blockers: runtimeCapability.runtime_enabled
         ? []
         : runtimeCapability.blockers,
-      recommended_next_batch: runtimeCapability.runtime_enabled
+      recommended_next_batch: runtimeCapability.attendance_api_accepting_runtime_verification
         ? 'face_attendance_operational_closeout'
         : 'face_runtime_enablement',
     };
