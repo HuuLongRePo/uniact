@@ -69,6 +69,24 @@ describe('Admin activities page', () => {
                 points: 3,
                 created_at: '2098-12-02T00:00:00.000Z',
               },
+              {
+                id: 3,
+                title: 'Approved Published Activity',
+                description: 'Just approved by admin',
+                teacher_id: 12,
+                teacher_name: 'Teacher C',
+                activity_type: 'Campaign',
+                organization_level: 'University',
+                date_time: '2099-01-03T08:00:00.000Z',
+                end_time: '2099-01-03T10:00:00.000Z',
+                location: 'Hall C',
+                max_participants: 80,
+                participant_count: 18,
+                status: 'published',
+                approval_status: 'approved',
+                points: 6,
+                created_at: '2098-12-03T00:00:00.000Z',
+              },
             ],
           }),
         } as Response;
@@ -76,6 +94,32 @@ describe('Admin activities page', () => {
 
       throw new Error(`Unhandled fetch: ${url}`);
     }) as any;
+  });
+
+  it('shows approved activities in admin activities and lets them be found by both workflow and review filters', async () => {
+    const Page = (await import('../src/app/admin/activities/page')).default;
+    render(<Page />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Approved Published Activity')).toBeInTheDocument();
+    });
+
+    const selects = screen.getAllByRole('combobox');
+
+    fireEvent.change(selects[0], { target: { value: 'published' } });
+    await waitFor(() => {
+      expect(screen.getByText('Approved Published Activity')).toBeInTheDocument();
+      expect(screen.queryByText('Pending Activity')).not.toBeInTheDocument();
+    });
+
+    fireEvent.change(selects[0], { target: { value: 'all' } });
+    fireEvent.change(selects[1], { target: { value: 'approved' } });
+
+    await waitFor(() => {
+      expect(screen.getByText('Approved Published Activity')).toBeInTheDocument();
+      expect(screen.queryByText('Pending Activity')).not.toBeInTheDocument();
+      expect(screen.queryByText('Rejected Activity')).not.toBeInTheDocument();
+    });
   });
 
   it('filters workflow and review semantics separately on admin activities page', async () => {

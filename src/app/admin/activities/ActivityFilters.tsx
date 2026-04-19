@@ -58,9 +58,9 @@ export default function ActivityFilters({
           >
             <option value="all">Tất cả review</option>
             <option value="draft">Chưa gửi duyệt</option>
-            <option value="requested">Chờ phê duyệt</option>
-            <option value="approved">Đã duyệt</option>
-            <option value="rejected">Từ chối</option>
+            <option value="requested">Đã gửi duyệt</option>
+            <option value="approved">Đã duyệt (đã công bố)</option>
+            <option value="rejected">Bị từ chối</option>
           </select>
         </div>
       </div>
