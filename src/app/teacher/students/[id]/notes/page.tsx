@@ -64,15 +64,15 @@ export default function StudentNotesPage({ params }: { params: Promise<{ id: str
       if (!studentRes.ok) throw new Error('Không thể tải thông tin học viên');
 
       const studentData = await studentRes.json();
-      setStudent(studentData.student || studentData);
+      setStudent(studentData.student || studentData.data?.student || studentData);
 
       if (notesRes.ok) {
         const notesData = await notesRes.json();
-        setNotes(notesData.notes || []);
+        setNotes(notesData.notes || notesData.data?.notes || []);
       }
     } catch (error) {
       console.error(error);
-      toast.error('Không thể tải dữ liệu');
+      toast.error(error instanceof Error ? error.message : 'Không thể tải dữ liệu');
     } finally {
       setLoading(false);
     }

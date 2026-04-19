@@ -89,17 +89,17 @@ export default function StudentProfilePage() {
       const res = await fetch(`/api/students/${id}/profile`);
       const data = await res.json();
       if (res.ok) {
-        setStudent(data.student);
-        setActivities(data.activities || []);
-        setAwards(data.awards || []);
-        setMonthlyStats(data.monthlyStats || []);
-        setNotes(data.notes || []);
+        setStudent(data.student || data.data?.student || null);
+        setActivities(data.activities || data.data?.activities || []);
+        setAwards(data.awards || data.data?.awards || []);
+        setMonthlyStats(data.monthlyStats || data.data?.monthlyStats || []);
+        setNotes(data.notes || data.data?.notes || []);
       } else {
-        toast.error(data.error || 'Không thể tải hồ sơ học viên');
+        toast.error(data.error || data.message || 'Không thể tải hồ sơ học viên');
       }
     } catch (e) {
       console.error('Fetch profile error:', e);
-      toast.error('Lỗi khi tải hồ sơ');
+      toast.error(e instanceof Error ? e.message : 'Không thể tải hồ sơ học viên');
     } finally {
       setLoading(false);
     }
@@ -119,11 +119,11 @@ export default function StudentProfilePage() {
         setNewNote('');
         fetchProfile(); // Reload để lấy note mới
       } else {
-        toast.error(data.error || 'Không thể thêm ghi chú');
+        toast.error(data.error || data.message || 'Không thể thêm ghi chú');
       }
     } catch (e) {
       console.error('Add note error:', e);
-      toast.error('Lỗi khi thêm ghi chú');
+      toast.error(e instanceof Error ? e.message : 'Không thể thêm ghi chú');
     } finally {
       setSavingNote(false);
     }
@@ -138,11 +138,11 @@ export default function StudentProfilePage() {
         fetchProfile();
       } else {
         const data = await res.json();
-        toast.error(data.error || 'Không thể xóa ghi chú');
+        toast.error(data.error || data.message || 'Không thể xóa ghi chú');
       }
     } catch (e) {
       console.error('Delete note error:', e);
-      toast.error('Lỗi khi xóa ghi chú');
+      toast.error(e instanceof Error ? e.message : 'Không thể xóa ghi chú');
     }
   };
 
