@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Plus,
   Upload,
@@ -69,6 +69,7 @@ export default function CreateActivityPage() {
   const [date, setDate] = useState('');
   const [time, setTime] = useState('');
   const [location, setLocation] = useState('');
+  const [endTime, setEndTime] = useState('');
   const [maxParticipants, setMaxParticipants] = useState<number | ''>('');
   const [mandatoryClassIds, setMandatoryClassIds] = useState<number[]>([]);
   const [voluntaryClassIds, setVoluntaryClassIds] = useState<number[]>([]);
@@ -90,7 +91,10 @@ export default function CreateActivityPage() {
   );
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
-  const selectedClasses = Array.from(new Set([...mandatoryClassIds, ...voluntaryClassIds]));
+  const selectedClasses = useMemo(
+    () => Array.from(new Set([...mandatoryClassIds, ...voluntaryClassIds])),
+    [mandatoryClassIds, voluntaryClassIds]
+  );
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -140,7 +144,7 @@ export default function CreateActivityPage() {
   // Fetch class list, activity types, organization levels on mount
   useEffect(() => {
     Promise.all([
-      fetch('/api/classes?mine=1').then((res) => res.json()),
+      fetch('/api/classes').then((res) => res.json()),
       fetch('/api/activity-types').then((res) => res.json()),
       fetch('/api/organization-levels').then((res) => res.json()),
     ])
@@ -259,6 +263,7 @@ export default function CreateActivityPage() {
         title: title.trim(),
         description,
         date_time: time ? `${date}T${time}` : `${date}T00:00`,
+        ...(endTime ? { end_time: `${date}T${endTime}` } : {}),
         location: location.trim(),
         max_participants: maxParticipants ? Number(maxParticipants) : 30,
         class_ids: selectedClasses,
@@ -320,6 +325,8 @@ export default function CreateActivityPage() {
       setDate('');
       setTime('');
       setLocation('');
+      setTime('');
+      setEndTime('');
       setMaxParticipants('');
       setMandatoryClassIds([]);
       setVoluntaryClassIds([]);
@@ -455,7 +462,7 @@ export default function CreateActivityPage() {
                     </div>
 
                     {/* Date, Time, Location */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                       <div>
                         <label className="block font-medium mb-1">
                           <Calendar className="w-4 h-4 inline mr-1" />
@@ -471,14 +478,50 @@ export default function CreateActivityPage() {
                         />
                       </div>
                       <div>
-                        <label className="block font-medium mb-1">Giờ</label>
-                        <input
-                          type="time"
-                          className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-200"
-                          value={time}
-                          onChange={(e) => setTime(e.target.value)}
-                          disabled={submitting}
-                        />
+                        <label className="block font-medium mb-1">Giờ bắt đầu</label>
+                        <div className="relative">
+                          <input
+                            type="time"
+                            className="w-full rounded-lg border px-3 py-2 pr-10 focus:ring-2 focus:ring-blue-200"
+                            value={time}
+                            onChange={(e) => setTime(e.target.value)}
+                            disabled={submitting}
+                          />
+                          {time ? (
+                            <button
+                              type="button"
+                              onClick={() => setTime('')}
+                              disabled={submitting}
+                              aria-label="Xóa giờ bắt đầu"
+                              className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 disabled:opacity-50"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          ) : null}
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block font-medium mb-1">Giờ kết thúc</label>
+                        <div className="relative">
+                          <input
+                            type="time"
+                            className="w-full rounded-lg border px-3 py-2 pr-10 focus:ring-2 focus:ring-blue-200"
+                            value={endTime}
+                            onChange={(e) => setEndTime(e.target.value)}
+                            disabled={submitting}
+                          />
+                          {endTime ? (
+                            <button
+                              type="button"
+                              onClick={() => setEndTime('')}
+                              disabled={submitting}
+                              aria-label="Xóa giờ kết thúc"
+                              className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 disabled:opacity-50"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          ) : null}
+                        </div>
                       </div>
                       <div>
                         <label className="block font-medium mb-1">

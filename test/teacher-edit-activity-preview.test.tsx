@@ -74,7 +74,7 @@ describe('EditActivityPage participation preview', () => {
         });
       }
 
-      if (url === '/api/classes?mine=1') return jsonResponse({ classes: [{ id: 1, name: 'CNTT K18A' }] });
+      if (url === '/api/classes') return jsonResponse({ classes: [{ id: 1, name: 'CNTT K18A' }] });
       if (url === '/api/activity-types') return jsonResponse({ types: [{ id: 5, name: 'Tình nguyện' }] });
       if (url === '/api/organization-levels') return jsonResponse({ levels: [{ id: 7, name: 'Cấp trường' }] });
 

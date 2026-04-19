@@ -37,7 +37,7 @@ describe('CreateActivityPage', () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
 
-      if (url === '/api/classes?mine=1') {
+      if (url === '/api/classes') {
         return jsonResponse({ classes: [{ id: 1, name: 'CNTT K18A' }] });
       }
 
@@ -60,6 +60,7 @@ describe('CreateActivityPage', () => {
           mandatory_class_ids: [1],
           voluntary_class_ids: [],
         });
+        expect(body.end_time).toBeUndefined();
         expect(body).not.toHaveProperty('files');
         expect(body).not.toHaveProperty('status');
 
@@ -90,7 +91,8 @@ describe('CreateActivityPage', () => {
     fireEvent.change(container.querySelector('input[type="date"]') as HTMLInputElement, {
       target: { value: '2026-04-20' },
     });
-    fireEvent.change(container.querySelector('input[type="time"]') as HTMLInputElement, {
+    const timeInputs = container.querySelectorAll('input[type="time"]');
+    fireEvent.change(timeInputs[0] as HTMLInputElement, {
       target: { value: '08:30' },
     });
     fireEvent.change(textInputs[1] as HTMLInputElement, { target: { value: 'Phòng 101' } });

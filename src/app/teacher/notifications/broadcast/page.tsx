@@ -60,7 +60,7 @@ export default function BroadcastNotificationsPage() {
       setLoading(true);
       const [notificationsRes, classesRes] = await Promise.all([
         fetch(`/api/teacher/broadcast-notifications?status=${filter}`),
-        fetch('/api/classes?mine=1'),
+        fetch('/api/classes'),
       ]);
 
       if (!notificationsRes.ok) throw new Error('Không thể tải thông báo');

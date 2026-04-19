@@ -19,31 +19,29 @@ export async function GET(request: NextRequest) {
     const classId = searchParams.get('class_id');
     const search = searchParams.get('search') || '';
 
-    // Lấy danh sách các lớp của giảng viên (qua class_teachers hoặc classes.teacher_id)
-    const teacherClasses = await dbAll(
+    const allClasses = (await dbAll(
       `
-      SELECT DISTINCT c.id as class_id
+      SELECT c.id, c.name, c.grade
       FROM classes c
-      LEFT JOIN class_teachers ct ON ct.class_id = c.id
-      WHERE c.teacher_id = ? OR ct.teacher_id = ?
-      `,
-      [user.id, user.id]
-    );
+      ORDER BY c.grade ASC, c.name ASC
+      `
+    )) as Array<{ id: number; name: string; grade: string }>;
 
-    if (teacherClasses.length === 0) {
+    if (allClasses.length === 0) {
       return successResponse(
         {
           students: [],
           classes: [],
           total: 0,
         },
-        'Giảng viên chưa được phân công lớp nào'
+        'Chưa có lớp nào trong hệ thống'
       );
     }
 
-    const classIds = teacherClasses.map((c) => c.class_id);
+    const classIds = allClasses.map((item) => Number(item.id));
 
-    // Build WHERE clause
+    // Teacher hiện có thể xem toàn bộ lớp/học viên trên surface này.
+    // Permission mutation chi tiết vẫn do từng route nghiệp vụ kiểm soát.
     let whereClause = `u.class_id IN (${classIds.join(',')})`;
     const params: any[] = [];
 
@@ -102,15 +100,7 @@ export async function GET(request: NextRequest) {
         return String(left.name).localeCompare(String(right.name));
       });
 
-    // Lấy danh sách classes để làm filter dropdown
-    const classes = (await dbAll(
-      `
-      SELECT c.id, c.name, c.grade
-      FROM classes c
-      WHERE c.id IN (${classIds.join(',')})
-      ORDER BY c.grade ASC, c.name ASC
-      `
-    )) as Array<{ id: number; name: string; grade: string }>;
+    const classes = allClasses;
 
     return successResponse({
       students: students.map((student) => ({

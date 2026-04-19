@@ -13,8 +13,8 @@ describe('GET /api/teacher/students', () => {
 
     vi.doMock('@/lib/database', () => ({
       dbAll: vi.fn(async (sql: string) => {
-        if (sql.includes('SELECT DISTINCT c.id as class_id')) {
-          return [{ class_id: 10 }];
+        if (sql.includes('SELECT c.id, c.name, c.grade') && sql.includes('FROM classes c')) {
+          return [{ id: 10, name: 'CTK42A', grade: 'K42' }];
         }
         if (sql.includes('FROM users u') && sql.includes('GROUP BY u.id')) {
           return [
@@ -39,9 +39,6 @@ describe('GET /api/teacher/students', () => {
               final_total: 25,
             },
           ];
-        }
-        if (sql.includes('SELECT c.id, c.name, c.grade')) {
-          return [{ id: 10, name: 'CTK42A', grade: 'K42' }];
         }
         return [];
       }),
@@ -92,7 +89,7 @@ describe('GET /api/teacher/students', () => {
     expect(body.code).toBe('FORBIDDEN');
   });
 
-  it('returns empty canonical payload when teacher has no assigned classes', async () => {
+  it('returns empty canonical payload when the system has no classes yet', async () => {
     vi.doMock('@/lib/guards', () => ({
       requireApiRole: async () => ({ id: 7, role: 'teacher', name: 'Teacher A' }),
     }));
@@ -112,5 +109,65 @@ describe('GET /api/teacher/students', () => {
     expect(body.students).toEqual([]);
     expect(body.classes).toEqual([]);
     expect(body.total).toBe(0);
+  });
+
+  it('allows teacher to filter across all classes in the system', async () => {
+    vi.doMock('@/lib/guards', () => ({
+      requireApiRole: async () => ({ id: 7, role: 'teacher', name: 'Teacher A' }),
+    }));
+
+    const dbAllMock = vi.fn(async (sql: string, params?: any[]) => {
+      if (sql.includes('SELECT c.id, c.name, c.grade') && sql.includes('FROM classes c')) {
+        return [
+          { id: 10, name: 'CTK42A', grade: 'K42' },
+          { id: 11, name: 'CTK42B', grade: 'K42' },
+        ];
+      }
+      if (sql.includes('FROM users u') && sql.includes('u.class_id = ?')) {
+        expect(params).toContain(11);
+        return [
+          {
+            id: 301,
+            email: 'student2@example.com',
+            name: 'Tran Thi B',
+            avatar_url: null,
+            class_id: 11,
+            class_name: 'CTK42B',
+            activities_count: 1,
+          },
+        ];
+      }
+      if (sql.includes('WITH participation_totals AS')) {
+        return [
+          {
+            student_id: 301,
+            participation_points: 5,
+            award_points: 0,
+            adjustment_points: 0,
+            final_total: 5,
+          },
+        ];
+      }
+      return [];
+    });
+
+    vi.doMock('@/lib/database', () => ({
+      dbAll: dbAllMock,
+    }));
+
+    const route = await import('../src/app/api/teacher/students/route');
+    const res: any = await route.GET({
+      url: 'http://localhost/api/teacher/students?class_id=11',
+    } as any);
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+    expect(body.classes).toHaveLength(2);
+    expect(body.students[0]).toMatchObject({
+      id: 301,
+      class_id: 11,
+      total_points: 5,
+    });
   });
 });

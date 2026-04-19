@@ -74,7 +74,7 @@ describe('EditActivityPage', () => {
         });
       }
 
-      if (url === '/api/classes?mine=1') return jsonResponse({ classes: [{ id: 1, name: 'CNTT K18A' }] });
+      if (url === '/api/classes') return jsonResponse({ classes: [{ id: 1, name: 'CNTT K18A' }] });
       if (url === '/api/activity-types') return jsonResponse({ types: [{ id: 5, name: 'Tình nguyện' }] });
       if (url === '/api/organization-levels') return jsonResponse({ levels: [{ id: 7, name: 'Cấp trường' }] });
 
@@ -84,6 +84,7 @@ describe('EditActivityPage', () => {
           title: 'Hoạt động đã sửa',
           description: 'Mô tả đã cập nhật',
           date_time: '2026-04-25T08:30',
+          end_time: null,
           location: 'Phòng B2',
           max_participants: 30,
           activity_type_id: 5,

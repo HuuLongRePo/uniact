@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { AlertCircle, ArrowLeft, Lock, Save, Send } from 'lucide-react';
+import { AlertCircle, ArrowLeft, Lock, Save, Send, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface ActivityType {
@@ -89,6 +89,7 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
   const [description, setDescription] = useState('');
   const [date, setDate] = useState('');
   const [time, setTime] = useState('');
+  const [endTime, setEndTime] = useState('');
   const [location, setLocation] = useState('');
   const [maxParticipants, setMaxParticipants] = useState<number | ''>('');
   const [activityTypeId, setActivityTypeId] = useState<number | ''>('');
@@ -105,7 +106,10 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
   );
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
-  const selectedClasses = Array.from(new Set([...mandatoryClassIds, ...voluntaryClassIds]));
+  const selectedClasses = useMemo(
+    () => Array.from(new Set([...mandatoryClassIds, ...voluntaryClassIds])),
+    [mandatoryClassIds, voluntaryClassIds]
+  );
 
   useEffect(() => {
     void fetchAllData();
@@ -168,7 +172,7 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
 
       const [activityRes, classesRes, typesRes, levelsRes] = await Promise.all([
         fetch(`/api/activities/${id}`),
-        fetch('/api/classes?mine=1'),
+        fetch('/api/classes'),
         fetch('/api/activity-types'),
         fetch('/api/organization-levels'),
       ]);
@@ -191,6 +195,11 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
       const [dateOnly, timeOnly = '00:00'] = String(nextActivity.date_time || '').split('T');
       setDate(dateOnly || '');
       setTime(timeOnly.slice(0, 5) || '00:00');
+      setEndTime(
+        typeof (nextActivity as any).end_time === 'string'
+          ? String((nextActivity as any).end_time).split('T')[1]?.slice(0, 5) || ''
+          : ''
+      );
 
       setLocation(nextActivity.location || '');
       setMaxParticipants(nextActivity.max_participants || '');
@@ -272,6 +281,7 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
         title: title.trim(),
         description: description.trim(),
         date_time: time ? `${date}T${time}` : `${date}T00:00`,
+        end_time: endTime ? `${date}T${endTime}` : null,
         location: location.trim(),
         max_participants: maxParticipants ? parseInt(String(maxParticipants), 10) : 30,
         class_ids: selectedClasses,
@@ -419,7 +429,7 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
           <div className="space-y-4 rounded-lg border border-gray-200 bg-white p-6 shadow">
             <h2 className="text-lg font-bold text-gray-900">Thời gian và địa điểm</h2>
 
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
               <div>
                 <label className="mb-2 block text-sm font-medium text-gray-700">Ngày *</label>
                 <input
@@ -433,14 +443,51 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700">Giờ</label>
-                <input
-                  type="time"
-                  value={time}
-                  onChange={(event) => setTime(event.target.value)}
-                  disabled={!canEdit}
-                  className="w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
-                />
+                <label className="mb-2 block text-sm font-medium text-gray-700">Giờ bắt đầu</label>
+                <div className="relative">
+                  <input
+                    type="time"
+                    value={time}
+                    onChange={(event) => setTime(event.target.value)}
+                    disabled={!canEdit}
+                    className="w-full rounded-lg border px-4 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                  />
+                  {time ? (
+                    <button
+                      type="button"
+                      onClick={() => setTime('')}
+                      disabled={!canEdit}
+                      aria-label="Xóa giờ bắt đầu"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 disabled:opacity-50"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-700">Giờ kết thúc</label>
+                <div className="relative">
+                  <input
+                    type="time"
+                    value={endTime}
+                    onChange={(event) => setEndTime(event.target.value)}
+                    disabled={!canEdit}
+                    className="w-full rounded-lg border px-4 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                  />
+                  {endTime ? (
+                    <button
+                      type="button"
+                      onClick={() => setEndTime('')}
+                      disabled={!canEdit}
+                      aria-label="Xóa giờ kết thúc"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 disabled:opacity-50"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  ) : null}
+                </div>
               </div>
 
               <div>

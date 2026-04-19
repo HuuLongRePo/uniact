@@ -8,13 +8,10 @@ export async function GET(request: NextRequest) {
     const user = await requireApiAuth(request);
 
     let classes: any[] = [];
-    if (user.role === 'admin') {
-      // Admin xem tất cả lớp
+    if (user.role === 'admin' || user.role === 'teacher') {
+      // Admin và giảng viên đều xem được tất cả lớp.
+      // Teacher ownership/permission cho từng mutation vẫn được kiểm soát ở các route nghiệp vụ riêng.
       classes = (await dbHelpers.getAllClassesWithTeachers()) as any[];
-    } else if (user.role === 'teacher') {
-      // Teacher xem lớp mình dạy
-      classes = (await dbHelpers.getAllClassesWithTeachers()) as any[]; // Sẽ filter sau
-      classes = classes.filter((cls: any) => cls.teacher_id === user.id);
     } else {
       // Student chỉ xem lớp của mình
       if (user.class_id) {
