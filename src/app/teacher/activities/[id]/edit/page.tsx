@@ -122,6 +122,7 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
   );
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
+  const [currentStep, setCurrentStep] = useState<'basic' | 'scope' | 'submit'>('basic');
   const selectedClasses = useMemo(
     () => Array.from(new Set([...mandatoryClassIds, ...voluntaryClassIds])),
     [mandatoryClassIds, voluntaryClassIds]
@@ -482,6 +483,57 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
         )}
 
         <form onSubmit={handleFormSubmit} className="space-y-6">
+          <div className="rounded-lg border border-gray-200 bg-white p-3 shadow">
+            <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
+              {[
+                { key: 'basic', label: 'Bước 1: Thông tin' },
+                { key: 'scope', label: 'Bước 2: Phạm vi và phân loại' },
+                { key: 'submit', label: 'Bước 3: Kiểm tra và gửi' },
+              ].map((step) => (
+                <button
+                  key={step.key}
+                  type="button"
+                  onClick={() => setCurrentStep(step.key as 'basic' | 'scope' | 'submit')}
+                  className={`rounded-lg px-4 py-2 text-sm font-medium transition ${currentStep === step.key ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                >
+                  {step.label}
+                </button>
+              ))}
+            </div>
+            <div className="mt-3 flex items-center justify-between gap-3 text-sm">
+              <button
+                type="button"
+                onClick={() =>
+                  setCurrentStep((current) =>
+                    current === 'submit' ? 'scope' : current === 'scope' ? 'basic' : 'basic'
+                  )
+                }
+                disabled={currentStep === 'basic'}
+                className="rounded-lg border px-4 py-2 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              >
+                Quay lại bước trước
+              </button>
+              <div className="text-gray-600">
+                {currentStep === 'basic'
+                  ? 'Cập nhật thông tin chính của hoạt động.'
+                  : currentStep === 'scope'
+                    ? 'Điều chỉnh phạm vi lớp, học viên và phân loại.'
+                    : 'Kiểm tra lại thay đổi rồi lưu nháp hoặc gửi duyệt.'}
+              </div>
+              <button
+                type="button"
+                onClick={() =>
+                  setCurrentStep((current) =>
+                    current === 'basic' ? 'scope' : current === 'scope' ? 'submit' : 'submit'
+                  )
+                }
+                disabled={currentStep === 'submit'}
+                className="rounded-lg border px-4 py-2 text-blue-700 hover:bg-blue-50 disabled:opacity-50"
+              >
+                Sang bước tiếp theo
+              </button>
+            </div>
+          </div>
           <div className="space-y-4 rounded-lg border border-gray-200 bg-white p-6 shadow">
             <h2 className="text-lg font-bold text-gray-900">Thông tin hoạt động</h2>
 
