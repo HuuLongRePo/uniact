@@ -105,7 +105,7 @@ describe('CreateActivityPage', () => {
     mandatorySelect.options[0].selected = true;
     fireEvent.change(mandatorySelect);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Tài liệu đính kèm' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Bước 3: Tài liệu và gửi' }));
 
     const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement;
     const file = new File(['pdf-content'], 'guide.pdf', { type: 'application/pdf' });

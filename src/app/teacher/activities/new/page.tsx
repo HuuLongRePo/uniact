@@ -468,7 +468,7 @@ export default function CreateActivityPage() {
             </div>
           </div>
 
-          {/* Tabs */}
+          {/* Wizard steps */}
           <div className="flex border-b border-gray-200 bg-gray-50">
             <button
               type="button"
@@ -480,7 +480,7 @@ export default function CreateActivityPage() {
               }`}
             >
               <BookOpen className="w-4 h-4 inline mr-2" />
-              Thông tin cơ bản
+              Bước 1: Thông tin
             </button>
             <button
               type="button"
@@ -492,7 +492,7 @@ export default function CreateActivityPage() {
               }`}
             >
               <Award className="w-4 h-4 inline mr-2" />
-              Chi tiết & phân loại
+              Bước 2: Phạm vi và phân loại
             </button>
             <button
               type="button"
@@ -504,7 +504,7 @@ export default function CreateActivityPage() {
               }`}
             >
               <FileText className="w-4 h-4 inline mr-2" />
-              Tài liệu đính kèm
+              Bước 3: Tài liệu và gửi
             </button>
           </div>
 
@@ -1116,6 +1116,40 @@ export default function CreateActivityPage() {
                     </div>
                   </>
                 )}
+
+                <div className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setCurrentTab((current) =>
+                        current === 'files' ? 'details' : current === 'details' ? 'basic' : 'basic'
+                      )
+                    }
+                    disabled={currentTab === 'basic'}
+                    className="rounded-lg border bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+                  >
+                    Quay lại bước trước
+                  </button>
+                  <div className="text-sm text-gray-600">
+                    {currentTab === 'basic'
+                      ? 'Bước 1/3, hoàn thiện thông tin chính của hoạt động.'
+                      : currentTab === 'details'
+                        ? 'Bước 2/3, chọn phạm vi lớp, học viên và phân loại.'
+                        : 'Bước 3/3, kiểm tra tài liệu và gửi hoạt động.'}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setCurrentTab((current) =>
+                        current === 'basic' ? 'details' : current === 'details' ? 'files' : 'files'
+                      )
+                    }
+                    disabled={currentTab === 'files'}
+                    className="rounded-lg border bg-white px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-50 disabled:opacity-50"
+                  >
+                    Sang bước tiếp theo
+                  </button>
+                </div>
 
                 {/* Action Buttons */}
                 <div className="pt-6 flex gap-3 border-t border-gray-200">
