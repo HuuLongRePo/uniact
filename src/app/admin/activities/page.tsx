@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { CheckCircle } from 'lucide-react';
+import { CheckCircle, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { useDebounce } from '@/lib/debounce-hooks';
@@ -37,6 +37,16 @@ export default function AdminActivitiesPage() {
       fetchActivities();
     }
   }, [user, authLoading, router]);
+
+  useEffect(() => {
+    if (!user || user.role !== 'admin') return;
+
+    const intervalId = window.setInterval(() => {
+      fetchActivities();
+    }, 30000);
+
+    return () => window.clearInterval(intervalId);
+  }, [user]);
 
   const fetchActivities = async () => {
     try {
@@ -98,14 +108,27 @@ export default function AdminActivitiesPage() {
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Quản lý hoạt động</h1>
             <p className="text-gray-600 mt-2">Tất cả hoạt động trong hệ thống</p>
+            <p className="text-sm text-gray-500 mt-1">
+              Danh sách tự làm mới định kỳ để giảm nguy cơ bỏ sót hoạt động vừa được duyệt.
+            </p>
           </div>
-          <Link
-            href="/admin/approvals"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            <CheckCircle className="w-5 h-5" />
-            Phê duyệt hoạt động
-          </Link>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => fetchActivities()}
+              className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 bg-white text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Làm mới
+            </button>
+            <Link
+              href="/admin/approvals"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <CheckCircle className="w-5 h-5" />
+              Phê duyệt hoạt động
+            </Link>
+          </div>
         </div>
 
         {/* Filters */}

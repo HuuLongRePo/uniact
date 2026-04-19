@@ -122,6 +122,21 @@ describe('Admin activities page', () => {
     });
   });
 
+  it('allows admin to refresh the activities list manually', async () => {
+    const Page = (await import('../src/app/admin/activities/page')).default;
+    render(<Page />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Pending Activity')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Làm mới/i }));
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledTimes(2);
+    });
+  });
+
   it('filters workflow and review semantics separately on admin activities page', async () => {
     const Page = (await import('../src/app/admin/activities/page')).default;
     render(<Page />);
