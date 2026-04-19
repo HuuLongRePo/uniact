@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import LoadingSpinner from '@/components/LoadingSpinner';
@@ -31,6 +32,7 @@ export default function AdminBiometricsPage() {
   const [students, setStudents] = useState<StudentBiometricRow[]>([]);
   const [summary, setSummary] = useState({ total: 0, ready_count: 0, missing_count: 0 });
   const [error, setError] = useState('');
+  const [updatingStudentId, setUpdatingStudentId] = useState<number | null>(null);
 
   useEffect(() => {
     if (!authLoading && (!user || user.role !== 'admin')) {
@@ -59,6 +61,28 @@ export default function AdminBiometricsPage() {
       setError(fetchError instanceof Error ? fetchError.message : 'Không thể tải biometric readiness');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const markEnrollmentCaptured = async (studentId: number) => {
+    try {
+      setUpdatingStudentId(studentId);
+      const res = await fetch(`/api/admin/biometrics/students/${studentId}/enrollment`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sample_image_count_delta: 1 }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        throw new Error(data?.error || data?.message || 'Không thể cập nhật enrollment');
+      }
+      toast.success('Đã cập nhật enrollment mẫu cho học viên');
+      await fetchData();
+    } catch (updateError) {
+      console.error('Admin biometrics enrollment update error:', updateError);
+      toast.error(updateError instanceof Error ? updateError.message : 'Không thể cập nhật enrollment');
+    } finally {
+      setUpdatingStudentId(null);
     }
   };
 
@@ -108,6 +132,7 @@ export default function AdminBiometricsPage() {
                 <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Sample ảnh</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Face attendance</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Blocker / note</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Hành động</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
@@ -140,6 +165,16 @@ export default function AdminBiometricsPage() {
                     {student.biometric_readiness.notes ? (
                       <div className="text-xs text-gray-500 mt-1">{student.biometric_readiness.notes}</div>
                     ) : null}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-600">
+                    <button
+                      type="button"
+                      onClick={() => void markEnrollmentCaptured(student.id)}
+                      disabled={updatingStudentId === student.id}
+                      className="rounded bg-blue-600 px-3 py-2 text-white hover:bg-blue-700 disabled:bg-gray-400"
+                    >
+                      {updatingStudentId === student.id ? 'Đang cập nhật...' : 'Ghi nhận thêm ảnh mẫu'}
+                    </button>
                   </td>
                 </tr>
               ))}
