@@ -150,7 +150,7 @@ describe('TeacherActivitiesPage', () => {
     render(<TeacherActivitiesPage />);
 
     expect(await screen.findByText('Hoạt động nháp')).toBeInTheDocument();
-    fireEvent.click(screen.getByText('Gửi phê duyệt'));
+    fireEvent.click(screen.getByText('Gửi duyệt'));
     fireEvent.click(await screen.findByText('Confirm action'));
 
     await waitFor(() => {

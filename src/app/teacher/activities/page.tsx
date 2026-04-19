@@ -116,7 +116,7 @@ export default function TeacherActivitiesPage() {
         throw new Error(data.error || 'Không thể gửi phê duyệt');
       }
 
-      toast.success(data.message || 'Đã gửi hoạt động để phê duyệt');
+      toast.success(data.message || 'Đã gửi duyệt hoạt động');
       await fetchActivities();
     } catch (error: unknown) {
       console.error('Error submitting approval:', error);
@@ -219,9 +219,9 @@ export default function TeacherActivitiesPage() {
     switch (confirmAction.type) {
       case 'submit':
         return {
-          title: 'Xác nhận gửi phê duyệt',
-          message: `Bạn có chắc muốn gửi hoạt động "${confirmAction.title}" để phê duyệt không?`,
-          confirmText: 'Gửi phê duyệt',
+          title: 'Xác nhận gửi duyệt hoạt động',
+          message: `Bạn có chắc muốn gửi duyệt hoạt động "${confirmAction.title}" không?`,
+          confirmText: 'Gửi duyệt',
           variant: 'warning' as const,
         };
       case 'cancel':
@@ -464,7 +464,7 @@ export default function TeacherActivitiesPage() {
                             <Send className="w-4 h-4" />
                             {activity.status === 'rejected'
                               ? 'Chỉnh sửa và gửi lại'
-                              : 'Gửi phê duyệt'}
+                              : 'Gửi duyệt'}
                           </>
                         )}
                       </button>
@@ -473,7 +473,7 @@ export default function TeacherActivitiesPage() {
 
                   {activity.status === 'pending' && (
                     <span className="px-4 py-2 bg-yellow-100 text-yellow-800 rounded text-sm font-medium">
-                      ⏳ Đang chờ phê duyệt
+                      ⏳ Đã gửi duyệt, đang chờ xử lý
                     </span>
                   )}
 

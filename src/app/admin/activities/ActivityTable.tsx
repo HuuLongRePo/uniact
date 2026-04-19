@@ -17,7 +17,7 @@ export default function ActivityTable({ activities, loading, onDelete }: Activit
       pending: { label: 'Chờ duyệt', className: 'bg-yellow-100 text-yellow-800' },
       published: { label: 'Đã công bố', className: 'bg-green-100 text-green-800' },
       completed: { label: 'Hoàn thành', className: 'bg-blue-100 text-blue-800' },
-      rejected: { label: 'Từ chối', className: 'bg-red-100 text-red-800' },
+      rejected: { label: 'Bị từ chối', className: 'bg-red-100 text-red-800' },
       cancelled: { label: 'Đã hủy', className: 'bg-red-100 text-red-800' },
     };
 
@@ -30,9 +30,9 @@ export default function ActivityTable({ activities, loading, onDelete }: Activit
   const getApprovalBadge = (approval: string) => {
     const badges: Record<string, { label: string; className: string; icon: any }> = {
       draft: { label: 'Nháp', className: 'bg-gray-100 text-gray-800', icon: null },
-      requested: { label: 'Chờ phê duyệt', className: 'bg-yellow-100 text-yellow-800', icon: null },
+      requested: { label: 'Đã gửi duyệt', className: 'bg-yellow-100 text-yellow-800', icon: null },
       approved: { label: 'Đã duyệt', className: 'bg-green-100 text-green-800', icon: CheckCircle },
-      rejected: { label: 'Từ chối', className: 'bg-red-100 text-red-800', icon: XCircle },
+      rejected: { label: 'Bị từ chối', className: 'bg-red-100 text-red-800', icon: XCircle },
     };
 
     const badge = badges[approval] || badges.draft;
