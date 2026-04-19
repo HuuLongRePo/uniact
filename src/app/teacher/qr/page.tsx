@@ -79,7 +79,7 @@ export default function TeacherQRPage() {
         const res = await fetch('/api/activities?scope=operational&status=ongoing');
         if (!res.ok) throw new Error('Không thể tải danh sách hoạt động');
         const json = await res.json();
-        const list: Activity[] = json.activities || [];
+        const list: Activity[] = json.activities || json.data?.activities || [];
         setActivities(list);
 
         const tabParam = searchParams.get('tab');
@@ -113,7 +113,9 @@ export default function TeacherQRPage() {
         }
       } catch (err: any) {
         console.error(err);
-        setError(err?.message || 'Lỗi');
+        const message = err?.message || 'Không thể tải danh sách hoạt động';
+        setError(message);
+        toast.error(message);
       }
     };
     load();
@@ -145,10 +147,14 @@ export default function TeacherQRPage() {
       const res = await fetch('/api/qr-sessions');
       if (!res.ok) throw new Error('Không thể tải lịch sử');
       const json = await res.json();
-      setHistory(json.sessions || []);
+      setHistory(json.sessions || json.data?.sessions || []);
     } catch (err: any) {
       console.error(err);
-      if (!autoRefresh) setError(err?.message || 'Lỗi khi tải lịch sử');
+      if (!autoRefresh) {
+        const message = err?.message || 'Không thể tải lịch sử';
+        setError(message);
+        toast.error(message);
+      }
     } finally {
       if (!autoRefresh) setHistoryLoading(false);
     }
@@ -175,10 +181,10 @@ export default function TeacherQRPage() {
       const res = await fetch(`/api/qr-sessions/${sessionId}/scans`);
       if (!res.ok) throw new Error('Không thể tải dữ liệu quét');
       const json = await res.json();
-      setBulkScans(json.scans || []);
+      setBulkScans(json.scans || json.data?.scans || []);
     } catch (err: any) {
       console.error(err);
-      toast.error('Không thể tải dữ liệu quét');
+      toast.error(err?.message || 'Không thể tải dữ liệu quét');
     } finally {
       setBulkLoading(false);
     }
