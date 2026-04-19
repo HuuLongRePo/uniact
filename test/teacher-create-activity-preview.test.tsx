@@ -56,8 +56,16 @@ describe('CreateActivityPage participation preview', () => {
           preview: {
             total_classes: 1,
             mandatory_participants: 2,
-            voluntary_participants: 0,
+            voluntary_participants: 1,
             conflict_count: 0,
+            direct_students: [
+              {
+                id: 201,
+                name: 'Student Direct',
+                email: 'direct@example.com',
+                resolved_mode: 'voluntary',
+              },
+            ],
             groups: [
               {
                 class_id: 1,
@@ -97,5 +105,8 @@ describe('CreateActivityPage participation preview', () => {
 
     expect(screen.getAllByText(/CNTT K18A/i).length).toBeGreaterThan(0);
     expect(screen.getByText('Student A')).toBeInTheDocument();
+    expect(screen.getByText(/Học viên chọn trực tiếp • 1 học viên/i)).toBeInTheDocument();
+    expect(screen.getByText('Student Direct')).toBeInTheDocument();
+    expect(screen.getAllByText('Tự nguyện').length).toBeGreaterThan(0);
   });
 });

@@ -69,6 +69,7 @@ interface ParticipationPreview {
   voluntary_participants: number;
   conflict_count: number;
   groups: ParticipationPreviewGroup[];
+  direct_students?: ParticipationPreviewStudent[];
 }
 
 export default function CreateActivityPage() {
@@ -780,9 +781,9 @@ export default function CreateActivityPage() {
                           <div className="mb-2 text-sm font-semibold text-blue-900">
                             Xem trước danh sách tham gia hiện tại
                           </div>
-                          {selectedClasses.length === 0 ? (
+                          {selectedClasses.length === 0 && mandatoryStudentIds.length === 0 && voluntaryStudentIds.length === 0 ? (
                             <p className="text-sm text-gray-600">
-                              Chọn ít nhất một lớp bắt buộc hoặc tự nguyện để xem danh sách dự kiến.
+                              Chọn ít nhất một lớp hoặc học viên trực tiếp để xem danh sách dự kiến.
                             </p>
                           ) : previewLoading ? (
                             <div className="flex items-center gap-2 text-sm text-blue-700">
@@ -820,9 +821,31 @@ export default function CreateActivityPage() {
                                 </div>
                               </div>
                               <div className="text-xs text-gray-600">
-                                Nếu một lớp xuất hiện ở cả hai danh sách, hệ thống sẽ ưu tiên bắt
+                                Nếu một lớp hoặc học viên xuất hiện ở cả hai danh sách, hệ thống sẽ ưu tiên bắt
                                 buộc hơn tự nguyện.
                               </div>
+                              {participationPreview.direct_students && participationPreview.direct_students.length > 0 ? (
+                                <details className="rounded-lg border border-emerald-200 bg-white p-3">
+                                  <summary className="cursor-pointer list-none font-medium text-gray-800">
+                                    Học viên chọn trực tiếp • {participationPreview.direct_students.length} học viên
+                                  </summary>
+                                  <div className="mt-2 space-y-1 text-sm text-gray-600">
+                                    {participationPreview.direct_students.map((student) => (
+                                      <div key={`direct-${student.id}`} className="flex justify-between gap-3">
+                                        <div>
+                                          <span>{student.name}</span>
+                                          <span className="ml-2 text-xs font-medium text-emerald-700">
+                                            {student.resolved_mode === 'mandatory' ? 'Bắt buộc' : 'Tự nguyện'}
+                                          </span>
+                                        </div>
+                                        <span className="text-xs text-gray-500">
+                                          {student.email || `ID ${student.id}`}
+                                        </span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </details>
+                              ) : null}
                               <div className="space-y-2">
                                 {participationPreview.groups.map((group) => (
                                   <details
