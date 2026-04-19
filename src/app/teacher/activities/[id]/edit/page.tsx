@@ -138,6 +138,14 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
       return haystack.includes(keyword);
     });
   }, [studentOptions, studentSearch]);
+  const mandatorySelectedStudents = useMemo(
+    () => studentOptions.filter((student) => mandatoryStudentIds.includes(student.id)),
+    [studentOptions, mandatoryStudentIds]
+  );
+  const voluntarySelectedStudents = useMemo(
+    () => studentOptions.filter((student) => voluntaryStudentIds.includes(student.id)),
+    [studentOptions, voluntaryStudentIds]
+  );
 
   const handleMandatoryStudentSelect = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const values = Array.from(event.target.selectedOptions).map((option) => parseInt(option.value, 10));
@@ -814,6 +822,21 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
                     </div>
                     <div className="mt-3 grid grid-cols-1 gap-4 lg:grid-cols-2">
                       <div>
+                        {mandatorySelectedStudents.length > 0 ? (
+                          <div className="mb-2 flex flex-wrap gap-2">
+                            {mandatorySelectedStudents.map((student) => (
+                              <button
+                                key={`mandatory-chip-${student.id}`}
+                                type="button"
+                                onClick={() => setMandatoryStudentIds((current) => current.filter((id) => id !== student.id))}
+                                disabled={!canEdit}
+                                className="rounded-full bg-orange-100 px-2 py-1 text-xs text-orange-800 hover:bg-orange-200 disabled:opacity-60"
+                              >
+                                {student.name} ×
+                              </button>
+                            ))}
+                          </div>
+                        ) : null}
                         <label className="mb-1 block text-sm font-medium text-orange-700">
                           Học viên bắt buộc
                         </label>
@@ -833,6 +856,21 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
                         </select>
                       </div>
                       <div>
+                        {voluntarySelectedStudents.length > 0 ? (
+                          <div className="mb-2 flex flex-wrap gap-2">
+                            {voluntarySelectedStudents.map((student) => (
+                              <button
+                                key={`voluntary-chip-${student.id}`}
+                                type="button"
+                                onClick={() => setVoluntaryStudentIds((current) => current.filter((id) => id !== student.id))}
+                                disabled={!canEdit}
+                                className="rounded-full bg-sky-100 px-2 py-1 text-xs text-sky-800 hover:bg-sky-200 disabled:opacity-60"
+                              >
+                                {student.name} ×
+                              </button>
+                            ))}
+                          </div>
+                        ) : null}
                         <label className="mb-1 block text-sm font-medium text-sky-700">
                           Học viên tự nguyện
                         </label>
