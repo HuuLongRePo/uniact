@@ -148,6 +148,7 @@ describe('Admin activities page', () => {
       expect(screen.getByText('Past Published Activity')).toBeInTheDocument();
     });
 
+    expect(screen.getAllByText('Đã gửi duyệt').length).toBeGreaterThan(0);
     expect(screen.getByText('Đã khép lại')).toBeInTheDocument();
     expect(screen.getByText('Đã qua hoặc đã khép lại, cần rà lại việc hoàn thành thực tế.')).toBeInTheDocument();
     expect(screen.getByText('Trong toàn bộ danh sách hiện có 1 hoạt động đã qua hoặc đã khép lại.')).toBeInTheDocument();

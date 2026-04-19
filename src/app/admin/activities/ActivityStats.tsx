@@ -25,7 +25,7 @@ export default function ActivityStats({ activities }: ActivityStatsProps) {
         <div className="text-2xl font-bold text-yellow-600">
           {activities.filter((a) => a.status === 'pending').length}
         </div>
-        <div className="text-sm text-gray-600">Chờ duyệt</div>
+        <div className="text-sm text-gray-600">Đã gửi duyệt</div>
       </div>
       <div className="bg-white rounded-lg shadow-sm border p-4">
         <div className="text-2xl font-bold text-green-600">
