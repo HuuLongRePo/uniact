@@ -3,6 +3,7 @@ import { successResponse, ApiError, errorResponse } from '@/lib/api-response';
 import { dbGet, dbRun } from '@/lib/database';
 import { ensureStudentBiometricSchema } from '@/infrastructure/db/student-biometric-schema';
 import { FACE_BIOMETRIC_RUNTIME_ENABLED } from '@/lib/biometrics/face-runtime';
+import { encryptEmbedding } from '@/lib/biometrics/encryption';
 
 function computeReady(enrollmentStatus: string, trainingStatus: string) {
   return FACE_BIOMETRIC_RUNTIME_ENABLED && enrollmentStatus === 'ready' && trainingStatus === 'trained';
@@ -23,6 +24,9 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     const trainingStatus = String(body?.training_status || 'pending');
     const notes = typeof body?.notes === 'string' ? body.notes.trim() : null;
     const trainingVersion = typeof body?.training_version === 'string' ? body.training_version.trim() : null;
+    const embeddingInput = Array.isArray(body?.face_embedding)
+      ? body.face_embedding.map((value: unknown) => Number(value)).filter((value: number) => Number.isFinite(value))
+      : null;
 
     if (!['pending', 'trained', 'failed'].includes(trainingStatus)) {
       throw ApiError.validation('training_status không hợp lệ');
@@ -39,23 +43,42 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     );
 
     const sampleImageCount = Number(existingProfile?.sample_image_count || 0);
+    const encryptedEmbedding = embeddingInput && embeddingInput.length > 0
+      ? await encryptEmbedding(embeddingInput, studentId)
+      : null;
     const nextEnrollmentStatus = trainingStatus === 'trained'
       ? 'ready'
       : existingProfile?.enrollment_status || (sampleImageCount > 0 ? 'captured' : 'missing');
 
     await dbRun(
       `INSERT INTO student_biometric_profiles (
-         student_id, enrollment_status, training_status, sample_image_count, notes, training_version, last_trained_at, updated_at
-       ) VALUES (?, ?, ?, ?, ?, ?, CASE WHEN ? = 'trained' THEN CURRENT_TIMESTAMP ELSE NULL END, CURRENT_TIMESTAMP)
+         student_id, enrollment_status, training_status, sample_image_count, notes, training_version,
+         face_embedding_encrypted, face_embedding_iv, face_embedding_salt,
+         last_trained_at, updated_at
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CASE WHEN ? = 'trained' THEN CURRENT_TIMESTAMP ELSE NULL END, CURRENT_TIMESTAMP)
        ON CONFLICT(student_id) DO UPDATE SET
          enrollment_status = excluded.enrollment_status,
          training_status = excluded.training_status,
          sample_image_count = COALESCE(student_biometric_profiles.sample_image_count, excluded.sample_image_count),
          notes = COALESCE(excluded.notes, student_biometric_profiles.notes),
          training_version = COALESCE(excluded.training_version, student_biometric_profiles.training_version),
+         face_embedding_encrypted = COALESCE(excluded.face_embedding_encrypted, student_biometric_profiles.face_embedding_encrypted),
+         face_embedding_iv = COALESCE(excluded.face_embedding_iv, student_biometric_profiles.face_embedding_iv),
+         face_embedding_salt = COALESCE(excluded.face_embedding_salt, student_biometric_profiles.face_embedding_salt),
          last_trained_at = CASE WHEN excluded.training_status = 'trained' THEN CURRENT_TIMESTAMP ELSE student_biometric_profiles.last_trained_at END,
          updated_at = CURRENT_TIMESTAMP`,
-      [studentId, nextEnrollmentStatus, trainingStatus, sampleImageCount, notes, trainingVersion, trainingStatus]
+      [
+        studentId,
+        nextEnrollmentStatus,
+        trainingStatus,
+        sampleImageCount,
+        notes,
+        trainingVersion,
+        encryptedEmbedding?.encryptedData || null,
+        encryptedEmbedding?.iv || null,
+        encryptedEmbedding?.salt || null,
+        trainingStatus,
+      ]
     );
 
     return successResponse({
@@ -65,6 +88,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       sample_image_count: sampleImageCount,
       notes,
       training_version: trainingVersion,
+      has_face_embedding: Boolean(encryptedEmbedding),
       face_attendance_ready: computeReady(nextEnrollmentStatus, trainingStatus),
     });
   } catch (error) {

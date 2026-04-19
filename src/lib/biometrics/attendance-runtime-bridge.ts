@@ -39,7 +39,8 @@ export async function verifyFaceAttendanceRuntime(
   }
 
   const profile = await dbGet(
-    `SELECT enrollment_status, training_status, sample_image_count
+    `SELECT enrollment_status, training_status, sample_image_count,
+            face_embedding_encrypted, face_embedding_iv, face_embedding_salt
      FROM student_biometric_profiles
      WHERE student_id = ?`,
     [input.studentId]
@@ -48,11 +49,28 @@ export async function verifyFaceAttendanceRuntime(
   const enrollmentStatus = String(profile?.enrollment_status || 'missing');
   const trainingStatus = String(profile?.training_status || 'not_started');
   const sampleImageCount = Number(profile?.sample_image_count || 0);
+  const hasFaceEmbedding = Boolean(
+    profile?.face_embedding_encrypted && profile?.face_embedding_iv && profile?.face_embedding_salt
+  );
 
   if (enrollmentStatus !== 'ready' || trainingStatus !== 'trained' || sampleImageCount <= 0) {
     throw new ApiError(
       'FACE_BIOMETRIC_NOT_READY',
       'Học viên chưa sẵn sàng biometric cho face attendance',
+      409,
+      {
+        enrollment_status: enrollmentStatus,
+        training_status: trainingStatus,
+        sample_image_count: sampleImageCount,
+        recommended_fallback: 'manual',
+      }
+    );
+  }
+
+  if (!hasFaceEmbedding) {
+    throw new ApiError(
+      'FACE_EMBEDDING_MISSING',
+      'Học viên chưa có biometric template sẵn sàng cho face attendance',
       409,
       {
         enrollment_status: enrollmentStatus,

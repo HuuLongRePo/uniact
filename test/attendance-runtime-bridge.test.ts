@@ -35,6 +35,9 @@ describe('attendance runtime bridge', () => {
       enrollment_status: 'captured',
       training_status: 'pending',
       sample_image_count: 2,
+      face_embedding_encrypted: null,
+      face_embedding_iv: null,
+      face_embedding_salt: null,
     });
 
     const { verifyFaceAttendanceRuntime } = await import('../src/lib/biometrics/attendance-runtime-bridge');
@@ -60,6 +63,9 @@ describe('attendance runtime bridge', () => {
       enrollment_status: 'ready',
       training_status: 'trained',
       sample_image_count: 5,
+      face_embedding_encrypted: 'cipher',
+      face_embedding_iv: 'iv',
+      face_embedding_salt: 'salt',
     });
 
     const { verifyFaceAttendanceRuntime } = await import('../src/lib/biometrics/attendance-runtime-bridge');
@@ -77,5 +83,33 @@ describe('attendance runtime bridge', () => {
       runtimeMode: 'runtime_ready',
       verificationSource: 'upstream',
     });
+  });
+
+  it('blocks when lifecycle is ready but embedding template is still missing', async () => {
+    getFaceRuntimeCapabilityMock.mockReturnValue({
+      attendance_api_accepting_runtime_verification: true,
+      mode: 'runtime_ready',
+      blockers: [],
+    });
+    dbGetMock.mockResolvedValue({
+      enrollment_status: 'ready',
+      training_status: 'trained',
+      sample_image_count: 5,
+      face_embedding_encrypted: null,
+      face_embedding_iv: null,
+      face_embedding_salt: null,
+    });
+
+    const { verifyFaceAttendanceRuntime } = await import('../src/lib/biometrics/attendance-runtime-bridge');
+
+    await expect(
+      verifyFaceAttendanceRuntime({
+        activityId: 1,
+        studentId: 12,
+        confidenceScore: 0.92,
+        upstreamVerified: true,
+        deviceId: 'cam-1',
+      })
+    ).rejects.toMatchObject({ code: 'FACE_EMBEDDING_MISSING' });
   });
 });
