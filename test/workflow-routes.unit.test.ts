@@ -526,9 +526,12 @@ describe('Workflow route fixes (unit, mocked)', () => {
       } as any
 
       const res: any = await route.POST(req, { params: Promise.resolve({ id: '4' }) } as any)
-      expect(res.status).toBe(200)
-      expect(submitActivityForApproval).toHaveBeenCalledWith(4, 77, 'teacher note')
-      expect(decideApproval).toHaveBeenCalledWith(88, 304, 'approved', 'ok')
+      expect(res.status).toBe(409)
+      const body = await res.json()
+      expect(body.success).toBe(false)
+      expect(body.error).toBe('Không tìm thấy yêu cầu phê duyệt đang chờ xử lý')
+      expect(submitActivityForApproval).not.toHaveBeenCalled()
+      expect(decideApproval).not.toHaveBeenCalled()
     })
   })
 

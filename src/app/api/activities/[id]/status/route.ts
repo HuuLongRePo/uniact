@@ -62,14 +62,6 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     // Invalidate activities cache
     cache.invalidatePrefix('activities:');
 
-    // Auto-update approval_status when publishing
-    if (newStatus === 'published' && activity.approval_status === 'requested') {
-      await dbRun('UPDATE activities SET approval_status = ? WHERE id = ?', [
-        'approved',
-        activityId,
-      ]);
-    }
-
     // Create audit log
     await dbHelpers.createAuditLog(
       user.id,
@@ -104,6 +96,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         activity: {
           id: activityId,
           status: newStatus,
+          approval_status: activity.approval_status,
           status_label: getStatusLabel(newStatus),
         },
       },

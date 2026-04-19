@@ -49,4 +49,65 @@ describe('PUT /api/activities/[id]/status', () => {
     expect(body.code).toBe('FORBIDDEN');
     expect(body.error).toBe('Không có quyền truy cập');
   });
+
+  it('does not rewrite approval_status when publishing after transition validation', async () => {
+    const dbRun = vi.fn(async () => ({ changes: 1 }));
+
+    vi.doMock('@/lib/guards', () => ({
+      requireApiRole: async () => ({ id: 99, role: 'admin' }),
+    }));
+
+    vi.doMock('@/lib/database', () => ({
+      dbReady: async () => undefined,
+      dbGet: async () => ({
+        id: 12,
+        title: 'Activity A',
+        teacher_id: 77,
+        status: 'draft',
+        approval_status: 'approved',
+      }),
+      dbRun,
+      dbHelpers: {
+        createAuditLog: async () => undefined,
+      },
+    }));
+
+    vi.doMock('@/lib/cache', () => ({
+      cache: {
+        invalidatePrefix: vi.fn(),
+      },
+    }));
+
+    vi.doMock('@/lib/activity-workflow', () => ({
+      validateTransition: vi.fn(() => ({ valid: true })),
+      getStatusLabel: vi.fn((status: string) => status),
+    }));
+
+    const route = await import('../src/app/api/activities/[id]/status/route');
+    const res: any = await route.PUT(
+      {
+        json: async () => ({ status: 'published' }),
+      } as any,
+      { params: Promise.resolve({ id: '12' }) }
+    );
+
+    expect(res.status).toBe(200);
+    expect(dbRun).toHaveBeenCalledTimes(2);
+    expect(dbRun).toHaveBeenNthCalledWith(1, 'UPDATE activities SET status = ? WHERE id = ?', [
+      'published',
+      12,
+    ]);
+    expect(dbRun).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining('INSERT INTO alerts'),
+      ['info', 'Hoạt động "Activity A" đã chuyển sang trạng thái: published', 'activities', 12]
+    );
+
+    const body = await res.json();
+    expect(body.data.activity).toMatchObject({
+      id: 12,
+      status: 'published',
+      approval_status: 'approved',
+    });
+  });
 });
