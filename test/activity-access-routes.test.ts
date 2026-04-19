@@ -162,6 +162,46 @@ describe('activity access routes', () => {
     expect(mockWithTransaction).toHaveBeenCalledTimes(1);
   });
 
+  it('blocks teacher batch evaluation when the activity is outside activity-scoped access', async () => {
+    vi.doMock('@/lib/guards', () => ({
+      requireApiRole: async () => ({ id: 12, role: 'teacher' }),
+    }));
+
+    vi.doMock('@/lib/activity-access', () => ({
+      teacherCanAccessActivity: async () => false,
+    }));
+
+    vi.doMock('@/lib/database', () => ({
+      dbGet: vi.fn(async (sql: string) => {
+        if (sql.includes('SELECT id, teacher_id, title FROM activities')) {
+          return { id: 66, teacher_id: 99, title: 'Evaluation Activity' };
+        }
+        return null;
+      }),
+      dbRun: vi.fn(async () => ({ changes: 1, lastID: 1 })),
+      dbReady: vi.fn(async () => {}),
+      withTransaction: vi.fn(async (callback: any) => callback()),
+    }));
+
+    vi.doMock('@/lib/scoring', () => ({
+      PointCalculationService: {
+        autoCalculateAfterEvaluation: vi.fn(async () => ({ totalPoints: 10 })),
+      },
+    }));
+
+    const route = await import('../src/app/api/teacher/activities/[id]/evaluate/route');
+    const response = await route.POST(
+      {
+        json: async () => ({ evaluations: [] }),
+      } as any,
+      { params: Promise.resolve({ id: '66' }) } as any
+    );
+
+    expect(response.status).toBe(403);
+    const body = await response.json();
+    expect(body.error).toContain('thuộc phạm vi quản lý');
+  });
+
   it('allows a support teacher to submit evaluations for a related activity', async () => {
     const mockDbGet = vi.fn(async (sql: string) => {
       if (sql.includes('SELECT id, teacher_id, title FROM activities')) {

@@ -50,7 +50,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       !(await teacherCanAccessActivity(Number(user.id), Number(activityId)))
     ) {
       return errorResponse(
-        ApiError.forbidden('Bạn chỉ có thể đánh giá người tham gia của hoạt động do bạn tổ chức')
+        ApiError.forbidden('Bạn chỉ có thể đánh giá người tham gia của hoạt động thuộc phạm vi quản lý')
       );
     }
 
