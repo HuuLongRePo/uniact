@@ -25,6 +25,9 @@ export async function POST(request: NextRequest) {
     const confidenceScore = Number(body?.confidence_score ?? body?.confidenceScore ?? 0);
     const upstreamVerified = Boolean(body?.upstream_verified ?? body?.upstreamVerified);
     const deviceId = body?.device_id ?? body?.deviceId ?? null;
+    const candidateEmbedding = Array.isArray(body?.candidate_embedding)
+      ? body.candidate_embedding.map((value: unknown) => Number(value)).filter((value: number) => Number.isFinite(value))
+      : null;
 
     const activity = await dbGet(
       `SELECT id, title, status, approval_status, max_participants, date_time
@@ -101,6 +104,7 @@ export async function POST(request: NextRequest) {
       confidenceScore,
       upstreamVerified,
       deviceId,
+      candidateEmbedding,
     });
 
     if (confidenceScore < policy.facePilot.minConfidenceScore) {

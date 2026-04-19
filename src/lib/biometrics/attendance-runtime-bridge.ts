@@ -1,6 +1,8 @@
 import { ApiError } from '@/lib/api-response';
 import { dbGet } from '@/lib/database';
 import { ensureStudentBiometricSchema } from '@/infrastructure/db/student-biometric-schema';
+import { decryptEmbedding } from './encryption';
+import { cosineDistance } from './face-runtime';
 import { getFaceRuntimeCapability } from './runtime-capability';
 
 export type FaceAttendanceVerificationInput = {
@@ -9,6 +11,7 @@ export type FaceAttendanceVerificationInput = {
   deviceId?: string | null;
   activityId: number;
   studentId: number;
+  candidateEmbedding?: number[] | null;
 };
 
 export type FaceAttendanceVerificationResult = {
@@ -17,6 +20,8 @@ export type FaceAttendanceVerificationResult = {
   verificationSource: 'upstream' | 'runtime_bridge';
   runtimeMode: string;
 };
+
+const FACE_EMBEDDING_DISTANCE_THRESHOLD = 0.18;
 
 export async function verifyFaceAttendanceRuntime(
   input: FaceAttendanceVerificationInput
@@ -79,6 +84,36 @@ export async function verifyFaceAttendanceRuntime(
         recommended_fallback: 'manual',
       }
     );
+  }
+
+  if (Array.isArray(input.candidateEmbedding) && input.candidateEmbedding.length > 0) {
+    const storedEmbedding = await decryptEmbedding(
+      String(profile.face_embedding_encrypted),
+      String(profile.face_embedding_iv),
+      String(profile.face_embedding_salt),
+      input.studentId
+    );
+    const distance = cosineDistance(Array.from(storedEmbedding), input.candidateEmbedding);
+
+    if (!Number.isFinite(distance) || distance > FACE_EMBEDDING_DISTANCE_THRESHOLD) {
+      throw new ApiError(
+        'FACE_EMBEDDING_MISMATCH',
+        'Biometric template không khớp để tự động xác nhận face attendance',
+        409,
+        {
+          distance,
+          distance_threshold: FACE_EMBEDDING_DISTANCE_THRESHOLD,
+          recommended_fallback: 'manual',
+        }
+      );
+    }
+
+    return {
+      verified: true,
+      confidenceScore: input.confidenceScore,
+      verificationSource: 'runtime_bridge',
+      runtimeMode: capability.mode,
+    };
   }
 
   if (!input.upstreamVerified) {
