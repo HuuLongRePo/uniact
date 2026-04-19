@@ -305,7 +305,7 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
         }
       }
 
-      toast.success(mode === 'draft' ? 'Lưu nháp thành công' : 'Gửi duyệt thành công');
+      toast.success(mode === 'draft' ? 'Lưu nháp thành công' : 'Đã gửi duyệt hoạt động');
       router.push('/teacher/activities');
     } catch (error) {
       console.error(error);

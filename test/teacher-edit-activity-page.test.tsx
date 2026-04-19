@@ -121,7 +121,7 @@ describe('EditActivityPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Gửi duyệt' }));
 
     await waitFor(() => {
-      expect(toastSuccessMock).toHaveBeenCalledWith('Gửi duyệt thành công');
+      expect(toastSuccessMock).toHaveBeenCalledWith('Đã gửi duyệt hoạt động');
     });
 
     expect(

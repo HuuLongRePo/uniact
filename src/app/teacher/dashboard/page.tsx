@@ -106,7 +106,7 @@ export default function TeacherDashboardPage() {
           <div className="text-3xl font-bold">{data.summary.total_activities}</div>
         </div>
         <div className="bg-white rounded-lg shadow p-6" data-testid="stat-pending-activities">
-          <div className="text-sm text-gray-600 mb-2">Chờ duyệt</div>
+          <div className="text-sm text-gray-600 mb-2">Đã gửi duyệt</div>
           <div className="text-3xl font-bold text-yellow-600">
             {data.summary.pending_activities}
           </div>
@@ -264,7 +264,7 @@ export default function TeacherDashboardPage() {
                   {a.status === 'published' && (
                     <span className="text-green-600">✅ Đã phát hành</span>
                   )}
-                  {a.status === 'pending' && <span className="text-yellow-600">⏳ Chờ duyệt</span>}
+                  {a.status === 'pending' && <span className="text-yellow-600">⏳ Đã gửi duyệt</span>}
                   {a.status === 'draft' && <span className="text-gray-600">📝 Nháp</span>}
                 </div>
                 <div className="text-sm text-gray-500 mt-1">
