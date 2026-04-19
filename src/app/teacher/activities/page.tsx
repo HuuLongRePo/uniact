@@ -274,6 +274,7 @@ export default function TeacherActivitiesPage() {
     await deleteActivity(id);
   };
 
+  const now = Date.now();
   const sortedActivities = [...activities].sort((a, b) => {
     if (sortBy === 'title') {
       return a.title.localeCompare(b.title, 'vi');
@@ -282,6 +283,16 @@ export default function TeacherActivitiesPage() {
     const timeA = new Date(a.date_time).getTime();
     const timeB = new Date(b.date_time).getTime();
     return sortBy === 'oldest' ? timeA - timeB : timeB - timeA;
+  });
+
+  const upcomingActivities = sortedActivities.filter((activity) => {
+    const activityTime = new Date(activity.date_time).getTime();
+    return activity.status === 'published' && Number.isFinite(activityTime) && activityTime > now;
+  });
+
+  const remainingActivities = sortedActivities.filter((activity) => {
+    const activityTime = new Date(activity.date_time).getTime();
+    return !(activity.status === 'published' && Number.isFinite(activityTime) && activityTime > now);
   });
 
   const getStatusBadge = (status: Activity['status']) => {
@@ -368,8 +379,44 @@ export default function TeacherActivitiesPage() {
           message="Hiện chưa có hoạt động nào trong danh sách này."
         />
       ) : (
-        <div className="space-y-4">
-          {sortedActivities.map((activity) => {
+        <div className="space-y-6">
+          {upcomingActivities.length > 0 && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-lg font-semibold text-amber-900">Sắp diễn ra</h2>
+                  <p className="text-sm text-amber-700">
+                    Ưu tiên theo dõi các hoạt động đã phát hành và sắp đến giờ bắt đầu.
+                  </p>
+                </div>
+                <span className="rounded-full bg-white px-3 py-1 text-sm font-medium text-amber-800">
+                  {upcomingActivities.length} hoạt động
+                </span>
+              </div>
+              <div className="space-y-3">
+                {upcomingActivities.map((activity) => (
+                  <div
+                    key={`upcoming-${activity.id}`}
+                    className="rounded-lg border border-amber-200 bg-white p-4"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <div className="text-base font-semibold text-gray-900">{activity.title}</div>
+                        <div className="mt-1 text-sm text-gray-600">{activity.location}</div>
+                        <div className="mt-1 text-sm text-gray-500">
+                          {new Date(activity.date_time).toLocaleString('vi-VN')}
+                        </div>
+                      </div>
+                      {getStatusBadge(activity.status)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-4">
+          {remainingActivities.map((activity) => {
             const canEditAndResubmit =
               activity.status === 'draft' || activity.status === 'rejected';
             const canCancelPublished =
@@ -567,6 +614,7 @@ export default function TeacherActivitiesPage() {
               </div>
             );
           })}
+          </div>
         </div>
       )}
 

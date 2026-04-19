@@ -105,6 +105,57 @@ describe('TeacherActivitiesPage', () => {
     expect(screen.getByText('12/100')).toBeInTheDocument();
   });
 
+  it('surfaces upcoming published activities in a dedicated section above the main list', async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+
+      if (url.startsWith('/api/activities?')) {
+        return {
+          ok: true,
+          json: async () => ({
+            activities: [
+              {
+                id: 21,
+                title: 'Hoạt động sắp diễn ra',
+                description: 'Chuẩn bị bắt đầu',
+                date_time: '2099-04-21T08:00:00.000Z',
+                location: 'Hội trường B',
+                max_participants: 50,
+                status: 'published',
+                participant_count: 20,
+                attended_count: 0,
+              },
+              {
+                id: 22,
+                title: 'Hoạt động nháp',
+                description: 'Chưa gửi duyệt',
+                date_time: '2099-04-22T08:00:00.000Z',
+                location: 'Phòng 101',
+                max_participants: 40,
+                status: 'draft',
+                participant_count: 0,
+                attended_count: 0,
+              },
+            ],
+            total: 2,
+          }),
+        } as Response;
+      }
+
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
+
+    vi.stubGlobal('fetch', fetchMock);
+    window.fetch = fetchMock as typeof fetch;
+
+    const { default: TeacherActivitiesPage } = await import('../src/app/teacher/activities/page');
+    render(<TeacherActivitiesPage />);
+
+    expect(await screen.findByText('Sắp diễn ra')).toBeInTheDocument();
+    expect(screen.getByText('Hoạt động sắp diễn ra')).toBeInTheDocument();
+    expect(screen.getByText('Hoạt động nháp')).toBeInTheDocument();
+  });
+
   it('uses API message for submit approval success toast', async () => {
     const { toast } = await import('@/lib/toast');
 
