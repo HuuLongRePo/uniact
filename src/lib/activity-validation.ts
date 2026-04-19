@@ -7,6 +7,8 @@ export type CreateActivityPayload = {
   class_ids: number[];
   mandatory_class_ids: number[];
   voluntary_class_ids: number[];
+  mandatory_student_ids?: number[];
+  voluntary_student_ids?: number[];
   applies_to_all_students?: boolean;
   registration_deadline?: string;
   activity_type_id?: number;
@@ -22,6 +24,8 @@ export type UpdateActivityPayload = {
   class_ids?: number[];
   mandatory_class_ids?: number[];
   voluntary_class_ids?: number[];
+  mandatory_student_ids?: number[];
+  voluntary_student_ids?: number[];
   applies_to_all_students?: boolean;
   registration_deadline?: string | null;
   activity_type_id?: number | null;
@@ -122,6 +126,62 @@ function normalizeClassScopes(
     class_ids: Array.from(new Set([...normalizedMandatory, ...normalizedVoluntary])),
     mandatory_class_ids: normalizedMandatory,
     voluntary_class_ids: normalizedVoluntary,
+  };
+}
+
+function parseStudentIdArray(
+  value: unknown,
+  fieldName: 'mandatory_student_ids' | 'voluntary_student_ids',
+  errors: Record<string, string>
+): number[] | undefined {
+  if (value === undefined) return undefined;
+  if (value === null) return [];
+  if (!Array.isArray(value)) {
+    errors[fieldName] = `${fieldName} phai la mang ID hoc vien`;
+    return undefined;
+  }
+
+  const parsedIds: number[] = [];
+  for (const studentId of value) {
+    const parsedStudentId = parsePositiveInt(studentId);
+    if (parsedStudentId === null) {
+      errors[fieldName] = `Moi phan tu trong ${fieldName} phai la so nguyen duong`;
+      return undefined;
+    }
+    parsedIds.push(parsedStudentId);
+  }
+
+  return Array.from(new Set(parsedIds));
+}
+
+function normalizeStudentScopes(
+  input: Record<string, unknown>,
+  errors: Record<string, string>
+): Pick<UpdateActivityPayload, 'mandatory_student_ids' | 'voluntary_student_ids'> {
+  const mandatoryStudentIds = parseStudentIdArray(
+    input.mandatory_student_ids,
+    'mandatory_student_ids',
+    errors
+  );
+  const voluntaryStudentIds = parseStudentIdArray(
+    input.voluntary_student_ids,
+    'voluntary_student_ids',
+    errors
+  );
+
+  if (errors.mandatory_student_ids || errors.voluntary_student_ids) {
+    return {};
+  }
+
+  const normalizedMandatory = Array.from(new Set(mandatoryStudentIds || []));
+  const mandatorySet = new Set(normalizedMandatory);
+  const normalizedVoluntary = Array.from(
+    new Set((voluntaryStudentIds || []).filter((studentId) => !mandatorySet.has(studentId)))
+  );
+
+  return {
+    mandatory_student_ids: normalizedMandatory,
+    voluntary_student_ids: normalizedVoluntary,
   };
 }
 
@@ -238,11 +298,14 @@ function validateActivityBody(
   normalized.applies_to_all_students = appliesToAllStudents;
 
   Object.assign(normalized, normalizeClassScopes(input, errors, isCreate));
+  Object.assign(normalized, normalizeStudentScopes(input, errors));
 
   if (appliesToAllStudents) {
     normalized.class_ids = [];
     normalized.mandatory_class_ids = [];
     normalized.voluntary_class_ids = [];
+    normalized.mandatory_student_ids = [];
+    normalized.voluntary_student_ids = [];
   }
 
   const hasRegistrationDeadline = hasOwn(input, 'registration_deadline');
@@ -324,6 +387,9 @@ function validateActivityBody(
         class_ids: normalized.class_ids || [],
         mandatory_class_ids: normalized.mandatory_class_ids || normalized.class_ids || [],
         voluntary_class_ids: normalized.voluntary_class_ids || [],
+        mandatory_student_ids: normalized.mandatory_student_ids || [],
+        voluntary_student_ids: normalized.voluntary_student_ids || [],
+        applies_to_all_students: normalized.applies_to_all_students || false,
         ...(typeof normalized.registration_deadline === 'string'
           ? { registration_deadline: normalized.registration_deadline }
           : {}),

@@ -1,5 +1,9 @@
 import { NextRequest } from 'next/server';
-import { dbAll, ensureActivityClassParticipationMode } from '@/lib/database';
+import {
+  dbAll,
+  ensureActivityClassParticipationMode,
+  ensureActivityStudentScope,
+} from '@/lib/database';
 import { requireApiRole } from '@/lib/guards';
 import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
 
@@ -28,16 +32,19 @@ export async function POST(request: NextRequest) {
   try {
     const user = await requireApiRole(request, ['teacher', 'admin']);
     await ensureActivityClassParticipationMode();
+    await ensureActivityStudentScope();
 
     const body = await request.json().catch(() => ({}));
     const hasLegacy = Array.isArray(body?.class_ids);
     const hasMandatory = Array.isArray(body?.mandatory_class_ids);
     const hasVoluntary = Array.isArray(body?.voluntary_class_ids);
+    const hasMandatoryStudents = Array.isArray(body?.mandatory_student_ids);
+    const hasVoluntaryStudents = Array.isArray(body?.voluntary_student_ids);
 
-    if (!hasLegacy && !hasMandatory && !hasVoluntary) {
+    if (!hasLegacy && !hasMandatory && !hasVoluntary && !hasMandatoryStudents && !hasVoluntaryStudents) {
       return errorResponse(
         ApiError.validation(
-          'Cần gửi ít nhất một trong các trường class_ids, mandatory_class_ids hoặc voluntary_class_ids'
+          'Cần gửi ít nhất một trường scope cho lớp hoặc học viên'
         )
       );
     }
@@ -56,13 +63,21 @@ export async function POST(request: NextRequest) {
     const voluntaryClassIds = rawVoluntaryClassIds.filter((classId) => !mandatorySet.has(classId));
     const classIds = Array.from(new Set([...mandatoryClassIds, ...voluntaryClassIds]));
 
-    if (classIds.length === 0) {
+    const rawMandatoryStudentIds = hasMandatoryStudents ? normalizeIds(body.mandatory_student_ids) : [];
+    const rawVoluntaryStudentIds = hasVoluntaryStudents ? normalizeIds(body.voluntary_student_ids) : [];
+    const mandatoryStudentIds = Array.from(new Set(rawMandatoryStudentIds));
+    const mandatoryStudentSet = new Set(mandatoryStudentIds);
+    const voluntaryStudentIds = rawVoluntaryStudentIds.filter((id) => !mandatoryStudentSet.has(id));
+    const directStudentIds = Array.from(new Set([...mandatoryStudentIds, ...voluntaryStudentIds]));
+
+    if (classIds.length === 0 && directStudentIds.length === 0) {
       return successResponse({
         preview: {
           total_classes: 0,
           mandatory_participants: 0,
           voluntary_participants: 0,
           conflict_count: 0,
+          direct_students: [],
           groups: [],
         },
       });
@@ -113,6 +128,31 @@ export async function POST(request: NextRequest) {
     const overlappedSet = new Set(overlappedClassIds);
     const mandatoryClassSet = new Set(mandatoryClassIds);
 
+    const directStudents = directStudentIds.length
+      ? ((await dbAll(
+          `SELECT
+             u.id,
+             COALESCE(u.name, u.username, CAST(u.id AS TEXT)) as name,
+             u.email,
+             u.class_id
+           FROM users u
+           WHERE u.role = 'student'
+             AND COALESCE(u.is_active, 1) = 1
+             AND u.id IN (${directStudentIds.map(() => '?').join(', ')})
+           ORDER BY COALESCE(u.name, u.username, CAST(u.id AS TEXT)), u.id`,
+          directStudentIds
+        )) as StudentRow[]).map((student) => ({
+          id: Number(student.id),
+          name: student.name || `Student ${student.id}`,
+          email: student.email || null,
+          class_id: Number(student.class_id),
+          participation_mode: mandatoryStudentSet.has(Number(student.id)) ? 'mandatory' : 'voluntary',
+          resolved_mode: mandatoryStudentSet.has(Number(student.id)) ? 'mandatory' : 'voluntary',
+          was_conflicted: false,
+          source: 'direct_student_scope',
+        }))
+      : [];
+
     const groups = accessibleClasses.map((classRow) => {
       const classStudents = students
         .filter((student) => Number(student.class_id) === Number(classRow.id))
@@ -156,6 +196,7 @@ export async function POST(request: NextRequest) {
           (total, group) => total + Number(group.conflict_count || 0),
           0
         ),
+        direct_students: directStudents,
         groups,
       },
     });
