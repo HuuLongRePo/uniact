@@ -164,4 +164,77 @@ describe('AdminBiometricsPage', () => {
     });
     expect(fetchMock).toHaveBeenCalledWith('/api/admin/biometrics/students/12/enrollment', expect.objectContaining({ method: 'POST' }));
   });
+
+  it('allows marking training as completed for a student', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          data: {
+            summary: { total: 1, ready_count: 0, missing_count: 1 },
+            students: [
+              {
+                id: 12,
+                name: 'Nguyễn Văn A',
+                email: 'a@student.edu.vn',
+                student_code: 'SV001',
+                class_name: 'CNTT K18A',
+                biometric_readiness: {
+                  runtime_enabled: false,
+                  enrollment_status: 'captured',
+                  training_status: 'pending',
+                  sample_image_count: 5,
+                  face_attendance_ready: false,
+                  blocker: 'Face biometric runtime đang bị tắt',
+                },
+              },
+            ],
+          },
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ data: { student_id: 12, training_status: 'trained', enrollment_status: 'ready' } }),
+      })
+      .mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          data: {
+            summary: { total: 1, ready_count: 0, missing_count: 1 },
+            students: [
+              {
+                id: 12,
+                name: 'Nguyễn Văn A',
+                email: 'a@student.edu.vn',
+                student_code: 'SV001',
+                class_name: 'CNTT K18A',
+                biometric_readiness: {
+                  runtime_enabled: false,
+                  enrollment_status: 'ready',
+                  training_status: 'trained',
+                  sample_image_count: 5,
+                  face_attendance_ready: false,
+                  blocker: 'Face biometric runtime đang bị tắt',
+                },
+              },
+            ],
+          },
+        }),
+      }) as any;
+
+    vi.stubGlobal('fetch', fetchMock);
+    window.fetch = fetchMock as typeof fetch;
+
+    const Page = (await import('../src/app/admin/biometrics/page')).default;
+    render(<Page />);
+
+    expect(await screen.findByText('Nguyễn Văn A')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Đánh dấu train xong' }));
+
+    await waitFor(() => {
+      expect(toastSuccessMock).toHaveBeenCalledWith('Đã ghi nhận học viên train thành công');
+    });
+    expect(fetchMock).toHaveBeenCalledWith('/api/admin/biometrics/students/12/training', expect.objectContaining({ method: 'POST' }));
+  });
 });

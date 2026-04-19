@@ -33,6 +33,7 @@ export default function AdminBiometricsPage() {
   const [summary, setSummary] = useState({ total: 0, ready_count: 0, missing_count: 0 });
   const [error, setError] = useState('');
   const [updatingStudentId, setUpdatingStudentId] = useState<number | null>(null);
+  const [trainingStudentId, setTrainingStudentId] = useState<number | null>(null);
 
   useEffect(() => {
     if (!authLoading && (!user || user.role !== 'admin')) {
@@ -83,6 +84,37 @@ export default function AdminBiometricsPage() {
       toast.error(updateError instanceof Error ? updateError.message : 'Không thể cập nhật enrollment');
     } finally {
       setUpdatingStudentId(null);
+    }
+  };
+
+  const updateTrainingStatus = async (studentId: number, trainingStatus: 'pending' | 'trained' | 'failed') => {
+    try {
+      setTrainingStudentId(studentId);
+      const res = await fetch(`/api/admin/biometrics/students/${studentId}/training`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          training_status: trainingStatus,
+          training_version: trainingStatus === 'trained' ? '1' : undefined,
+        }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        throw new Error(data?.error || data?.message || 'Không thể cập nhật training');
+      }
+      toast.success(
+        trainingStatus === 'trained'
+          ? 'Đã ghi nhận học viên train thành công'
+          : trainingStatus === 'failed'
+            ? 'Đã ghi nhận training thất bại'
+            : 'Đã chuyển học viên sang trạng thái chờ training'
+      );
+      await fetchData();
+    } catch (updateError) {
+      console.error('Admin biometrics training update error:', updateError);
+      toast.error(updateError instanceof Error ? updateError.message : 'Không thể cập nhật training');
+    } finally {
+      setTrainingStudentId(null);
     }
   };
 
@@ -167,14 +199,40 @@ export default function AdminBiometricsPage() {
                     ) : null}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-600">
-                    <button
-                      type="button"
-                      onClick={() => void markEnrollmentCaptured(student.id)}
-                      disabled={updatingStudentId === student.id}
-                      className="rounded bg-blue-600 px-3 py-2 text-white hover:bg-blue-700 disabled:bg-gray-400"
-                    >
-                      {updatingStudentId === student.id ? 'Đang cập nhật...' : 'Ghi nhận thêm ảnh mẫu'}
-                    </button>
+                    <div className="flex flex-col gap-2">
+                      <button
+                        type="button"
+                        onClick={() => void markEnrollmentCaptured(student.id)}
+                        disabled={updatingStudentId === student.id || trainingStudentId === student.id}
+                        className="rounded bg-blue-600 px-3 py-2 text-white hover:bg-blue-700 disabled:bg-gray-400"
+                      >
+                        {updatingStudentId === student.id ? 'Đang cập nhật...' : 'Ghi nhận thêm ảnh mẫu'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void updateTrainingStatus(student.id, 'pending')}
+                        disabled={trainingStudentId === student.id || updatingStudentId === student.id}
+                        className="rounded bg-amber-500 px-3 py-2 text-white hover:bg-amber-600 disabled:bg-gray-400"
+                      >
+                        {trainingStudentId === student.id ? 'Đang cập nhật...' : 'Chờ training'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void updateTrainingStatus(student.id, 'trained')}
+                        disabled={trainingStudentId === student.id || updatingStudentId === student.id}
+                        className="rounded bg-green-600 px-3 py-2 text-white hover:bg-green-700 disabled:bg-gray-400"
+                      >
+                        {trainingStudentId === student.id ? 'Đang cập nhật...' : 'Đánh dấu train xong'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void updateTrainingStatus(student.id, 'failed')}
+                        disabled={trainingStudentId === student.id || updatingStudentId === student.id}
+                        className="rounded bg-red-600 px-3 py-2 text-white hover:bg-red-700 disabled:bg-gray-400"
+                      >
+                        {trainingStudentId === student.id ? 'Đang cập nhật...' : 'Đánh dấu train lỗi'}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
