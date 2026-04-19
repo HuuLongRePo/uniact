@@ -11,6 +11,8 @@ interface ActivityTableProps {
 }
 
 export default function ActivityTable({ activities, loading, onDelete }: ActivityTableProps) {
+  const now = Date.now();
+
   const getStatusBadge = (status: string) => {
     const badges: Record<string, { label: string; className: string }> = {
       draft: { label: 'Nháp', className: 'bg-gray-100 text-gray-800' },
@@ -89,14 +91,24 @@ export default function ActivityTable({ activities, loading, onDelete }: Activit
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {activities.map((activity) => (
-                <tr key={activity.id} className="hover:bg-gray-50">
+              {activities.map((activity) => {
+                const activityTime = new Date(activity.date_time).getTime();
+                const isArchived =
+                  (activity.status === 'published' && Number.isFinite(activityTime) && activityTime <= now) ||
+                  activity.status === 'completed' ||
+                  activity.status === 'cancelled';
+
+                return (
+                <tr key={activity.id} className={`hover:bg-gray-50 ${isArchived ? 'bg-slate-50/60' : ''}`}>
                   <td className="px-6 py-4">
                     <div>
                       <div className="font-medium text-gray-900">{activity.title}</div>
                       <div className="text-sm text-gray-500 line-clamp-1">
                         {activity.description}
                       </div>
+                      {isArchived ? (
+                        <div className="mt-1 text-xs font-medium text-slate-600">Đã qua hoặc đã khép lại</div>
+                      ) : null}
                     </div>
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-900">{activity.teacher_name}</td>
@@ -145,7 +157,7 @@ export default function ActivityTable({ activities, loading, onDelete }: Activit
                     </div>
                   </td>
                 </tr>
-              ))}
+              );})}
             </tbody>
           </table>
         </div>

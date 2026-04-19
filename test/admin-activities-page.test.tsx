@@ -87,6 +87,24 @@ describe('Admin activities page', () => {
                 points: 6,
                 created_at: '2098-12-03T00:00:00.000Z',
               },
+              {
+                id: 4,
+                title: 'Past Published Activity',
+                description: 'Already happened but not closed manually',
+                teacher_id: 13,
+                teacher_name: 'Teacher D',
+                activity_type: 'Seminar',
+                organization_level: 'Faculty',
+                date_time: '2020-01-03T08:00:00.000Z',
+                end_time: '2020-01-03T10:00:00.000Z',
+                location: 'Hall D',
+                max_participants: 35,
+                participant_count: 21,
+                status: 'published',
+                approval_status: 'approved',
+                points: 4,
+                created_at: '2019-12-03T00:00:00.000Z',
+              },
             ],
           }),
         } as Response;
@@ -120,6 +138,18 @@ describe('Admin activities page', () => {
       expect(screen.queryByText('Pending Activity')).not.toBeInTheDocument();
       expect(screen.queryByText('Rejected Activity')).not.toBeInTheDocument();
     });
+  });
+
+  it('shows archived lifecycle summary for past published activities', async () => {
+    const Page = (await import('../src/app/admin/activities/page')).default;
+    render(<Page />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Past Published Activity')).toBeInTheDocument();
+    });
+
+    expect(screen.getByText('Đã khép lại')).toBeInTheDocument();
+    expect(screen.getByText('Đã qua hoặc đã khép lại')).toBeInTheDocument();
   });
 
   it('allows admin to refresh the activities list manually', async () => {

@@ -7,8 +7,16 @@ interface ActivityStatsProps {
 }
 
 export default function ActivityStats({ activities }: ActivityStatsProps) {
+  const now = Date.now();
+  const archivedCount = activities.filter((activity) => {
+    const activityTime = new Date(activity.date_time).getTime();
+    const isPastPublished =
+      activity.status === 'published' && Number.isFinite(activityTime) && activityTime <= now;
+    return isPastPublished || activity.status === 'completed' || activity.status === 'cancelled';
+  }).length;
+
   return (
-    <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+    <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-6">
       <div className="bg-white rounded-lg shadow-sm border p-4">
         <div className="text-2xl font-bold text-gray-900">{activities.length}</div>
         <div className="text-sm text-gray-600">Tổng số</div>
@@ -30,6 +38,10 @@ export default function ActivityStats({ activities }: ActivityStatsProps) {
           {activities.filter((a) => a.status === 'completed').length}
         </div>
         <div className="text-sm text-gray-600">Hoàn thành</div>
+      </div>
+      <div className="bg-white rounded-lg shadow-sm border p-4">
+        <div className="text-2xl font-bold text-slate-600">{archivedCount}</div>
+        <div className="text-sm text-gray-600">Đã khép lại</div>
       </div>
       <div className="bg-white rounded-lg shadow-sm border p-4">
         <div className="text-2xl font-bold text-red-600">
