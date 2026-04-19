@@ -55,7 +55,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       user.role === 'teacher' &&
       !(await teacherCanAccessActivity(Number(user.id), Number(activityId)))
     ) {
-      return errorResponse(ApiError.forbidden('Bạn chỉ có thể xem hoạt động của mình'));
+      return errorResponse(ApiError.forbidden('Bạn chỉ có thể xem phiên QR của hoạt động thuộc phạm vi quản lý'));
     }
 
     const rawSessions = (await dbAll(

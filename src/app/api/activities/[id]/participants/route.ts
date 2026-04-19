@@ -32,7 +32,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     if (user.role === 'teacher' && !(await teacherCanAccessActivity(Number(user.id), activityId))) {
-      return errorResponse(ApiError.forbidden('Forbidden'));
+      return errorResponse(ApiError.forbidden('Bạn chỉ có thể xem người tham gia của hoạt động thuộc phạm vi quản lý'));
     }
 
     const participations = (await dbAll(

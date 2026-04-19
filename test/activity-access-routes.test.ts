@@ -100,6 +100,62 @@ describe('activity access routes', () => {
     } as any);
 
     expect(response.status).toBe(403);
+    const body = await response.json();
+    expect(body.error).toContain('thuộc phạm vi quản lý');
+    expect(mockDbAll).not.toHaveBeenCalled();
+  });
+
+  it('blocks unrelated teachers from listing activity students outside scope', async () => {
+    const mockDbAll = vi.fn();
+
+    vi.doMock('@/lib/guards', () => ({
+      requireRole: async () => ({ id: 21, role: 'teacher' }),
+    }));
+
+    vi.doMock('@/lib/activity-access', () => ({
+      teacherCanAccessActivity: async () => false,
+    }));
+
+    vi.doMock('@/lib/database', () => ({
+      dbGet: vi.fn(async () => ({ id: 58, teacher_id: 99 })),
+      dbAll: mockDbAll,
+    }));
+
+    const route = await import('../src/app/api/activities/[id]/students/route');
+    const response = await route.GET({} as any, {
+      params: Promise.resolve({ id: '58' }),
+    } as any);
+
+    expect(response.status).toBe(403);
+    const body = await response.json();
+    expect(body.error).toContain('học viên của hoạt động thuộc phạm vi quản lý');
+    expect(mockDbAll).not.toHaveBeenCalled();
+  });
+
+  it('blocks unrelated teachers from listing qr sessions outside scope', async () => {
+    const mockDbAll = vi.fn();
+
+    vi.doMock('@/lib/guards', () => ({
+      requireRole: async () => ({ id: 21, role: 'teacher' }),
+    }));
+
+    vi.doMock('@/lib/activity-access', () => ({
+      teacherCanAccessActivity: async () => false,
+    }));
+
+    vi.doMock('@/lib/database', () => ({
+      dbGet: vi.fn(async () => ({ id: 59, teacher_id: 99 })),
+      dbAll: mockDbAll,
+    }));
+
+    const route = await import('../src/app/api/activities/[id]/qr-sessions/route');
+    const response = await route.GET({} as any, {
+      params: Promise.resolve({ id: '59' }),
+    } as any);
+
+    expect(response.status).toBe(403);
+    const body = await response.json();
+    expect(body.error).toContain('phiên QR của hoạt động thuộc phạm vi quản lý');
     expect(mockDbAll).not.toHaveBeenCalled();
   });
 
