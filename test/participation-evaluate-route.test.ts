@@ -34,11 +34,17 @@ describe('POST /api/participations/[id]/evaluate', () => {
       withTransaction: mockWithTransaction,
     }));
 
+    const mockSendDatabaseNotification = vi.fn(async () => undefined);
+
     vi.doMock('@/lib/scoring', () => ({
       PointCalculationService: {
         calculatePoints: mockCalculate,
         saveCalculation: mockSave,
       },
+    }));
+
+    vi.doMock('@/lib/notifications', () => ({
+      sendDatabaseNotification: mockSendDatabaseNotification,
     }));
 
     const route = await import('../src/app/api/participations/[id]/evaluate/route');
@@ -56,6 +62,14 @@ describe('POST /api/participations/[id]/evaluate', () => {
       penaltyPoints: 0,
     });
     expect(mockSave).toHaveBeenCalled();
+    expect(mockSendDatabaseNotification).toHaveBeenCalledWith({
+      userId: 22,
+      type: 'achievement',
+      title: 'Đánh giá thành tích',
+      message: 'Bạn đã được đánh giá "good" và nhận 14.00 điểm',
+      relatedTable: 'participations',
+      relatedId: 41,
+    });
 
     const body = await response.json();
     expect(body.success).toBe(true);
@@ -74,6 +88,10 @@ describe('POST /api/participations/[id]/evaluate', () => {
       requireApiRole: async () => {
         throw ApiError.unauthorized('Chưa đăng nhập');
       },
+    }));
+
+    vi.doMock('@/lib/notifications', () => ({
+      sendDatabaseNotification: vi.fn(async () => undefined),
     }));
 
     const route = await import('../src/app/api/participations/[id]/evaluate/route');

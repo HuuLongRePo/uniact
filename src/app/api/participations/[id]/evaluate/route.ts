@@ -3,6 +3,7 @@ import { dbRun, dbGet, withTransaction } from '@/lib/database';
 import { PointCalculationService } from '@/lib/scoring';
 import { requireApiRole } from '@/lib/guards';
 import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
+import { sendDatabaseNotification } from '@/lib/notifications';
 
 /**
  * POST /api/participations/[id]/evaluate
@@ -102,16 +103,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
       await PointCalculationService.saveCalculation(participationId, calculationResult);
 
-      await dbRun(
-        `INSERT INTO notifications (user_id, type, title, message, related_table, related_id, is_read)
-         VALUES (?, 'achievement', ?, ?, 'participations', ?, 0)`,
-        [
-          participation.student_id,
-          'Đánh giá thành tích',
-          `Bạn đã được đánh giá "${achievementLevel}" và nhận ${calculationResult.totalPoints.toFixed(2)} điểm`,
-          participationId,
-        ]
-      );
+      await sendDatabaseNotification({
+        userId: Number(participation.student_id),
+        type: 'achievement',
+        title: 'Đánh giá thành tích',
+        message: `Bạn đã được đánh giá "${achievementLevel}" và nhận ${calculationResult.totalPoints.toFixed(2)} điểm`,
+        relatedTable: 'participations',
+        relatedId: participationId,
+      });
 
       await dbRun(
         `INSERT INTO audit_logs (actor_id, action, target_table, target_id, details)

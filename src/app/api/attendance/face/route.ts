@@ -5,6 +5,7 @@ import { dbAll, dbGet, dbRun } from '@/lib/database';
 import { buildAttendancePolicy } from '@/lib/attendance-policy';
 import { loadAttendancePolicyConfig } from '@/lib/attendance-policy-config';
 import { verifyFaceAttendanceRuntime } from '@/lib/biometrics/attendance-runtime-bridge';
+import { sendDatabaseNotification } from '@/lib/notifications';
 
 const MIN_CANDIDATE_EMBEDDING_LENGTH = 3;
 const MAX_CANDIDATE_EMBEDDING_LENGTH = 2048;
@@ -230,15 +231,14 @@ export async function POST(request: NextRequest) {
     );
 
     try {
-      await dbRun(
-        `INSERT INTO notifications (user_id, type, title, message, related_table, related_id)
-         VALUES (?, 'success', 'Face attendance thành công', ?, 'activities', ?)`,
-        [
-          targetStudentId,
-          `Bạn đã được ghi nhận tham gia bằng face attendance cho hoạt động "${activity.title}"`,
-          activityId,
-        ]
-      );
+      await sendDatabaseNotification({
+        userId: targetStudentId,
+        type: 'success',
+        title: 'Face attendance thành công',
+        message: `Bạn đã được ghi nhận tham gia bằng face attendance cho hoạt động "${activity.title}"`,
+        relatedTable: 'activities',
+        relatedId: activityId,
+      });
     } catch (notificationError) {
       console.error('Failed to create face attendance notification:', notificationError);
     }

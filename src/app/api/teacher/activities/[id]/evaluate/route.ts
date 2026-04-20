@@ -4,6 +4,7 @@ import { PointCalculationService } from '@/lib/scoring';
 import { requireApiRole } from '@/lib/guards';
 import { ApiError, successResponse, errorResponse } from '@/lib/api-response';
 import { teacherCanAccessActivity } from '@/lib/activity-access';
+import { sendDatabaseNotification } from '@/lib/notifications';
 
 type UiAchievementLevel = 'excellent' | 'good' | 'participated' | 'xuat_sac' | 'tot' | 'tham_gia';
 
@@ -128,16 +129,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
             await PointCalculationService.saveCalculation(participation_id, calc);
           }
 
-          await dbRun(
-            `INSERT INTO notifications (user_id, type, title, message, related_table, related_id, is_read, created_at)
-             VALUES (?, 'achievement', ?, ?, 'participations', ?, 0, datetime('now'))`,
-            [
-              participation.student_id,
-              'Đánh giá thành tích',
-              `Bạn đã được đánh giá "${normalizedLevel}" trong hoạt động "${String(activity.title || '')}" và nhận ${calc.totalPoints.toFixed(2)} điểm.`,
-              participation_id,
-            ]
-          );
+          await sendDatabaseNotification({
+            userId: Number(participation.student_id),
+            type: 'achievement',
+            title: 'Đánh giá thành tích',
+            message: `Bạn đã được đánh giá "${normalizedLevel}" trong hoạt động "${String(activity.title || '')}" và nhận ${calc.totalPoints.toFixed(2)} điểm.`,
+            relatedTable: 'participations',
+            relatedId: Number(participation_id),
+          });
 
           return calc.totalPoints;
         });

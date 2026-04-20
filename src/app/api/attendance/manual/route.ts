@@ -3,6 +3,7 @@ import { dbRun, dbGet, dbAll } from '@/lib/database';
 import { requireApiRole } from '@/lib/guards';
 import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
 import { teacherCanAccessActivity } from '@/lib/activity-access';
+import { sendDatabaseNotification } from '@/lib/notifications';
 
 // POST /api/attendance/manual - Điểm danh thủ công (không qua QR)
 export async function POST(request: NextRequest) {
@@ -98,15 +99,14 @@ export async function POST(request: NextRequest) {
 
         // Tạo thông báo (best-effort, không làm hỏng backbone attendance nếu notification lỗi cục bộ)
         try {
-          await dbRun(
-            `INSERT INTO notifications (user_id, type, title, message, related_table, related_id)
-             VALUES (?, 'success', 'Điểm danh thành công', ?, 'activities', ?)`,
-            [
-              studentId,
-              `Bạn đã được điểm danh cho hoạt động "${activity.title}" (Điểm danh thủ công)`,
-              activity_id,
-            ]
-          );
+          await sendDatabaseNotification({
+            userId: Number(studentId),
+            type: 'success',
+            title: 'Điểm danh thành công',
+            message: `Bạn đã được điểm danh cho hoạt động "${activity.title}" (Điểm danh thủ công)`,
+            relatedTable: 'activities',
+            relatedId: Number(activity_id),
+          });
         } catch (notificationError) {
           console.error(
             `Failed to create notification for student ${studentId}:`,

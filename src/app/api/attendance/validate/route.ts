@@ -3,6 +3,7 @@ import { dbHelpers, dbRun, withTransaction } from '@/lib/database';
 import { requireApiRole } from '@/lib/guards';
 import { User } from '@/types/database';
 import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
+import { sendDatabaseNotification } from '@/lib/notifications';
 
 /**
  * POST /api/attendance/validate
@@ -326,16 +327,14 @@ export async function POST(request: NextRequest) {
 
     // Post-insert side effect: Send notification to student (best-effort, non-critical)
     try {
-      await dbRun(
-        `INSERT INTO notifications (user_id, type, title, message, related_table, related_id, is_read, created_at)
-         VALUES (?, 'attendance', ?, ?, 'activities', ?, 0, datetime('now'))`,
-        [
-          student.id,
-          'Điểm danh thành công',
-          'Bạn đã điểm danh hoạt động thành công qua mã QR.',
-          session.activity_id,
-        ]
-      );
+      await sendDatabaseNotification({
+        userId: Number(student.id),
+        type: 'attendance',
+        title: 'Điểm danh thành công',
+        message: 'Bạn đã điểm danh hoạt động thành công qua mã QR.',
+        relatedTable: 'activities',
+        relatedId: Number(session.activity_id),
+      });
     } catch (notifyErr) {
       console.warn('Attendance notification error:', notifyErr);
       // Non-critical: don't fail the response if notification fails

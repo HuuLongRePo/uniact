@@ -20,6 +20,10 @@ vi.mock('@/lib/biometrics/attendance-runtime-bridge', () => ({
   verifyFaceAttendanceRuntime: (...args: any[]) => mockVerifyFaceAttendanceRuntime(...args),
 }));
 
+vi.mock('@/lib/notifications', () => ({
+  sendDatabaseNotification: (...args: any[]) => mockDbRun(...args),
+}));
+
 describe('POST /api/attendance/face', () => {
   beforeEach(() => {
     vi.resetModules();
