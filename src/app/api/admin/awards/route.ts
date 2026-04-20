@@ -1,7 +1,8 @@
 import { NextRequest } from 'next/server';
 import { getUserFromRequest } from '@/lib/guards';
-import { dbHelpers, dbRun, dbReady } from '@/lib/database';
+import { dbHelpers, dbReady } from '@/lib/database';
 import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
+import { sendDatabaseNotification } from '@/lib/notifications';
 
 // GET /api/admin/awards?status=pending - List award suggestions
 export async function GET(request: NextRequest) {
@@ -83,16 +84,14 @@ export async function PUT(request: NextRequest) {
         const suggestions = await dbHelpers.getAwardSuggestions();
         const suggestion = suggestions.find((s: any) => s.id === Number(suggestion_id));
         if (suggestion?.student_id && suggestion?.award_type_name) {
-          await dbRun(
-            `INSERT INTO notifications (user_id, type, title, message, related_table, related_id, is_read, created_at)
-             VALUES (?, 'award', ?, ?, 'award_suggestions', ?, 0, datetime('now'))`,
-            [
-              suggestion.student_id,
-              'Chúc mừng! Bạn được khen thưởng',
-              `Bạn đã được duyệt khen thưởng: ${suggestion.award_type_name}`,
-              suggestion.id,
-            ]
-          );
+          await sendDatabaseNotification({
+            userId: Number(suggestion.student_id),
+            type: 'award',
+            title: 'Chúc mừng! Bạn được khen thưởng',
+            message: `Bạn đã được duyệt khen thưởng: ${suggestion.award_type_name}`,
+            relatedTable: 'award_suggestions',
+            relatedId: Number(suggestion.id),
+          });
         }
       } catch (notifyErr) {
         console.error('Award approval notification error:', notifyErr);
@@ -116,16 +115,14 @@ export async function PUT(request: NextRequest) {
       const suggestions = await dbHelpers.getAwardSuggestions('rejected');
       const suggestion = suggestions.find((s: any) => s.id === Number(suggestion_id));
       if (suggestion?.student_id && suggestion?.award_type_name) {
-        await dbRun(
-          `INSERT INTO notifications (user_id, type, title, message, related_table, related_id, is_read, created_at)
-           VALUES (?, 'award', ?, ?, 'award_suggestions', ?, 0, datetime('now'))`,
-          [
-            suggestion.student_id,
-            'Khen thưởng chưa được duyệt',
-            `Đề xuất khen thưởng "${suggestion.award_type_name}" chưa được duyệt`,
-            suggestion.id,
-          ]
-        );
+        await sendDatabaseNotification({
+          userId: Number(suggestion.student_id),
+          type: 'award',
+          title: 'Khen thưởng chưa được duyệt',
+          message: `Đề xuất khen thưởng "${suggestion.award_type_name}" chưa được duyệt`,
+          relatedTable: 'award_suggestions',
+          relatedId: Number(suggestion.id),
+        });
       }
     } catch (notifyErr) {
       console.error('Award rejection notification error:', notifyErr);

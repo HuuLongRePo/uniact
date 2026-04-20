@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { dbAll, dbGet, dbRun, dbReady } from '@/lib/database';
 import { getUserFromRequest } from '@/lib/guards';
 import { PointCalculationService } from '@/lib/scoring';
+import { sendDatabaseNotification } from '@/lib/notifications';
 
 export async function POST(request: NextRequest) {
   try {
@@ -106,13 +107,14 @@ export async function POST(request: NextRequest) {
 
         // Also create notification if notifications table exists
         try {
-          await dbRun(
-            `
-            INSERT INTO notifications (user_id, type, title, message, related_table, related_id, is_read, created_at)
-            VALUES (?, 'score_alert', ?, ?, 'users', ?, 0, datetime('now'))
-          `,
-            [student.id, `Cảnh báo ${alertLevel.toUpperCase()}`, message, student.id]
-          );
+          await sendDatabaseNotification({
+            userId: Number(student.id),
+            type: 'score_alert',
+            title: `Cảnh báo ${alertLevel.toUpperCase()}`,
+            message,
+            relatedTable: 'users',
+            relatedId: Number(student.id),
+          });
         } catch {
           // Notifications table might not exist, that's okay
         }
