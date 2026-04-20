@@ -185,4 +185,84 @@ test.describe('Integration - Complete backbone workflows', () => {
     await adminContext.close()
     await teacherContext.close()
   })
+
+  test('teacher -> admin -> student -> face attendance -> student visibility -> teacher report happy path', async ({ browser }) => {
+    test.setTimeout(90_000)
+    const teacherContext = await browser.newContext()
+    const teacherPage = await teacherContext.newPage()
+    const teacher = new TeacherHelper(teacherPage)
+    await teacher.login()
+
+    const adminContext = await browser.newContext()
+    const adminPage = await adminContext.newPage()
+    const admin = new AdminHelper(adminPage)
+    await admin.login()
+
+    const studentContext = await browser.newContext()
+    const studentPage = await studentContext.newPage()
+    const student = new StudentHelper(studentPage)
+    await student.login()
+
+    const { activityId, title, studentId } = await createApprovedActivityForStudent(
+      studentPage,
+      teacherPage,
+      adminPage
+    )
+
+    const registerRes = await studentPage.request.post(
+      `http://127.0.0.1:3000/api/activities/${activityId}/register`,
+      {
+        headers: { 'Content-Type': 'application/json' },
+        data: {},
+      }
+    )
+    expect(registerRes.ok()).toBeTruthy()
+
+    const faceRes = await teacherPage.request.post('http://127.0.0.1:3000/api/attendance/face', {
+      headers: { 'Content-Type': 'application/json' },
+      data: {
+        activity_id: activityId,
+        student_id: studentId,
+        confidence_score: 0.91,
+        upstream_verified: true,
+        device_id: 'uat-integration-face',
+      },
+    })
+    expect(faceRes.ok()).toBeTruthy()
+    const faceData = await faceRes.json()
+    expect(faceData?.data?.recorded).toBe(true)
+    expect(faceData?.data?.method).toBe('face')
+
+    const notificationsRes = await studentPage.request.get('http://127.0.0.1:3000/api/notifications?per_page=20')
+    expect(notificationsRes.ok()).toBeTruthy()
+    const notificationsData = await notificationsRes.json()
+    const notifications = notificationsData?.data?.notifications ?? notificationsData?.notifications ?? []
+    const faceNotification = notifications.find(
+      (row: any) => row.title === 'Face attendance thành công' && String(row.message).includes(title)
+    )
+    expect(faceNotification).toBeTruthy()
+
+    const historyRes = await studentPage.request.get('http://127.0.0.1:3000/api/student/history')
+    expect(historyRes.ok()).toBeTruthy()
+    const historyData = await historyRes.json()
+    const history = historyData?.data?.history ?? historyData?.history ?? []
+    const historyItem = history.find((row: any) => Number(row.activity_id) === Number(activityId))
+    expect(historyItem?.attended).toBe(1)
+    expect(historyItem?.attendance_method).toBe('face')
+
+    const reportRes = await teacherPage.request.get('http://127.0.0.1:3000/api/teacher/reports/attendance/records')
+    expect(reportRes.ok()).toBeTruthy()
+    const reportData = await reportRes.json()
+    const reportRecords = reportData?.data?.records ?? reportData?.records ?? []
+    const reportRecord = reportRecords.find(
+      (row: any) => Number(row.student_id) === Number(studentId) && String(row.activity_name) === title
+    )
+    expect(reportRecord).toBeTruthy()
+    expect(reportRecord?.method).toBe('face')
+    expect(reportRecord?.status).toBe('present')
+
+    await studentContext.close()
+    await adminContext.close()
+    await teacherContext.close()
+  })
 })
