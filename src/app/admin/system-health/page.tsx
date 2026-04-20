@@ -8,6 +8,9 @@ import LoadingSpinner from '@/components/LoadingSpinner';
 interface HealthData {
   biometric_readiness?: {
     runtime_enabled: boolean;
+    runtime_mode?: string;
+    model_loading_ready?: boolean;
+    model_loading_status?: string;
     enrollment_flow_ready: boolean;
     embedding_storage_ready: boolean;
     training_route_ready: boolean;
@@ -258,12 +261,23 @@ export default function SystemHealthPage() {
           {data.biometric_readiness && (
             <div className="bg-white rounded-lg shadow p-6 mb-6">
               <h2 className="text-lg font-bold mb-4">🧠 Biometric readiness</h2>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
                 <div>
                   <div className="text-sm text-gray-600">Runtime</div>
                   <div className={`font-bold ${data.biometric_readiness.runtime_enabled ? 'text-green-600' : 'text-amber-600'}`}>
                     {data.biometric_readiness.runtime_enabled ? 'Enabled' : 'Disabled'}
                   </div>
+                </div>
+                <div>
+                  <div className="text-sm text-gray-600">Model loading</div>
+                  <div
+                    className={`font-bold ${data.biometric_readiness.model_loading_ready ? 'text-green-600' : 'text-amber-600'}`}
+                  >
+                    {data.biometric_readiness.model_loading_status || (data.biometric_readiness.model_loading_ready ? 'ready' : 'pending')}
+                  </div>
+                  {data.biometric_readiness.runtime_mode && (
+                    <div className="text-xs text-gray-500">Mode: {data.biometric_readiness.runtime_mode}</div>
+                  )}
                 </div>
                 <div>
                   <div className="text-sm text-gray-600">Enrollment flow</div>

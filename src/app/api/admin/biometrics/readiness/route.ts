@@ -15,6 +15,7 @@ export async function GET(request: Request) {
       runtime_enabled: runtimeCapability.runtime_enabled,
       runtime_mode: runtimeCapability.mode,
       model_loading_ready: runtimeCapability.model_loading_ready,
+      model_loading_status: runtimeCapability.model_loading_ready ? 'ready' : 'pending',
       embedding_detection_ready: runtimeCapability.embedding_detection_ready,
       liveness_check_ready: runtimeCapability.liveness_check_ready,
       attendance_api_accepting_runtime_verification:
@@ -25,9 +26,7 @@ export async function GET(request: Request) {
       face_attendance_route_ready: true,
       total_students: Number(totalStudentsRow?.count ?? 0),
       students_ready_for_face_attendance: 0,
-      blockers: runtimeCapability.runtime_enabled
-        ? []
-        : runtimeCapability.blockers,
+      blockers: runtimeCapability.blockers,
       recommended_next_batch: runtimeCapability.attendance_api_accepting_runtime_verification
         ? 'face_attendance_operational_closeout'
         : 'face_runtime_enablement',
