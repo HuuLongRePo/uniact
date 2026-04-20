@@ -152,6 +152,27 @@ test.describe('Teacher - face attendance route', () => {
     expect(duplicateData?.data?.already_recorded).toBe(true)
     expect(duplicateData?.data?.method).toBe('face')
 
+    const notificationsRes = await studentPage.request.get('http://127.0.0.1:3000/api/notifications')
+    expect(notificationsRes.ok()).toBeTruthy()
+    const notificationsData = await notificationsRes.json()
+    const notifications = notificationsData?.data?.notifications ?? notificationsData?.notifications ?? []
+    expect(
+      notifications.some(
+        (item: any) =>
+          item?.title === 'Face attendance thành công' &&
+          String(item?.message || '').includes(title)
+      )
+    ).toBe(true)
+
+    const historyRes = await studentPage.request.get('http://127.0.0.1:3000/api/student/history')
+    expect(historyRes.ok()).toBeTruthy()
+    const historyData = await historyRes.json()
+    const history = historyData?.data?.history ?? historyData?.history ?? []
+    const activityHistory = history.find((item: any) => item?.activity_id === activityId)
+    expect(activityHistory).toBeTruthy()
+    expect(activityHistory?.attended).toBe(1)
+    expect(activityHistory?.attendance_method).toBe('face')
+
     await studentContext.close()
     await adminContext.close()
     await teacherContext.close()
