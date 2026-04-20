@@ -186,6 +186,35 @@ describe('TeacherFaceAttendancePage', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it('surfaces runtime-unavailable liveness errors before preview submission', async () => {
+    detectSingleEmbeddingMock.mockResolvedValue({
+      embedding: [0.4, 0.5, 0.6],
+      qualityScore: 88,
+      landmarks: { positions: [{ x: 1, y: 1 }] },
+      detection: { box: { width: 140, height: 140 } },
+    });
+    performLivenessCheckMock.mockResolvedValue({
+      score: 0,
+      passed: false,
+      status: 'runtime_unavailable',
+      details: ['Face biometric runtime unavailable'],
+    });
+
+    const fetchMock = vi.fn() as any;
+    vi.stubGlobal('fetch', fetchMock);
+    window.fetch = fetchMock as typeof fetch;
+
+    const Page = (await import('../src/app/teacher/attendance/face/page')).default;
+    render(<Page />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Lấy candidate từ camera' }));
+
+    await waitFor(() => {
+      expect(toastErrorMock).toHaveBeenCalledWith('Face biometric runtime unavailable');
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it('surfaces verification failure state on the face attendance page', async () => {
     const fetchMock = vi
       .fn()

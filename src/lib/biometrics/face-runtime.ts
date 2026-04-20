@@ -91,13 +91,14 @@ function createStubbedAdapter(mode: FaceRuntimeMode): FaceRuntimeAdapter {
       _framesCount = 10,
       _intervalMs = 100
     ) {
-      return {
+      return normalizeLivenessResult({
         passed: false,
         blinkDetected: false,
         headMovement: false,
         score: 0,
         details: ['Face biometric runtime unavailable'],
-      };
+        status: 'runtime_unavailable',
+      });
     },
   };
 }
@@ -196,6 +197,27 @@ export interface LivenessCheckResult {
   headMovement: boolean;
   score: number;
   details: string[];
+  status: 'runtime_unavailable' | 'insufficient_signal' | 'passed';
+}
+
+export function normalizeLivenessResult(input: Partial<LivenessCheckResult> | null | undefined): LivenessCheckResult {
+  const score = Number(input?.score ?? 0);
+  const blinkDetected = Boolean(input?.blinkDetected);
+  const headMovement = Boolean(input?.headMovement);
+  const details = Array.isArray(input?.details)
+    ? input!.details.filter((detail): detail is string => typeof detail === 'string' && detail.length > 0)
+    : [];
+
+  const status = input?.status ?? (score >= 0.7 && (blinkDetected || headMovement) ? 'passed' : 'insufficient_signal');
+
+  return {
+    passed: status === 'passed' && Boolean(input?.passed ?? true),
+    blinkDetected,
+    headMovement,
+    score: Number.isFinite(score) ? score : 0,
+    details,
+    status,
+  };
 }
 
 export async function performLivenessCheck(

@@ -19,7 +19,28 @@ describe('face runtime adapter seam', () => {
 
     const liveness = await runtime.performLivenessCheck();
     expect(liveness.passed).toBe(false);
+    expect(liveness.status).toBe('runtime_unavailable');
     expect(liveness.details).toContain('Face biometric runtime unavailable');
+  });
+
+  it('normalizes liveness results into deterministic statuses', async () => {
+    const runtime = await import('../src/lib/biometrics/face-runtime');
+
+    expect(
+      runtime.normalizeLivenessResult({ score: 0.82, blinkDetected: true, headMovement: false })
+    ).toMatchObject({
+      passed: true,
+      status: 'passed',
+      score: 0.82,
+    });
+
+    expect(
+      runtime.normalizeLivenessResult({ score: 0.61, blinkDetected: false, headMovement: false })
+    ).toMatchObject({
+      passed: false,
+      status: 'insufficient_signal',
+      score: 0.61,
+    });
   });
 
   it('switches to config-enabled stubbed adapter when env flag is on', async () => {

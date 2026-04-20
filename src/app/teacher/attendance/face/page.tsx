@@ -121,7 +121,13 @@ export default function TeacherFaceAttendancePage() {
       if (result.qualityScore < 60) {
         throw new Error('Ảnh từ camera chưa đủ rõ để tạo candidate embedding');
       }
-      if (!liveness.passed || liveness.score < 0.7) {
+      if (liveness.status === 'runtime_unavailable') {
+        throw new FaceBiometricUnavailableError(
+          liveness.details?.[0] || 'Liveness runtime hiện chưa khả dụng để tạo candidate embedding'
+        );
+      }
+
+      if (!liveness.passed || liveness.status === 'insufficient_signal' || liveness.score < 0.7) {
         throw new Error(
           liveness.details?.[0] || 'Liveness check từ camera chưa đủ để tạo candidate embedding'
         );
