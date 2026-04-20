@@ -5,7 +5,7 @@
  * and customizable notification templates
  */
 
-import { dbRun, dbGet } from './database';
+import { dbRun, dbGet, dbAll, dbHelpers } from './database';
 
 // ============ STRATEGY PATTERN ============
 
@@ -82,6 +82,92 @@ export interface Notification {
   message: string;
   related_table?: string;
   related_id?: number;
+}
+
+export type NotificationAuditEvent = {
+  actorId: number;
+  action: string;
+  targetTable?: string;
+  targetId?: number | null;
+  details?: unknown;
+};
+
+export async function sendDatabaseNotification(params: {
+  userId: number;
+  type: string;
+  title: string;
+  message: string;
+  relatedTable?: string | null;
+  relatedId?: number | null;
+}) {
+  await dbRun(
+    `INSERT INTO notifications (user_id, type, title, message, related_table, related_id, is_read)
+     VALUES (?, ?, ?, ?, ?, ?, 0)`,
+    [
+      params.userId,
+      params.type,
+      params.title,
+      params.message,
+      params.relatedTable || null,
+      params.relatedId || null,
+    ]
+  );
+}
+
+export async function sendBulkDatabaseNotifications(params: {
+  userIds: number[];
+  type: string;
+  title: string;
+  message: string;
+  relatedTable?: string | null;
+  relatedId?: number | null;
+  audit?: NotificationAuditEvent;
+}) {
+  const uniqueUserIds = Array.from(
+    new Set(params.userIds.map((value) => Number(value)).filter((value) => Number.isInteger(value) && value > 0))
+  );
+
+  let created = 0;
+  for (const userId of uniqueUserIds) {
+    await sendDatabaseNotification({
+      userId,
+      type: params.type,
+      title: params.title,
+      message: params.message,
+      relatedTable: params.relatedTable,
+      relatedId: params.relatedId,
+    });
+    created += 1;
+  }
+
+  if (params.audit) {
+    await dbHelpers.createAuditLog(
+      params.audit.actorId,
+      params.audit.action,
+      params.audit.targetTable || 'notifications',
+      params.audit.targetId || null,
+      typeof params.audit.details === 'string'
+        ? params.audit.details
+        : JSON.stringify(params.audit.details || {})
+    );
+  }
+
+  return { created, targetCount: uniqueUserIds.length };
+}
+
+export async function getTeacherManagedStudentIds(teacherId: number): Promise<number[]> {
+  const rows = (await dbAll(
+    `SELECT DISTINCT u.id
+     FROM users u
+     INNER JOIN classes c ON c.id = u.class_id
+     WHERE u.role = 'student'
+       AND COALESCE(u.is_active, 1) = 1
+       AND c.teacher_id = ?
+     ORDER BY u.id`,
+    [teacherId]
+  )) as Array<{ id: number }>;
+
+  return rows.map((row) => Number(row.id)).filter((id) => Number.isInteger(id) && id > 0);
 }
 
 /**

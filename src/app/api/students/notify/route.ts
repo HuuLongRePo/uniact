@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { dbRun, dbAll } from '@/lib/database';
+import { dbAll } from '@/lib/database';
 import { getUserFromToken } from '@/lib/auth';
 import { ApiError, successResponse, errorResponse } from '@/lib/api-response';
+import { getTeacherManagedStudentIds, sendBulkDatabaseNotifications } from '@/lib/notifications';
 
 // POST /api/students/notify - Gửi thông báo cho học viên
 export async function POST(request: NextRequest) {
@@ -29,14 +30,10 @@ export async function POST(request: NextRequest) {
 
     // Kiểm tra quyền: teacher chỉ gửi cho học viên trong lớp của mình
     if (user.role === 'teacher') {
-      const teacherClasses = await dbAll('SELECT id FROM classes WHERE teacher_id = ?', [user.id]);
-      const teacherClassIds = teacherClasses.map((c) => c.id);
-
-      const students = await dbAll(
-        `SELECT id, class_id FROM users WHERE id IN (${student_ids.join(',')}) AND role = 'student'`
+      const managedStudentIds = await getTeacherManagedStudentIds(user.id);
+      const invalidStudents = student_ids.filter(
+        (studentId: unknown) => !managedStudentIds.includes(Number(studentId))
       );
-
-      const invalidStudents = students.filter((s) => !teacherClassIds.includes(s.class_id));
       if (invalidStudents.length > 0) {
         return errorResponse(
           ApiError.forbidden('Bạn chỉ có thể gửi thông báo cho học viên trong lớp của mình')
@@ -44,43 +41,25 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Tạo bảng notifications nếu chưa có
-    await dbRun(`
-      CREATE TABLE IF NOT EXISTS notifications (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        type TEXT DEFAULT 'info',
-        title TEXT NOT NULL,
-        message TEXT NOT NULL,
-        related_table TEXT,
-        related_id INTEGER,
-        is_read INTEGER DEFAULT 0,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id)
-      )
-    `);
+    const sendResult = await sendBulkDatabaseNotifications({
+      userIds: student_ids,
+      type,
+      title,
+      message,
+      relatedTable: 'teacher_message',
+      audit: {
+        actorId: user.id,
+        action: 'teacher_notify_students',
+        targetTable: 'notifications',
+        details: {
+          recipient_count: student_ids.length,
+          title,
+          type,
+        },
+      },
+    });
 
-    // Gửi thông báo cho từng học viên
-    let successCount = 0;
-    for (const studentId of student_ids) {
-      try {
-        await dbRun(
-          `INSERT INTO notifications (user_id, type, title, message, related_table)
-           VALUES (?, ?, ?, ?, 'teacher_message')`,
-          [studentId, type, title, message]
-        );
-        successCount++;
-      } catch (e) {
-        console.error(`Không thể gửi thông báo đến học viên ${studentId}:`, e);
-      }
-    }
-
-    // Log audit
-    await dbRun(
-      `INSERT INTO audit_logs (actor_id, action, target_table, target_id, details)
-       VALUES (?, 'SEND_NOTIFICATION', 'notifications', NULL, ?)`,
-      [user.id, `Gửi thông báo cho ${successCount} học viên: ${title}`]
-    );
+    const successCount = sendResult.created;
 
     return successResponse(
       { successCount },

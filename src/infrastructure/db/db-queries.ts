@@ -18,6 +18,7 @@ import { dbRun, dbGet, dbAll, withTransaction } from './db-core';
 import { ensureActivityClassParticipationMode } from './activity-class-schema';
 import { ensureActivityStudentScope } from './activity-student-scope-schema';
 import { ensureParticipationColumns } from './participation-schema';
+import { sendBulkDatabaseNotifications } from '@/lib/notifications';
 
 type ActivityClassParticipationMode = 'mandatory' | 'voluntary';
 
@@ -1308,31 +1309,23 @@ export const dbHelpers = {
         `SELECT id FROM users WHERE role = 'admin' AND is_active = 1 ORDER BY id`
       )) as Array<{ id: number }>;
 
-      let success = 0;
-      let failed = 0;
+      const result = await sendBulkDatabaseNotifications({
+        userIds: (admins || []).map((admin) => Number(admin.id)),
+        type: 'info',
+        title: 'Hoạt động mới cần phê duyệt',
+        message: `Giảng viên ${teacher_name} đã gửi hoạt động "${activity_title}" cần phê duyệt`,
+        relatedTable: 'activities',
+        relatedId: activity_id,
+        audit: {
+          actorId: 0,
+          action: 'activity_submission_notified_admins',
+          targetTable: 'activities',
+          targetId: activity_id,
+          details: { teacher_name, activity_title },
+        },
+      });
 
-      for (const admin of admins || []) {
-        try {
-          await dbRun(
-            `INSERT INTO notifications (user_id, type, title, message, related_table, related_id)
-             VALUES (?, 'info', 'Hoạt động mới cần phê duyệt', ?, 'activities', ?)`,
-            [
-              admin.id,
-              `Giảng viên ${teacher_name} đã gửi hoạt động "${activity_title}" cần phê duyệt`,
-              activity_id,
-            ]
-          );
-          success += 1;
-        } catch (err) {
-          failed += 1;
-          console.error(
-            `⚠️  Failed to create approval submission notification for admin ${admin.id}:`,
-            err
-          );
-        }
-      }
-
-      return { success, failed };
+      return { success: result.created, failed: Math.max((admins || []).length - result.created, 0) };
     } catch (err) {
       console.error('⚠️  Failed to load admins for approval submission notifications:', err);
       return { success: 0, failed: 0 };
@@ -1525,19 +1518,24 @@ export const dbHelpers = {
 
       try {
         if (row.teacher_id) {
-          await dbRun(
-            `INSERT INTO notifications (user_id, type, title, message, related_table, related_id)
-             VALUES (?, ?, ?, ?, 'activities', ?)`,
-            [
-              row.teacher_id,
-              status === 'approved' ? 'success' : 'warning',
-              status === 'approved' ? 'Hoạt động đã được phê duyệt' : 'Hoạt động bị từ chối',
+          await sendBulkDatabaseNotifications({
+            userIds: [Number(row.teacher_id)],
+            type: status === 'approved' ? 'success' : 'warning',
+            title: status === 'approved' ? 'Hoạt động đã được phê duyệt' : 'Hoạt động bị từ chối',
+            message:
               status === 'approved'
                 ? `Hoạt động "${row.activity_title || row.activity_id}" đã được phê duyệt.`
                 : `Hoạt động "${row.activity_title || row.activity_id}" bị từ chối.${note ? ` Lý do: ${note}` : ''}`,
-              row.activity_id,
-            ]
-          );
+            relatedTable: 'activities',
+            relatedId: Number(row.activity_id),
+            audit: {
+              actorId: approver_id,
+              action: status === 'approved' ? 'activity_approval_teacher_notified' : 'activity_rejection_teacher_notified',
+              targetTable: 'activities',
+              targetId: Number(row.activity_id),
+              details: { approval_id, teacher_id: row.teacher_id, note: note || null },
+            },
+          });
         }
       } catch (err) {
         console.error('⚠️  Failed to create notification for approval:', err);
