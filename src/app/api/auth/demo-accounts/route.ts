@@ -13,8 +13,7 @@ type DemoAccountRow = {
 // GET /api/auth/demo-accounts
 // Dev-only helper for login page: returns demo account metadata from local SQLite.
 export async function GET() {
-  const demoAccountsEnabled =
-    process.env.NODE_ENV !== 'production' && process.env.ENABLE_DEMO_ACCOUNTS === '1';
+  const demoAccountsEnabled = process.env.ENABLE_DEMO_ACCOUNTS === '1';
 
   if (!demoAccountsEnabled) {
     return NextResponse.json(

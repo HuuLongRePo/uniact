@@ -1930,7 +1930,7 @@ async function seedDemo(): Promise<void> {
   for (const r of sampleRoles) {
     const studentId = studentIds[r.studentIndex]
     const result = await dbRun(
-      'INSERT INTO role_assignments (user_id, role, assigned_at) VALUES (?, ?, ?)',
+      'INSERT INTO role_assignments (student_id, role_type, start_date) VALUES (?, ?, ?)',
       [studentId, r.role_type, new Date(Date.now() - r.startOffsetDays * 24 * 3600 * 1000).toISOString()]
     )
     roleIds.push(result.lastID)
