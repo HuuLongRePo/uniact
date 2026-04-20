@@ -9,6 +9,13 @@ vi.mock('@/lib/biometrics/face-runtime', () => ({
   detectSingleEmbedding: detectSingleEmbeddingMock,
   performLivenessCheck: performLivenessCheckMock,
   FaceBiometricUnavailableError: class FaceBiometricUnavailableError extends Error {},
+  FaceDetectionError: class FaceDetectionError extends Error {
+    code: string
+    constructor(code: string, message: string) {
+      super(message)
+      this.code = code
+    }
+  },
   FACE_BIOMETRIC_RUNTIME_ENABLED: true,
 }));
 
@@ -104,6 +111,25 @@ describe('TeacherFaceAttendancePage', () => {
 
     await waitFor(() => {
       expect(toastErrorMock).toHaveBeenCalledWith('Ảnh từ camera chưa đủ rõ để tạo candidate embedding');
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('surfaces no-face camera errors before preview submission', async () => {
+    detectSingleEmbeddingMock.mockResolvedValue(null);
+    performLivenessCheckMock.mockResolvedValue({ score: 0.94, passed: true, details: [] });
+
+    const fetchMock = vi.fn() as any;
+    vi.stubGlobal('fetch', fetchMock);
+    window.fetch = fetchMock as typeof fetch;
+
+    const Page = (await import('../src/app/teacher/attendance/face/page')).default;
+    render(<Page />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Lấy candidate từ camera' }));
+
+    await waitFor(() => {
+      expect(toastErrorMock).toHaveBeenCalledWith('Không phát hiện được khuôn mặt nào để tạo candidate embedding');
     });
     expect(fetchMock).not.toHaveBeenCalled();
   });

@@ -48,6 +48,19 @@ export class FaceBiometricUnavailableError extends Error {
   }
 }
 
+export class FaceDetectionError extends Error {
+  code: 'NO_FACE_DETECTED' | 'MULTIPLE_FACES_DETECTED' | 'LOW_IMAGE_QUALITY';
+
+  constructor(
+    code: 'NO_FACE_DETECTED' | 'MULTIPLE_FACES_DETECTED' | 'LOW_IMAGE_QUALITY',
+    message: string
+  ) {
+    super(message);
+    this.name = 'FaceDetectionError';
+    this.code = code;
+  }
+}
+
 export type FaceModelLoadState = {
   status: 'idle' | 'loading' | 'ready' | 'failed';
   mode: FaceRuntimeMode;

@@ -6,11 +6,16 @@ import {
   detectSingleEmbedding,
   performLivenessCheck,
   FaceBiometricUnavailableError,
+  FaceDetectionError,
   FACE_BIOMETRIC_RUNTIME_ENABLED,
 } from '@/lib/biometrics/face-runtime';
 
 function getCameraCaptureErrorMessage(error: unknown) {
   if (error instanceof FaceBiometricUnavailableError) {
+    return error.message;
+  }
+
+  if (error instanceof FaceDetectionError) {
     return error.message;
   }
 
@@ -92,7 +97,17 @@ export default function TeacherFaceAttendancePage() {
 
       const result = await detectSingleEmbedding(videoRef.current);
       if (!result) {
-        throw new Error('Không thể tạo candidate embedding từ camera');
+        throw new FaceDetectionError(
+          'NO_FACE_DETECTED',
+          'Không phát hiện được khuôn mặt nào để tạo candidate embedding'
+        );
+      }
+
+      if (result.detection?.box?.width && result.detection.box.width < 80) {
+        throw new FaceDetectionError(
+          'LOW_IMAGE_QUALITY',
+          'Khuôn mặt quá nhỏ để tạo candidate embedding ổn định'
+        );
       }
 
       const liveness = await performLivenessCheck(videoRef.current, 5, 80);
