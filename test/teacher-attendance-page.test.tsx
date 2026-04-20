@@ -39,6 +39,59 @@ describe('AttendanceReportsPage', () => {
     }) as any);
   });
 
+  it('renders face attendance badge from canonical records payload', async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+
+      if (url === '/api/classes') {
+        return { ok: true, json: async () => ({ data: { classes: [{ id: 1, name: 'CNTT K18A' }] } }) } as Response;
+      }
+      if (url === '/api/teacher/reports/attendance/records') {
+        return {
+          ok: true,
+          json: async () => ({
+            data: {
+              records: [
+                {
+                  student_id: 1,
+                  student_name: 'Nguyễn Văn A',
+                  student_code: 'SV001',
+                  class_name: 'CNTT K18A',
+                  activity_name: 'Sinh hoạt công dân',
+                  activity_date: '2026-04-20T00:00:00.000Z',
+                  status: 'present',
+                  method: 'face',
+                  check_in_time: '08:00',
+                  notes: 'runtime_bridge',
+                },
+              ],
+            },
+          }),
+        } as Response;
+      }
+      if (url === '/api/teacher/reports/attendance/class-summary') {
+        return { ok: true, json: async () => ({ data: { summary: [] } }) } as Response;
+      }
+      if (url === '/api/teacher/reports/attendance/student-summary') {
+        return { ok: true, json: async () => ({ data: { summary: [] } }) } as Response;
+      }
+
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
+
+    vi.stubGlobal('fetch', fetchMock);
+    window.fetch = fetchMock as typeof fetch;
+
+    const Page = (await import('../src/app/teacher/reports/attendance/page')).default;
+    render(<Page />);
+
+    expect(await screen.findByText('Báo cáo điểm danh')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Chi tiết' }));
+    expect(await screen.findByText('Nguyễn Văn A')).toBeInTheDocument();
+    expect(screen.getAllByText('Face').length).toBeGreaterThan(0);
+    expect(screen.getByText('Sinh hoạt công dân')).toBeInTheDocument();
+  });
+
   it('surfaces canonical export failure message', async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
