@@ -51,6 +51,18 @@ Must deliver:
 ### Slice 4. Liveness pilot implementation
 Goal: replace fake `performLivenessCheck(...)` return with a real, limited liveness heuristic while still preserving fail-closed behavior.
 
+Status: groundwork partially landed.
+
+What now exists:
+- normalized liveness result semantics (`runtime_unavailable | insufficient_signal | passed`)
+- teacher camera flow respects runtime-unavailable and weak-signal liveness states
+- deterministic failure messaging for weak liveness details
+
+Still missing before Slice 4 can be called fully real:
+- actual blink/head-movement heuristic implementation behind the adapter
+- telemetry persistence / observability for liveness signal reasons
+- readiness/capability promotion from semantic groundwork to real `liveness_check_ready`
+
 Must deliver:
 - blink/head-movement heuristic contract
 - deterministic low-confidence failure path

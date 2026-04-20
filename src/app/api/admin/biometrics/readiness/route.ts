@@ -15,9 +15,10 @@ export async function GET(request: Request) {
       runtime_enabled: runtimeCapability.runtime_enabled,
       runtime_mode: runtimeCapability.mode,
       model_loading_ready: runtimeCapability.model_loading_ready,
-      model_loading_status: runtimeCapability.model_loading_ready ? 'ready' : 'pending',
+      model_loading_status: runtimeCapability.model_loading_status,
       embedding_detection_ready: runtimeCapability.embedding_detection_ready,
       liveness_check_ready: runtimeCapability.liveness_check_ready,
+      liveness_status: runtimeCapability.liveness_status,
       attendance_api_accepting_runtime_verification:
         runtimeCapability.attendance_api_accepting_runtime_verification,
       enrollment_flow_ready: true,

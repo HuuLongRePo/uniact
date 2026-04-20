@@ -30,9 +30,10 @@ describe('GET /api/admin/biometrics/readiness', () => {
       runtime_enabled: false,
       runtime_mode: 'stubbed',
       model_loading_ready: false,
-      model_loading_status: 'pending',
+      model_loading_status: 'idle',
       embedding_detection_ready: false,
       liveness_check_ready: false,
+      liveness_status: 'runtime_unavailable',
       attendance_api_accepting_runtime_verification: false,
       face_attendance_route_ready: true,
       training_route_ready: true,
@@ -57,7 +58,8 @@ describe('GET /api/admin/biometrics/readiness', () => {
     expect(body.data.readiness).toMatchObject({
       runtime_enabled: true,
       runtime_mode: 'config_enabled_stubbed',
-      model_loading_status: 'pending',
+      model_loading_status: 'idle',
+      liveness_status: 'runtime_unavailable',
       attendance_api_accepting_runtime_verification: false,
       recommended_next_batch: 'face_runtime_enablement',
     });

@@ -9,6 +9,8 @@ describe('biometric runtime capability', () => {
     expect(getFaceRuntimeCapability()).toMatchObject({
       runtime_enabled: false,
       mode: 'stubbed',
+      model_loading_status: 'idle',
+      liveness_status: 'runtime_unavailable',
       attendance_api_accepting_runtime_verification: false,
     });
   });
@@ -21,6 +23,8 @@ describe('biometric runtime capability', () => {
     expect(getFaceRuntimeCapability()).toMatchObject({
       runtime_enabled: true,
       mode: 'config_enabled_stubbed',
+      model_loading_status: 'idle',
+      liveness_status: 'runtime_unavailable',
       attendance_api_accepting_runtime_verification: false,
     });
 
@@ -40,6 +44,8 @@ describe('biometric runtime capability', () => {
       runtime_enabled: true,
       mode: 'runtime_ready',
       model_loading_ready: false,
+      model_loading_status: 'idle',
+      liveness_status: 'runtime_unavailable',
       attendance_api_accepting_runtime_verification: false,
     });
 
@@ -49,8 +55,10 @@ describe('biometric runtime capability', () => {
       runtime_enabled: true,
       mode: 'runtime_ready',
       model_loading_ready: true,
+      model_loading_status: 'ready',
       embedding_detection_ready: false,
       liveness_check_ready: false,
+      liveness_status: 'insufficient_signal',
       attendance_api_accepting_runtime_verification: false,
     });
   });

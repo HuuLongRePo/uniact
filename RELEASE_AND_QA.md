@@ -78,6 +78,7 @@ rather than wide refactor churn.
 - evaluate participation
 - class stats / participation report / export PDF
 - face attendance candidate preview -> submit flow
+- confirm teacher camera face flow surfaces honest runtime/liveness blockers (`runtime_unavailable`, weak liveness signal, multiple faces, low quality)
 - teacher attendance report detail view shows correct method badge (`QR` / `Manual` / `Face`)
 - teacher attendance export respects current class/status/method/date filters
 

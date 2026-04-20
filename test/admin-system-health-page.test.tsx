@@ -48,6 +48,9 @@ describe('SystemHealthPage', () => {
                 runtime_mode: 'stubbed',
                 model_loading_ready: false,
                 model_loading_status: 'pending',
+                embedding_detection_ready: false,
+                liveness_check_ready: false,
+                liveness_status: 'runtime_unavailable',
                 enrollment_flow_ready: false,
                 embedding_storage_ready: false,
                 training_route_ready: false,
@@ -73,6 +76,7 @@ describe('SystemHealthPage', () => {
     expect(await screen.findByText('🧠 Biometric readiness')).toBeInTheDocument();
     expect(screen.getByText('Disabled')).toBeInTheDocument();
     expect(screen.getByText('pending')).toBeInTheDocument();
+    expect(screen.getByText('runtime_unavailable')).toBeInTheDocument();
     expect(screen.getByText(/Mode: stubbed/i)).toBeInTheDocument();
     expect(screen.getByText(/student_image_enrollment_and_training_groundwork/i)).toBeInTheDocument();
   });
