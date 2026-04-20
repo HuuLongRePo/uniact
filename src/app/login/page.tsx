@@ -14,10 +14,9 @@ export default function LoginPage() {
   const router = useRouter();
   const { user, login } = useAuth(); // Sử dụng login từ AuthContext
 
-  const isProduction = process.env.NODE_ENV === 'production';
   const demoAccountsEnabled = process.env.NEXT_PUBLIC_ENABLE_DEMO_ACCOUNTS === '1';
-  const showDemoAccounts = !isProduction && demoAccountsEnabled;
-  const shouldExplainMissingDemoPanel = !isProduction && !demoAccountsEnabled;
+  const showDemoAccounts = demoAccountsEnabled;
+  const shouldExplainMissingDemoPanel = !demoAccountsEnabled;
 
   const handleQuickLogin = (email: string, password: string) => {
     setEmail(email);
@@ -158,7 +157,7 @@ export default function LoginPage() {
           </div>
           {shouldExplainMissingDemoPanel && (
             <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-              Quick login đang tắt. Bật <code className="rounded bg-amber-100 px-1">NEXT_PUBLIC_ENABLE_DEMO_ACCOUNTS=1</code> để hiện panel tài khoản demo ở môi trường local/dev.
+              Quick login đang tắt. Bật <code className="rounded bg-amber-100 px-1">NEXT_PUBLIC_ENABLE_DEMO_ACCOUNTS=1</code> để hiện panel tài khoản demo cả trên production lẫn local/dev.
             </div>
           )}
         </form>

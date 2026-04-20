@@ -39,8 +39,8 @@ describe('Login page demo panel gating', () => {
     vi.clearAllMocks();
   });
 
-  it('shows explanatory notice when demo panel is disabled in non-production', async () => {
-    vi.stubEnv('NODE_ENV', 'test');
+  it('shows explanatory notice when demo panel is disabled', async () => {
+    vi.stubEnv('NODE_ENV', 'production');
     vi.stubEnv('NEXT_PUBLIC_ENABLE_DEMO_ACCOUNTS', '0');
 
     const Page = (await import('../src/app/login/page')).default;
@@ -50,8 +50,8 @@ describe('Login page demo panel gating', () => {
     expect(screen.queryByTestId('login-test-panel')).not.toBeInTheDocument();
   });
 
-  it('shows demo panel when demo accounts are enabled', async () => {
-    vi.stubEnv('NODE_ENV', 'test');
+  it('shows demo panel when demo accounts are enabled even in production', async () => {
+    vi.stubEnv('NODE_ENV', 'production');
     vi.stubEnv('NEXT_PUBLIC_ENABLE_DEMO_ACCOUNTS', '1');
 
     const Page = (await import('../src/app/login/page')).default;
