@@ -77,6 +77,9 @@ rather than wide refactor churn.
 - bulk attendance
 - evaluate participation
 - class stats / participation report / export PDF
+- face attendance candidate preview -> submit flow
+- teacher attendance report detail view shows correct method badge (`QR` / `Manual` / `Face`)
+- teacher attendance export respects current class/status/method/date filters
 
 ### Student
 - login, refresh, logout
@@ -85,12 +88,19 @@ rather than wide refactor churn.
 - history page filter/sort/export
 - points breakdown tabs
 - scores page and detail surfaces
+- face attendance success should appear in notifications
+- history should show the actual attendance method for attended activities
 
 ### Cross-role checks
 - wrong-role access should redirect or show proper forbidden behavior
 - stale/invalid session should fail cleanly
 - canonical error messages should surface in hardened UI paths
 - exports should download with proper content type and permission behavior
+- face attendance actor chain should stay consistent across surfaces:
+  1. teacher records attendance,
+  2. student notification appears,
+  3. student history shows `attendance_method = face`,
+  4. teacher/admin reporting shows `face` in method mix
 
 ---
 
