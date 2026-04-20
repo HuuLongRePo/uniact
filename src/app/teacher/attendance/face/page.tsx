@@ -9,6 +9,31 @@ import {
   FACE_BIOMETRIC_RUNTIME_ENABLED,
 } from '@/lib/biometrics/face-runtime';
 
+function getCameraCaptureErrorMessage(error: unknown) {
+  if (error instanceof FaceBiometricUnavailableError) {
+    return error.message;
+  }
+
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return 'Không thể lấy candidate từ camera';
+}
+
+function normalizeEmbeddingDraft(input: string): number[] {
+  const normalized = input
+    .split(',')
+    .map((value) => Number(value.trim()))
+    .filter((value) => Number.isFinite(value));
+
+  if (normalized.length < 3) {
+    throw new Error('Candidate embedding quá ngắn để tạo preview');
+  }
+
+  return normalized;
+}
+
 export default function TeacherFaceAttendancePage() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -71,12 +96,18 @@ export default function TeacherFaceAttendancePage() {
       }
 
       const liveness = await performLivenessCheck(videoRef.current, 5, 80);
+      if (result.qualityScore < 60) {
+        throw new Error('Ảnh từ camera chưa đủ rõ để tạo candidate embedding');
+      }
+      if (liveness.score < 0.7) {
+        throw new Error('Liveness check từ camera chưa đủ để tạo candidate embedding');
+      }
       setEmbeddingInput(result.embedding.join(', '));
       setQualityScore(String(result.qualityScore));
       setLivenessScore(String(liveness.score));
       toast.success('Đã lấy candidate embedding từ camera');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Không thể lấy candidate từ camera');
+      toast.error(getCameraCaptureErrorMessage(error));
     } finally {
       setCapturing(false);
     }
@@ -85,10 +116,7 @@ export default function TeacherFaceAttendancePage() {
   const handlePreview = async () => {
     try {
       setLoading(true);
-      const embedding = embeddingInput
-        .split(',')
-        .map((value) => Number(value.trim()))
-        .filter((value) => Number.isFinite(value));
+      const embedding = normalizeEmbeddingDraft(embeddingInput);
 
       const res = await fetch('/api/biometric/candidate-preview', {
         method: 'POST',
