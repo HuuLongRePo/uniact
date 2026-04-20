@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   dbGet: vi.fn(),
   dbReady: vi.fn(),
   getTeacherManagedStudentIds: vi.fn(),
+  getManagedActivityParticipantIds: vi.fn(),
   sendBulkDatabaseNotifications: vi.fn(),
 }));
 
@@ -23,6 +24,7 @@ vi.mock('@/lib/database', () => ({
 
 vi.mock('@/lib/notifications', () => ({
   getTeacherManagedStudentIds: mocks.getTeacherManagedStudentIds,
+  getManagedActivityParticipantIds: mocks.getManagedActivityParticipantIds,
   sendBulkDatabaseNotifications: mocks.sendBulkDatabaseNotifications,
 }));
 
@@ -34,6 +36,7 @@ describe('teacher notification routes', () => {
     mocks.dbReady.mockResolvedValue(undefined);
     mocks.sendBulkDatabaseNotifications.mockResolvedValue({ created: 2, targetCount: 2 });
     mocks.getTeacherManagedStudentIds.mockResolvedValue([11, 12, 13]);
+    mocks.getManagedActivityParticipantIds.mockResolvedValue([21, 22]);
   });
 
   it('students notify route uses canonical bulk notification helper', async () => {
@@ -67,6 +70,30 @@ describe('teacher notification routes', () => {
 
     expect(response.status).toBe(403);
     expect(mocks.sendBulkDatabaseNotifications).not.toHaveBeenCalled();
+  });
+
+  it('teacher broadcast route resolves managed activity participants', async () => {
+    const route = await import('../src/app/api/teacher/notifications/broadcast/route');
+
+    const response = await route.POST({
+      cookies: { get: vi.fn(() => ({ value: 'token-1' })) },
+      json: async () => ({
+        scope: 'managed_activities',
+        activity_ids: [99, 100],
+        title: 'Nhắc điểm danh',
+        message: 'Các em nhớ có mặt đúng giờ',
+      }),
+    } as any);
+
+    expect(response.status).toBe(200);
+    expect(mocks.getManagedActivityParticipantIds).toHaveBeenCalledWith(7, [99, 100]);
+    expect(mocks.sendBulkDatabaseNotifications).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userIds: [21, 22],
+        type: 'broadcast',
+        title: 'Nhắc điểm danh',
+      })
+    );
   });
 
   it('teacher notification history returns canonical nested payload', async () => {

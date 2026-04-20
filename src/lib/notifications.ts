@@ -160,11 +160,35 @@ export async function getTeacherManagedStudentIds(teacherId: number): Promise<nu
     `SELECT DISTINCT u.id
      FROM users u
      INNER JOIN classes c ON c.id = u.class_id
+     LEFT JOIN class_teachers ct ON ct.class_id = c.id
      WHERE u.role = 'student'
        AND COALESCE(u.is_active, 1) = 1
-       AND c.teacher_id = ?
+       AND (c.teacher_id = ? OR ct.teacher_id = ?)
      ORDER BY u.id`,
-    [teacherId]
+    [teacherId, teacherId]
+  )) as Array<{ id: number }>;
+
+  return rows.map((row) => Number(row.id)).filter((id) => Number.isInteger(id) && id > 0);
+}
+
+export async function getManagedActivityParticipantIds(teacherId: number, activityIds: number[]) {
+  const uniqueActivityIds = Array.from(
+    new Set(activityIds.map((value) => Number(value)).filter((value) => Number.isInteger(value) && value > 0))
+  );
+
+  if (uniqueActivityIds.length === 0) {
+    return [];
+  }
+
+  const placeholders = uniqueActivityIds.map(() => '?').join(',');
+  const rows = (await dbAll(
+    `SELECT DISTINCT p.student_id as id
+     FROM participations p
+     INNER JOIN activities a ON a.id = p.activity_id
+     WHERE p.activity_id IN (${placeholders})
+       AND a.teacher_id = ?
+       AND p.student_id IS NOT NULL`,
+    [...uniqueActivityIds, teacherId]
   )) as Array<{ id: number }>;
 
   return rows.map((row) => Number(row.id)).filter((id) => Number.isInteger(id) && id > 0);
