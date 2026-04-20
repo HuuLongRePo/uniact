@@ -48,6 +48,20 @@ export class FaceBiometricUnavailableError extends Error {
   }
 }
 
+export type FaceModelLoadState = {
+  status: 'idle' | 'loading' | 'ready' | 'failed';
+  mode: FaceRuntimeMode;
+  lastError: string | null;
+};
+
+const faceModelLoadState: FaceModelLoadState = {
+  status: 'idle',
+  mode: FACE_BIOMETRIC_RUNTIME_MODE,
+  lastError: null,
+};
+
+let pendingModelLoad: Promise<null> | null = null;
+
 function createStubbedAdapter(mode: FaceRuntimeMode): FaceRuntimeAdapter {
   return {
     mode,
@@ -79,8 +93,43 @@ export function getFaceRuntimeAdapter(): FaceRuntimeAdapter {
   return createStubbedAdapter(FACE_BIOMETRIC_RUNTIME_MODE);
 }
 
+export function getFaceModelLoadState(): FaceModelLoadState {
+  return { ...faceModelLoadState };
+}
+
+export function resetFaceModelLoadStateForTests() {
+  faceModelLoadState.status = 'idle';
+  faceModelLoadState.mode = FACE_BIOMETRIC_RUNTIME_MODE;
+  faceModelLoadState.lastError = null;
+  pendingModelLoad = null;
+}
+
 export async function loadFaceModels(basePath?: string): Promise<null> {
-  return getFaceRuntimeAdapter().loadModels(basePath);
+  if (pendingModelLoad) {
+    return pendingModelLoad;
+  }
+
+  const adapter = getFaceRuntimeAdapter();
+  faceModelLoadState.mode = adapter.mode;
+  faceModelLoadState.status = 'loading';
+  faceModelLoadState.lastError = null;
+
+  pendingModelLoad = adapter
+    .loadModels(basePath)
+    .then((result) => {
+      faceModelLoadState.status = adapter.mode === 'runtime_ready' ? 'ready' : 'idle';
+      return result;
+    })
+    .catch((error) => {
+      faceModelLoadState.status = 'failed';
+      faceModelLoadState.lastError = error instanceof Error ? error.message : 'Unknown model load error';
+      throw error;
+    })
+    .finally(() => {
+      pendingModelLoad = null;
+    });
+
+  return pendingModelLoad;
 }
 
 export async function detectSingleEmbedding(
