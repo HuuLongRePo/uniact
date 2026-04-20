@@ -129,15 +129,19 @@ export async function sendBulkDatabaseNotifications(params: {
 
   let created = 0;
   for (const userId of uniqueUserIds) {
-    await sendDatabaseNotification({
-      userId,
-      type: params.type,
-      title: params.title,
-      message: params.message,
-      relatedTable: params.relatedTable,
-      relatedId: params.relatedId,
-    });
-    created += 1;
+    try {
+      await sendDatabaseNotification({
+        userId,
+        type: params.type,
+        title: params.title,
+        message: params.message,
+        relatedTable: params.relatedTable,
+        relatedId: params.relatedId,
+      });
+      created += 1;
+    } catch (error) {
+      console.error(`Failed to send notification to user ${userId}:`, error);
+    }
   }
 
   if (params.audit) {

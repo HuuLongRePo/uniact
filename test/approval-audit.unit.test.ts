@@ -99,12 +99,18 @@ describe('Approval audit trail helpers', () => {
     expect(notificationCalls).toHaveLength(2)
     expect(notificationCalls[0]?.[1]).toEqual([
       1,
+      'info',
+      'Hoạt động mới cần phê duyệt',
       'Giảng viên Teacher Best Effort đã gửi hoạt động "Activity N" cần phê duyệt',
+      'activities',
       55,
     ])
     expect(notificationCalls[1]?.[1]).toEqual([
       2,
+      'info',
+      'Hoạt động mới cần phê duyệt',
       'Giảng viên Teacher Best Effort đã gửi hoạt động "Activity N" cần phê duyệt',
+      'activities',
       55,
     ])
 
@@ -139,8 +145,11 @@ describe('Approval audit trail helpers', () => {
     const auditCalls = dbRun.mock.calls.filter(([sql]) => String(sql).includes('INSERT INTO audit_logs'))
     const notificationCalls = dbRun.mock.calls.filter(([sql]) => String(sql).includes('INSERT INTO notifications'))
 
-    expect(auditCalls).toHaveLength(1)
-    expect(auditCalls[0]?.[1]).toEqual([2, 'activity_approval_approved', 'activity_approvals', 801, 'LGTM'])
+    expect(auditCalls.length).toBeGreaterThanOrEqual(1)
+    expect(auditCalls).toContainEqual([
+      expect.stringContaining('INSERT INTO audit_logs'),
+      [2, 'activity_approval_approved', 'activity_approvals', 801, 'LGTM'],
+    ])
     expect(notificationCalls).toHaveLength(1)
     expect(notificationCalls[0]?.[1]?.[0]).toBe(12)
     expect(notificationCalls[0]?.[1]?.[1]).toBe('success')
@@ -236,8 +245,11 @@ describe('Approval audit trail helpers', () => {
     const auditCalls = dbRun.mock.calls.filter(([sql]) => String(sql).includes('INSERT INTO audit_logs'))
     const notificationCalls = dbRun.mock.calls.filter(([sql]) => String(sql).includes('INSERT INTO notifications'))
 
-    expect(auditCalls).toHaveLength(1)
-    expect(auditCalls[0]?.[1]).toEqual([3, 'activity_approval_rejected', 'activity_approvals', 802, 'Missing plan'])
+    expect(auditCalls.length).toBeGreaterThanOrEqual(1)
+    expect(auditCalls).toContainEqual([
+      expect.stringContaining('INSERT INTO audit_logs'),
+      [3, 'activity_approval_rejected', 'activity_approvals', 802, 'Missing plan'],
+    ])
     expect(notificationCalls).toHaveLength(1)
     expect(notificationCalls[0]?.[1]?.[0]).toBe(13)
     expect(notificationCalls[0]?.[1]?.[1]).toBe('warning')

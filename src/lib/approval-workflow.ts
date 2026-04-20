@@ -6,6 +6,7 @@
  */
 
 import { dbRun, dbGet, dbAll } from './database';
+import { sendDatabaseNotification } from './notifications';
 
 // ============ STATE PATTERN ============
 
@@ -56,16 +57,16 @@ class PendingState extends BaseApprovalState {
   async onEnter(request: ApprovalRequest): Promise<void> {
     await super.onEnter(request);
     // Notify first approver
-    await dbRun(
-      `INSERT INTO notifications (user_id, type, title, message, related_table, related_id)
-       VALUES (?, 'approval_request', 'Yêu cầu phê duyệt mới', ?, ?, ?)`,
-      [
-        request.current_approver_id,
-        `Bạn có yêu cầu phê duyệt mới: ${request.entity_type}`,
-        'approval_requests',
-        request.id,
-      ]
-    );
+    if (request.current_approver_id) {
+      await sendDatabaseNotification({
+        userId: request.current_approver_id,
+        type: 'approval_request',
+        title: 'Yêu cầu phê duyệt mới',
+        message: `Bạn có yêu cầu phê duyệt mới: ${request.entity_type}`,
+        relatedTable: 'approval_requests',
+        relatedId: request.id,
+      });
+    }
   }
 }
 
@@ -93,11 +94,14 @@ class ApprovedState extends BaseApprovalState {
     await request.executeApproval();
 
     // Notify requester
-    await dbRun(
-      `INSERT INTO notifications (user_id, type, title, message, related_table, related_id)
-       VALUES (?, 'approval_approved', 'Phê duyệt thành công', 'Yêu cầu của bạn đã được phê duyệt', ?, ?)`,
-      [request.requester_id, 'approval_requests', request.id]
-    );
+    await sendDatabaseNotification({
+      userId: request.requester_id,
+      type: 'approval_approved',
+      title: 'Phê duyệt thành công',
+      message: 'Yêu cầu của bạn đã được phê duyệt',
+      relatedTable: 'approval_requests',
+      relatedId: request.id,
+    });
   }
 }
 
@@ -113,16 +117,14 @@ class RejectedState extends BaseApprovalState {
     await super.onEnter(request);
 
     // Notify requester
-    await dbRun(
-      `INSERT INTO notifications (user_id, type, title, message, related_table, related_id)
-       VALUES (?, 'approval_rejected', 'Phê duyệt bị từ chối', ?, ?, ?)`,
-      [
-        request.requester_id,
-        `Yêu cầu của bạn đã bị từ chối: ${request.rejection_reason}`,
-        'approval_requests',
-        request.id,
-      ]
-    );
+    await sendDatabaseNotification({
+      userId: request.requester_id,
+      type: 'approval_rejected',
+      title: 'Phê duyệt bị từ chối',
+      message: `Yêu cầu của bạn đã bị từ chối: ${request.rejection_reason}`,
+      relatedTable: 'approval_requests',
+      relatedId: request.id,
+    });
   }
 }
 

@@ -75,6 +75,7 @@ beforeAll(async () => {
         message TEXT,
         related_table TEXT,
         related_id INTEGER,
+        is_read INTEGER DEFAULT 0,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );
       CREATE TABLE student_awards (
