@@ -121,6 +121,33 @@ describe('teacher notification routes', () => {
     );
   });
 
+  it('teacher notification history export returns csv for broadcast records', async () => {
+    mocks.dbRun.mockResolvedValue(undefined);
+    mocks.dbAll.mockResolvedValue([
+      {
+        id: 9,
+        notification_id: 5,
+        notification_title: 'Thông báo lớp',
+        student_name: 'Nguyễn Văn A',
+        class_name: 'CTK42',
+        sent_at: '2026-04-20T07:00:00.000Z',
+        is_read: 0,
+      },
+    ]);
+
+    const route = await import('../src/app/api/teacher/notifications/history/export/route');
+    const response = await route.POST({
+      cookies: { get: vi.fn(() => ({ value: 'token-1' })) },
+      json: async () => ({ filters: { readStatus: 'unread' } }),
+    } as any);
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('Content-Type')).toContain('text/csv');
+    const csv = await response.text();
+    expect(csv).toContain('Thông báo lớp');
+    expect(csv).toContain('Nguyễn Văn A');
+  });
+
   it('teacher notification history returns canonical nested payload', async () => {
     mocks.dbRun.mockResolvedValue(undefined);
     mocks.dbAll
