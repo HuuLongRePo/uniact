@@ -217,6 +217,7 @@ export default function StudentNotifications() {
       case 'activity_update':
         return '📢';
       case 'attendance':
+      case 'success':
         return '✅';
       case 'award':
         return '🏆';
