@@ -97,6 +97,50 @@ describe('ActivityStatisticsPage', () => {
     expect(await screen.findByText('Thống kê hoạt động')).toBeInTheDocument();
     expect(screen.getByText('Citizen Orientation')).toBeInTheDocument();
     expect(screen.getByTestId('admin-method-card-qr')).toBeInTheDocument();
+    expect(screen.getByTestId('admin-method-card-face')).toHaveTextContent('1');
+    expect(screen.getByTestId('admin-face-adoption-card')).toHaveTextContent('25.0%');
     expect(screen.getByTestId('admin-not-participated-card')).toBeInTheDocument();
+  });
+
+  it('renders hotspot insights for registered-only pressure alongside face mix cards', async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        data: [],
+        statistics: {
+          total_activities: '2',
+          total_participants: '15',
+          total_attended: '10',
+          total_registered_only: '5',
+          total_manual_attendance: '3',
+          total_qr_attendance: '5',
+          total_face_attendance: '2',
+          avg_participants_per_activity: '7.5',
+          attendance_rate: '66.7',
+          face_adoption_rate: '20',
+        },
+        insights: {
+          top_not_participated_activities: [
+            {
+              id: '12',
+              title: 'Tech Talk',
+              registered_only: '4',
+              total_participants: '8',
+              attended_count: '4',
+            },
+          ],
+        },
+      }),
+    })) as any;
+
+    vi.stubGlobal('fetch', fetchMock);
+    window.fetch = fetchMock as typeof fetch;
+
+    const Page = (await import('../src/app/admin/reports/activity-statistics/page')).default;
+    render(<Page />);
+
+    expect(await screen.findByText('Hotspots chưa tham gia')).toBeInTheDocument();
+    expect(screen.getByText('Tech Talk')).toBeInTheDocument();
+    expect(screen.getByTestId('admin-method-card-face')).toHaveTextContent('2');
   });
 });
