@@ -24,6 +24,20 @@ interface HistoryItem {
   feedback: string | null;
   points_earned: number;
   status: string;
+  attendance_method?: string | null;
+}
+
+function getAttendanceMethodLabel(method?: string | null) {
+  switch (method) {
+    case 'face':
+      return 'Face attendance';
+    case 'qr':
+      return 'QR attendance';
+    case 'manual':
+      return 'Điểm danh thủ công';
+    default:
+      return 'Chưa rõ phương thức';
+  }
 }
 
 export default function StudentHistoryPage() {
@@ -277,6 +291,11 @@ export default function StudentHistoryPage() {
                     {item.achievement_level && (
                       <span className="px-3 py-1 bg-orange-100 text-orange-800 rounded-full text-sm">
                         🏅 {item.achievement_level}
+                      </span>
+                    )}
+                    {item.attended === 1 && (
+                      <span className="px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-sm">
+                        📍 {getAttendanceMethodLabel(item.attendance_method)}
                       </span>
                     )}
                   </div>

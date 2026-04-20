@@ -55,6 +55,7 @@ describe('GET /api/student/history', () => {
             points_earned: 13,
             attended: 1,
             status: 'attended',
+            attendance_method: 'face',
             evaluated_by_name: 'Teacher A',
           },
         ];
@@ -81,6 +82,7 @@ describe('GET /api/student/history', () => {
       participation_id: 1,
       title: 'Hoạt động A',
       total_points: 13,
+      attendance_method: 'face',
     });
     expect(body.data.summary).toMatchObject({
       total_participations: 1,

@@ -33,6 +33,7 @@ type StudentHistoryRow = {
   points_earned: number;
   attended: number;
   status: string;
+  attendance_method: string | null;
   evaluated_by_name: string | null;
 };
 
@@ -88,6 +89,7 @@ export async function GET(request: NextRequest) {
         COALESCE(pc.total_points, 0) as points_earned,
         CASE WHEN p.attendance_status = 'attended' THEN 1 ELSE 0 END as attended,
         p.attendance_status as status,
+        ar.method as attendance_method,
         evaluator.name as evaluated_by_name
       FROM participations p
       JOIN activities a ON p.activity_id = a.id
@@ -97,6 +99,13 @@ export async function GET(request: NextRequest) {
       LEFT JOIN point_calculations pc ON p.id = pc.participation_id
       LEFT JOIN achievement_multipliers am ON am.achievement_level = p.achievement_level
       LEFT JOIN users evaluator ON p.evaluated_by = evaluator.id
+      LEFT JOIN attendance_records ar ON ar.id = (
+        SELECT ar2.id
+        FROM attendance_records ar2
+        WHERE ar2.activity_id = p.activity_id AND ar2.student_id = p.student_id
+        ORDER BY COALESCE(ar2.recorded_at, ar2.created_at) DESC, ar2.id DESC
+        LIMIT 1
+      )
       WHERE p.student_id = ?
     `;
     const params: Array<number | string> = [user.id];

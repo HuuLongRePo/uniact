@@ -75,6 +75,7 @@ describe('StudentHistoryPage', () => {
               feedback: 'Làm tốt',
               points_earned: 13,
               status: 'attended',
+              attendance_method: 'face',
             },
           ],
         },
@@ -89,6 +90,7 @@ describe('StudentHistoryPage', () => {
     expect(await screen.findByText('Lịch Sử Hoạt Động')).toBeInTheDocument()
     expect(await screen.findByText('Hoạt động A')).toBeInTheDocument()
     expect(screen.getByText('Làm tốt')).toBeInTheDocument()
+    expect(screen.getByText('📍 Face attendance')).toBeInTheDocument()
     expect(toastErrorMock).not.toHaveBeenCalled()
   })
 
