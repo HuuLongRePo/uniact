@@ -36,4 +36,13 @@ describe('Audit API unit', () => {
     const body = await res.json()
     expect(body.csv).toBeDefined()
   })
+
+  it('GET preserves action and target filters in audit queries', async () => {
+    const res: any = await (auditRoute as any).GET(
+      makeReq('?action=teacher_broadcast_notification&target_table=notifications&target_id=5')
+    )
+    const body = await res.json()
+    expect(res.status).toBe(200)
+    expect(body.meta).toBeDefined()
+  })
 })
