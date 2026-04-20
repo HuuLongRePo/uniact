@@ -194,6 +194,22 @@ export async function getManagedActivityParticipantIds(teacherId: number, activi
   return rows.map((row) => Number(row.id)).filter((id) => Number.isInteger(id) && id > 0);
 }
 
+export async function ensureScheduledNotificationsTable() {
+  await dbRun(
+    `CREATE TABLE IF NOT EXISTS scheduled_notifications (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      sender_id INTEGER NOT NULL,
+      title TEXT NOT NULL,
+      message TEXT NOT NULL,
+      student_ids TEXT NOT NULL,
+      scheduled_at TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (sender_id) REFERENCES users(id)
+    )`
+  );
+}
+
 /**
  * Abstract base class for notification builders
  * Implements Template Method pattern

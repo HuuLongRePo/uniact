@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   dbReady: vi.fn(),
   getTeacherManagedStudentIds: vi.fn(),
   getManagedActivityParticipantIds: vi.fn(),
+  ensureScheduledNotificationsTable: vi.fn(),
   sendBulkDatabaseNotifications: vi.fn(),
 }));
 
@@ -25,6 +26,7 @@ vi.mock('@/lib/database', () => ({
 vi.mock('@/lib/notifications', () => ({
   getTeacherManagedStudentIds: mocks.getTeacherManagedStudentIds,
   getManagedActivityParticipantIds: mocks.getManagedActivityParticipantIds,
+  ensureScheduledNotificationsTable: mocks.ensureScheduledNotificationsTable,
   sendBulkDatabaseNotifications: mocks.sendBulkDatabaseNotifications,
 }));
 
@@ -34,9 +36,11 @@ describe('teacher notification routes', () => {
     vi.clearAllMocks();
     mocks.getUserFromToken.mockResolvedValue({ id: 7, role: 'teacher' });
     mocks.dbReady.mockResolvedValue(undefined);
+    mocks.dbRun.mockResolvedValue({ lastID: 77, changes: 1 });
     mocks.sendBulkDatabaseNotifications.mockResolvedValue({ created: 2, targetCount: 2 });
     mocks.getTeacherManagedStudentIds.mockResolvedValue([11, 12, 13]);
     mocks.getManagedActivityParticipantIds.mockResolvedValue([21, 22]);
+    mocks.ensureScheduledNotificationsTable.mockResolvedValue(undefined);
   });
 
   it('students notify route uses canonical bulk notification helper', async () => {
@@ -93,6 +97,27 @@ describe('teacher notification routes', () => {
         type: 'broadcast',
         title: 'Nhắc điểm danh',
       })
+    );
+  });
+
+  it('teacher schedule route validates managed student scope before persisting', async () => {
+    const route = await import('../src/app/api/teacher/notifications/schedule/route');
+
+    const response = await route.POST({
+      cookies: { get: vi.fn(() => ({ value: 'token-1' })) },
+      json: async () => ({
+        student_ids: [11, 12],
+        title: 'Nhắc lịch',
+        message: 'Mai nộp báo cáo',
+        scheduled_at: '2026-04-21T08:00:00.000Z',
+      }),
+    } as any);
+
+    expect(response.status).toBe(200);
+    expect(mocks.ensureScheduledNotificationsTable).toHaveBeenCalled();
+    expect(mocks.dbRun).toHaveBeenCalledWith(
+      expect.stringContaining('INSERT INTO scheduled_notifications'),
+      expect.arrayContaining([7, 'Nhắc lịch', 'Mai nộp báo cáo'])
     );
   });
 

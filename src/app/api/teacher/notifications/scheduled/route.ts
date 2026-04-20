@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromToken } from '@/lib/auth';
 import { dbAll } from '@/lib/database';
 import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
+import { ensureScheduledNotificationsTable } from '@/lib/notifications';
 
 // GET /api/teacher/notifications/scheduled
 export async function GET(request: NextRequest) {
@@ -13,6 +14,8 @@ export async function GET(request: NextRequest) {
     if (!user || user.role !== 'teacher') {
       return errorResponse(ApiError.forbidden('Không có quyền truy cập'));
     }
+
+    await ensureScheduledNotificationsTable();
 
     // Lấy danh sách thông báo đã lên lịch của giảng viên
     const notifications = await dbAll(

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromToken } from '@/lib/auth';
-import { dbRun, dbAll } from '@/lib/database';
+import { dbRun } from '@/lib/database';
 import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
+import { ensureScheduledNotificationsTable, getTeacherManagedStudentIds } from '@/lib/notifications';
 
 // POST /api/teacher/notifications/schedule
 export async function POST(request: NextRequest) {
@@ -15,11 +16,31 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { student_ids, title, message, scheduled_at, type = 'info' } = body;
+    const { student_ids, title, message, scheduled_at } = body;
 
     if (!student_ids || !title || !message || !scheduled_at) {
       return errorResponse(ApiError.validation('Thiếu trường bắt buộc'));
     }
+
+    const normalizedStudentIds = Array.from(
+      new Set(
+        (Array.isArray(student_ids) ? student_ids : [])
+          .map((value) => Number(value))
+          .filter((value) => Number.isInteger(value) && value > 0)
+      )
+    );
+
+    if (normalizedStudentIds.length === 0) {
+      return errorResponse(ApiError.validation('Danh sách học viên không hợp lệ'));
+    }
+
+    const managedStudentIds = await getTeacherManagedStudentIds(user.id);
+    const invalidStudentIds = normalizedStudentIds.filter((studentId) => !managedStudentIds.includes(studentId));
+    if (invalidStudentIds.length > 0) {
+      return errorResponse(ApiError.forbidden('Bạn chỉ có thể lên lịch thông báo cho học viên trong phạm vi quản lý'));
+    }
+
+    await ensureScheduledNotificationsTable();
 
     // Create scheduled notification record
     const result = await dbRun(
@@ -32,7 +53,7 @@ export async function POST(request: NextRequest) {
         user.id,
         title,
         message,
-        JSON.stringify(student_ids),
+        JSON.stringify(normalizedStudentIds),
         scheduled_at,
         'pending',
         new Date().toISOString(),
