@@ -1,14 +1,43 @@
 export type FaceEmbedding = number[];
 
+export type FaceRuntimeMode = 'stubbed' | 'config_enabled_stubbed' | 'runtime_ready';
+
+export interface FaceRuntimeAdapter {
+  mode: FaceRuntimeMode;
+  loadModels(basePath?: string): Promise<null>;
+  detectSingleEmbedding(
+    input?: HTMLVideoElement | HTMLImageElement | HTMLCanvasElement
+  ): Promise<FaceDetectionResult | null>;
+  performLivenessCheck(
+    video?: HTMLVideoElement,
+    framesCount?: number,
+    intervalMs?: number
+  ): Promise<LivenessCheckResult>;
+}
+
 function isRuntimeEnvEnabled() {
   const value = process.env.ENABLE_FACE_BIOMETRIC_RUNTIME;
   return ['1', 'true', 'yes', 'on'].includes(String(value ?? '').trim().toLowerCase());
 }
 
+function resolveRuntimeMode(): FaceRuntimeMode {
+  if (!isRuntimeEnvEnabled()) {
+    return 'stubbed';
+  }
+
+  const requestedMode = String(process.env.FACE_BIOMETRIC_RUNTIME_MODE ?? '')
+    .trim()
+    .toLowerCase();
+
+  if (requestedMode === 'runtime_ready') {
+    return 'runtime_ready';
+  }
+
+  return 'config_enabled_stubbed';
+}
+
 export const FACE_BIOMETRIC_RUNTIME_ENABLED = isRuntimeEnvEnabled();
-export const FACE_BIOMETRIC_RUNTIME_MODE = FACE_BIOMETRIC_RUNTIME_ENABLED
-  ? 'config_enabled_stubbed'
-  : 'stubbed';
+export const FACE_BIOMETRIC_RUNTIME_MODE = resolveRuntimeMode();
 
 export class FaceBiometricUnavailableError extends Error {
   constructor(
@@ -19,14 +48,45 @@ export class FaceBiometricUnavailableError extends Error {
   }
 }
 
-export async function loadFaceModels(_basePath?: string): Promise<null> {
-  return null;
+function createStubbedAdapter(mode: FaceRuntimeMode): FaceRuntimeAdapter {
+  return {
+    mode,
+    async loadModels(_basePath?: string) {
+      return null;
+    },
+    async detectSingleEmbedding(
+      _input?: HTMLVideoElement | HTMLImageElement | HTMLCanvasElement
+    ) {
+      return null;
+    },
+    async performLivenessCheck(
+      _video?: HTMLVideoElement,
+      _framesCount = 10,
+      _intervalMs = 100
+    ) {
+      return {
+        passed: false,
+        blinkDetected: false,
+        headMovement: false,
+        score: 0,
+        details: ['Face biometric runtime unavailable'],
+      };
+    },
+  };
+}
+
+export function getFaceRuntimeAdapter(): FaceRuntimeAdapter {
+  return createStubbedAdapter(FACE_BIOMETRIC_RUNTIME_MODE);
+}
+
+export async function loadFaceModels(basePath?: string): Promise<null> {
+  return getFaceRuntimeAdapter().loadModels(basePath);
 }
 
 export async function detectSingleEmbedding(
-  _input?: HTMLVideoElement | HTMLImageElement | HTMLCanvasElement
+  input?: HTMLVideoElement | HTMLImageElement | HTMLCanvasElement
 ): Promise<FaceDetectionResult | null> {
-  return null;
+  return getFaceRuntimeAdapter().detectSingleEmbedding(input);
 }
 
 export function cosineDistance(a: FaceEmbedding, b: FaceEmbedding): number {
@@ -77,15 +137,9 @@ export interface LivenessCheckResult {
 }
 
 export async function performLivenessCheck(
-  _video?: HTMLVideoElement,
-  _framesCount = 10,
-  _intervalMs = 100
+  video?: HTMLVideoElement,
+  framesCount = 10,
+  intervalMs = 100
 ): Promise<LivenessCheckResult> {
-  return {
-    passed: false,
-    blinkDetected: false,
-    headMovement: false,
-    score: 0,
-    details: ['Face biometric runtime unavailable'],
-  };
+  return getFaceRuntimeAdapter().performLivenessCheck(video, framesCount, intervalMs);
 }
