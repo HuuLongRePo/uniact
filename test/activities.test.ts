@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   mockDbAll: vi.fn(),
   mockDbRun: vi.fn(),
   mockInvalidatePrefix: vi.fn(),
+  mockSendDatabaseNotification: vi.fn(),
 }));
 
 const teacherUser = { id: 1, role: 'teacher', class_id: 1 };
@@ -73,6 +74,10 @@ vi.mock('@/lib/cache', () => ({
   },
 }));
 
+vi.mock('@/lib/notifications', () => ({
+  sendDatabaseNotification: mocks.mockSendDatabaseNotification,
+}));
+
 import * as activitiesRoute from '../src/app/api/activities/[id]/route';
 
 function makePutReq(body: unknown) {
@@ -95,6 +100,7 @@ beforeEach(() => {
   mocks.mockCreateAuditLog.mockResolvedValue(undefined);
   mocks.mockDbRun.mockResolvedValue({ changes: 1 });
   mocks.mockInvalidatePrefix.mockImplementation(() => undefined);
+  mocks.mockSendDatabaseNotification.mockResolvedValue(undefined);
 
   mocks.mockGetActivityById.mockImplementation(async (id: number) => {
     if (id === 1) return existingActivity;
@@ -175,6 +181,62 @@ describe('Activities API (unit)', () => {
     });
 
     expect(res.status).toBe(404);
+  });
+
+  it('PUT uses notification helper when cancelling an activity with participants', async () => {
+    mocks.mockGetActivityById.mockResolvedValueOnce({
+      ...existingActivity,
+      status: 'published',
+      title: 'Cancelled Activity',
+    });
+    mocks.mockUpdateActivity.mockResolvedValueOnce({ changes: 1 });
+    mocks.mockDbAll.mockImplementation(async (sql: string) => {
+      if (sql.includes('SELECT student_id FROM participations')) {
+        return [{ student_id: 21 }, { student_id: 22 }];
+      }
+      if (sql.includes('FROM activity_classes')) {
+        return [];
+      }
+      return [];
+    });
+
+    const res = await activitiesRoute.PUT(makePutReq({ status: 'cancelled' }), {
+      params: Promise.resolve({ id: '1' }),
+    });
+
+    expect(res.status).toBe(200);
+    expect(mocks.mockSendDatabaseNotification).toHaveBeenCalledTimes(2);
+    expect(mocks.mockSendDatabaseNotification).toHaveBeenCalledWith({
+      userId: 21,
+      type: 'activity_update',
+      title: 'Hoạt động đã hủy',
+      message: 'Hoạt động "Cancelled Activity" đã bị hủy.',
+      relatedTable: 'activities',
+      relatedId: 1,
+    });
+  });
+
+  it('DELETE uses notification helper when deleting an activity with participants', async () => {
+    mocks.mockGetActivityById.mockResolvedValueOnce({
+      ...existingActivity,
+      status: 'published',
+      title: 'Deleted Activity',
+    });
+    mocks.mockDbAll.mockResolvedValueOnce([{ student_id: 31 }]);
+
+    const res = await activitiesRoute.DELETE({} as any, {
+      params: Promise.resolve({ id: '1' }),
+    });
+
+    expect(res.status).toBe(200);
+    expect(mocks.mockSendDatabaseNotification).toHaveBeenCalledWith({
+      userId: 31,
+      type: 'activity_update',
+      title: 'Hoạt động đã bị xóa',
+      message: 'Hoạt động "Deleted Activity" đã bị xóa.',
+      relatedTable: 'activities',
+      relatedId: 1,
+    });
   });
 
   it('GET exposes class-scope mismatch to student viewers and disables self-registration', async () => {

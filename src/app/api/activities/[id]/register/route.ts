@@ -9,7 +9,11 @@ import {
   withTransaction,
 } from '@/lib/database';
 import { evaluateRegistrationPolicies } from '@/lib/activity-service';
-import { notificationService, ActivityRegistrationNotification } from '@/lib/notifications';
+import {
+  notificationService,
+  ActivityRegistrationNotification,
+  sendDatabaseNotification,
+} from '@/lib/notifications';
 import { requireApiRole } from '@/lib/guards';
 import { rateLimit } from '@/lib/rateLimit';
 import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
@@ -340,16 +344,14 @@ export async function DELETE(
     );
 
     // Tạo thông báo cho học viên
-    await dbRun(
-      `INSERT INTO notifications (user_id, type, title, message, related_table, related_id, is_read, created_at)
-       VALUES (?, 'registration', ?, ?, 'activities', ?, 0, datetime('now'))`,
-      [
-        user.id,
-        'Hủy đăng ký thành công',
-        `Bạn đã hủy đăng ký hoạt động "${activity.title}".`,
-        activityId,
-      ]
-    );
+    await sendDatabaseNotification({
+      userId: Number(user.id),
+      type: 'registration',
+      title: 'Hủy đăng ký thành công',
+      message: `Bạn đã hủy đăng ký hoạt động "${activity.title}".`,
+      relatedTable: 'activities',
+      relatedId: activityId,
+    });
 
     // Tạo thông báo cho giảng viên
     await dbRun(

@@ -6,6 +6,71 @@ describe('registration route cancel semantics', () => {
     vi.clearAllMocks();
   });
 
+  it('uses notification helper for successful self-cancel', async () => {
+    const mockSendDatabaseNotification = vi.fn(async () => undefined);
+
+    vi.doMock('@/lib/guards', () => ({
+      requireApiRole: async () => ({
+        id: 201,
+        role: 'student',
+        class_id: 1,
+        name: 'Student Cancel',
+      }),
+    }));
+
+    vi.doMock('@/lib/notifications', () => ({
+      notificationService: { send: vi.fn(async () => undefined) },
+      ActivityRegistrationNotification: class {},
+      sendDatabaseNotification: mockSendDatabaseNotification,
+    }));
+
+    vi.doMock('@/lib/database', () => ({
+      ensureParticipationColumns: vi.fn(async () => undefined),
+      withTransaction: vi.fn(async (callback: any) => callback()),
+      dbAll: async () => [],
+      dbGet: async (sql: string) => {
+        if (sql.includes('SELECT * FROM activities')) {
+          return {
+            id: 77,
+            status: 'published',
+            title: 'Cancel Notify Activity',
+            date_time: new Date(Date.now() + 3 * 86_400_000).toISOString(),
+            location: 'Room B',
+          };
+        }
+
+        if (sql.includes('FROM participations')) {
+          return {
+            id: 902,
+            attendance_status: 'registered',
+            participation_source: 'voluntary',
+          };
+        }
+
+        return null;
+      },
+      dbRun: async () => ({ changes: 1 }),
+      dbHelpers: {
+        createAuditLog: async () => undefined,
+      },
+    }));
+
+    const route = await import('../src/app/api/activities/[id]/register/route');
+    const res: any = await route.DELETE({} as any, {
+      params: Promise.resolve({ id: '77' }),
+    } as any);
+
+    expect(res.status).toBe(200);
+    expect(mockSendDatabaseNotification).toHaveBeenCalledWith({
+      userId: 201,
+      type: 'registration',
+      title: 'Hủy đăng ký thành công',
+      message: 'Bạn đã hủy đăng ký hoạt động "Cancel Notify Activity".',
+      relatedTable: 'activities',
+      relatedId: 77,
+    });
+  });
+
   it('returns success noop when the student has no registration to cancel', async () => {
     vi.doMock('@/lib/guards', () => ({
       requireApiRole: async () => ({

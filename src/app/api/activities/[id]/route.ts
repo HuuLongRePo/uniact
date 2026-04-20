@@ -13,6 +13,7 @@ import { cache } from '@/lib/cache';
 import { validateUpdateActivityBody } from '@/lib/activity-validation';
 import { validateTransition, type ActivityStatus } from '@/lib/activity-workflow';
 import { teacherCanAccessActivity } from '@/lib/activity-access';
+import { sendDatabaseNotification } from '@/lib/notifications';
 
 type ActivityDetailRecord = {
   id: number;
@@ -272,16 +273,14 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         if (participants && Array.isArray(participants) && participants.length > 0) {
           for (const p of participants) {
             if (p.student_id) {
-              await dbRun(
-                `INSERT INTO notifications (user_id, type, title, message, related_table, related_id, is_read, created_at)
-                 VALUES (?, 'activity_update', ?, ?, 'activities', ?, 0, datetime('now'))`,
-                [
-                  p.student_id,
-                  'Hoạt động đã hủy',
-                  `Hoạt động "${existingActivity.title}" đã bị hủy.`,
-                  activityId,
-                ]
-              );
+              await sendDatabaseNotification({
+                userId: Number(p.student_id),
+                type: 'activity_update',
+                title: 'Hoạt động đã hủy',
+                message: `Hoạt động "${existingActivity.title}" đã bị hủy.`,
+                relatedTable: 'activities',
+                relatedId: activityId,
+              });
             }
           }
         }
@@ -488,16 +487,14 @@ export async function DELETE(
       if (participants && Array.isArray(participants) && participants.length > 0) {
         for (const p of participants) {
           if (p.student_id) {
-            await dbRun(
-              `INSERT INTO notifications (user_id, type, title, message, related_table, related_id, is_read, created_at)
-               VALUES (?, 'activity_update', ?, ?, 'activities', ?, 0, datetime('now'))`,
-              [
-                p.student_id,
-                'Hoạt động đã bị xóa',
-                `Hoạt động "${activity.title}" đã bị xóa.`,
-                activityId,
-              ]
-            );
+            await sendDatabaseNotification({
+              userId: Number(p.student_id),
+              type: 'activity_update',
+              title: 'Hoạt động đã bị xóa',
+              message: `Hoạt động "${activity.title}" đã bị xóa.`,
+              relatedTable: 'activities',
+              relatedId: activityId,
+            });
           }
         }
       }
