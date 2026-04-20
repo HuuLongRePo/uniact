@@ -1,4 +1,8 @@
-import { FACE_BIOMETRIC_RUNTIME_ENABLED, FACE_BIOMETRIC_RUNTIME_MODE } from './face-runtime';
+import {
+  FACE_BIOMETRIC_RUNTIME_ENABLED,
+  FACE_BIOMETRIC_RUNTIME_MODE,
+  getFaceModelLoadState,
+} from './face-runtime';
 
 export type FaceRuntimeCapability = {
   runtime_enabled: boolean;
@@ -11,6 +15,8 @@ export type FaceRuntimeCapability = {
 };
 
 export function getFaceRuntimeCapability(): FaceRuntimeCapability {
+  const modelLoadState = getFaceModelLoadState();
+
   if (!FACE_BIOMETRIC_RUNTIME_ENABLED) {
     return {
       runtime_enabled: false,
@@ -45,13 +51,26 @@ export function getFaceRuntimeCapability(): FaceRuntimeCapability {
     };
   }
 
+  const modelLoadingReady = modelLoadState.status === 'ready';
+
   return {
     runtime_enabled: true,
-    model_loading_ready: true,
-    embedding_detection_ready: true,
-    liveness_check_ready: true,
-    attendance_api_accepting_runtime_verification: true,
+    model_loading_ready: modelLoadingReady,
+    embedding_detection_ready: false,
+    liveness_check_ready: false,
+    attendance_api_accepting_runtime_verification: false,
     mode: 'runtime_ready',
-    blockers: [],
+    blockers: modelLoadingReady
+      ? [
+          'Embedding detection chưa sẵn sàng cho production',
+          'Liveness check chưa sẵn sàng cho production',
+        ]
+      : [
+          modelLoadState.status === 'failed'
+            ? `Model loading thất bại: ${modelLoadState.lastError || 'Unknown model load error'}`
+            : 'Model loading chưa hoàn tất cho runtime thật',
+          'Embedding detection chưa sẵn sàng cho production',
+          'Liveness check chưa sẵn sàng cho production',
+        ],
   };
 }
