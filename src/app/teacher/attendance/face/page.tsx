@@ -103,6 +103,13 @@ export default function TeacherFaceAttendancePage() {
         );
       }
 
+      if (result.landmarks?.positions && result.landmarks.positions.length > 120) {
+        throw new FaceDetectionError(
+          'MULTIPLE_FACES_DETECTED',
+          'Phát hiện nhiều khuôn mặt, hãy chỉ giữ một người trong khung hình'
+        );
+      }
+
       if (result.detection?.box?.width && result.detection.box.width < 80) {
         throw new FaceDetectionError(
           'LOW_IMAGE_QUALITY',
@@ -114,8 +121,10 @@ export default function TeacherFaceAttendancePage() {
       if (result.qualityScore < 60) {
         throw new Error('Ảnh từ camera chưa đủ rõ để tạo candidate embedding');
       }
-      if (liveness.score < 0.7) {
-        throw new Error('Liveness check từ camera chưa đủ để tạo candidate embedding');
+      if (!liveness.passed || liveness.score < 0.7) {
+        throw new Error(
+          liveness.details?.[0] || 'Liveness check từ camera chưa đủ để tạo candidate embedding'
+        );
       }
       setEmbeddingInput(result.embedding.join(', '));
       setQualityScore(String(result.qualityScore));

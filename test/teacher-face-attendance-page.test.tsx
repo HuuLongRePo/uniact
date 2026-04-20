@@ -134,6 +134,58 @@ describe('TeacherFaceAttendancePage', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it('surfaces multiple-face camera errors before preview submission', async () => {
+    detectSingleEmbeddingMock.mockResolvedValue({
+      embedding: [0.4, 0.5, 0.6],
+      qualityScore: 88,
+      landmarks: { positions: new Array(121).fill({ x: 1, y: 1 }) },
+      detection: { box: { width: 140, height: 140 } },
+    });
+    performLivenessCheckMock.mockResolvedValue({ score: 0.94, passed: true, details: [] });
+
+    const fetchMock = vi.fn() as any;
+    vi.stubGlobal('fetch', fetchMock);
+    window.fetch = fetchMock as typeof fetch;
+
+    const Page = (await import('../src/app/teacher/attendance/face/page')).default;
+    render(<Page />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Lấy candidate từ camera' }));
+
+    await waitFor(() => {
+      expect(toastErrorMock).toHaveBeenCalledWith('Phát hiện nhiều khuôn mặt, hãy chỉ giữ một người trong khung hình');
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('surfaces liveness detail errors before preview submission', async () => {
+    detectSingleEmbeddingMock.mockResolvedValue({
+      embedding: [0.4, 0.5, 0.6],
+      qualityScore: 88,
+      landmarks: { positions: [{ x: 1, y: 1 }] },
+      detection: { box: { width: 140, height: 140 } },
+    });
+    performLivenessCheckMock.mockResolvedValue({
+      score: 0.62,
+      passed: false,
+      details: ['Cần chớp mắt hoặc xoay đầu rõ hơn để vượt qua liveness check'],
+    });
+
+    const fetchMock = vi.fn() as any;
+    vi.stubGlobal('fetch', fetchMock);
+    window.fetch = fetchMock as typeof fetch;
+
+    const Page = (await import('../src/app/teacher/attendance/face/page')).default;
+    render(<Page />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Lấy candidate từ camera' }));
+
+    await waitFor(() => {
+      expect(toastErrorMock).toHaveBeenCalledWith('Cần chớp mắt hoặc xoay đầu rõ hơn để vượt qua liveness check');
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it('surfaces verification failure state on the face attendance page', async () => {
     const fetchMock = vi
       .fn()
