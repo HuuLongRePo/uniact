@@ -44,6 +44,10 @@ export default function AdminApprovalsPage() {
     }
   };
 
+  const closeModal = () => {
+    setModal({ type: 'approve', activityId: null });
+  };
+
   const handleApprove = async (data: any) => {
     if (!modal.activityId) return;
     try {
@@ -53,9 +57,10 @@ export default function AdminApprovalsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'approve', notes: data.content || '' }),
       });
-      if (!response.ok) throw new Error('Không thể phê duyệt hoạt động');
-      toast.success('Đã phê duyệt hoạt động');
-      setModal({ type: 'approve', activityId: null });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(body.error || 'Không thể phê duyệt hoạt động');
+      toast.success(body.message || 'Đã phê duyệt hoạt động');
+      closeModal();
       fetchPendingActivities();
     } catch (error: any) {
       toast.error(error.message || 'Không thể phê duyệt hoạt động');
@@ -73,9 +78,10 @@ export default function AdminApprovalsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'reject', notes: data.content }),
       });
-      if (!response.ok) throw new Error('Không thể từ chối hoạt động');
-      toast.success('Đã từ chối hoạt động');
-      setModal({ type: 'reject', activityId: null });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(body.error || 'Không thể từ chối hoạt động');
+      toast.success(body.message || 'Đã từ chối hoạt động');
+      closeModal();
       fetchPendingActivities();
     } catch (error: any) {
       toast.error(error.message || 'Không thể từ chối hoạt động');
@@ -152,7 +158,7 @@ export default function AdminApprovalsPage() {
         type={modal.type}
         isOpen={modal.activityId !== null}
         activityId={modal.activityId}
-        onClose={() => setModal({ type: 'approve', activityId: null })}
+        onClose={closeModal}
         onSubmit={modal.type === 'approve' ? handleApprove : handleReject}
         loading={actionLoading}
       />

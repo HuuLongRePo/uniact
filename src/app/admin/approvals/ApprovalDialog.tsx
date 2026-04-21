@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 interface ApprovalDialogProps {
   type: 'approve' | 'reject';
@@ -20,6 +20,10 @@ export default function ApprovalDialog({
   loading,
 }: ApprovalDialogProps) {
   const [content, setContent] = useState('');
+
+  useEffect(() => {
+    setContent('');
+  }, [isOpen, type, activityId]);
 
   if (!isOpen) return null;
 
