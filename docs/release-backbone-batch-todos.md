@@ -208,10 +208,11 @@ Yeu cau:
 - [ ] Giang vien runtime scan:
   - camera stream
   - matching threshold + quality/liveness checks
-- [ ] Face training authorization:
-  - Admin duoc train khuon mat toan truong
-  - Giang vien chi duoc train hoc vien thuoc cac lop do minh chu nhiem
-  - Chan thao tac voi hoc vien ngoai pham vi
+- [x] Face training authorization:
+  - [x] Admin duoc train/enroll khuon mat toan truong.
+  - [x] Giang vien chi duoc train/enroll hoc vien thuoc cac lop chu nhiem (primary/homeroom).
+  - [x] Chan thao tac voi hoc vien ngoai pham vi + tra loi 403 ro rang + co audit log.
+  - [x] Bo sung route UI teacher: `/teacher/biometrics` (du lieu scope homeroom).
 - [ ] Hoc vien thong bao realtime:
   - "Ban da duoc diem danh thanh cong"
 - [ ] Thiet ke API FaceID:

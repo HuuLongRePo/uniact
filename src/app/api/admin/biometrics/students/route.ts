@@ -10,8 +10,26 @@ function computeReady(enrollmentStatus: string, trainingStatus: string) {
 
 export async function GET(request: Request) {
   try {
-    await requireApiRole(request, ['admin']);
+    const user = await requireApiRole(request, ['admin', 'teacher']);
     await ensureStudentBiometricSchema();
+
+    const teacherScopeSql =
+      user.role === 'teacher'
+        ? `
+        AND (
+          c.teacher_id = ?
+          OR EXISTS (
+            SELECT 1
+            FROM class_teachers ct
+            WHERE ct.class_id = c.id
+              AND ct.teacher_id = ?
+              AND ct.role = 'primary'
+          )
+        )
+      `
+        : '';
+
+    const teacherScopeParams = user.role === 'teacher' ? [Number(user.id), Number(user.id)] : [];
 
     const students = await dbAll(
       `SELECT
@@ -30,8 +48,10 @@ export async function GET(request: Request) {
        LEFT JOIN classes c ON c.id = u.class_id
        LEFT JOIN student_biometric_profiles sbp ON sbp.student_id = u.id
        WHERE u.role = 'student'
+       ${teacherScopeSql}
        ORDER BY u.name ASC
-       LIMIT 200`
+       LIMIT 200`,
+      teacherScopeParams
     );
 
     const rows = students.map((student: any) => {
@@ -56,8 +76,8 @@ export async function GET(request: Request) {
           blocker: ready
             ? null
             : FACE_BIOMETRIC_RUNTIME_ENABLED
-              ? 'Chưa đủ enrollment hoặc training data cho học viên'
-              : 'Face biometric runtime đang bị tắt',
+              ? 'Chua du enrollment hoac training data cho hoc vien'
+              : 'Face biometric runtime dang bi tat',
         },
       };
     });
@@ -71,6 +91,7 @@ export async function GET(request: Request) {
         missing_count: rows.filter((student) => !student.biometric_readiness.face_attendance_ready)
           .length,
       },
+      scope: user.role === 'teacher' ? 'teacher_homeroom' : 'admin_all_students',
     });
   } catch (error) {
     if (error instanceof ApiError) {
@@ -78,6 +99,6 @@ export async function GET(request: Request) {
     }
 
     console.error('Biometric students route error:', error);
-    return errorResponse(ApiError.internalError('Không thể tải biometric readiness theo học viên'));
+    return errorResponse(ApiError.internalError('Khong the tai biometric readiness theo hoc vien'));
   }
 }

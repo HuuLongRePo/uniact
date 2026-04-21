@@ -34,17 +34,20 @@ export default function AdminBiometricsPage() {
   const [error, setError] = useState('');
   const [updatingStudentId, setUpdatingStudentId] = useState<number | null>(null);
   const [trainingStudentId, setTrainingStudentId] = useState<number | null>(null);
+  const userId = Number(user?.id || 0);
+  const userRole = user?.role;
+  const canManageBiometric = userRole === 'admin' || userRole === 'teacher';
 
   useEffect(() => {
-    if (!authLoading && (!user || user.role !== 'admin')) {
+    if (!authLoading && (!userId || !canManageBiometric)) {
       router.push('/login');
       return;
     }
 
-    if (user) {
+    if (userId && canManageBiometric) {
       void fetchData();
     }
-  }, [authLoading, router, user]);
+  }, [authLoading, canManageBiometric, router, userId]);
 
   const fetchData = async () => {
     try {

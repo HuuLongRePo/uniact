@@ -38,4 +38,21 @@ describe('GET /api/admin/biometrics/students', () => {
       },
     });
   });
+
+  it('filters student list by homeroom scope for teacher role', async () => {
+    requireApiRoleMock.mockResolvedValue({ id: 7, role: 'teacher' });
+    dbAllMock.mockResolvedValue([]);
+
+    const route = await import('../src/app/api/admin/biometrics/students/route');
+    const response = await route.GET(new Request('http://localhost/api/admin/biometrics/students'));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.data.scope).toBe('teacher_homeroom');
+
+    const [query, params] = dbAllMock.mock.calls[0] as [string, number[]];
+    expect(query).toContain('ct.role = \'primary\'');
+    expect(query).toContain('c.teacher_id = ?');
+    expect(params).toEqual([7, 7]);
+  });
 });

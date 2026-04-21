@@ -1,9 +1,10 @@
 import { requireApiRole } from '@/lib/guards';
 import { successResponse, ApiError, errorResponse } from '@/lib/api-response';
-import { dbGet, dbRun } from '@/lib/database';
+import { dbGet, dbHelpers, dbRun } from '@/lib/database';
 import { ensureStudentBiometricSchema } from '@/infrastructure/db/student-biometric-schema';
 import { FACE_BIOMETRIC_RUNTIME_ENABLED } from '@/lib/biometrics/face-runtime';
 import { encryptEmbedding } from '@/lib/biometrics/encryption';
+import { getTeacherStudentHomeroomScope } from '@/lib/teacher-student-scope';
 
 function computeReady(enrollmentStatus: string, trainingStatus: string) {
   return FACE_BIOMETRIC_RUNTIME_ENABLED && enrollmentStatus === 'ready' && trainingStatus === 'trained';
@@ -11,13 +12,13 @@ function computeReady(enrollmentStatus: string, trainingStatus: string) {
 
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    await requireApiRole(request, ['admin']);
+    const user = await requireApiRole(request, ['admin', 'teacher']);
     await ensureStudentBiometricSchema();
 
     const { id } = await context.params;
     const studentId = Number(id);
     if (!Number.isFinite(studentId)) {
-      throw ApiError.validation('ID học viên không hợp lệ');
+      throw ApiError.validation('ID hoc vien khong hop le');
     }
 
     const body = await request.json().catch(() => ({}));
@@ -25,16 +26,53 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     const notes = typeof body?.notes === 'string' ? body.notes.trim() : null;
     const trainingVersion = typeof body?.training_version === 'string' ? body.training_version.trim() : null;
     const embeddingInput = Array.isArray(body?.face_embedding)
-      ? body.face_embedding.map((value: unknown) => Number(value)).filter((value: number) => Number.isFinite(value))
+      ? body.face_embedding
+          .map((value: unknown) => Number(value))
+          .filter((value: number) => Number.isFinite(value))
       : null;
 
     if (!['pending', 'trained', 'failed'].includes(trainingStatus)) {
-      throw ApiError.validation('training_status không hợp lệ');
+      throw ApiError.validation('training_status khong hop le');
     }
 
-    const student = await dbGet(`SELECT id FROM users WHERE id = ? AND role = 'student'`, [studentId]);
-    if (!student) {
-      throw ApiError.notFound('Không tìm thấy học viên');
+    let classScope = 'all_school';
+
+    if (user.role === 'teacher') {
+      const teacherScope = await getTeacherStudentHomeroomScope(Number(user.id), studentId);
+      if (!teacherScope) {
+        throw ApiError.notFound('Khong tim thay hoc vien');
+      }
+
+      classScope = teacherScope.classId ? `homeroom:${teacherScope.classId}` : 'homeroom:unassigned';
+
+      if (!teacherScope.inScope) {
+        try {
+          await dbHelpers.createAuditLog({
+            actor_id: Number(user.id),
+            action: 'biometric_training_denied_out_of_scope',
+            target_table: 'student_biometric_profiles',
+            target_id: studentId,
+            details: {
+              actor_role: user.role,
+              student_id: studentId,
+              class_scope: classScope,
+              training_status: trainingStatus,
+              result: 'forbidden_out_of_scope',
+            },
+          });
+        } catch (auditError) {
+          console.warn('Failed to write biometric training denied audit log:', auditError);
+        }
+
+        throw ApiError.forbidden(
+          'Giang vien chi duoc thao tac khuon mat voi hoc vien thuoc lop chu nhiem'
+        );
+      }
+    } else {
+      const student = await dbGet(`SELECT id FROM users WHERE id = ? AND role = 'student'`, [studentId]);
+      if (!student) {
+        throw ApiError.notFound('Khong tim thay hoc vien');
+      }
     }
 
     const existingProfile = await dbGet(
@@ -43,12 +81,14 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     );
 
     const sampleImageCount = Number(existingProfile?.sample_image_count || 0);
-    const encryptedEmbedding = embeddingInput && embeddingInput.length > 0
-      ? await encryptEmbedding(embeddingInput, studentId)
-      : null;
-    const nextEnrollmentStatus = trainingStatus === 'trained'
-      ? 'ready'
-      : existingProfile?.enrollment_status || (sampleImageCount > 0 ? 'captured' : 'missing');
+    const encryptedEmbedding =
+      embeddingInput && embeddingInput.length > 0
+        ? await encryptEmbedding(embeddingInput, studentId)
+        : null;
+    const nextEnrollmentStatus =
+      trainingStatus === 'trained'
+        ? 'ready'
+        : existingProfile?.enrollment_status || (sampleImageCount > 0 ? 'captured' : 'missing');
 
     await dbRun(
       `INSERT INTO student_biometric_profiles (
@@ -81,6 +121,26 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       ]
     );
 
+    try {
+      await dbHelpers.createAuditLog({
+        actor_id: Number(user.id),
+        action: 'biometric_training_update',
+        target_table: 'student_biometric_profiles',
+        target_id: studentId,
+        details: {
+          actor_role: user.role,
+          student_id: studentId,
+          class_scope: classScope,
+          training_status: trainingStatus,
+          training_version: trainingVersion || null,
+          has_face_embedding: Boolean(encryptedEmbedding),
+          result: 'success',
+        },
+      });
+    } catch (auditError) {
+      console.warn('Failed to write biometric training audit log:', auditError);
+    }
+
     return successResponse({
       student_id: studentId,
       enrollment_status: nextEnrollmentStatus,
@@ -97,6 +157,6 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     }
 
     console.error('Student biometric training route error:', error);
-    return errorResponse(ApiError.internalError('Không thể cập nhật training biometric học viên'));
+    return errorResponse(ApiError.internalError('Khong the cap nhat training biometric hoc vien'));
   }
 }

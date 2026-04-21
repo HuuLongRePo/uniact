@@ -1,26 +1,61 @@
 import { requireApiRole } from '@/lib/guards';
 import { successResponse, ApiError, errorResponse } from '@/lib/api-response';
-import { dbGet, dbRun } from '@/lib/database';
+import { dbGet, dbHelpers, dbRun } from '@/lib/database';
 import { ensureStudentBiometricSchema } from '@/infrastructure/db/student-biometric-schema';
+import { getTeacherStudentHomeroomScope } from '@/lib/teacher-student-scope';
 
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    await requireApiRole(request, ['admin']);
+    const user = await requireApiRole(request, ['admin', 'teacher']);
     await ensureStudentBiometricSchema();
 
     const { id } = await context.params;
     const studentId = Number(id);
     if (!Number.isFinite(studentId)) {
-      throw ApiError.validation('ID học viên không hợp lệ');
+      throw ApiError.validation('ID hoc vien khong hop le');
     }
 
     const body = await request.json().catch(() => ({}));
     const sampleImageDelta = Math.max(1, Number(body?.sample_image_count_delta ?? 1));
     const notes = typeof body?.notes === 'string' ? body.notes.trim() : null;
 
-    const student = await dbGet(`SELECT id FROM users WHERE id = ? AND role = 'student'`, [studentId]);
-    if (!student) {
-      throw ApiError.notFound('Không tìm thấy học viên');
+    let classScope = 'all_school';
+
+    if (user.role === 'teacher') {
+      const teacherScope = await getTeacherStudentHomeroomScope(Number(user.id), studentId);
+      if (!teacherScope) {
+        throw ApiError.notFound('Khong tim thay hoc vien');
+      }
+
+      classScope = teacherScope.classId ? `homeroom:${teacherScope.classId}` : 'homeroom:unassigned';
+
+      if (!teacherScope.inScope) {
+        try {
+          await dbHelpers.createAuditLog({
+            actor_id: Number(user.id),
+            action: 'biometric_enrollment_denied_out_of_scope',
+            target_table: 'student_biometric_profiles',
+            target_id: studentId,
+            details: {
+              actor_role: user.role,
+              student_id: studentId,
+              class_scope: classScope,
+              result: 'forbidden_out_of_scope',
+            },
+          });
+        } catch (auditError) {
+          console.warn('Failed to write biometric enrollment denied audit log:', auditError);
+        }
+
+        throw ApiError.forbidden(
+          'Giang vien chi duoc thao tac khuon mat voi hoc vien thuoc lop chu nhiem'
+        );
+      }
+    } else {
+      const student = await dbGet(`SELECT id FROM users WHERE id = ? AND role = 'student'`, [studentId]);
+      if (!student) {
+        throw ApiError.notFound('Khong tim thay hoc vien');
+      }
     }
 
     await dbRun(
@@ -43,6 +78,24 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       [studentId]
     );
 
+    try {
+      await dbHelpers.createAuditLog({
+        actor_id: Number(user.id),
+        action: 'biometric_enrollment_update',
+        target_table: 'student_biometric_profiles',
+        target_id: studentId,
+        details: {
+          actor_role: user.role,
+          student_id: studentId,
+          class_scope: classScope,
+          sample_image_count_delta: sampleImageDelta,
+          result: 'success',
+        },
+      });
+    } catch (auditError) {
+      console.warn('Failed to write biometric enrollment audit log:', auditError);
+    }
+
     return successResponse({
       student_id: Number(profile.student_id),
       enrollment_status: profile.enrollment_status,
@@ -56,6 +109,6 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     }
 
     console.error('Student biometric enrollment route error:', error);
-    return errorResponse(ApiError.internalError('Không thể cập nhật enrollment biometric học viên'));
+    return errorResponse(ApiError.internalError('Khong the cap nhat enrollment biometric hoc vien'));
   }
 }
