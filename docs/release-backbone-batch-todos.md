@@ -378,7 +378,9 @@ Yeu cau:
 - [x] Dedupe push toast theo `notification.id` / `event_id` de tranh cung 1 thong bao lap lai nhieu lan.
 - [x] Them helper camera fallback dung chung cho QR scanner + FaceID login/attendance.
 - [x] Trang quan ly hoat dong cua giang vien hien CTA `Diem danh` neu activity dang co active QR session.
-- [ ] Chay lai cum test/build/lint cho batch uu tien nong va commit rieng.
+- [x] Chay lai cum test/build/lint cho batch uu tien nong va commit rieng.
+  - [x] Test/build tiep dien sau loat uu tien nong + shell modernization da pass (2026-04-22).
+  - [x] Commits lien quan: `3d16b1c` (QR/notification/camera) + `4c54435` (navbar shell/check-in/dark-mode).
 
 ### Prompt bo sung (copy de chay batch nay)
 
