@@ -45,8 +45,15 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const apiError =
       error instanceof ApiError
         ? error
-        : error instanceof Error && typeof (error as any).status === 'number' && typeof (error as any).code === 'string'
-          ? new ApiError((error as any).code, error.message, (error as any).status, (error as any).details)
+        : error instanceof Error &&
+            typeof (error as any).status === 'number' &&
+            typeof (error as any).code === 'string'
+          ? new ApiError(
+              (error as any).code,
+              error.message,
+              (error as any).status,
+              (error as any).details
+            )
           : ApiError.internalError('Không thể tải thông tin lớp', { details: error?.message });
 
     return errorResponse(apiError);
@@ -131,8 +138,15 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const apiError =
       error instanceof ApiError
         ? error
-        : error instanceof Error && typeof (error as any).status === 'number' && typeof (error as any).code === 'string'
-          ? new ApiError((error as any).code, error.message, (error as any).status, (error as any).details)
+        : error instanceof Error &&
+            typeof (error as any).status === 'number' &&
+            typeof (error as any).code === 'string'
+          ? new ApiError(
+              (error as any).code,
+              error.message,
+              (error as any).status,
+              (error as any).details
+            )
           : ApiError.internalError('Không thể cập nhật lớp', { details: error?.message });
 
     return errorResponse(apiError);
@@ -161,7 +175,9 @@ export async function DELETE(
     const students = await dbAll('SELECT id FROM users WHERE class_id = ?', [classId]);
     if (students.length > 0) {
       return errorResponse(
-        ApiError.validation('Không thể xóa lớp đang có học viên. Hãy chuyển lớp cho học viên trước.')
+        ApiError.validation(
+          'Không thể xóa lớp đang có học viên. Hãy chuyển lớp cho học viên trước.'
+        )
       );
     }
 
@@ -180,8 +196,15 @@ export async function DELETE(
     const apiError =
       error instanceof ApiError
         ? error
-        : error instanceof Error && typeof (error as any).status === 'number' && typeof (error as any).code === 'string'
-          ? new ApiError((error as any).code, error.message, (error as any).status, (error as any).details)
+        : error instanceof Error &&
+            typeof (error as any).status === 'number' &&
+            typeof (error as any).code === 'string'
+          ? new ApiError(
+              (error as any).code,
+              error.message,
+              (error as any).status,
+              (error as any).details
+            )
           : ApiError.internalError('Không thể xóa lớp', { details: error?.message });
 
     return errorResponse(apiError);

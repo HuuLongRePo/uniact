@@ -179,7 +179,12 @@ export default function Sidebar() {
     {
       title: 'THÔNG BÁO & KHẢO SÁT',
       items: [
-        { label: 'Hộp thư thông báo', href: '/teacher/notifications', icon: Bell, badge: unreadCount },
+        {
+          label: 'Hộp thư thông báo',
+          href: '/teacher/notifications',
+          icon: Bell,
+          badge: unreadCount,
+        },
         { label: 'Thông báo học viên', href: '/teacher/notify-students', icon: Bell },
         { label: 'Khảo sát', href: '/teacher/polls', icon: ClipboardCheck },
         { label: 'Cảnh báo', href: '/teacher/alerts', icon: AlertTriangle },

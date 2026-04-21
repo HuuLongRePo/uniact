@@ -221,7 +221,11 @@ export async function POST(request: NextRequest) {
       activity_title: String(activity.title || ''),
       threshold: FACE_EMBEDDING_DISTANCE_THRESHOLD,
       evaluated_count: scoredCandidates.length,
-      reason: matched ? null : scoredCandidates.length > 0 ? 'distance_threshold_not_met' : 'no_valid_embeddings',
+      reason: matched
+        ? null
+        : scoredCandidates.length > 0
+          ? 'distance_threshold_not_met'
+          : 'no_valid_embeddings',
       candidate: matched ? bestCandidate : null,
       candidates: topCandidates,
     });

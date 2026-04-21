@@ -1381,7 +1381,10 @@ export const dbHelpers = {
         },
       });
 
-      return { success: result.created, failed: Math.max((admins || []).length - result.created, 0) };
+      return {
+        success: result.created,
+        failed: Math.max((admins || []).length - result.created, 0),
+      };
     } catch (err) {
       console.error('⚠️  Failed to load admins for approval submission notifications:', err);
       return { success: 0, failed: 0 };
@@ -1586,7 +1589,10 @@ export const dbHelpers = {
             relatedId: Number(row.activity_id),
             audit: {
               actorId: approver_id,
-              action: status === 'approved' ? 'activity_approval_teacher_notified' : 'activity_rejection_teacher_notified',
+              action:
+                status === 'approved'
+                  ? 'activity_approval_teacher_notified'
+                  : 'activity_rejection_teacher_notified',
               targetTable: 'activities',
               targetId: Number(row.activity_id),
               details: { approval_id, teacher_id: row.teacher_id, note: note || null },

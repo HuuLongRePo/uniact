@@ -34,7 +34,10 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error getting award types:', error);
-    return NextResponse.json({ error: 'Không thể tải danh sách loại khen thưởng' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Không thể tải danh sách loại khen thưởng' },
+      { status: 500 }
+    );
   }
 }
 

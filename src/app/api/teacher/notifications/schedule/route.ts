@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromToken } from '@/lib/auth';
 import { dbRun } from '@/lib/database';
 import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
-import { ensureScheduledNotificationsTable, getTeacherManagedStudentIds } from '@/lib/notifications';
+import {
+  ensureScheduledNotificationsTable,
+  getTeacherManagedStudentIds,
+} from '@/lib/notifications';
 
 // POST /api/teacher/notifications/schedule
 export async function POST(request: NextRequest) {
@@ -35,9 +38,13 @@ export async function POST(request: NextRequest) {
     }
 
     const managedStudentIds = await getTeacherManagedStudentIds(user.id);
-    const invalidStudentIds = normalizedStudentIds.filter((studentId) => !managedStudentIds.includes(studentId));
+    const invalidStudentIds = normalizedStudentIds.filter(
+      (studentId) => !managedStudentIds.includes(studentId)
+    );
     if (invalidStudentIds.length > 0) {
-      return errorResponse(ApiError.forbidden('Bạn chỉ có thể lên lịch thông báo cho học viên trong phạm vi quản lý'));
+      return errorResponse(
+        ApiError.forbidden('Bạn chỉ có thể lên lịch thông báo cho học viên trong phạm vi quản lý')
+      );
     }
 
     await ensureScheduledNotificationsTable();

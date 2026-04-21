@@ -267,7 +267,9 @@ export default function SystemHealthPage() {
               <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-4">
                 <div>
                   <div className="text-sm text-gray-600">Runtime</div>
-                  <div className={`font-bold ${data.biometric_readiness.runtime_enabled ? 'text-green-600' : 'text-amber-600'}`}>
+                  <div
+                    className={`font-bold ${data.biometric_readiness.runtime_enabled ? 'text-green-600' : 'text-amber-600'}`}
+                  >
                     {data.biometric_readiness.runtime_enabled ? 'Enabled' : 'Disabled'}
                   </div>
                 </div>
@@ -276,10 +278,13 @@ export default function SystemHealthPage() {
                   <div
                     className={`font-bold ${data.biometric_readiness.model_loading_ready ? 'text-green-600' : 'text-amber-600'}`}
                   >
-                    {data.biometric_readiness.model_loading_status || (data.biometric_readiness.model_loading_ready ? 'ready' : 'pending')}
+                    {data.biometric_readiness.model_loading_status ||
+                      (data.biometric_readiness.model_loading_ready ? 'ready' : 'pending')}
                   </div>
                   {data.biometric_readiness.runtime_mode && (
-                    <div className="text-xs text-gray-500">Mode: {data.biometric_readiness.runtime_mode}</div>
+                    <div className="text-xs text-gray-500">
+                      Mode: {data.biometric_readiness.runtime_mode}
+                    </div>
                   )}
                 </div>
                 <div>
@@ -287,25 +292,33 @@ export default function SystemHealthPage() {
                   <div
                     className={`font-bold ${data.biometric_readiness.liveness_check_ready ? 'text-green-600' : 'text-amber-600'}`}
                   >
-                    {data.biometric_readiness.liveness_status || (data.biometric_readiness.liveness_check_ready ? 'passed' : 'runtime_unavailable')}
+                    {data.biometric_readiness.liveness_status ||
+                      (data.biometric_readiness.liveness_check_ready
+                        ? 'passed'
+                        : 'runtime_unavailable')}
                   </div>
                 </div>
                 <div>
                   <div className="text-sm text-gray-600">Enrollment flow</div>
-                  <div className={`font-bold ${data.biometric_readiness.enrollment_flow_ready ? 'text-green-600' : 'text-amber-600'}`}>
+                  <div
+                    className={`font-bold ${data.biometric_readiness.enrollment_flow_ready ? 'text-green-600' : 'text-amber-600'}`}
+                  >
                     {data.biometric_readiness.enrollment_flow_ready ? 'Ready' : 'Missing'}
                   </div>
                 </div>
                 <div>
                   <div className="text-sm text-gray-600">Training route</div>
-                  <div className={`font-bold ${data.biometric_readiness.training_route_ready ? 'text-green-600' : 'text-amber-600'}`}>
+                  <div
+                    className={`font-bold ${data.biometric_readiness.training_route_ready ? 'text-green-600' : 'text-amber-600'}`}
+                  >
                     {data.biometric_readiness.training_route_ready ? 'Ready' : 'Missing'}
                   </div>
                 </div>
                 <div>
                   <div className="text-sm text-gray-600">Students ready</div>
                   <div className="font-bold text-blue-600">
-                    {data.biometric_readiness.students_ready_for_face_attendance}/{data.biometric_readiness.total_students}
+                    {data.biometric_readiness.students_ready_for_face_attendance}/
+                    {data.biometric_readiness.total_students}
                   </div>
                 </div>
               </div>

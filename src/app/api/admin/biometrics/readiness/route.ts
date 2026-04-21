@@ -8,7 +8,9 @@ export async function GET(request: NextRequest) {
   try {
     await requireApiRole(request, ['admin']);
 
-    const totalStudentsRow = await dbGet(`SELECT COUNT(*) as count FROM users WHERE role = 'student'`);
+    const totalStudentsRow = await dbGet(
+      `SELECT COUNT(*) as count FROM users WHERE role = 'student'`
+    );
 
     const runtimeCapability = getFaceRuntimeCapability();
 

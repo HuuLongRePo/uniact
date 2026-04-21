@@ -140,7 +140,9 @@ export default function NotificationInbox({
         throw new Error('Không thể đánh dấu đã đọc');
       }
 
-      setNotifications((prev) => prev.map((item) => (item.id === id ? { ...item, is_read: 1 } : item)));
+      setNotifications((prev) =>
+        prev.map((item) => (item.id === id ? { ...item, is_read: 1 } : item))
+      );
       setUnreadCount((prev) => Math.max(0, prev - 1));
     } catch (error) {
       console.error('Mark notification read error:', error);
@@ -165,7 +167,9 @@ export default function NotificationInbox({
       }
 
       const selected = new Set(selectedIds);
-      const newlyRead = notifications.filter((item) => selected.has(item.id) && !item.is_read).length;
+      const newlyRead = notifications.filter(
+        (item) => selected.has(item.id) && !item.is_read
+      ).length;
       setNotifications((prev) =>
         prev.map((item) => (selected.has(item.id) ? { ...item, is_read: 1 } : item))
       );
@@ -222,7 +226,9 @@ export default function NotificationInbox({
       }
 
       const selected = new Set(selectedIds);
-      const deletedUnread = notifications.filter((item) => selected.has(item.id) && !item.is_read).length;
+      const deletedUnread = notifications.filter(
+        (item) => selected.has(item.id) && !item.is_read
+      ).length;
       setNotifications((prev) => prev.filter((item) => !selected.has(item.id)));
       setSelectedIds(new Set());
       setUnreadCount((prev) => Math.max(0, prev - deletedUnread));
@@ -432,7 +438,9 @@ export default function NotificationInbox({
                     <div className="flex-1">
                       <h3 className="font-semibold text-gray-900">{notification.title}</h3>
                       <p className="mt-1 text-gray-700">{notification.message}</p>
-                      <p className="mt-2 text-sm text-gray-500">{formatDate(notification.created_at)}</p>
+                      <p className="mt-2 text-sm text-gray-500">
+                        {formatDate(notification.created_at)}
+                      </p>
                     </div>
                   </div>
                   {!notification.is_read && (

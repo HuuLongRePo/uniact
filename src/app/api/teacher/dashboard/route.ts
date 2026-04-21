@@ -54,8 +54,15 @@ export async function GET(request: NextRequest) {
     const apiError =
       error instanceof ApiError
         ? error
-        : error instanceof Error && typeof (error as any).status === 'number' && typeof (error as any).code === 'string'
-          ? new ApiError((error as any).code, error.message, (error as any).status, (error as any).details)
+        : error instanceof Error &&
+            typeof (error as any).status === 'number' &&
+            typeof (error as any).code === 'string'
+          ? new ApiError(
+              (error as any).code,
+              error.message,
+              (error as any).status,
+              (error as any).details
+            )
           : ApiError.internalError('Không thể lấy dữ liệu tổng quan', {
               details: error instanceof Error ? error.message : 'Unknown error',
             });

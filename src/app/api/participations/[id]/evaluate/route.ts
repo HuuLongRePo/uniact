@@ -26,7 +26,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const validLevels = ['excellent', 'good', 'participated'];
     if (!achievementLevel || !validLevels.includes(achievementLevel)) {
       return errorResponse(
-        ApiError.validation('Mức đánh giá không hợp lệ. Phải là: excellent, good, hoặc participated')
+        ApiError.validation(
+          'Mức đánh giá không hợp lệ. Phải là: excellent, good, hoặc participated'
+        )
       );
     }
 
@@ -39,7 +41,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
 
     if (participation.attendance_status !== 'attended') {
-      return errorResponse(ApiError.validation('Chỉ có thể đánh giá các lượt tham gia đã điểm danh'));
+      return errorResponse(
+        ApiError.validation('Chỉ có thể đánh giá các lượt tham gia đã điểm danh')
+      );
     }
 
     const result = await withTransaction(async () => {
@@ -66,10 +70,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           const awardTypeName = (awardBonus.description ||
             awardBonus.award_type ||
             awardType) as string;
-          await dbRun('INSERT OR IGNORE INTO award_types (name, description, min_points) VALUES (?, ?, 0)', [
-            awardTypeName,
-            `Award bonus (${awardType})`,
-          ]);
+          await dbRun(
+            'INSERT OR IGNORE INTO award_types (name, description, min_points) VALUES (?, ?, 0)',
+            [awardTypeName, `Award bonus (${awardType})`]
+          );
 
           const resolvedAwardType = (await dbGet(
             'SELECT id FROM award_types WHERE name = ? LIMIT 1',

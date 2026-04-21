@@ -38,7 +38,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       error instanceof ApiError ||
         (error && typeof error.status === 'number' && typeof error.code === 'string')
         ? error
-        : ApiError.internalError('Không thể gửi hoạt động để phê duyệt', { details: error?.message })
+        : ApiError.internalError('Không thể gửi hoạt động để phê duyệt', {
+            details: error?.message,
+          })
     );
   }
 }

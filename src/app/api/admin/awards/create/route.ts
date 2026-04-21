@@ -75,7 +75,9 @@ export async function POST(request: NextRequest) {
 
     if (!resolvedAwardTypeId) {
       return errorResponse(
-        ApiError.validation('Không tìm thấy loại khen thưởng. Vui lòng tạo trước trong Admin > Award Types.')
+        ApiError.validation(
+          'Không tìm thấy loại khen thưởng. Vui lòng tạo trước trong Admin > Award Types.'
+        )
       );
     }
 

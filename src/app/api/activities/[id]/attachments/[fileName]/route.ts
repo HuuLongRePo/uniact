@@ -48,7 +48,9 @@ export async function DELETE(
     }
 
     if (user.role === 'teacher' && !(await teacherCanAccessActivity(Number(user.id), activityId))) {
-      return errorResponse(ApiError.forbidden('Bạn không có quyền xóa file trong hoạt động thuộc phạm vi quản lý'));
+      return errorResponse(
+        ApiError.forbidden('Bạn không có quyền xóa file trong hoạt động thuộc phạm vi quản lý')
+      );
     }
 
     // Delete file

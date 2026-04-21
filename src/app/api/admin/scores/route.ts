@@ -95,7 +95,9 @@ export async function GET(request: NextRequest) {
       penalty_points: toNumber(score.penalty_points),
     }));
 
-    const ledgers = await getFinalScoreLedgerByStudentIds(rawScores.map((score) => Number(score.user_id)));
+    const ledgers = await getFinalScoreLedgerByStudentIds(
+      rawScores.map((score) => Number(score.user_id))
+    );
 
     const scores = rawScores
       .map((score) => ({

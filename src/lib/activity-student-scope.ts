@@ -47,6 +47,8 @@ export function buildActivityStudentScopePayload(
   return normalizeActivityStudentScope(state);
 }
 
-export function indexActivityScopedStudents(students: ActivityScopedStudent[]): Map<number, ActivityScopedStudent> {
+export function indexActivityScopedStudents(
+  students: ActivityScopedStudent[]
+): Map<number, ActivityScopedStudent> {
   return new Map(students.map((student) => [Number(student.id), student]));
 }

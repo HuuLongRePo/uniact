@@ -62,13 +62,14 @@ export function clampToastTtlSeconds(
   return Math.min(10, Math.max(5, Math.round(candidate)));
 }
 
-export function getToastDurationMs(priority: RealtimeNotificationPriority, ttlSeconds?: number | null) {
+export function getToastDurationMs(
+  priority: RealtimeNotificationPriority,
+  ttlSeconds?: number | null
+) {
   return clampToastTtlSeconds(priority, ttlSeconds) * 1000;
 }
 
-export function normalizeActionButtons(
-  actionButtons: unknown
-): RealtimeNotificationActionButton[] {
+export function normalizeActionButtons(actionButtons: unknown): RealtimeNotificationActionButton[] {
   if (!Array.isArray(actionButtons)) {
     return [];
   }

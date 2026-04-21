@@ -7,8 +7,7 @@ export async function POST(request: NextRequest) {
   try {
     const user = await getUserFromSession();
     if (!user) return errorResponse(ApiError.unauthorized('Chưa xác thực'));
-    if (user.role !== 'admin')
-      return errorResponse(ApiError.forbidden('Không có quyền truy cập'));
+    if (user.role !== 'admin') return errorResponse(ApiError.forbidden('Không có quyền truy cập'));
 
     const { studentIds, targetClassId } = await request.json();
 

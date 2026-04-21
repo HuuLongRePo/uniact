@@ -35,11 +35,15 @@ export async function GET(request: NextRequest) {
       activities_count: number;
     }>;
 
-    const ledgers = await getFinalScoreLedgerByStudentIds(studentRows.map((student) => student.user_id));
+    const ledgers = await getFinalScoreLedgerByStudentIds(
+      studentRows.map((student) => student.user_id)
+    );
 
     const leaderboard = studentRows
       .map((student) => {
-        const fallbackTotalPoints = Number((student as { total_points?: unknown }).total_points || 0);
+        const fallbackTotalPoints = Number(
+          (student as { total_points?: unknown }).total_points || 0
+        );
         const ledgerTotalPoints = Number(ledgers.get(Number(student.user_id))?.final_total || 0);
 
         return {

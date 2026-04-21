@@ -159,7 +159,11 @@ function normalizeClassScopes(
   const mandatorySet = new Set(normalizedMandatory);
   const derivedVoluntaryIds = shouldLegacyDefaultToVoluntary ? legacyClassIds || [] : [];
   const normalizedVoluntary = Array.from(
-    new Set([...derivedVoluntaryIds, ...(voluntaryClassIds || [])].filter((classId) => !mandatorySet.has(classId)))
+    new Set(
+      [...derivedVoluntaryIds, ...(voluntaryClassIds || [])].filter(
+        (classId) => !mandatorySet.has(classId)
+      )
+    )
   );
 
   return {

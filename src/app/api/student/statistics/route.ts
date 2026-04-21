@@ -84,7 +84,9 @@ export async function GET(request: NextRequest) {
       const studentRows = (await dbAll(
         `SELECT id FROM users WHERE role = 'student' ORDER BY id ASC`
       )) as Array<{ id: number }>;
-      const allLedgers = await getFinalScoreLedgerByStudentIds(studentRows.map((student) => student.id));
+      const allLedgers = await getFinalScoreLedgerByStudentIds(
+        studentRows.map((student) => student.id)
+      );
       allStudentsScores = studentRows.map((student) => ({
         id: student.id,
         total_points: allLedgers.get(Number(student.id))?.final_total || 0,

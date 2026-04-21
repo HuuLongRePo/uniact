@@ -6,7 +6,9 @@ import { FACE_BIOMETRIC_RUNTIME_ENABLED } from '@/lib/biometrics/face-runtime';
 import { ensureStudentBiometricSchema } from '@/infrastructure/db/student-biometric-schema';
 
 function computeReady(enrollmentStatus: string, trainingStatus: string) {
-  return FACE_BIOMETRIC_RUNTIME_ENABLED && enrollmentStatus === 'ready' && trainingStatus === 'trained';
+  return (
+    FACE_BIOMETRIC_RUNTIME_ENABLED && enrollmentStatus === 'ready' && trainingStatus === 'trained'
+  );
 }
 
 export async function PUT(request: NextRequest, context: { params: Promise<{ id: string }> }) {
@@ -25,7 +27,8 @@ export async function PUT(request: NextRequest, context: { params: Promise<{ id:
     const trainingStatus = String(body?.training_status || 'not_started');
     const sampleImageCount = Number(body?.sample_image_count ?? 0);
     const notes = typeof body?.notes === 'string' ? body.notes.trim() : null;
-    const trainingVersion = typeof body?.training_version === 'string' ? body.training_version.trim() : null;
+    const trainingVersion =
+      typeof body?.training_version === 'string' ? body.training_version.trim() : null;
 
     const validEnrollment = ['missing', 'captured', 'ready', 'failed'];
     const validTraining = ['not_started', 'pending', 'trained', 'failed'];
@@ -37,7 +40,9 @@ export async function PUT(request: NextRequest, context: { params: Promise<{ id:
       throw ApiError.validation('training_status không hợp lệ');
     }
 
-    const student = await dbGet(`SELECT id FROM users WHERE id = ? AND role = 'student'`, [studentId]);
+    const student = await dbGet(`SELECT id FROM users WHERE id = ? AND role = 'student'`, [
+      studentId,
+    ]);
     if (!student) {
       throw ApiError.notFound('Không tìm thấy học viên');
     }
@@ -54,7 +59,15 @@ export async function PUT(request: NextRequest, context: { params: Promise<{ id:
          training_version = excluded.training_version,
          last_trained_at = CASE WHEN excluded.training_status = 'trained' THEN CURRENT_TIMESTAMP ELSE student_biometric_profiles.last_trained_at END,
          updated_at = CURRENT_TIMESTAMP`,
-      [studentId, enrollmentStatus, trainingStatus, sampleImageCount, notes, trainingVersion, trainingStatus]
+      [
+        studentId,
+        enrollmentStatus,
+        trainingStatus,
+        sampleImageCount,
+        notes,
+        trainingVersion,
+        trainingStatus,
+      ]
     );
 
     return successResponse({

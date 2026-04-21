@@ -144,7 +144,9 @@ export async function POST(request: NextRequest) {
        ORDER BY created_at DESC
        LIMIT 1`,
       [activityId]
-    )) as { id: number; session_token: string; expires_at: string; metadata: string | null } | undefined;
+    )) as
+      | { id: number; session_token: string; expires_at: string; metadata: string | null }
+      | undefined;
 
     if (existingActiveSession) {
       return successResponse(
@@ -315,4 +317,3 @@ export async function GET(request: NextRequest) {
     return errorResponse(ApiError.internalError('Lỗi máy chủ nội bộ'));
   }
 }
-

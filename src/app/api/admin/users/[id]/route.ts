@@ -84,9 +84,18 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const apiError =
       error instanceof ApiError
         ? error
-        : error instanceof Error && typeof (error as any).status === 'number' && typeof (error as any).code === 'string'
-          ? new ApiError((error as any).code, error.message, (error as any).status, (error as any).details)
-          : ApiError.internalError('Không thể tải thông tin người dùng', { details: error?.message });
+        : error instanceof Error &&
+            typeof (error as any).status === 'number' &&
+            typeof (error as any).code === 'string'
+          ? new ApiError(
+              (error as any).code,
+              error.message,
+              (error as any).status,
+              (error as any).details
+            )
+          : ApiError.internalError('Không thể tải thông tin người dùng', {
+              details: error?.message,
+            });
 
     return errorResponse(apiError);
   }
@@ -307,8 +316,15 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const apiError =
       error instanceof ApiError
         ? error
-        : error instanceof Error && typeof (error as any).status === 'number' && typeof (error as any).code === 'string'
-          ? new ApiError((error as any).code, error.message, (error as any).status, (error as any).details)
+        : error instanceof Error &&
+            typeof (error as any).status === 'number' &&
+            typeof (error as any).code === 'string'
+          ? new ApiError(
+              (error as any).code,
+              error.message,
+              (error as any).status,
+              (error as any).details
+            )
           : ApiError.internalError('Không thể cập nhật người dùng', { details: error?.message });
 
     return errorResponse(apiError);
@@ -353,8 +369,15 @@ export async function DELETE(
     const apiError =
       error instanceof ApiError
         ? error
-        : error instanceof Error && typeof (error as any).status === 'number' && typeof (error as any).code === 'string'
-          ? new ApiError((error as any).code, error.message, (error as any).status, (error as any).details)
+        : error instanceof Error &&
+            typeof (error as any).status === 'number' &&
+            typeof (error as any).code === 'string'
+          ? new ApiError(
+              (error as any).code,
+              error.message,
+              (error as any).status,
+              (error as any).details
+            )
           : ApiError.internalError('Không thể vô hiệu hóa người dùng', { details: error?.message });
 
     return errorResponse(apiError);

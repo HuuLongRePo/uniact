@@ -158,7 +158,10 @@ export default function LoginPage() {
           </div>
           {shouldExplainMissingDemoPanel && (
             <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-              Demo account panel hiện chỉ hiển thị khi bạn bật <code className="rounded bg-amber-100 px-1">NEXT_PUBLIC_ENABLE_DEMO_ACCOUNTS=1</code> và <code className="rounded bg-amber-100 px-1">ENABLE_DEMO_ACCOUNTS=1</code> trên production.
+              Demo account panel hiện chỉ hiển thị khi bạn bật{' '}
+              <code className="rounded bg-amber-100 px-1">NEXT_PUBLIC_ENABLE_DEMO_ACCOUNTS=1</code>{' '}
+              và <code className="rounded bg-amber-100 px-1">ENABLE_DEMO_ACCOUNTS=1</code> trên
+              production.
             </div>
           )}
         </form>

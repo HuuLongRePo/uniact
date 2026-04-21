@@ -8,7 +8,9 @@ import { encryptEmbedding } from '@/lib/biometrics/encryption';
 import { getTeacherStudentHomeroomScope } from '@/lib/teacher-student-scope';
 
 function computeReady(enrollmentStatus: string, trainingStatus: string) {
-  return FACE_BIOMETRIC_RUNTIME_ENABLED && enrollmentStatus === 'ready' && trainingStatus === 'trained';
+  return (
+    FACE_BIOMETRIC_RUNTIME_ENABLED && enrollmentStatus === 'ready' && trainingStatus === 'trained'
+  );
 }
 
 export async function POST(request: NextRequest, context: { params: Promise<{ id: string }> }) {
@@ -25,7 +27,8 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     const body = await request.json().catch(() => ({}));
     const trainingStatus = String(body?.training_status || 'pending');
     const notes = typeof body?.notes === 'string' ? body.notes.trim() : null;
-    const trainingVersion = typeof body?.training_version === 'string' ? body.training_version.trim() : null;
+    const trainingVersion =
+      typeof body?.training_version === 'string' ? body.training_version.trim() : null;
     const embeddingInput = Array.isArray(body?.face_embedding)
       ? body.face_embedding
           .map((value: unknown) => Number(value))
@@ -44,7 +47,9 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
         throw ApiError.notFound('Khong tim thay hoc vien');
       }
 
-      classScope = teacherScope.classId ? `homeroom:${teacherScope.classId}` : 'homeroom:unassigned';
+      classScope = teacherScope.classId
+        ? `homeroom:${teacherScope.classId}`
+        : 'homeroom:unassigned';
 
       if (!teacherScope.inScope) {
         try {
@@ -70,7 +75,9 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
         );
       }
     } else {
-      const student = await dbGet(`SELECT id FROM users WHERE id = ? AND role = 'student'`, [studentId]);
+      const student = await dbGet(`SELECT id FROM users WHERE id = ? AND role = 'student'`, [
+        studentId,
+      ]);
       if (!student) {
         throw ApiError.notFound('Khong tim thay hoc vien');
       }

@@ -28,7 +28,9 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
         throw ApiError.notFound('Khong tim thay hoc vien');
       }
 
-      classScope = teacherScope.classId ? `homeroom:${teacherScope.classId}` : 'homeroom:unassigned';
+      classScope = teacherScope.classId
+        ? `homeroom:${teacherScope.classId}`
+        : 'homeroom:unassigned';
 
       if (!teacherScope.inScope) {
         try {
@@ -53,7 +55,9 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
         );
       }
     } else {
-      const student = await dbGet(`SELECT id FROM users WHERE id = ? AND role = 'student'`, [studentId]);
+      const student = await dbGet(`SELECT id FROM users WHERE id = ? AND role = 'student'`, [
+        studentId,
+      ]);
       if (!student) {
         throw ApiError.notFound('Khong tim thay hoc vien');
       }
@@ -110,6 +114,8 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     }
 
     console.error('Student biometric enrollment route error:', error);
-    return errorResponse(ApiError.internalError('Khong the cap nhat enrollment biometric hoc vien'));
+    return errorResponse(
+      ApiError.internalError('Khong the cap nhat enrollment biometric hoc vien')
+    );
   }
 }

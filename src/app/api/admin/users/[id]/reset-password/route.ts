@@ -58,8 +58,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const apiError =
       error instanceof ApiError
         ? error
-        : error instanceof Error && typeof (error as any).status === 'number' && typeof (error as any).code === 'string'
-          ? new ApiError((error as any).code, error.message, (error as any).status, (error as any).details)
+        : error instanceof Error &&
+            typeof (error as any).status === 'number' &&
+            typeof (error as any).code === 'string'
+          ? new ApiError(
+              (error as any).code,
+              error.message,
+              (error as any).status,
+              (error as any).details
+            )
           : ApiError.internalError(error?.message || 'Không thể đặt lại mật khẩu');
 
     return errorResponse(apiError);

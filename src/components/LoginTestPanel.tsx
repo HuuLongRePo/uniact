@@ -238,7 +238,8 @@ export default function LoginTestPanel({ onSelectAccount }: LoginTestPanelProps)
       setAccounts(normalizedAccounts);
     } catch (err: any) {
       clearTimeout(timerId);
-      const message = err?.name === 'AbortError' ? 'Request timeout (>12s)' : (err?.message ?? String(err));
+      const message =
+        err?.name === 'AbortError' ? 'Request timeout (>12s)' : (err?.message ?? String(err));
       console.error('LoginTestPanel fetch error:', message);
       setAccounts([]);
       setError(`Cannot load accounts: ${message}`);
@@ -383,7 +384,9 @@ export default function LoginTestPanel({ onSelectAccount }: LoginTestPanelProps)
               title="Refresh accounts"
               aria-label="Refresh accounts"
             >
-              <RefreshCw className={`h-4 w-4 ${isLoading || searchState.isLoading ? 'animate-spin' : ''}`} />
+              <RefreshCw
+                className={`h-4 w-4 ${isLoading || searchState.isLoading ? 'animate-spin' : ''}`}
+              />
             </button>
             <button
               onClick={() => setIsExpanded(false)}
@@ -527,7 +530,8 @@ export default function LoginTestPanel({ onSelectAccount }: LoginTestPanelProps)
       </div>
 
       <div className="border-t border-[var(--quick-login-panel-border)] bg-[var(--quick-login-panel-bg)] px-3 py-2 text-center text-xs text-[var(--quick-login-text-muted)] transition-colors duration-200">
-        <strong className="text-[var(--quick-login-text-secondary)]">Tip:</strong> Only accounts with demo passwords can use quick login.
+        <strong className="text-[var(--quick-login-text-secondary)]">Tip:</strong> Only accounts
+        with demo passwords can use quick login.
       </div>
     </div>
   );
@@ -562,7 +566,9 @@ function RoleSection({
     <section
       className={`mb-3 rounded-lg border p-3 transition-colors duration-200 last:mb-0 ${sectionClassName}`}
     >
-      <h4 className={`mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide ${titleClassName}`}>
+      <h4
+        className={`mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide ${titleClassName}`}
+      >
         {icon}
         <span>{title}</span>
       </h4>
@@ -609,7 +615,9 @@ function AccountCard({ account, onCopy, copiedField, onQuickLogin }: AccountCard
   };
 
   const roleClass = roleCardClass[account.role as SupportedRole] ?? '';
-  const badgeClass = roleBadgeClass[account.role as SupportedRole] ?? 'bg-[var(--quick-login-copy-bg)] text-[var(--quick-login-copy-text)]';
+  const badgeClass =
+    roleBadgeClass[account.role as SupportedRole] ??
+    'bg-[var(--quick-login-copy-bg)] text-[var(--quick-login-copy-text)]';
 
   return (
     <div
@@ -631,10 +639,16 @@ function AccountCard({ account, onCopy, copiedField, onQuickLogin }: AccountCard
     >
       <div className="mb-2 flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-[var(--quick-login-text-primary)]">{account.name}</p>
-          <p className="truncate text-xs text-[var(--quick-login-text-secondary)]">{account.email}</p>
+          <p className="truncate text-sm font-semibold text-[var(--quick-login-text-primary)]">
+            {account.name}
+          </p>
+          <p className="truncate text-xs text-[var(--quick-login-text-secondary)]">
+            {account.email}
+          </p>
         </div>
-        <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${badgeClass}`}>
+        <span
+          className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${badgeClass}`}
+        >
           {roleName[account.role] ?? account.role}
         </span>
       </div>

@@ -51,7 +51,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       !(await teacherCanAccessActivity(Number(user.id), Number(activityId)))
     ) {
       return errorResponse(
-        ApiError.forbidden('Bạn chỉ có thể đánh giá người tham gia của hoạt động thuộc phạm vi quản lý')
+        ApiError.forbidden(
+          'Bạn chỉ có thể đánh giá người tham gia của hoạt động thuộc phạm vi quản lý'
+        )
       );
     }
 
@@ -116,7 +118,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
             [normalizedLevel, feedback || null, user.id, participation_id]
           );
 
-          const hasCustomAdjustments = Number(bonus_points || 0) !== 0 || Number(penalty_points || 0) !== 0;
+          const hasCustomAdjustments =
+            Number(bonus_points || 0) !== 0 || Number(penalty_points || 0) !== 0;
           const calc = hasCustomAdjustments
             ? await PointCalculationService.calculatePoints({
                 participationId: participation_id,

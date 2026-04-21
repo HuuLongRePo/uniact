@@ -153,16 +153,24 @@ export default function AdminActivitiesPage() {
 
         {/* Total count */}
         <div className="mt-4 space-y-2 text-sm text-gray-600 text-center">
-          <div>Hiển thị {filteredActivities.length} / {activities.length} hoạt động</div>
           <div>
-            Trong toàn bộ danh sách hiện có {activities.filter((activity) => {
-              const activityTime = new Date(activity.date_time).getTime();
-              return (
-                (activity.status === 'published' && Number.isFinite(activityTime) && activityTime <= Date.now()) ||
-                activity.status === 'completed' ||
-                activity.status === 'cancelled'
-              );
-            }).length} hoạt động đã qua hoặc đã khép lại.
+            Hiển thị {filteredActivities.length} / {activities.length} hoạt động
+          </div>
+          <div>
+            Trong toàn bộ danh sách hiện có{' '}
+            {
+              activities.filter((activity) => {
+                const activityTime = new Date(activity.date_time).getTime();
+                return (
+                  (activity.status === 'published' &&
+                    Number.isFinite(activityTime) &&
+                    activityTime <= Date.now()) ||
+                  activity.status === 'completed' ||
+                  activity.status === 'cancelled'
+                );
+              }).length
+            }{' '}
+            hoạt động đã qua hoặc đã khép lại.
           </div>
         </div>
 

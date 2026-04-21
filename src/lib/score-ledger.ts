@@ -61,7 +61,10 @@ export async function getFinalScoreLedgerByStudentIds(
       COALESCE(pt.participation_points, 0) + COALESCE(aw.award_points, 0) + COALESCE(adj.adjustment_points, 0) AS final_total
     FROM (
       SELECT ? AS student_id
-      ${normalizedIds.slice(1).map(() => 'UNION ALL SELECT ?').join('\n      ')}
+      ${normalizedIds
+        .slice(1)
+        .map(() => 'UNION ALL SELECT ?')
+        .join('\n      ')}
     ) ids
     LEFT JOIN participation_totals pt ON pt.student_id = ids.student_id
     LEFT JOIN award_totals aw ON aw.student_id = ids.student_id

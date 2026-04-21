@@ -264,7 +264,9 @@ export default function TeacherDashboardPage() {
                   {a.status === 'published' && (
                     <span className="text-green-600">✅ Đã phát hành</span>
                   )}
-                  {a.status === 'pending' && <span className="text-yellow-600">⏳ Đã gửi duyệt</span>}
+                  {a.status === 'pending' && (
+                    <span className="text-yellow-600">⏳ Đã gửi duyệt</span>
+                  )}
                   {a.status === 'draft' && <span className="text-gray-600">📝 Nháp</span>}
                 </div>
                 <div className="text-sm text-gray-500 mt-1">

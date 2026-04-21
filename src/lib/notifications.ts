@@ -185,7 +185,11 @@ export async function sendBulkDatabaseNotifications(params: {
   metadata?: unknown;
 }) {
   const uniqueUserIds = Array.from(
-    new Set(params.userIds.map((value) => Number(value)).filter((value) => Number.isInteger(value) && value > 0))
+    new Set(
+      params.userIds
+        .map((value) => Number(value))
+        .filter((value) => Number.isInteger(value) && value > 0)
+    )
   );
 
   let created = 0;
@@ -254,7 +258,11 @@ export async function getTeacherManagedStudentIds(teacherId: number): Promise<nu
 
 export async function getManagedActivityParticipantIds(teacherId: number, activityIds: number[]) {
   const uniqueActivityIds = Array.from(
-    new Set(activityIds.map((value) => Number(value)).filter((value) => Number.isInteger(value) && value > 0))
+    new Set(
+      activityIds
+        .map((value) => Number(value))
+        .filter((value) => Number.isInteger(value) && value > 0)
+    )
   );
 
   if (uniqueActivityIds.length === 0) {

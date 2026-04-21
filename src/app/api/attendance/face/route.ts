@@ -20,9 +20,7 @@ function normalizeCandidateEmbedding(input: unknown): number[] | null {
     );
   }
 
-  const normalized = input
-    .map((value) => Number(value))
-    .filter((value) => Number.isFinite(value));
+  const normalized = input.map((value) => Number(value)).filter((value) => Number.isFinite(value));
 
   if (normalized.length !== input.length) {
     throw new ApiError(
@@ -128,7 +126,6 @@ export async function POST(request: NextRequest) {
       },
       config
     );
-
 
     if (!policy.facePilot.eligible) {
       throw new ApiError(

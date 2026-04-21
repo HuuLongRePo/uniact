@@ -58,7 +58,11 @@ export async function POST(request: NextRequest) {
           Number(award_type_id),
           user.id
         );
-        return successResponse({ suggestion_id: result.lastID }, 'Tạo đề xuất khen thưởng thành công', 201);
+        return successResponse(
+          { suggestion_id: result.lastID },
+          'Tạo đề xuất khen thưởng thành công',
+          201
+        );
       } catch (err: any) {
         return errorResponse(ApiError.validation(err.message || 'Không thể tạo đề xuất'));
       }
@@ -81,7 +85,9 @@ export async function PUT(request: NextRequest) {
 
     // Only admins can approve/reject suggestions
     if (user.role !== 'admin') {
-      return errorResponse(ApiError.forbidden('Không có quyền truy cập (chỉ admin duyệt/từ chối khen thưởng)'));
+      return errorResponse(
+        ApiError.forbidden('Không có quyền truy cập (chỉ admin duyệt/từ chối khen thưởng)')
+      );
     }
 
     const body = await request.json();

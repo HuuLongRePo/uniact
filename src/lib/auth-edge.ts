@@ -36,11 +36,19 @@ function toArrayBuffer(data: Uint8Array): ArrayBuffer {
   return data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) as ArrayBuffer;
 }
 
-async function verifyHmacSha256(secret: string, payload: string, signature: Uint8Array): Promise<boolean> {
+async function verifyHmacSha256(
+  secret: string,
+  payload: string,
+  signature: Uint8Array
+): Promise<boolean> {
   const keyData = new TextEncoder().encode(secret);
-  const key = await crypto.subtle.importKey('raw', keyData, { name: 'HMAC', hash: 'SHA-256' }, false, [
-    'verify',
-  ]);
+  const key = await crypto.subtle.importKey(
+    'raw',
+    keyData,
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['verify']
+  );
   return crypto.subtle.verify(
     'HMAC',
     key,
@@ -72,7 +80,11 @@ export async function verifyToken(token: string): Promise<JwtPayload> {
   const signature = base64UrlDecode(encodedSignature);
   const payloadJson = utf8Decode(base64UrlDecode(encodedPayload));
 
-  const valid = await verifyHmacSha256(getJwtSecret(), `${encodedHeader}.${encodedPayload}`, signature);
+  const valid = await verifyHmacSha256(
+    getJwtSecret(),
+    `${encodedHeader}.${encodedPayload}`,
+    signature
+  );
   if (!valid) {
     throw new Error('Token không hợp lệ');
   }

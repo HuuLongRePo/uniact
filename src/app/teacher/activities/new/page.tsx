@@ -331,7 +331,12 @@ export default function CreateActivityPage() {
 
   const handleSubmit = async (e: React.FormEvent, mode: 'draft' | 'submit') => {
     e.preventDefault();
-    if (!title.trim() || !date || !location.trim() || (!appliesToAllStudents && selectedClasses.length === 0)) {
+    if (
+      !title.trim() ||
+      !date ||
+      !location.trim() ||
+      (!appliesToAllStudents && selectedClasses.length === 0)
+    ) {
       toast.error('Vui lòng nhập đầy đủ thông tin bắt buộc');
       return;
     }
@@ -648,9 +653,12 @@ export default function CreateActivityPage() {
                             className="mt-1"
                           />
                           <span>
-                            <span className="block font-medium">Mở đăng ký cho tất cả học viên</span>
+                            <span className="block font-medium">
+                              Mở đăng ký cho tất cả học viên
+                            </span>
                             <span className="block text-xs text-emerald-800">
-                              Khi bật, hoạt động sẽ không giới hạn theo lớp và sinh viên đủ điều kiện có thể nhìn thấy để đăng ký.
+                              Khi bật, hoạt động sẽ không giới hạn theo lớp và sinh viên đủ điều
+                              kiện có thể nhìn thấy để đăng ký.
                             </span>
                           </span>
                         </label>
@@ -728,7 +736,8 @@ export default function CreateActivityPage() {
                             <div>
                               <p className="font-medium">Chọn học viên trực tiếp</p>
                               <p className="text-xs text-blue-800">
-                                Tải danh sách học viên theo yêu cầu để bổ sung học viên ngoài phạm vi lớp mà không cần reload trang.
+                                Tải danh sách học viên theo yêu cầu để bổ sung học viên ngoài phạm
+                                vi lớp mà không cần reload trang.
                               </p>
                             </div>
                             <button
@@ -747,7 +756,9 @@ export default function CreateActivityPage() {
                           {studentsLoaded ? (
                             <>
                               <p className="mt-2 text-xs text-blue-800">
-                                Đã nạp {studentOptions.length} học viên. Đang chọn {mandatoryStudentIds.length} bắt buộc và {voluntaryStudentIds.length} tự nguyện.
+                                Đã nạp {studentOptions.length} học viên. Đang chọn{' '}
+                                {mandatoryStudentIds.length} bắt buộc và{' '}
+                                {voluntaryStudentIds.length} tự nguyện.
                               </p>
                               <div className="mt-3">
                                 <input
@@ -758,7 +769,8 @@ export default function CreateActivityPage() {
                                   className="w-full rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:ring-blue-200"
                                 />
                                 <p className="mt-1 text-xs text-blue-800">
-                                  Hiển thị {filteredStudentOptions.length}/{studentOptions.length} học viên phù hợp.
+                                  Hiển thị {filteredStudentOptions.length}/{studentOptions.length}{' '}
+                                  học viên phù hợp.
                                 </p>
                               </div>
                               <div className="mt-3 grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -769,7 +781,11 @@ export default function CreateActivityPage() {
                                         <button
                                           key={`mandatory-chip-${student.id}`}
                                           type="button"
-                                          onClick={() => setMandatoryStudentIds((current) => current.filter((id) => id !== student.id))}
+                                          onClick={() =>
+                                            setMandatoryStudentIds((current) =>
+                                              current.filter((id) => id !== student.id)
+                                            )
+                                          }
                                           className="rounded-full bg-orange-100 px-2 py-1 text-xs text-orange-800 hover:bg-orange-200"
                                         >
                                           {student.name} ×
@@ -788,7 +804,10 @@ export default function CreateActivityPage() {
                                     disabled={submitting}
                                   >
                                     {filteredStudentOptions.map((student) => (
-                                      <option key={`mandatory-student-${student.id}`} value={student.id}>
+                                      <option
+                                        key={`mandatory-student-${student.id}`}
+                                        value={student.id}
+                                      >
                                         {student.name}
                                         {student.class_name ? ` - ${student.class_name}` : ''}
                                       </option>
@@ -802,7 +821,11 @@ export default function CreateActivityPage() {
                                         <button
                                           key={`voluntary-chip-${student.id}`}
                                           type="button"
-                                          onClick={() => setVoluntaryStudentIds((current) => current.filter((id) => id !== student.id))}
+                                          onClick={() =>
+                                            setVoluntaryStudentIds((current) =>
+                                              current.filter((id) => id !== student.id)
+                                            )
+                                          }
                                           className="rounded-full bg-sky-100 px-2 py-1 text-xs text-sky-800 hover:bg-sky-200"
                                         >
                                           {student.name} ×
@@ -842,7 +865,9 @@ export default function CreateActivityPage() {
                           <div className="mb-2 text-sm font-semibold text-blue-900">
                             Xem trước danh sách tham gia hiện tại
                           </div>
-                          {selectedClasses.length === 0 && mandatoryStudentIds.length === 0 && voluntaryStudentIds.length === 0 ? (
+                          {selectedClasses.length === 0 &&
+                          mandatoryStudentIds.length === 0 &&
+                          voluntaryStudentIds.length === 0 ? (
                             <p className="text-sm text-gray-600">
                               Chọn ít nhất một lớp hoặc học viên trực tiếp để xem danh sách dự kiến.
                             </p>
@@ -882,21 +907,28 @@ export default function CreateActivityPage() {
                                 </div>
                               </div>
                               <div className="text-xs text-gray-600">
-                                Nếu một lớp hoặc học viên xuất hiện ở cả hai danh sách, hệ thống sẽ ưu tiên bắt
-                                buộc hơn tự nguyện.
+                                Nếu một lớp hoặc học viên xuất hiện ở cả hai danh sách, hệ thống sẽ
+                                ưu tiên bắt buộc hơn tự nguyện.
                               </div>
-                              {participationPreview.direct_students && participationPreview.direct_students.length > 0 ? (
+                              {participationPreview.direct_students &&
+                              participationPreview.direct_students.length > 0 ? (
                                 <details className="rounded-lg border border-emerald-200 bg-white p-3">
                                   <summary className="cursor-pointer list-none font-medium text-gray-800">
-                                    Học viên chọn trực tiếp • {participationPreview.direct_students.length} học viên
+                                    Học viên chọn trực tiếp •{' '}
+                                    {participationPreview.direct_students.length} học viên
                                   </summary>
                                   <div className="mt-2 space-y-1 text-sm text-gray-600">
                                     {participationPreview.direct_students.map((student) => (
-                                      <div key={`direct-${student.id}`} className="flex justify-between gap-3">
+                                      <div
+                                        key={`direct-${student.id}`}
+                                        className="flex justify-between gap-3"
+                                      >
                                         <div>
                                           <span>{student.name}</span>
                                           <span className="ml-2 text-xs font-medium text-emerald-700">
-                                            {student.resolved_mode === 'mandatory' ? 'Bắt buộc' : 'Tự nguyện'}
+                                            {student.resolved_mode === 'mandatory'
+                                              ? 'Bắt buộc'
+                                              : 'Tự nguyện'}
                                           </span>
                                         </div>
                                         <span className="text-xs text-gray-500">
@@ -1176,7 +1208,11 @@ export default function CreateActivityPage() {
                     ) : (
                       <Save className="w-5 h-5" />
                     )}
-                    {submitting ? 'Đang xử lý...' : currentTab !== 'files' ? 'Đến bước 3 để lưu nháp' : 'Lưu nháp'}
+                    {submitting
+                      ? 'Đang xử lý...'
+                      : currentTab !== 'files'
+                        ? 'Đến bước 3 để lưu nháp'
+                        : 'Lưu nháp'}
                   </button>
                   <button
                     type="button"
@@ -1192,7 +1228,11 @@ export default function CreateActivityPage() {
                     ) : (
                       <Send className="w-5 h-5" />
                     )}
-                    {submitting ? 'Đang xử lý...' : currentTab !== 'files' ? 'Đến bước 3 để gửi duyệt' : 'Gửi duyệt'}
+                    {submitting
+                      ? 'Đang xử lý...'
+                      : currentTab !== 'files'
+                        ? 'Đến bước 3 để gửi duyệt'
+                        : 'Gửi duyệt'}
                   </button>
                 </div>
                 {success && (

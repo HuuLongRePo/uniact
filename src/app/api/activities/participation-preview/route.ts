@@ -57,18 +57,24 @@ export async function POST(request: NextRequest) {
     const hasMandatoryStudents = Array.isArray(body?.mandatory_student_ids);
     const hasVoluntaryStudents = Array.isArray(body?.voluntary_student_ids);
     const hasLegacyMandatoryFlag =
-      !!body && typeof body === 'object' && Object.prototype.hasOwnProperty.call(body, 'is_mandatory');
+      !!body &&
+      typeof body === 'object' &&
+      Object.prototype.hasOwnProperty.call(body, 'is_mandatory');
     const legacyMandatoryFlag = parseLegacyMandatoryFlag(body?.is_mandatory);
 
     if (hasLegacyMandatoryFlag && legacyMandatoryFlag === null) {
       return errorResponse(ApiError.validation('Trường is_mandatory không hợp lệ'));
     }
 
-    if (!hasLegacy && !hasMandatory && !hasVoluntary && !hasMandatoryStudents && !hasVoluntaryStudents) {
+    if (
+      !hasLegacy &&
+      !hasMandatory &&
+      !hasVoluntary &&
+      !hasMandatoryStudents &&
+      !hasVoluntaryStudents
+    ) {
       return errorResponse(
-        ApiError.validation(
-          'Cần gửi ít nhất một trường scope cho lớp hoặc học viên'
-        )
+        ApiError.validation('Cần gửi ít nhất một trường scope cho lớp hoặc học viên')
       );
     }
 
@@ -83,9 +89,9 @@ export async function POST(request: NextRequest) {
       ? normalizeIds(body.mandatory_class_ids)
       : useLegacyAsVoluntary
         ? []
-      : hasLegacy
-        ? normalizeIds(body.class_ids)
-        : [];
+        : hasLegacy
+          ? normalizeIds(body.class_ids)
+          : [];
     const rawVoluntaryClassIds = hasVoluntary
       ? normalizeIds(body.voluntary_class_ids)
       : useLegacyAsVoluntary
@@ -99,8 +105,12 @@ export async function POST(request: NextRequest) {
     const voluntaryClassIds = rawVoluntaryClassIds.filter((classId) => !mandatorySet.has(classId));
     const classIds = Array.from(new Set([...mandatoryClassIds, ...voluntaryClassIds]));
 
-    const rawMandatoryStudentIds = hasMandatoryStudents ? normalizeIds(body.mandatory_student_ids) : [];
-    const rawVoluntaryStudentIds = hasVoluntaryStudents ? normalizeIds(body.voluntary_student_ids) : [];
+    const rawMandatoryStudentIds = hasMandatoryStudents
+      ? normalizeIds(body.mandatory_student_ids)
+      : [];
+    const rawVoluntaryStudentIds = hasVoluntaryStudents
+      ? normalizeIds(body.voluntary_student_ids)
+      : [];
     const mandatoryStudentIds = Array.from(new Set(rawMandatoryStudentIds));
     const mandatoryStudentSet = new Set(mandatoryStudentIds);
     const voluntaryStudentIds = rawVoluntaryStudentIds.filter((id) => !mandatoryStudentSet.has(id));
@@ -165,8 +175,9 @@ export async function POST(request: NextRequest) {
     const mandatoryClassSet = new Set(mandatoryClassIds);
 
     const directStudents = directStudentIds.length
-      ? ((await dbAll(
-          `SELECT
+      ? (
+          (await dbAll(
+            `SELECT
              u.id,
              COALESCE(u.name, u.username, CAST(u.id AS TEXT)) as name,
              u.email,
@@ -176,13 +187,16 @@ export async function POST(request: NextRequest) {
              AND COALESCE(u.is_active, 1) = 1
              AND u.id IN (${directStudentIds.map(() => '?').join(', ')})
            ORDER BY COALESCE(u.name, u.username, CAST(u.id AS TEXT)), u.id`,
-          directStudentIds
-        )) as StudentRow[]).map((student) => ({
+            directStudentIds
+          )) as StudentRow[]
+        ).map((student) => ({
           id: Number(student.id),
           name: student.name || `Student ${student.id}`,
           email: student.email || null,
           class_id: Number(student.class_id),
-          participation_mode: mandatoryStudentSet.has(Number(student.id)) ? 'mandatory' : 'voluntary',
+          participation_mode: mandatoryStudentSet.has(Number(student.id))
+            ? 'mandatory'
+            : 'voluntary',
           resolved_mode: mandatoryStudentSet.has(Number(student.id)) ? 'mandatory' : 'voluntary',
           was_conflicted: false,
           source: 'direct_student_scope',

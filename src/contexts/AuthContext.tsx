@@ -71,7 +71,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
 
             const errorPayload = await response.json().catch(() => null);
-            throw new Error(errorPayload?.error || `Auth check failed with status ${response.status}`);
+            throw new Error(
+              errorPayload?.error || `Auth check failed with status ${response.status}`
+            );
           } finally {
             clearTimeout(timeoutId);
           }

@@ -234,9 +234,9 @@ export default function TeacherAttendancePolicyPage() {
 
       {!FACE_BIOMETRIC_RUNTIME_ENABLED ? (
         <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          Runtime nhận diện khuôn mặt hiện chưa được bật trong bản phát hành này. Trang này giúp
-          xác nhận pilot policy và điều kiện readiness trước khi mở luồng training ảnh học viên và
-          face attendance production.
+          Runtime nhận diện khuôn mặt hiện chưa được bật trong bản phát hành này. Trang này giúp xác
+          nhận pilot policy và điều kiện readiness trước khi mở luồng training ảnh học viên và face
+          attendance production.
         </div>
       ) : null}
 

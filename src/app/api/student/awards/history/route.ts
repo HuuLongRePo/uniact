@@ -7,7 +7,8 @@ export async function GET(request: NextRequest) {
   try {
     const user = await getUserFromSession();
     if (!user) return errorResponse(ApiError.unauthorized('Chưa đăng nhập'));
-    if (user.role !== 'student') return errorResponse(ApiError.forbidden('Không có quyền truy cập'));
+    if (user.role !== 'student')
+      return errorResponse(ApiError.forbidden('Không có quyền truy cập'));
 
     // Get awards from student_awards (schema-backed)
     const awards = await dbAll(

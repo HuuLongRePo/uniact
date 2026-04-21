@@ -31,7 +31,14 @@ interface Activity {
   organization_level_id?: number;
 }
 
-type ActivityFilter = 'all' | 'draft' | 'pending' | 'rejected' | 'published' | 'completed' | 'cancelled';
+type ActivityFilter =
+  | 'all'
+  | 'draft'
+  | 'pending'
+  | 'rejected'
+  | 'published'
+  | 'completed'
+  | 'cancelled';
 type ConfirmActionType = 'submit' | 'cancel' | 'clone' | 'delete';
 
 const FILTER_OPTIONS: Array<{ value: ActivityFilter; label: string }> = [
@@ -302,13 +309,15 @@ export default function TeacherActivitiesPage() {
 
   const archivedActivities = sortedActivities.filter((activity) => {
     const activityTime = new Date(activity.date_time).getTime();
-    const isPastPublished = isPublished(activity) && Number.isFinite(activityTime) && activityTime <= now;
+    const isPastPublished =
+      isPublished(activity) && Number.isFinite(activityTime) && activityTime <= now;
     return isPastPublished || isCompletedOrCancelled(activity);
   });
 
   const remainingActivities = sortedActivities.filter((activity) => {
     const activityTime = new Date(activity.date_time).getTime();
-    const isUpcomingPublished = isPublished(activity) && Number.isFinite(activityTime) && activityTime > now;
+    const isUpcomingPublished =
+      isPublished(activity) && Number.isFinite(activityTime) && activityTime > now;
     const isArchived =
       (isPublished(activity) && Number.isFinite(activityTime) && activityTime <= now) ||
       isCompletedOrCancelled(activity);
@@ -402,7 +411,9 @@ export default function TeacherActivitiesPage() {
       ) : (
         <div className="space-y-6">
           <div className="rounded-lg border border-gray-200 bg-white p-4 text-sm text-gray-600">
-            Hiển thị {sortedActivities.length} hoạt động, gồm {upcomingActivities.length} sắp diễn ra, {archivedActivities.length} đã qua hoặc đã khép lại và {remainingActivities.length} hoạt động còn đang cần theo dõi xử lý.
+            Hiển thị {sortedActivities.length} hoạt động, gồm {upcomingActivities.length} sắp diễn
+            ra, {archivedActivities.length} đã qua hoặc đã khép lại và {remainingActivities.length}{' '}
+            hoạt động còn đang cần theo dõi xử lý.
           </div>
           {upcomingActivities.length > 0 && (
             <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
@@ -425,7 +436,9 @@ export default function TeacherActivitiesPage() {
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div>
-                        <div className="text-base font-semibold text-gray-900">{activity.title}</div>
+                        <div className="text-base font-semibold text-gray-900">
+                          {activity.title}
+                        </div>
                         <div className="mt-1 text-sm text-gray-600">{activity.location}</div>
                         <div className="mt-1 text-sm text-gray-500">
                           {new Date(activity.date_time).toLocaleString('vi-VN')}
@@ -445,7 +458,8 @@ export default function TeacherActivitiesPage() {
                 <div>
                   <h2 className="text-lg font-semibold text-slate-900">Đã qua hoặc đã khép lại</h2>
                   <p className="text-sm text-slate-700">
-                    Gom các hoạt động đã hết thời gian diễn ra, đã hoàn thành hoặc đã hủy để danh sách chính đỡ lẫn với việc đang xử lý.
+                    Gom các hoạt động đã hết thời gian diễn ra, đã hoàn thành hoặc đã hủy để danh
+                    sách chính đỡ lẫn với việc đang xử lý.
                   </p>
                 </div>
                 <span className="rounded-full bg-white px-3 py-1 text-sm font-medium text-slate-800">
@@ -459,232 +473,244 @@ export default function TeacherActivitiesPage() {
                     isPublished(activity) && Number.isFinite(activityTime) && activityTime <= now;
 
                   return (
-                  <div
-                    key={`archived-${activity.id}`}
-                    className="rounded-lg border border-slate-200 bg-white p-4"
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <div className="text-base font-semibold text-gray-900">{activity.title}</div>
-                        <div className="mt-1 text-sm text-gray-600">{activity.location}</div>
-                        <div className="mt-1 text-sm text-gray-500">
-                          {new Date(activity.date_time).toLocaleString('vi-VN')}
+                    <div
+                      key={`archived-${activity.id}`}
+                      className="rounded-lg border border-slate-200 bg-white p-4"
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <div className="text-base font-semibold text-gray-900">
+                            {activity.title}
+                          </div>
+                          <div className="mt-1 text-sm text-gray-600">{activity.location}</div>
+                          <div className="mt-1 text-sm text-gray-500">
+                            {new Date(activity.date_time).toLocaleString('vi-VN')}
+                          </div>
+                          <div className="mt-2 text-xs font-medium text-slate-600">
+                            {isStalePublished
+                              ? 'Đã quá thời điểm diễn ra, cần xác nhận hoàn thành hoặc cập nhật trạng thái.'
+                              : getDisplayStatus(activity) === 'completed'
+                                ? 'Hoạt động đã được khép lại ở trạng thái hoàn thành.'
+                                : 'Hoạt động đã được khép lại ở trạng thái hủy.'}
+                          </div>
                         </div>
-                        <div className="mt-2 text-xs font-medium text-slate-600">
-                          {isStalePublished
-                            ? 'Đã quá thời điểm diễn ra, cần xác nhận hoàn thành hoặc cập nhật trạng thái.'
-                            : getDisplayStatus(activity) === 'completed'
-                              ? 'Hoạt động đã được khép lại ở trạng thái hoàn thành.'
-                              : 'Hoạt động đã được khép lại ở trạng thái hủy.'}
-                        </div>
+                        {getStatusBadge(getDisplayStatus(activity))}
                       </div>
-                      {getStatusBadge(getDisplayStatus(activity))}
                     </div>
-                  </div>
-                );})}
+                  );
+                })}
               </div>
             </div>
           )}
 
           <div className="space-y-4">
-          {remainingActivities.map((activity) => {
-            const canEditAndResubmit =
-              getDisplayStatus(activity) === 'draft' || getDisplayStatus(activity) === 'rejected';
-            const canCancelPublished =
-              getDisplayStatus(activity) === 'published' &&
-              (new Date(activity.date_time).getTime() - Date.now()) / (1000 * 60 * 60) > 0;
+            {remainingActivities.map((activity) => {
+              const canEditAndResubmit =
+                getDisplayStatus(activity) === 'draft' || getDisplayStatus(activity) === 'rejected';
+              const canCancelPublished =
+                getDisplayStatus(activity) === 'published' &&
+                (new Date(activity.date_time).getTime() - Date.now()) / (1000 * 60 * 60) > 0;
 
-            return (
-              <div
-                key={activity.id}
-                className="bg-white rounded-lg shadow p-6"
-                data-testid={`activity-card-${activity.id}`}
-              >
-                <div className="flex justify-between items-start mb-4">
-                  <div className="flex-1">
-                    <div className="flex items-start gap-3">
-                      <h3 className="text-xl font-semibold text-gray-900">{activity.title}</h3>
-                      {getStatusBadge(getDisplayStatus(activity))}
-                    </div>
-                    <p className="text-gray-600 mt-2 line-clamp-2">{activity.description}</p>
-                    {activity.teacher_name && (
-                      <p className="text-sm text-gray-500 mt-1">
-                        👨‍🏫 Người tạo:{' '}
-                        <span className="font-medium text-gray-700">{activity.teacher_name}</span>
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4 text-sm">
-                  <div>
-                    <span className="text-gray-600">📅 Thời gian:</span>
-                    <div className="font-medium">
-                      {new Date(activity.date_time).toLocaleString('vi-VN')}
-                    </div>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">📍 Địa điểm:</span>
-                    <div className="font-medium">{activity.location}</div>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">👥 Đăng ký:</span>
-                    <div className="font-medium">
-                      {activity.participant_count}/{activity.max_participants}
-                    </div>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">✓ Điểm danh:</span>
-                    <div className="font-medium text-green-600">{activity.attended_count || 0}</div>
-                  </div>
-                </div>
-
-                <div className="flex gap-2 flex-wrap items-center">
-                  <Link
-                    href={`/teacher/activities/${activity.id}/participants`}
-                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition text-sm"
-                  >
-                    📊 Quản lý người tham gia
-                  </Link>
-
-                  <Link
-                    href={`/activities/${activity.id}`}
-                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition text-sm"
-                  >
-                    👁️ Xem chi tiết
-                  </Link>
-
-                  {canEditAndResubmit && (
-                    <>
-                      <button
-                        onClick={() => handleEdit(activity.id)}
-                        disabled={actionLoading.id === activity.id}
-                        className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition text-sm flex items-center gap-1 disabled:opacity-50"
-                      >
-                        <Edit className="w-4 h-4" />
-                        Chỉnh sửa
-                      </button>
-
-                      <button
-                        onClick={() => handleSubmitApproval(activity)}
-                        disabled={
-                          actionLoading.type === 'submit' && actionLoading.id === activity.id
-                        }
-                        className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition text-sm flex items-center gap-1 disabled:opacity-50"
-                      >
-                        {actionLoading.type === 'submit' && actionLoading.id === activity.id ? (
-                          <>
-                            <LoadingSpinner size="xs" color="white" variant="inline" />
-                            Đang gửi...
-                          </>
-                        ) : (
-                          <>
-                            <Send className="w-4 h-4" />
-                            {getDisplayStatus(activity) === 'rejected'
-                              ? 'Chỉnh sửa và gửi lại'
-                              : 'Gửi duyệt'}
-                          </>
-                        )}
-                      </button>
-                    </>
-                  )}
-
-                  {getDisplayStatus(activity) === 'pending' && (
-                    <span className="px-4 py-2 bg-yellow-100 text-yellow-800 rounded text-sm font-medium">
-                      ⏳ Đã gửi duyệt, đang chờ xử lý
-                    </span>
-                  )}
-
-                  {getDisplayStatus(activity) === 'rejected' && (
-                    <span className="px-4 py-2 bg-red-100 text-red-800 rounded text-sm font-medium">
-                      ⚠️ Cần chỉnh sửa và gửi lại
-                    </span>
-                  )}
-
-                  {canCancelPublished && (
-                    <button
-                      onClick={() => handleCancelActivity(activity)}
-                      disabled={actionLoading.type === 'cancel' && actionLoading.id === activity.id}
-                      className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition text-sm flex items-center gap-1 disabled:opacity-50"
-                    >
-                      {actionLoading.type === 'cancel' && actionLoading.id === activity.id ? (
-                        <>
-                          <LoadingSpinner size="xs" color="white" variant="inline" />
-                          Đang hủy...
-                        </>
-                      ) : (
-                        '🚫 Hủy hoạt động'
+              return (
+                <div
+                  key={activity.id}
+                  className="bg-white rounded-lg shadow p-6"
+                  data-testid={`activity-card-${activity.id}`}
+                >
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="flex-1">
+                      <div className="flex items-start gap-3">
+                        <h3 className="text-xl font-semibold text-gray-900">{activity.title}</h3>
+                        {getStatusBadge(getDisplayStatus(activity))}
+                      </div>
+                      <p className="text-gray-600 mt-2 line-clamp-2">{activity.description}</p>
+                      {activity.teacher_name && (
+                        <p className="text-sm text-gray-500 mt-1">
+                          👨‍🏫 Người tạo:{' '}
+                          <span className="font-medium text-gray-700">{activity.teacher_name}</span>
+                        </p>
                       )}
-                    </button>
-                  )}
+                    </div>
+                  </div>
 
-                  <div className="relative ml-auto">
-                    <button
-                      onClick={() => setOpenMenuId(openMenuId === activity.id ? null : activity.id)}
-                      className="p-2 hover:bg-gray-100 rounded-full transition"
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4 text-sm">
+                    <div>
+                      <span className="text-gray-600">📅 Thời gian:</span>
+                      <div className="font-medium">
+                        {new Date(activity.date_time).toLocaleString('vi-VN')}
+                      </div>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">📍 Địa điểm:</span>
+                      <div className="font-medium">{activity.location}</div>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">👥 Đăng ký:</span>
+                      <div className="font-medium">
+                        {activity.participant_count}/{activity.max_participants}
+                      </div>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">✓ Điểm danh:</span>
+                      <div className="font-medium text-green-600">
+                        {activity.attended_count || 0}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2 flex-wrap items-center">
+                    <Link
+                      href={`/teacher/activities/${activity.id}/participants`}
+                      className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition text-sm"
                     >
-                      <MoreVertical className="w-5 h-5 text-gray-600" />
-                    </button>
+                      📊 Quản lý người tham gia
+                    </Link>
 
-                    {openMenuId === activity.id && (
-                      <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border z-10">
+                    <Link
+                      href={`/activities/${activity.id}`}
+                      className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition text-sm"
+                    >
+                      👁️ Xem chi tiết
+                    </Link>
+
+                    {canEditAndResubmit && (
+                      <>
                         <button
                           onClick={() => handleEdit(activity.id)}
-                          disabled={actionLoading.id === activity.id && actionLoading.type !== null}
-                          className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2 text-sm disabled:opacity-50"
+                          disabled={actionLoading.id === activity.id}
+                          className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition text-sm flex items-center gap-1 disabled:opacity-50"
                         >
                           <Edit className="w-4 h-4" />
                           Chỉnh sửa
                         </button>
 
                         <button
-                          onClick={() => handleClone(activity)}
+                          onClick={() => handleSubmitApproval(activity)}
                           disabled={
-                            actionLoading.type === 'clone' && actionLoading.id === activity.id
+                            actionLoading.type === 'submit' && actionLoading.id === activity.id
                           }
-                          className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2 text-sm disabled:opacity-50"
+                          className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition text-sm flex items-center gap-1 disabled:opacity-50"
                         >
-                          {actionLoading.type === 'clone' && actionLoading.id === activity.id ? (
+                          {actionLoading.type === 'submit' && actionLoading.id === activity.id ? (
                             <>
-                              <LoadingSpinner size="xs" color="gray" variant="inline" />
-                              Đang nhân bản...
+                              <LoadingSpinner size="xs" color="white" variant="inline" />
+                              Đang gửi...
                             </>
                           ) : (
                             <>
-                              <Copy className="w-4 h-4" />
-                              Nhân bản
+                              <Send className="w-4 h-4" />
+                              {getDisplayStatus(activity) === 'rejected'
+                                ? 'Chỉnh sửa và gửi lại'
+                                : 'Gửi duyệt'}
                             </>
                           )}
                         </button>
+                      </>
+                    )}
 
-                        {canEditAndResubmit && (
+                    {getDisplayStatus(activity) === 'pending' && (
+                      <span className="px-4 py-2 bg-yellow-100 text-yellow-800 rounded text-sm font-medium">
+                        ⏳ Đã gửi duyệt, đang chờ xử lý
+                      </span>
+                    )}
+
+                    {getDisplayStatus(activity) === 'rejected' && (
+                      <span className="px-4 py-2 bg-red-100 text-red-800 rounded text-sm font-medium">
+                        ⚠️ Cần chỉnh sửa và gửi lại
+                      </span>
+                    )}
+
+                    {canCancelPublished && (
+                      <button
+                        onClick={() => handleCancelActivity(activity)}
+                        disabled={
+                          actionLoading.type === 'cancel' && actionLoading.id === activity.id
+                        }
+                        className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition text-sm flex items-center gap-1 disabled:opacity-50"
+                      >
+                        {actionLoading.type === 'cancel' && actionLoading.id === activity.id ? (
+                          <>
+                            <LoadingSpinner size="xs" color="white" variant="inline" />
+                            Đang hủy...
+                          </>
+                        ) : (
+                          '🚫 Hủy hoạt động'
+                        )}
+                      </button>
+                    )}
+
+                    <div className="relative ml-auto">
+                      <button
+                        onClick={() =>
+                          setOpenMenuId(openMenuId === activity.id ? null : activity.id)
+                        }
+                        className="p-2 hover:bg-gray-100 rounded-full transition"
+                      >
+                        <MoreVertical className="w-5 h-5 text-gray-600" />
+                      </button>
+
+                      {openMenuId === activity.id && (
+                        <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border z-10">
                           <button
-                            onClick={() => handleDelete(activity)}
+                            onClick={() => handleEdit(activity.id)}
                             disabled={
-                              actionLoading.type === 'delete' && actionLoading.id === activity.id
+                              actionLoading.id === activity.id && actionLoading.type !== null
                             }
-                            className="w-full text-left px-4 py-2 hover:bg-red-50 text-red-600 flex items-center gap-2 text-sm border-t disabled:opacity-50"
+                            className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2 text-sm disabled:opacity-50"
                           >
-                            {actionLoading.type === 'delete' && actionLoading.id === activity.id ? (
+                            <Edit className="w-4 h-4" />
+                            Chỉnh sửa
+                          </button>
+
+                          <button
+                            onClick={() => handleClone(activity)}
+                            disabled={
+                              actionLoading.type === 'clone' && actionLoading.id === activity.id
+                            }
+                            className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2 text-sm disabled:opacity-50"
+                          >
+                            {actionLoading.type === 'clone' && actionLoading.id === activity.id ? (
                               <>
                                 <LoadingSpinner size="xs" color="gray" variant="inline" />
-                                Đang xóa...
+                                Đang nhân bản...
                               </>
                             ) : (
                               <>
-                                <Trash2 className="w-4 h-4" />
-                                Xóa
+                                <Copy className="w-4 h-4" />
+                                Nhân bản
                               </>
                             )}
                           </button>
-                        )}
-                      </div>
-                    )}
+
+                          {canEditAndResubmit && (
+                            <button
+                              onClick={() => handleDelete(activity)}
+                              disabled={
+                                actionLoading.type === 'delete' && actionLoading.id === activity.id
+                              }
+                              className="w-full text-left px-4 py-2 hover:bg-red-50 text-red-600 flex items-center gap-2 text-sm border-t disabled:opacity-50"
+                            >
+                              {actionLoading.type === 'delete' &&
+                              actionLoading.id === activity.id ? (
+                                <>
+                                  <LoadingSpinner size="xs" color="gray" variant="inline" />
+                                  Đang xóa...
+                                </>
+                              ) : (
+                                <>
+                                  <Trash2 className="w-4 h-4" />
+                                  Xóa
+                                </>
+                              )}
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
           </div>
         </div>
       )}

@@ -58,7 +58,8 @@ export default function PollResponsesPage() {
     try {
       const response = await fetch('/api/teacher/polls');
       const data = await response.json().catch(() => null);
-      if (!response.ok) throw new Error(data?.error || data?.message || 'Không thể tải danh sách bình chọn');
+      if (!response.ok)
+        throw new Error(data?.error || data?.message || 'Không thể tải danh sách bình chọn');
       const pollsList: any[] = Array.isArray(data) ? data : data?.polls || data?.data?.polls || [];
       setPolls(pollsList);
       // Select first poll with active status

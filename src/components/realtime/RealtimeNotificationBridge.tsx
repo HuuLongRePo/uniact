@@ -28,7 +28,9 @@ function toSafeInteger(value: unknown, fallback = 0) {
   return Number.isInteger(parsed) ? parsed : fallback;
 }
 
-function adaptApiNotificationToRealtime(notification: ApiNotificationItem): RealtimeNotificationEvent {
+function adaptApiNotificationToRealtime(
+  notification: ApiNotificationItem
+): RealtimeNotificationEvent {
   return {
     event_id: -Math.abs(Number(notification.id || 0)),
     event_type: 'notification.polling',
@@ -166,7 +168,8 @@ export function RealtimeNotificationBridge() {
     }
 
     const body = await response.json();
-    const notifications: ApiNotificationItem[] = body?.data?.notifications || body?.notifications || [];
+    const notifications: ApiNotificationItem[] =
+      body?.data?.notifications || body?.notifications || [];
 
     for (const item of notifications) {
       const id = toSafeInteger(item.id, 0);
@@ -232,7 +235,9 @@ export function RealtimeNotificationBridge() {
 
     source.addEventListener('notification', (message) => {
       try {
-        const payload = JSON.parse((message as MessageEvent).data || '{}') as RealtimeNotificationEvent;
+        const payload = JSON.parse(
+          (message as MessageEvent).data || '{}'
+        ) as RealtimeNotificationEvent;
         if (!payload || typeof payload !== 'object') {
           return;
         }

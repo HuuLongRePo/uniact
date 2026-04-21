@@ -79,7 +79,9 @@ export async function GET(request: NextRequest) {
       error instanceof ApiError ||
         (error && typeof error.status === 'number' && typeof error.code === 'string')
         ? error
-        : ApiError.internalError(error instanceof Error ? error.message : 'Không thể tải báo cáo điểm.')
+        : ApiError.internalError(
+            error instanceof Error ? error.message : 'Không thể tải báo cáo điểm.'
+          )
     );
   }
 }

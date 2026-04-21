@@ -46,7 +46,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       user.role === 'teacher' &&
       !(await teacherCanAccessActivity(Number(user.id), Number(activityId)))
     ) {
-      return errorResponse(ApiError.forbidden('Bạn chỉ có thể điểm danh cho hoạt động thuộc phạm vi quản lý'));
+      return errorResponse(
+        ApiError.forbidden('Bạn chỉ có thể điểm danh cho hoạt động thuộc phạm vi quản lý')
+      );
     }
 
     const body = await request.json().catch(() => ({}));

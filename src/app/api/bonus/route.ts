@@ -83,7 +83,11 @@ export async function POST(request: NextRequest) {
       console.error('Audit log error:', auditErr);
     }
 
-    return successResponse({ suggestion_id: res.lastID }, 'Tạo đề xuất điểm thưởng thành công', 201);
+    return successResponse(
+      { suggestion_id: res.lastID },
+      'Tạo đề xuất điểm thưởng thành công',
+      201
+    );
   } catch (err: any) {
     console.error('POST /api/bonus error:', err);
     return errorResponse(ApiError.internalError('Lỗi máy chủ nội bộ'));

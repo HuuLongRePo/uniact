@@ -56,7 +56,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   } catch (error) {
     console.error('Toggle user status error:', error);
     return errorResponse(
-      error instanceof ApiError ? error : ApiError.internalError('Cập nhật trạng thái người dùng thất bại')
+      error instanceof ApiError
+        ? error
+        : ApiError.internalError('Cập nhật trạng thái người dùng thất bại')
     );
   }
 }

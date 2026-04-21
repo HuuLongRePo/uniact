@@ -13,6 +13,7 @@ As of 2026-04-21, UniAct has reached a stronger internal release candidate state
 - Gate E `Scoring/bonus/report` is green
 - `npm.cmd run production:build` passes
 - `npm.cmd run release:check` passes in internal RC mode
+- `npm.cmd run release:check:full` passes
 - `npm.cmd run test:backbone` passes
 
 Recommended internal tag for this milestone:
@@ -41,6 +42,7 @@ Current tagged commit target when drafting:
 ## Verification evidence
 
 - Internal RC release check: type check + production build + backbone regression pass
+- Full release check: format check + lint(core runtime) + type check + build pass
 - Gate A regression: `8 files / 33 tests` pass
 - Gate B regression: `12 files / 53 tests` pass
 - Gate C regression: `9 files / 17 tests` pass

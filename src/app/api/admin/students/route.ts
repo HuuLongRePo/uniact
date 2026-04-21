@@ -36,10 +36,9 @@ export async function GET(request: NextRequest) {
       paramsFiltered.push(p, p, p, p, p);
     }
 
-    const total = (await dbGet(
-      `SELECT COUNT(*) as total FROM users u ${whereFiltered}`,
-      [...paramsFiltered]
-    )) as { total?: number } | undefined;
+    const total = (await dbGet(`SELECT COUNT(*) as total FROM users u ${whereFiltered}`, [
+      ...paramsFiltered,
+    ])) as { total?: number } | undefined;
 
     const students = (await dbAll(
       `SELECT 
@@ -63,17 +62,20 @@ export async function GET(request: NextRequest) {
       [...paramsFiltered, limit, offset]
     )) as Array<any>;
 
-    const ledgers = await getFinalScoreLedgerByStudentIds(students.map((student) => Number(student.id)));
+    const ledgers = await getFinalScoreLedgerByStudentIds(
+      students.map((student) => Number(student.id))
+    );
     const studentsWithTotals = students.map((student) => ({
       ...student,
       total_points: ledgers.get(Number(student.id))?.final_total || 0,
     }));
 
-    const filteredStudentIds = (await dbAll(
-      `SELECT u.id FROM users u ${whereFiltered}`,
-      [...paramsFiltered]
-    )) as Array<{ id: number }>;
-    const filteredLedgers = await getFinalScoreLedgerByStudentIds(filteredStudentIds.map((student) => Number(student.id)));
+    const filteredStudentIds = (await dbAll(`SELECT u.id FROM users u ${whereFiltered}`, [
+      ...paramsFiltered,
+    ])) as Array<{ id: number }>;
+    const filteredLedgers = await getFinalScoreLedgerByStudentIds(
+      filteredStudentIds.map((student) => Number(student.id))
+    );
 
     const filteredTotals = filteredStudentIds.map(
       (student) => filteredLedgers.get(Number(student.id))?.final_total || 0
@@ -90,10 +92,19 @@ export async function GET(request: NextRequest) {
           const classTotals = classIds.map((id) => filteredLedgers.get(id)?.final_total || 0);
           return {
             total: classIds.length,
-            activity_count: studentsWithTotals.reduce((sum, student) => sum + Number(student.activity_count || 0), 0),
-            attended_count: studentsWithTotals.reduce((sum, student) => sum + Number(student.attended_count || 0), 0),
+            activity_count: studentsWithTotals.reduce(
+              (sum, student) => sum + Number(student.activity_count || 0),
+              0
+            ),
+            attended_count: studentsWithTotals.reduce(
+              (sum, student) => sum + Number(student.attended_count || 0),
+              0
+            ),
             total_points: classTotals.reduce((sum, points) => sum + points, 0),
-            avg_points: classTotals.length > 0 ? classTotals.reduce((sum, points) => sum + points, 0) / classTotals.length : 0,
+            avg_points:
+              classTotals.length > 0
+                ? classTotals.reduce((sum, points) => sum + points, 0) / classTotals.length
+                : 0,
             award_count: filteredAwardCounts,
           };
         })()
@@ -105,10 +116,19 @@ export async function GET(request: NextRequest) {
       students: studentsWithTotals,
       summary: {
         total: totalCount,
-        activity_count: studentsWithTotals.reduce((sum, student) => sum + Number(student.activity_count || 0), 0),
-        attended_count: studentsWithTotals.reduce((sum, student) => sum + Number(student.attended_count || 0), 0),
+        activity_count: studentsWithTotals.reduce(
+          (sum, student) => sum + Number(student.activity_count || 0),
+          0
+        ),
+        attended_count: studentsWithTotals.reduce(
+          (sum, student) => sum + Number(student.attended_count || 0),
+          0
+        ),
         total_points: filteredTotals.reduce((sum, points) => sum + points, 0),
-        avg_points: filteredTotals.length > 0 ? filteredTotals.reduce((sum, points) => sum + points, 0) / filteredTotals.length : 0,
+        avg_points:
+          filteredTotals.length > 0
+            ? filteredTotals.reduce((sum, points) => sum + points, 0) / filteredTotals.length
+            : 0,
         award_count: filteredAwardCounts,
       },
       classSummary,

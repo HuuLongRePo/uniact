@@ -34,12 +34,16 @@ export async function POST(request: NextRequest) {
     if (scope === 'managed_activities') {
       recipientIds = await getManagedActivityParticipantIds(user.id, activityIds);
       if (recipientIds.length === 0) {
-        return errorResponse(ApiError.validation('Không có học viên tham gia hoạt động phù hợp để gửi thông báo'));
+        return errorResponse(
+          ApiError.validation('Không có học viên tham gia hoạt động phù hợp để gửi thông báo')
+        );
       }
     } else if (scope === 'homeroom_classes') {
       recipientIds = await getTeacherManagedStudentIds(user.id);
       if (recipientIds.length === 0) {
-        return errorResponse(ApiError.validation('Không tìm thấy học viên thuộc lớp bạn phụ trách'));
+        return errorResponse(
+          ApiError.validation('Không tìm thấy học viên thuộc lớp bạn phụ trách')
+        );
       }
     } else {
       return errorResponse(ApiError.validation('Phạm vi broadcast không hợp lệ'));

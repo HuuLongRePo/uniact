@@ -229,7 +229,13 @@ export default function TeacherFaceAttendancePage() {
             </p>
           </div>
           <div className="relative bg-black rounded-lg overflow-hidden aspect-video max-w-xl">
-            <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              className="w-full h-full object-cover"
+            />
           </div>
           <button
             type="button"
@@ -241,12 +247,15 @@ export default function TeacherFaceAttendancePage() {
           </button>
           {!FACE_BIOMETRIC_RUNTIME_ENABLED ? (
             <p className="text-sm text-amber-700">
-              Runtime camera hiện vẫn đang ở chế độ gated, nên đây là groundwork để nối flow thật ở batch sau.
+              Runtime camera hiện vẫn đang ở chế độ gated, nên đây là groundwork để nối flow thật ở
+              batch sau.
             </p>
           ) : null}
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Candidate embedding</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Candidate embedding
+          </label>
           <textarea
             value={embeddingInput}
             onChange={(e) => setEmbeddingInput(e.target.value)}

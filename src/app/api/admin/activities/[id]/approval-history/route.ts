@@ -26,8 +26,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const { id } = await params;
     const activityId = id;
 
-    const history = ((await dbAll(
-      `
+    const history = (
+      (await dbAll(
+        `
       SELECT 
         h.id,
         h.status,
@@ -40,8 +41,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       WHERE h.activity_id = ?
       ORDER BY h.changed_at DESC
     `,
-      [activityId]
-    )) as Array<any>).map((item) => ({
+        [activityId]
+      )) as Array<any>
+    ).map((item) => ({
       ...item,
       status_label: getApprovalHistoryStatusLabel(item.status),
       is_pending_request: item.status === 'requested' || item.status === 'pending_approval',

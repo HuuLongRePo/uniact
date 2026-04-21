@@ -95,16 +95,6 @@ export default function AdminActivityDetailPage() {
   const participantsPerPage = 10;
 
   useEffect(() => {
-    if (!authLoading && (!user || user.role !== 'admin')) {
-      router.push('/login');
-      return;
-    }
-    if (user && activityId) {
-      void fetchActivity();
-    }
-  }, [user, authLoading, activityId, router, fetchActivity]);
-
-  useEffect(() => {
     setParticipantPage(1);
   }, [participantSearch, participantStatusFilter, participantClassFilter, activeTab]);
 
@@ -171,6 +161,16 @@ export default function AdminActivityDetailPage() {
       setLoading(false);
     }
   });
+
+  useEffect(() => {
+    if (!authLoading && (!user || user.role !== 'admin')) {
+      router.push('/login');
+      return;
+    }
+    if (user && activityId) {
+      void fetchActivity();
+    }
+  }, [user, authLoading, activityId, router, fetchActivity]);
 
   const handleApprovalAction = (action: 'approve' | 'reject') => {
     setApprovalAction(action);
@@ -640,7 +640,9 @@ export default function AdminActivityDetailPage() {
                                   {p.user_name}
                                 </td>
                                 <td className="px-4 py-3 text-sm text-gray-600">{p.user_email}</td>
-                                <td className="px-4 py-3 text-sm text-gray-600">{p.class_name || '-'}</td>
+                                <td className="px-4 py-3 text-sm text-gray-600">
+                                  {p.class_name || '-'}
+                                </td>
                                 <td className="px-4 py-3 text-sm text-gray-600">
                                   {new Date(p.registered_at).toLocaleDateString('vi-VN')}
                                 </td>
@@ -674,8 +676,11 @@ export default function AdminActivityDetailPage() {
                       <div className="mt-4 flex flex-col gap-3 text-sm text-gray-600 md:flex-row md:items-center md:justify-between">
                         <div>
                           Hiển thị {(participantPage - 1) * participantsPerPage + 1}-
-                          {Math.min(participantPage * participantsPerPage, filteredParticipants.length)} /{' '}
-                          {filteredParticipants.length} người tham gia phù hợp
+                          {Math.min(
+                            participantPage * participantsPerPage,
+                            filteredParticipants.length
+                          )}{' '}
+                          / {filteredParticipants.length} người tham gia phù hợp
                         </div>
                         {totalParticipantPages > 1 && (
                           <div className="flex items-center gap-2">
@@ -693,7 +698,9 @@ export default function AdminActivityDetailPage() {
                             <button
                               type="button"
                               onClick={() =>
-                                setParticipantPage((page) => Math.min(totalParticipantPages, page + 1))
+                                setParticipantPage((page) =>
+                                  Math.min(totalParticipantPages, page + 1)
+                                )
                               }
                               disabled={participantPage === totalParticipantPages}
                               className="rounded border border-gray-300 px-3 py-1.5 hover:bg-gray-50 disabled:opacity-50"

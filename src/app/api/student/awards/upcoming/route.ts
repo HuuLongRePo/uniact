@@ -7,7 +7,8 @@ export async function GET(request: NextRequest) {
   try {
     const user = await getUserFromSession();
     if (!user) return errorResponse(ApiError.unauthorized('Chưa đăng nhập'));
-    if (user.role !== 'student') return errorResponse(ApiError.forbidden('Không có quyền truy cập'));
+    if (user.role !== 'student')
+      return errorResponse(ApiError.forbidden('Không có quyền truy cập'));
 
     // Tổng điểm hiện tại dựa trên student_scores
     const result: any = await dbGet(

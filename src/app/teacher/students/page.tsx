@@ -156,7 +156,9 @@ export default function TeacherStudentsPage() {
             Quay lại
           </Link>
           <h1 className="text-3xl font-bold text-gray-900">👥 Danh sách học viên</h1>
-          <p className="text-gray-600 mt-2">Theo dõi học viên trên các lớp và phạm vi hoạt động bạn đang quản lý</p>
+          <p className="text-gray-600 mt-2">
+            Theo dõi học viên trên các lớp và phạm vi hoạt động bạn đang quản lý
+          </p>
         </div>
 
         {/* Filters */}
@@ -436,7 +438,7 @@ export default function TeacherStudentsPage() {
             </div>
             <div className="text-sm text-purple-800 mt-1">Đạt chuẩn ≥70 điểm</div>
           </div>
-        
+
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
             <div className="text-2xl font-bold text-amber-700">
               {filteredStudents.filter((s) => s.is_homeroom_scope).length}

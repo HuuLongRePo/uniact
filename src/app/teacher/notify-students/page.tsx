@@ -79,7 +79,10 @@ export default function TeacherNotifyStudentsPage() {
       Array.from(
         new Map(
           students
-            .filter((student) => Number.isInteger(Number(student.class_id)) && Number(student.class_id) > 0)
+            .filter(
+              (student) =>
+                Number.isInteger(Number(student.class_id)) && Number(student.class_id) > 0
+            )
             .map((student) => [
               String(student.class_id),
               {
@@ -378,7 +381,9 @@ export default function TeacherNotifyStudentsPage() {
                   </label>
                 ))}
                 {filteredStudents.length === 0 && (
-                  <p className="text-gray-500 text-center py-8">Không có học viên trong bộ lọc này</p>
+                  <p className="text-gray-500 text-center py-8">
+                    Không có học viên trong bộ lọc này
+                  </p>
                 )}
               </div>
             </div>

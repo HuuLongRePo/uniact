@@ -71,7 +71,9 @@ export async function POST(request: NextRequest) {
       !(await teacherCanAccessActivity(Number(user.id), Number(participation.activity_id)))
     ) {
       return errorResponse(
-        ApiError.forbidden('Bạn chỉ có thể đánh giá người tham gia của hoạt động thuộc phạm vi quản lý')
+        ApiError.forbidden(
+          'Bạn chỉ có thể đánh giá người tham gia của hoạt động thuộc phạm vi quản lý'
+        )
       );
     }
 

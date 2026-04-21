@@ -90,7 +90,9 @@ export async function GET(request: NextRequest) {
       `SELECT id, class_id FROM users WHERE role = 'student' AND class_id IN (${inClause})`,
       [...classIds]
     )) as Array<{ id: number; class_id: number }>;
-    const ledgers = await getFinalScoreLedgerByStudentIds(studentRows.map((student) => Number(student.id)));
+    const ledgers = await getFinalScoreLedgerByStudentIds(
+      studentRows.map((student) => Number(student.id))
+    );
 
     const stats = [] as any[];
 

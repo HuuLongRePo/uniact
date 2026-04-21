@@ -17,7 +17,11 @@ export interface FaceRuntimeAdapter {
 
 function isRuntimeEnvEnabled() {
   const value = process.env.ENABLE_FACE_BIOMETRIC_RUNTIME;
-  return ['1', 'true', 'yes', 'on'].includes(String(value ?? '').trim().toLowerCase());
+  return ['1', 'true', 'yes', 'on'].includes(
+    String(value ?? '')
+      .trim()
+      .toLowerCase()
+  );
 }
 
 function resolveRuntimeMode(): FaceRuntimeMode {
@@ -81,16 +85,10 @@ function createStubbedAdapter(mode: FaceRuntimeMode): FaceRuntimeAdapter {
     async loadModels(_basePath?: string) {
       return null;
     },
-    async detectSingleEmbedding(
-      _input?: HTMLVideoElement | HTMLImageElement | HTMLCanvasElement
-    ) {
+    async detectSingleEmbedding(_input?: HTMLVideoElement | HTMLImageElement | HTMLCanvasElement) {
       return null;
     },
-    async performLivenessCheck(
-      _video?: HTMLVideoElement,
-      _framesCount = 10,
-      _intervalMs = 100
-    ) {
+    async performLivenessCheck(_video?: HTMLVideoElement, _framesCount = 10, _intervalMs = 100) {
       return normalizeLivenessResult({
         passed: false,
         blinkDetected: false,
@@ -136,7 +134,8 @@ export async function loadFaceModels(basePath?: string): Promise<null> {
     })
     .catch((error) => {
       faceModelLoadState.status = 'failed';
-      faceModelLoadState.lastError = error instanceof Error ? error.message : 'Unknown model load error';
+      faceModelLoadState.lastError =
+        error instanceof Error ? error.message : 'Unknown model load error';
       throw error;
     })
     .finally(() => {
@@ -200,15 +199,21 @@ export interface LivenessCheckResult {
   status: 'runtime_unavailable' | 'insufficient_signal' | 'passed';
 }
 
-export function normalizeLivenessResult(input: Partial<LivenessCheckResult> | null | undefined): LivenessCheckResult {
+export function normalizeLivenessResult(
+  input: Partial<LivenessCheckResult> | null | undefined
+): LivenessCheckResult {
   const score = Number(input?.score ?? 0);
   const blinkDetected = Boolean(input?.blinkDetected);
   const headMovement = Boolean(input?.headMovement);
   const details = Array.isArray(input?.details)
-    ? input!.details.filter((detail): detail is string => typeof detail === 'string' && detail.length > 0)
+    ? input!.details.filter(
+        (detail): detail is string => typeof detail === 'string' && detail.length > 0
+      )
     : [];
 
-  const status = input?.status ?? (score >= 0.7 && (blinkDetected || headMovement) ? 'passed' : 'insufficient_signal');
+  const status =
+    input?.status ??
+    (score >= 0.7 && (blinkDetected || headMovement) ? 'passed' : 'insufficient_signal');
 
   return {
     passed: status === 'passed' && Boolean(input?.passed ?? true),

@@ -66,7 +66,9 @@ export async function GET(request: NextRequest) {
        ORDER BY created_at DESC
        LIMIT 1`,
       [activityId]
-    )) as { id: number; session_token: string; expires_at: string; metadata: string | null } | undefined;
+    )) as
+      | { id: number; session_token: string; expires_at: string; metadata: string | null }
+      | undefined;
 
     if (!activeSession) {
       return successResponse({ session: null });

@@ -6,7 +6,9 @@ import { FACE_BIOMETRIC_RUNTIME_ENABLED } from '@/lib/biometrics/face-runtime';
 import { ensureStudentBiometricSchema } from '@/infrastructure/db/student-biometric-schema';
 
 function computeReady(enrollmentStatus: string, trainingStatus: string) {
-  return FACE_BIOMETRIC_RUNTIME_ENABLED && enrollmentStatus === 'ready' && trainingStatus === 'trained';
+  return (
+    FACE_BIOMETRIC_RUNTIME_ENABLED && enrollmentStatus === 'ready' && trainingStatus === 'trained'
+  );
 }
 
 export async function GET(request: NextRequest) {

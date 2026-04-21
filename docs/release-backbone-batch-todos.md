@@ -296,7 +296,8 @@ Yeu cau:
   - [x] risk con lai: runtime model unavailable se fallback manual; can tiep tuc monitor audit no-match anomaly
   - [x] da fix blocker build (2026-04-21): re-export `ensureActivityStudentScope`, dong bo type admin participants voi contract `present/absent/not_participated`
   - [x] da harden schema drift (2026-04-21): tu bo sung cot `activity_id`/`coefficient` cho `point_calculations` trong scoring + seed
-- [x] Internal RC summary cap nhat: `docs/INTERNAL_RC_SUMMARY_2026-04-21.md`
+  - [x] Internal RC summary cap nhat: `docs/INTERNAL_RC_SUMMARY_2026-04-21.md`
+  - [x] Full release check pass (2026-04-21): `npm.cmd run release:check:full`
 - [x] Tat ca Gate A-E da xanh (2026-04-21).
 - [x] Gan tag RC noi bo `internal-rc-2026-04-21` sau khi xac nhan build + backbone regression + docs release (2026-04-21).
 

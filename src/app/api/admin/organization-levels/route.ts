@@ -44,9 +44,10 @@ export async function POST(request: NextRequest) {
       return errorResponse(ApiError.validation('Tên cấp tổ chức không được để trống'));
     }
 
-    const existing = await dbAll('SELECT id FROM organization_levels WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))', [
-      normalizedName,
-    ]);
+    const existing = await dbAll(
+      'SELECT id FROM organization_levels WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))',
+      [normalizedName]
+    );
     if (existing.length > 0) {
       return errorResponse(ApiError.conflict('Tên cấp tổ chức đã tồn tại'));
     }

@@ -121,12 +121,12 @@ export default function DashboardPage() {
         };
       });
 
-      const typeDistribution = Array.from(new Set(activities.map((a) => a.activity_type || 'Khác'))).map(
-        (type) => ({
-          name: type,
-          value: activities.filter((a) => (a.activity_type || 'Khác') === type).length,
-        })
-      );
+      const typeDistribution = Array.from(
+        new Set(activities.map((a) => a.activity_type || 'Khác'))
+      ).map((type) => ({
+        name: type,
+        value: activities.filter((a) => (a.activity_type || 'Khác') === type).length,
+      }));
 
       const allScores = activities
         .map((a) => Number(a.average_score))

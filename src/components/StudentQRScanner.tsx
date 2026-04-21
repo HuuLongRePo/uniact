@@ -133,7 +133,9 @@ export function StudentQRScanner({ onScan }: Props) {
         {scanState === 'success' && (
           <p className="text-green-600 text-sm mt-2">Da xac thuc: {lastResult.slice(0, 24)}...</p>
         )}
-        {scanState === 'error' && error && <p className="text-red-600 text-sm mt-2">Loi: {error}</p>}
+        {scanState === 'error' && error && (
+          <p className="text-red-600 text-sm mt-2">Loi: {error}</p>
+        )}
         <div className="flex gap-2 mt-3">
           <button
             type="button"

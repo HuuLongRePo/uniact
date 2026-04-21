@@ -49,7 +49,9 @@ export async function DELETE(request: NextRequest) {
     ]);
 
     if (!device || device.length === 0) {
-      return errorResponse(ApiError.notFound('Không tìm thấy thiết bị hoặc bạn không sở hữu thiết bị này'));
+      return errorResponse(
+        ApiError.notFound('Không tìm thấy thiết bị hoặc bạn không sở hữu thiết bị này')
+      );
     }
 
     await dbRun('DELETE FROM devices WHERE id = ?', [deviceId]);

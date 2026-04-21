@@ -149,7 +149,9 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
   );
 
   const handleMandatoryStudentSelect = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const values = Array.from(event.target.selectedOptions).map((option) => parseInt(option.value, 10));
+    const values = Array.from(event.target.selectedOptions).map((option) =>
+      parseInt(option.value, 10)
+    );
     setMandatoryStudentIds(values);
     setVoluntaryStudentIds((current) => current.filter((studentId) => !values.includes(studentId)));
   };
@@ -277,7 +279,9 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
       setTime(timeOnly.slice(0, 5) || '00:00');
       setEndTime(
         typeof (nextActivity as any).end_time === 'string'
-          ? String((nextActivity as any).end_time).split('T')[1]?.slice(0, 5) || ''
+          ? String((nextActivity as any).end_time)
+              .split('T')[1]
+              ?.slice(0, 5) || ''
           : ''
       );
 
@@ -386,9 +390,7 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
       const updateData = await updateRes.json().catch(() => null);
 
       if (!updateRes.ok) {
-        throw new Error(
-          updateData?.message || updateData?.error || 'Không thể cập nhật hoạt động'
-        );
+        throw new Error(updateData?.message || updateData?.error || 'Không thể cập nhật hoạt động');
       }
 
       if (mode === 'submit') {
@@ -759,7 +761,8 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
                 <span>
                   <span className="block font-medium">Mở đăng ký cho tất cả học viên</span>
                   <span className="block text-xs text-emerald-800">
-                    Khi bật, hoạt động sẽ không giới hạn theo lớp và sinh viên đủ điều kiện có thể nhìn thấy để đăng ký.
+                    Khi bật, hoạt động sẽ không giới hạn theo lớp và sinh viên đủ điều kiện có thể
+                    nhìn thấy để đăng ký.
                   </span>
                 </span>
               </label>
@@ -849,7 +852,8 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
                   <div>
                     <p className="font-medium">Chọn học viên trực tiếp</p>
                     <p className="text-xs text-blue-800">
-                      Tải danh sách học viên theo yêu cầu để bổ sung học viên ngoài phạm vi lớp mà không cần reload trang.
+                      Tải danh sách học viên theo yêu cầu để bổ sung học viên ngoài phạm vi lớp mà
+                      không cần reload trang.
                     </p>
                   </div>
                   <button
@@ -868,7 +872,9 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
                 {studentsLoaded ? (
                   <>
                     <p className="mt-2 text-xs text-blue-800">
-                      Đã nạp {studentOptions.length} học viên. Đang chọn {mandatoryStudentIds.length} bắt buộc và {voluntaryStudentIds.length} tự nguyện.
+                      Đã nạp {studentOptions.length} học viên. Đang chọn{' '}
+                      {mandatoryStudentIds.length} bắt buộc và {voluntaryStudentIds.length} tự
+                      nguyện.
                     </p>
                     <div className="mt-3">
                       <input
@@ -880,7 +886,8 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
                         disabled={!canEdit}
                       />
                       <p className="mt-1 text-xs text-blue-800">
-                        Hiển thị {filteredStudentOptions.length}/{studentOptions.length} học viên phù hợp.
+                        Hiển thị {filteredStudentOptions.length}/{studentOptions.length} học viên
+                        phù hợp.
                       </p>
                     </div>
                     <div className="mt-3 grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -891,7 +898,11 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
                               <button
                                 key={`mandatory-chip-${student.id}`}
                                 type="button"
-                                onClick={() => setMandatoryStudentIds((current) => current.filter((id) => id !== student.id))}
+                                onClick={() =>
+                                  setMandatoryStudentIds((current) =>
+                                    current.filter((id) => id !== student.id)
+                                  )
+                                }
                                 disabled={!canEdit}
                                 className="rounded-full bg-orange-100 px-2 py-1 text-xs text-orange-800 hover:bg-orange-200 disabled:opacity-60"
                               >
@@ -925,7 +936,11 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
                               <button
                                 key={`voluntary-chip-${student.id}`}
                                 type="button"
-                                onClick={() => setVoluntaryStudentIds((current) => current.filter((id) => id !== student.id))}
+                                onClick={() =>
+                                  setVoluntaryStudentIds((current) =>
+                                    current.filter((id) => id !== student.id)
+                                  )
+                                }
                                 disabled={!canEdit}
                                 className="rounded-full bg-sky-100 px-2 py-1 text-xs text-sky-800 hover:bg-sky-200 disabled:opacity-60"
                               >
@@ -967,9 +982,12 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
                 <div className="mb-2 text-sm font-semibold text-blue-900">
                   Xem trước danh sách tham gia hiện tại
                 </div>
-                {selectedClasses.length === 0 && mandatoryStudentIds.length === 0 && voluntaryStudentIds.length === 0 ? (
+                {selectedClasses.length === 0 &&
+                mandatoryStudentIds.length === 0 &&
+                voluntaryStudentIds.length === 0 ? (
                   <p className="text-sm text-gray-600">
-                    Chọn ít nhất một lớp hoặc học viên trực tiếp để xem danh sách dự kiến theo phạm vi bắt buộc hoặc tự nguyện.
+                    Chọn ít nhất một lớp hoặc học viên trực tiếp để xem danh sách dự kiến theo phạm
+                    vi bắt buộc hoặc tự nguyện.
                   </p>
                 ) : previewLoading ? (
                   <div className="flex items-center gap-2 text-sm text-blue-700">
@@ -995,16 +1013,22 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
                       </div>
                     </div>
                     <div className="text-xs text-gray-600">
-                      Danh sách hiện được nhóm theo lớp và học viên chọn trực tiếp. Nếu một lớp hoặc học viên xuất hiện ở cả hai nhóm, hệ thống sẽ ưu tiên bắt buộc hơn tự nguyện.
+                      Danh sách hiện được nhóm theo lớp và học viên chọn trực tiếp. Nếu một lớp hoặc
+                      học viên xuất hiện ở cả hai nhóm, hệ thống sẽ ưu tiên bắt buộc hơn tự nguyện.
                     </div>
-                    {participationPreview.direct_students && participationPreview.direct_students.length > 0 ? (
+                    {participationPreview.direct_students &&
+                    participationPreview.direct_students.length > 0 ? (
                       <details className="rounded-lg border border-emerald-200 bg-white p-3">
                         <summary className="cursor-pointer list-none font-medium text-gray-800">
-                          Học viên chọn trực tiếp • {participationPreview.direct_students.length} học viên
+                          Học viên chọn trực tiếp • {participationPreview.direct_students.length}{' '}
+                          học viên
                         </summary>
                         <div className="mt-2 space-y-1 text-sm text-gray-600">
                           {participationPreview.direct_students.map((student) => (
-                            <div key={`direct-${student.id}`} className="flex justify-between gap-3">
+                            <div
+                              key={`direct-${student.id}`}
+                              className="flex justify-between gap-3"
+                            >
                               <div>
                                 <span>{student.name}</span>
                                 <span className="ml-2 text-xs font-medium text-emerald-700">

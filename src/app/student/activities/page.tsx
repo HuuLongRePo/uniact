@@ -67,7 +67,9 @@ export default function StudentActivitiesPage() {
       const response = await fetch(resolveClientFetchUrl('/api/activity-types'));
       const data = await response.json();
       if (response.ok) {
-        setActivityTypes(data.activityTypes || data.types || data.data?.activityTypes || data.data?.types || []);
+        setActivityTypes(
+          data.activityTypes || data.types || data.data?.activityTypes || data.data?.types || []
+        );
       }
     } catch (error) {
       console.error('Error fetching activity types:', error);
