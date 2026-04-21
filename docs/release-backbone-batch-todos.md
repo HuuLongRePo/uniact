@@ -22,9 +22,10 @@ Muc tieu: Release he thong theo duong xuong song, sua loi va mo rong tinh nang t
 - [ ] Chi tiep tuc code sau khi Product Owner xac nhan lua chon.
 
 ## 3) Backbone release gates (P0)
-- [ ] Gate A - Auth/session on dinh
+- [x] Gate A - Auth/session on dinh
   - login/logout/me + middleware + role guard
   - khong loop redirect, khong mat session ngau nhien
+  - [x] Regression Gate A: `8 files / 33 tests` pass (2026-04-21)
   - [x] Hardening UI theme toan he thong: token hoa mau + map light/dark + support system mode + giam FOUC (bat dau tu login va mo rong cho surface dung chung)
   - [x] Login test panel: them search nguoi dung toan he thong theo ten/email, click 1 lan de quick login, dong bo token light/dark cho input/button/card.
   - [x] UI interaction + contrast hardening:
@@ -295,7 +296,8 @@ Yeu cau:
   - [x] risk con lai: runtime model unavailable se fallback manual; can tiep tuc monitor audit no-match anomaly
   - [x] da fix blocker build (2026-04-21): re-export `ensureActivityStudentScope`, dong bo type admin participants voi contract `present/absent/not_participated`
   - [x] da harden schema drift (2026-04-21): tu bo sung cot `activity_id`/`coefficient` cho `point_calculations` trong scoring + seed
-- [ ] Gan tag RC sau khi tat ca Gate A-E xanh.
+- [x] Tat ca Gate A-E da xanh (2026-04-21).
+- [ ] Gan tag RC sau khi chot version/pham vi release candidate.
 
 ## 10) Ke hoach commit de xuat
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix
