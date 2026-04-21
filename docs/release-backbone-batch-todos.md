@@ -56,9 +56,10 @@ Yeu cau thi hanh:
   - [x] Dong bo admin approval queue page voi canonical `successResponse` va preserve workflow API errors tren `/api/activity-approvals` (2026-04-21)
   - [x] Dong bo admin approval queue action toast voi API message va reset approval dialog state giua cac lan mo dong (2026-04-21)
   - [x] Regression Gate B: `12 files / 53 tests` pass (2026-04-21)
-- [ ] Gate C - Student registration on dinh
+- [x] Gate C - Student registration on dinh
   - discover/register/cancel, policy + conflict + capacity race-safe
   - [x] Dong bo trang `student/my-activities` voi canonical `successResponse` cua `/api/activities/my-registrations` va bo sung regression UI (2026-04-21)
+  - [x] Regression Gate C: `9 files / 17 tests` pass (2026-04-21)
 - [ ] Gate D - Attendance on dinh
   - QR session, validate, duplicate-safe, thong bao check-in
 - [ ] Gate E - Scoring/bonus/report on dinh
