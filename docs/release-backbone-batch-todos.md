@@ -305,14 +305,14 @@ Yeu cau:
 
 ### Tai lieu vao cua session
 - [x] Da tao goi handoff: `docs/codex-ide-transition-pack.md`
+- [x] Da tao prompt clone may moi: `docs/codex-clone-coreflows-prompt.md`
 - [ ] Bat dau moi session bang prompt khoi dong trong handoff pack.
 - [ ] Lam viec theo workflow: Audit -> Patch nho -> Test cum -> Update docs -> Commit.
 
 ### Prompt khoi dong rut gon
 ```text
-Tiep tuc release backbone theo docs/release-backbone-batch-todos.md.
-Doc docs/codex-ide-transition-pack.md va thuc hien dung workflow batch.
-Code ngay phan da ro; neu gap quyet dinh nghiep vu thi dung lai va tao Decision Gate dang trac nghiem.
+Dung prompt trong docs/codex-clone-coreflows-prompt.md.
+Prompt nay da gom thu tu xu ly blocker + workflow batch + format bao cao.
 ```
 
 ### Checklist chuyen doi
