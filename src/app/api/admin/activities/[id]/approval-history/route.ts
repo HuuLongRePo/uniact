@@ -5,6 +5,7 @@ import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
 
 function getApprovalHistoryStatusLabel(status: string) {
   switch (status) {
+    case 'pending_approval':
     case 'requested':
       return 'Đã gửi duyệt';
     case 'approved':
@@ -43,7 +44,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     )) as Array<any>).map((item) => ({
       ...item,
       status_label: getApprovalHistoryStatusLabel(item.status),
-      is_pending_request: item.status === 'requested',
+      is_pending_request: item.status === 'requested' || item.status === 'pending_approval',
     }));
 
     return successResponse({ history });
