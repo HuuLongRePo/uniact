@@ -15,14 +15,14 @@ export async function GET(request: NextRequest) {
   try {
     const user = await getUserFromRequest(request);
     if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return NextResponse.json({ error: 'Không có quyền truy cập' }, { status: 403 });
     }
 
     const searchParams = request.nextUrl.searchParams;
     const role = searchParams.get('role') || 'student';
 
     if (!allowedRoles.includes(role)) {
-      return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
+      return NextResponse.json({ error: 'Vai trò không hợp lệ' }, { status: 400 });
     }
 
     await ensureUserColumns();

@@ -7,13 +7,13 @@ export async function POST(req: NextRequest) {
     const user = await getUserFromSession();
 
     if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+      return NextResponse.json({ error: 'Chưa xác thực' }, { status: 403 });
     }
 
     const { formula, variables } = await req.json();
 
     if (!formula) {
-      return NextResponse.json({ error: 'Formula is required' }, { status: 400 });
+      return NextResponse.json({ error: 'Công thức là bắt buộc' }, { status: 400 });
     }
 
     // Check if formula already exists
@@ -58,7 +58,7 @@ export async function GET(req: NextRequest) {
     const user = await getUserFromSession();
 
     if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+      return NextResponse.json({ error: 'Chưa xác thực' }, { status: 403 });
     }
 
     // Get active formula

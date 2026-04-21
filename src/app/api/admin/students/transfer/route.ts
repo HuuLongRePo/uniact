@@ -6,13 +6,14 @@ import { ApiError, successResponse, errorResponse } from '@/lib/api-response';
 export async function POST(request: NextRequest) {
   try {
     const user = await getUserFromSession();
-    if (!user) return errorResponse(ApiError.unauthorized('Unauthorized'));
-    if (user.role !== 'admin') return errorResponse(ApiError.forbidden('Forbidden'));
+    if (!user) return errorResponse(ApiError.unauthorized('Chưa xác thực'));
+    if (user.role !== 'admin')
+      return errorResponse(ApiError.forbidden('Không có quyền truy cập'));
 
     const { studentIds, targetClassId } = await request.json();
 
     if (!Array.isArray(studentIds) || studentIds.length === 0 || !targetClassId) {
-      return errorResponse(ApiError.validation('Invalid request'));
+      return errorResponse(ApiError.validation('Yêu cầu không hợp lệ'));
     }
 
     // Update all students' class_id

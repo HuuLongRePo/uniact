@@ -7,7 +7,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   try {
     const currentUser = await getUserFromRequest(request);
     if (!currentUser || currentUser.role !== 'admin') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Chưa xác thực' }, { status: 401 });
     }
 
     await ensureUserColumns();
@@ -16,7 +16,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const userId = parseInt(id);
 
     if (isNaN(userId)) {
-      return NextResponse.json({ error: 'Invalid user ID' }, { status: 400 });
+      return NextResponse.json({ error: 'ID người dùng không hợp lệ' }, { status: 400 });
     }
 
     // Cannot delete yourself
@@ -29,7 +29,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     const target = await dbGet('SELECT id, email FROM users WHERE id = ?', [userId]);
     if (!target) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Không tìm thấy người dùng' }, { status: 404 });
     }
 
     await dbRun('UPDATE users SET is_active = 0 WHERE id = ?', [userId]);
@@ -46,6 +46,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     });
   } catch (error) {
     console.error('Delete user error:', error);
-    return NextResponse.json({ error: 'Failed to delete user' }, { status: 500 });
+    return NextResponse.json({ error: 'Xóa người dùng thất bại' }, { status: 500 });
   }
 }

@@ -6,15 +6,40 @@ import { User } from '@/types/database';
 import crypto from 'crypto';
 import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
 import { teacherCanAccessActivity } from '@/lib/activity-access';
+import { sendBulkDatabaseNotifications } from '@/lib/notifications';
 
 const MIN_EXPIRES_MINUTES = 1;
 const MAX_EXPIRES_MINUTES = 60;
 const DEFAULT_EXPIRES_MINUTES = 5;
 const MAX_ALLOWED_SCANS = 5000;
 
+type SessionOptions = {
+  single_use: boolean;
+  max_scans: number | null;
+};
+
+function parseStoredSessionOptions(rawMetadata: unknown): SessionOptions {
+  if (!rawMetadata || typeof rawMetadata !== 'string') {
+    return { single_use: false, max_scans: null };
+  }
+
+  try {
+    const parsed = JSON.parse(rawMetadata);
+    return {
+      single_use: Boolean(parsed?.single_use),
+      max_scans:
+        typeof parsed?.max_scans === 'number' && Number.isFinite(parsed.max_scans)
+          ? parsed.max_scans
+          : null,
+    };
+  } catch {
+    return { single_use: false, max_scans: null };
+  }
+}
+
 function parseSessionOptions(body: any): {
   expiresMinutes: number;
-  metadata: { single_use: boolean; max_scans: number | null };
+  metadata: SessionOptions;
 } {
   const requestedExpires = Number(body?.expires_minutes);
   const expiresMinutes = Number.isFinite(requestedExpires)
@@ -81,11 +106,13 @@ export async function POST(request: NextRequest) {
     }
 
     const activity = (await dbGet(
-      `SELECT id, teacher_id, status, approval_status
+      `SELECT id, teacher_id, title, status, approval_status
        FROM activities
        WHERE id = ?`,
       [activityId]
-    )) as { id: number; teacher_id: number; status: string; approval_status: string } | undefined;
+    )) as
+      | { id: number; teacher_id: number; title: string; status: string; approval_status: string }
+      | undefined;
 
     if (!activity) {
       return errorResponse(ApiError.notFound('Không tìm thấy hoạt động'));
@@ -109,7 +136,7 @@ export async function POST(request: NextRequest) {
     }
 
     const existingActiveSession = (await dbGet(
-      `SELECT id, session_token, expires_at
+      `SELECT id, session_token, expires_at, metadata
        FROM qr_sessions
        WHERE activity_id = ?
          AND is_active = 1
@@ -117,14 +144,20 @@ export async function POST(request: NextRequest) {
        ORDER BY created_at DESC
        LIMIT 1`,
       [activityId]
-    )) as { id: number; session_token: string; expires_at: string } | undefined;
+    )) as { id: number; session_token: string; expires_at: string; metadata: string | null } | undefined;
 
     if (existingActiveSession) {
-      return errorResponse(
-        ApiError.conflict('Đã tồn tại phiên QR còn hiệu lực cho hoạt động này', {
+      return successResponse(
+        {
+          id: existingActiveSession.id,
+          token: existingActiveSession.session_token,
           session_id: existingActiveSession.id,
+          session_token: existingActiveSession.session_token,
           expires_at: existingActiveSession.expires_at,
-        })
+          options: parseStoredSessionOptions(existingActiveSession.metadata),
+          reused: true,
+        },
+        'Da co phien QR con hieu luc, su dung lai phien hien tai'
       );
     }
 
@@ -141,6 +174,61 @@ export async function POST(request: NextRequest) {
       JSON.stringify(metadata)
     );
 
+    try {
+      const participantRows = (await dbAll(
+        `SELECT DISTINCT student_id, COALESCE(participation_source, 'voluntary') as participation_source
+         FROM participations
+         WHERE activity_id = ?
+           AND student_id IS NOT NULL
+           AND attendance_status IN ('registered', 'attended')`,
+        [activityId]
+      )) as Array<{ student_id: number; participation_source?: string | null }>;
+
+      const mandatoryIds = participantRows
+        .filter((row) => String(row.participation_source || 'voluntary') === 'assigned')
+        .map((row) => Number(row.student_id))
+        .filter((value) => Number.isInteger(value) && value > 0);
+
+      const voluntaryRegisteredIds = participantRows
+        .filter((row) => String(row.participation_source || 'voluntary') !== 'assigned')
+        .map((row) => Number(row.student_id))
+        .filter((value) => Number.isInteger(value) && value > 0);
+
+      const targetUserIds = Array.from(new Set([...mandatoryIds, ...voluntaryRegisteredIds]));
+
+      if (targetUserIds.length > 0) {
+        await sendBulkDatabaseNotifications({
+          userIds: targetUserIds,
+          type: 'attendance',
+          title: 'Bat dau diem danh',
+          message: `Hoat dong "${activity.title}" da mo phien QR diem danh. Vao ngay de quet QR.`,
+          relatedTable: 'activities',
+          relatedId: activityId,
+          eventType: 'attendance_qr_started',
+          actorId: Number((user as User).id),
+          priority: 'high',
+          ttlSeconds: 10,
+          actionButtons: [
+            {
+              id: 'open_checkin',
+              label: 'Quet QR ngay',
+              action: 'open_link',
+              href: `/student/activities/${activityId}/check-in`,
+              variant: 'primary',
+            },
+          ],
+          metadata: {
+            activity_id: activityId,
+            qr_session_id: Number(result.lastID || 0),
+            mandatory_count: mandatoryIds.length,
+            voluntary_registered_count: voluntaryRegisteredIds.length,
+          },
+        });
+      }
+    } catch (notificationError) {
+      console.error('QR start notification error:', notificationError);
+    }
+
     return successResponse(
       {
         id: result.lastID || null,
@@ -155,7 +243,7 @@ export async function POST(request: NextRequest) {
     );
   } catch (error: any) {
     console.error('QR session creation error:', error);
-    return errorResponse(ApiError.internalError('Internal server error'));
+    return errorResponse(ApiError.internalError('Lỗi máy chủ nội bộ'));
   }
 }
 
@@ -224,6 +312,7 @@ export async function GET(request: NextRequest) {
     return successResponse({ sessions: sessionsWithParsedMetadata });
   } catch (error: any) {
     console.error('QR session history error:', error);
-    return errorResponse(ApiError.internalError('Internal server error'));
+    return errorResponse(ApiError.internalError('Lỗi máy chủ nội bộ'));
   }
 }
+

@@ -3,19 +3,19 @@ import { dbGet, dbRun } from '@/lib/database';
 import { getUserFromToken } from '@/lib/auth';
 import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
 
-// PUT /api/users/:id/class - Chuyển học sinh sang lớp khác (Admin only)
+// PUT /api/users/:id/class - Chuyển học viên sang lớp khác (Admin only)
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
     const token = request.cookies.get('token')?.value;
 
     if (!token) {
-      return errorResponse(ApiError.unauthorized('Unauthorized'));
+      return errorResponse(ApiError.unauthorized('Chưa đăng nhập'));
     }
 
     const currentUser = await getUserFromToken(token);
     if (!currentUser || currentUser.role !== 'admin') {
-      return errorResponse(ApiError.forbidden('Forbidden - Admin only'));
+      return errorResponse(ApiError.forbidden('Không có quyền truy cập (chỉ admin)'));
     }
 
     const userId = parseInt(id);
@@ -23,7 +23,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const { class_id } = body;
 
     if (!class_id) {
-      return errorResponse(ApiError.badRequest('class_id is required'));
+      return errorResponse(ApiError.badRequest('Thiếu class_id'));
     }
 
     // Kiểm tra user tồn tại và là student
@@ -40,7 +40,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     if (user.role !== 'student') {
-      return errorResponse(ApiError.badRequest('Chỉ có thể chuyển lớp cho học sinh'));
+      return errorResponse(ApiError.badRequest('Chỉ có thể chuyển lớp cho học viên'));
     }
 
     // Kiểm tra lớp mới tồn tại
@@ -53,7 +53,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     // Kiểm tra không trùng lớp cũ
     if (user.class_id === class_id) {
       return errorResponse(
-        ApiError.badRequest('Học sinh đã ở lớp này rồi', { current_class: user.current_class_name })
+        ApiError.badRequest('Học viên đã ở lớp này rồi', { current_class: user.current_class_name })
       );
     }
 
@@ -99,6 +99,6 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     );
   } catch (error) {
     console.error('Error moving student:', error);
-    return errorResponse(ApiError.internalError('Failed to move student'));
+    return errorResponse(ApiError.internalError('Không thể chuyển lớp học viên'));
   }
 }

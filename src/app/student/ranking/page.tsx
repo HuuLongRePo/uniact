@@ -54,7 +54,7 @@ export default function StudentRankingPage() {
       }
 
       const res = await fetch(`/api/scoreboard?${params.toString()}`);
-      if (!res.ok) throw new Error('Failed to fetch rankings');
+      if (!res.ok) throw new Error('Không thể tải bảng xếp hạng');
 
       const data: RankingResponse = await res.json();
 
@@ -87,7 +87,7 @@ export default function StudentRankingPage() {
           <h1 data-testid="ranking-heading" className="text-4xl font-bold text-gray-900 mb-2">
             🏆 Bảng Xếp Hạng
           </h1>
-          <p className="text-gray-600">Xem xếp hạng điểm của các học sinh</p>
+          <p className="text-gray-600">Xem xếp hạng điểm của các học viên</p>
         </div>
 
         {/* User Stats Card */}
@@ -138,7 +138,7 @@ export default function StudentRankingPage() {
               <thead className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
                 <tr>
                   <th className="px-6 py-4 text-left text-sm font-semibold w-24">Hạng</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold">Tên Học Sinh</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold">Tên Học Viên</th>
                   <th className="px-6 py-4 text-left text-sm font-semibold">Lớp</th>
                   <th className="px-6 py-4 text-center text-sm font-semibold">Tổng Điểm</th>
                   <th className="px-6 py-4 text-center text-sm font-semibold">Hoạt Động</th>

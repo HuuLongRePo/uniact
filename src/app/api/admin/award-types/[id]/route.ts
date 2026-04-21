@@ -8,12 +8,12 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const { id } = await params;
     const token = request.cookies.get('token')?.value;
     if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Chưa đăng nhập' }, { status: 401 });
     }
 
     const user = await getUserFromToken(token);
     if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return NextResponse.json({ error: 'Không có quyền truy cập' }, { status: 403 });
     }
 
     const awardType = await dbGet(
@@ -38,7 +38,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     });
   } catch (error) {
     console.error('Error getting award type:', error);
-    return NextResponse.json({ error: 'Failed to get award type' }, { status: 500 });
+    return NextResponse.json({ error: 'Không thể tải loại khen thưởng' }, { status: 500 });
   }
 }
 
@@ -48,12 +48,12 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const { id } = await params;
     const token = request.cookies.get('token')?.value;
     if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Chưa đăng nhập' }, { status: 401 });
     }
 
     const user = await getUserFromToken(token);
     if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return NextResponse.json({ error: 'Không có quyền truy cập' }, { status: 403 });
     }
 
     const awardTypeId = parseInt(id);
@@ -108,7 +108,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     });
   } catch (error) {
     console.error('Error updating award type:', error);
-    return NextResponse.json({ error: 'Failed to update award type' }, { status: 500 });
+    return NextResponse.json({ error: 'Không thể cập nhật loại khen thưởng' }, { status: 500 });
   }
 }
 
@@ -121,12 +121,12 @@ export async function DELETE(
     const { id } = await params;
     const token = request.cookies.get('token')?.value;
     if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Chưa đăng nhập' }, { status: 401 });
     }
 
     const user = await getUserFromToken(token);
     if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return NextResponse.json({ error: 'Không có quyền truy cập' }, { status: 403 });
     }
 
     const awardTypeId = parseInt(id);
@@ -168,6 +168,6 @@ export async function DELETE(
     });
   } catch (error) {
     console.error('Error deleting award type:', error);
-    return NextResponse.json({ error: 'Failed to delete award type' }, { status: 500 });
+    return NextResponse.json({ error: 'Không thể xóa loại khen thưởng' }, { status: 500 });
   }
 }

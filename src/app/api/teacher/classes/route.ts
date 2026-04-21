@@ -1,9 +1,6 @@
 /**
  * API Route: Lớp học của giảng viên
  * GET /api/teacher/classes
- *
- * Trả về danh sách lớp mà giảng viên phụ trách
- * Dùng bảng class_teachers cho quan hệ nhiều-nhiều
  */
 
 import { NextRequest } from 'next/server';
@@ -35,7 +32,34 @@ export async function GET(request: NextRequest) {
         c.id,
         c.name,
         c.grade,
-        (SELECT COUNT(*) FROM users u WHERE u.class_id = c.id AND u.role = 'student') as student_count
+        (SELECT COUNT(*) FROM users u WHERE u.class_id = c.id AND u.role = 'student') as student_count,
+        CASE
+          WHEN ? = 1 THEN 1
+          WHEN c.teacher_id = ? THEN 1
+          WHEN EXISTS (
+            SELECT 1 FROM class_teachers ct_primary
+            WHERE ct_primary.class_id = c.id
+              AND ct_primary.teacher_id = ?
+              AND ct_primary.role = 'primary'
+          ) THEN 1
+          ELSE 0
+        END as is_homeroom_class,
+        CASE
+          WHEN ? = 1 THEN 'admin'
+          WHEN c.teacher_id = ? THEN 'primary'
+          WHEN EXISTS (
+            SELECT 1 FROM class_teachers ct_primary
+            WHERE ct_primary.class_id = c.id
+              AND ct_primary.teacher_id = ?
+              AND ct_primary.role = 'primary'
+          ) THEN 'primary'
+          WHEN EXISTS (
+            SELECT 1 FROM class_teachers ct_assistant
+            WHERE ct_assistant.class_id = c.id
+              AND ct_assistant.teacher_id = ?
+          ) THEN 'assistant'
+          ELSE 'none'
+        END as teacher_class_role
       FROM classes c
       WHERE (
         ? = 1
@@ -47,7 +71,18 @@ export async function GET(request: NextRequest) {
       )
       ORDER BY c.grade ASC, c.name ASC
       `,
-      [isAdmin ? 1 : 0, user.id, user.id]
+      [
+        isAdmin ? 1 : 0,
+        user.id,
+        user.id,
+        isAdmin ? 1 : 0,
+        user.id,
+        user.id,
+        user.id,
+        isAdmin ? 1 : 0,
+        user.id,
+        user.id,
+      ]
     );
 
     const normalized = (classes as any[]).map((c: any) => ({
@@ -55,6 +90,9 @@ export async function GET(request: NextRequest) {
       name: String(c.name),
       grade: String(c.grade ?? ''),
       studentCount: Number(c.student_count ?? 0),
+      isHomeroomClass: Boolean(Number(c.is_homeroom_class ?? 0)),
+      teacherClassRole: String(c.teacher_class_role || 'none'),
+      canEdit: Boolean(Number(c.is_homeroom_class ?? 0)),
     }));
 
     return successResponse({ classes: normalized });

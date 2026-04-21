@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
   try {
     const user = await getUserFromRequest(request);
     if (!user) {
-      return errorResponse(ApiError.unauthorized('Unauthorized'));
+      return errorResponse(ApiError.unauthorized('Chưa đăng nhập'));
     }
 
     const params = request.nextUrl?.searchParams;
@@ -25,11 +25,11 @@ export async function GET(request: NextRequest) {
     const end_date = params?.get('end_date') || undefined;
 
     if (user.role === 'student') {
-      return errorResponse(ApiError.forbidden('Forbidden'));
+      return errorResponse(ApiError.forbidden('Không có quyền truy cập'));
     }
 
     if (user.role === 'teacher' && !class_id) {
-      return errorResponse(ApiError.validation('class_id is required for teacher export'));
+      return errorResponse(ApiError.validation('Giảng viên cần cung cấp class_id để xuất dữ liệu'));
     }
 
     const data = await dbHelpers.getAttendanceExportData({
@@ -77,6 +77,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (error: any) {
     console.error('Export attendance error:', error);
-    return errorResponse(ApiError.internalError('Internal server error'));
+    return errorResponse(ApiError.internalError('Lỗi máy chủ nội bộ'));
   }
 }

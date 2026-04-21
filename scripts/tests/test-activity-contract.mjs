@@ -114,27 +114,27 @@ try {
   cookieHeader = readCookieHeader(loginResponse.headers);
 
   if (loginResponse.status !== 200) {
-    printFail("Dang nhap giao vien that bai", `HTTP=${loginResponse.status} body=${loginText.slice(0, 240)}`);
+    printFail("Đăng nhập giảng viên thất bại", `HTTP=${loginResponse.status} body=${loginText.slice(0, 240)}`);
     console.log("");
     console.log("Contract test dung lai do khong dang nhap duoc.");
     process.exit(1);
   }
 
   if (!cookieHeader.includes("token=")) {
-    printFail("Dang nhap thanh cong nhung khong lay duoc cookie token");
+    printFail("Đăng nhập thành công nhưng không lấy được cookie token");
     console.log("");
     console.log("Contract test dung lai do khong co cookie xac thuc.");
     process.exit(1);
   }
 
-  printPass("Dang nhap giao vien thanh cong");
+  printPass("Đăng nhập giảng viên thành công");
 
   const classesResponse = await requestJson("GET", `${BASE_URL}/api/classes`);
   const classId = extractFirstClassId(classesResponse.json);
 
   if (classesResponse.status !== 200) {
     printFail(
-      "Lay danh sach lop that bai",
+      "Lấy danh sách lớp thất bại",
       `HTTP=${classesResponse.status} body=${classesResponse.text.slice(0, 240)}`,
     );
     console.log("");
@@ -143,7 +143,7 @@ try {
   }
 
   if (!classId) {
-    printFail("Khong tim thay class_id hop le tu /api/classes");
+    printFail("Không tìm thấy class_id hợp lệ từ /api/classes");
     console.log("");
     console.log("Contract test dung lai do khong co class_id.");
     process.exit(1);

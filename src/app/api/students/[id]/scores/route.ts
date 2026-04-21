@@ -12,14 +12,14 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const { id } = await params;
     const user = await getUserFromSession();
     if (!user) {
-      return errorResponse(ApiError.unauthorized('Unauthorized'));
+      return errorResponse(ApiError.unauthorized('Chưa đăng nhập'));
     }
 
     const studentId = parseInt(id);
 
     // Students chỉ xem được điểm của mình
     if (user.role === 'student' && user.id !== studentId) {
-      return errorResponse(ApiError.forbidden('Forbidden'));
+      return errorResponse(ApiError.forbidden('Không có quyền truy cập'));
     }
 
     const breakdown = await PointCalculationService.getStudentScoreBreakdown(studentId);

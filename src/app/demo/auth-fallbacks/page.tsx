@@ -190,7 +190,7 @@ export default function AuthFallbacksDemo() {
                 </p>
                 <ul className="text-xs text-amber-700 space-y-1 ml-4">
                   <li>✓ Hoạt động đầu tiên bạn tham gia</li>
-                  <li>✓ Số lượng học sinh trong lớp</li>
+                  <li>✓ Số lượng học viên trong lớp</li>
                   <li>✓ Giảng viên phê duyệt tài khoản (nếu có)</li>
                   <li>✓ Giới hạn 5 lần thử mỗi giờ</li>
                   <li>✓ Không phân biệt hoa thường, dấu</li>

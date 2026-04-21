@@ -95,4 +95,37 @@ describe('POST /api/activities/participation-preview', () => {
       }),
     ]);
   });
+
+  it('maps legacy is_mandatory=false to voluntary class preview', async () => {
+    mocks.mockRequireApiRole.mockResolvedValue({ id: 9, role: 'teacher' });
+    mocks.mockDbAll.mockImplementation(async (sql: string) => {
+      if (sql.includes('FROM classes c')) {
+        return [{ id: 2, name: 'CNTT K18B' }];
+      }
+
+      if (sql.includes('u.class_id IN')) {
+        return [
+          { id: 301, name: 'Student Legacy', email: 'legacy@example.com', class_id: 2 },
+        ];
+      }
+
+      return [];
+    });
+
+    const res = await route.POST({
+      json: async () => ({
+        class_ids: [2],
+        is_mandatory: false,
+      }),
+    } as any);
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.preview.groups[0]).toMatchObject({
+      class_id: 2,
+      participation_mode: 'voluntary',
+      mandatory_count: 0,
+      voluntary_count: 1,
+    });
+  });
 });

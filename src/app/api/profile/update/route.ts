@@ -8,7 +8,7 @@ export async function PUT(request: NextRequest) {
   try {
     const user = await getUserFromSession();
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Chưa đăng nhập' }, { status: 401 });
     }
 
     const body = await request.json();
@@ -37,7 +37,7 @@ export async function PUT(request: NextRequest) {
       if (existing) {
         return NextResponse.json(
           {
-            error: 'Email already in use',
+            error: 'Email đã được sử dụng',
           },
           { status: 409 }
         );
@@ -51,7 +51,7 @@ export async function PUT(request: NextRequest) {
       if (!current_password) {
         return NextResponse.json(
           {
-            error: 'Current password is required to set new password',
+            error: 'Cần nhập mật khẩu hiện tại để đặt mật khẩu mới',
           },
           { status: 400 }
         );
@@ -66,7 +66,7 @@ export async function PUT(request: NextRequest) {
       if (!isValid) {
         return NextResponse.json(
           {
-            error: 'Current password is incorrect',
+            error: 'Mật khẩu hiện tại không đúng',
           },
           { status: 401 }
         );
@@ -81,7 +81,7 @@ export async function PUT(request: NextRequest) {
     if (updates.length === 0) {
       return NextResponse.json(
         {
-          error: 'No fields to update',
+          error: 'Không có trường nào để cập nhật',
         },
         { status: 400 }
       );
@@ -109,7 +109,7 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Profile updated successfully',
+      message: 'Cập nhật hồ sơ thành công',
     });
   } catch (error: any) {
     console.error('Error updating profile:', error);

@@ -5,10 +5,10 @@ import createConductAndTrigger from '@/lib/conduct-api';
 export async function POST(request: NextRequest) {
   try {
     const user = await getUserFromRequest(request);
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!user) return NextResponse.json({ error: 'Chưa xác thực' }, { status: 401 });
 
     if (user.role !== 'teacher' && user.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return NextResponse.json({ error: 'Không có quyền truy cập' }, { status: 403 });
     }
 
     const body = await request.json();
@@ -21,13 +21,13 @@ export async function POST(request: NextRequest) {
     };
 
     if (!payload.studentId || !payload.term || isNaN(payload.finalConductScore)) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+      return NextResponse.json({ error: 'Thiếu trường bắt buộc' }, { status: 400 });
     }
 
     const result = await createConductAndTrigger(payload, user.id);
     return NextResponse.json({ success: true, result }, { status: 201 });
   } catch (err: any) {
     console.error('POST /api/conduct error:', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: 'Lỗi máy chủ nội bộ' }, { status: 500 });
   }
 }

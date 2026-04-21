@@ -30,7 +30,14 @@ vi.mock('@/lib/use-submit-hook', () => ({
 }));
 
 vi.mock('@/components/LoginTestPanel', () => ({
-  default: () => <div data-testid="login-test-panel">Demo Panel</div>,
+  default: ({ onSelectAccount }: any) => (
+    <button
+      data-testid="login-test-panel"
+      onClick={() => onSelectAccount?.('demo@user.test', 'demo-pass')}
+    >
+      Demo Panel
+    </button>
+  ),
 }));
 
 describe('Login page demo panel gating', () => {
@@ -39,18 +46,21 @@ describe('Login page demo panel gating', () => {
     vi.clearAllMocks();
   });
 
-  it('shows explanatory notice when demo panel is disabled', async () => {
+  it('shows explanatory notice when demo panel is disabled in production', async () => {
     vi.stubEnv('NODE_ENV', 'production');
     vi.stubEnv('NEXT_PUBLIC_ENABLE_DEMO_ACCOUNTS', '0');
+    vi.stubEnv('ENABLE_DEMO_ACCOUNTS', '0');
 
     const Page = (await import('../src/app/login/page')).default;
     render(<Page />);
 
-    expect(screen.getByText(/Quick login đang tắt/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Demo account panel hiện chỉ hiển thị khi bạn bật/i)
+    ).toBeInTheDocument();
     expect(screen.queryByTestId('login-test-panel')).not.toBeInTheDocument();
   });
 
-  it('shows demo panel when demo accounts are enabled even in production', async () => {
+  it('shows demo panel in production when NEXT_PUBLIC_ENABLE_DEMO_ACCOUNTS is enabled', async () => {
     vi.stubEnv('NODE_ENV', 'production');
     vi.stubEnv('NEXT_PUBLIC_ENABLE_DEMO_ACCOUNTS', '1');
 
@@ -58,6 +68,17 @@ describe('Login page demo panel gating', () => {
     render(<Page />);
 
     expect(screen.getByTestId('login-test-panel')).toBeInTheDocument();
-    expect(screen.queryByText(/Quick login đang tắt/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Demo account panel hiện chỉ hiển thị/i)).not.toBeInTheDocument();
+  });
+
+  it('shows demo panel in development by default', async () => {
+    vi.stubEnv('NODE_ENV', 'development');
+    vi.stubEnv('NEXT_PUBLIC_ENABLE_DEMO_ACCOUNTS', '0');
+    vi.stubEnv('ENABLE_DEMO_ACCOUNTS', '0');
+
+    const Page = (await import('../src/app/login/page')).default;
+    render(<Page />);
+
+    expect(screen.getByTestId('login-test-panel')).toBeInTheDocument();
   });
 });

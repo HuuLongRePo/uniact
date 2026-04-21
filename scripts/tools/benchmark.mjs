@@ -24,7 +24,7 @@ if (!shouldRunLoadTest) {
 }
 
 if (!hasLoadTestConfig || artilleryCheck.status !== 0) {
-  console.error("Khong du dieu kien chay load test that.");
+  console.error("Không đủ điều kiện chạy load test thật.");
   process.exit(1);
 }
 

@@ -9,12 +9,12 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const { id } = await params;
     const token = request.cookies.get('token')?.value;
     if (!token) {
-      return errorResponse(ApiError.unauthorized('Unauthorized'));
+      return errorResponse(ApiError.unauthorized('Chưa đăng nhập'));
     }
 
     const user = await getUserFromToken(token);
     if (!user) {
-      return errorResponse(ApiError.unauthorized('Unauthorized'));
+      return errorResponse(ApiError.unauthorized('Chưa đăng nhập'));
     }
 
     const studentId = parseInt(id);
@@ -41,10 +41,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         student.class_id,
       ]);
       if (!teacherClass) {
-        return errorResponse(ApiError.forbidden('Forbidden'));
+        return errorResponse(ApiError.forbidden('Không có quyền truy cập'));
       }
     } else if (user.role !== 'admin') {
-      return errorResponse(ApiError.forbidden('Forbidden'));
+      return errorResponse(ApiError.forbidden('Không có quyền truy cập'));
     }
 
     // Lấy tổng điểm và xếp hạng

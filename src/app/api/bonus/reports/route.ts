@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
 
   // Only admin and teachers can access reports
   if (!user || (user.role !== 'admin' && user.role !== 'teacher')) {
-    return errorResponse(ApiError.unauthorized('Unauthorized'));
+    return errorResponse(ApiError.unauthorized('Chưa đăng nhập'));
   }
 
   const searchParams = req.nextUrl.searchParams;
@@ -44,12 +44,12 @@ export async function GET(req: NextRequest) {
     if (type === 'student' && studentId) {
       data = await getStudentBonusReport(studentId);
       if (!data) {
-        return errorResponse(ApiError.notFound('Student not found'));
+        return errorResponse(ApiError.notFound('Không tìm thấy học viên'));
       }
     } else if (type === 'class' && classId) {
       data = await getClassBonusReport(classId);
       if (!data) {
-        return errorResponse(ApiError.notFound('Class not found'));
+        return errorResponse(ApiError.notFound('Không tìm thấy lớp'));
       }
     } else if (type === 'statistics') {
       data = await generateBonusStatistics();
@@ -111,6 +111,6 @@ export async function GET(req: NextRequest) {
     return successResponse(data);
   } catch (error) {
     console.error('Reports error:', error);
-    return errorResponse(ApiError.internalError('Failed to generate report'));
+    return errorResponse(ApiError.internalError('Không thể tạo báo cáo'));
   }
 }

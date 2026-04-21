@@ -10,24 +10,24 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     const token = cookieStore.get('auth_token')?.value;
 
     if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Chưa đăng nhập' }, { status: 401 });
     }
 
     const decoded = verifyToken(token);
     const user = (await dbGet('SELECT role FROM users WHERE id = ?', [decoded.userId])) as any;
 
     if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return NextResponse.json({ error: 'Không có quyền truy cập' }, { status: 403 });
     }
 
     await dbRun('DELETE FROM activity_templates WHERE id = ?', [id]);
 
     return NextResponse.json({
       success: true,
-      message: 'Template deleted',
+      message: 'Xóa mẫu thành công',
     });
   } catch (error) {
     console.error('Delete template error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: 'Lỗi máy chủ nội bộ' }, { status: 500 });
   }
 }

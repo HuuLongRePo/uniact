@@ -20,8 +20,9 @@ export async function POST(request: NextRequest) {
     await dbReady();
 
     const user = await getUserFromRequest(request);
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    if (user.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (!user) return NextResponse.json({ error: 'Chưa xác thực' }, { status: 401 });
+    if (user.role !== 'admin')
+      return NextResponse.json({ error: 'Không có quyền truy cập' }, { status: 403 });
 
     const body = await request.json();
     const { activityId, slotDate, totalParticipants, slotSize } = body;

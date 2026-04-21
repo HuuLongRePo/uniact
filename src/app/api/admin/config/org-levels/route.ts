@@ -6,7 +6,7 @@ export async function GET(request: NextRequest) {
   try {
     const user = await getUserFromSession();
     if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Chưa đăng nhập' }, { status: 401 });
     }
 
     const levels = await dbAll('SELECT * FROM organization_levels ORDER BY point_multiplier DESC');
@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
   try {
     const user = await getUserFromSession();
     if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Chưa đăng nhập' }, { status: 401 });
     }
 
     const { name, point_multiplier, description } = await request.json();

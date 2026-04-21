@@ -15,8 +15,9 @@ export async function DELETE(
     const { id: classId, studentId } = await params;
     const user = await getUserFromSession();
 
-    if (!user) return errorResponse(ApiError.unauthorized('Unauthorized'));
-    if (user.role !== 'admin') return errorResponse(ApiError.forbidden('Forbidden'));
+    if (!user) return errorResponse(ApiError.unauthorized('Chưa xác thực'));
+    if (user.role !== 'admin')
+      return errorResponse(ApiError.forbidden('Không có quyền truy cập'));
 
     // Verify class exists
     const classData = await dbGet('SELECT id, name FROM classes WHERE id = ?', [classId]);

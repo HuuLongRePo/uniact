@@ -21,30 +21,31 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   try {
     const { id: paramId } = await params;
     const token = request.cookies.get('token')?.value;
-    if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!token) return NextResponse.json({ error: 'Chưa đăng nhập' }, { status: 401 });
     const user = await getUserFromToken(token);
     if (!user || user.role !== 'admin')
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return NextResponse.json({ error: 'Không có quyền truy cập' }, { status: 403 });
 
     const id = parseInt(paramId);
     const existing = await dbGet('SELECT * FROM organization_levels WHERE id = ?', [id]);
     if (!existing) return NextResponse.json({ error: 'Không tìm thấy cấp độ' }, { status: 404 });
 
     const { name, multiplier, description } = await request.json();
+    const normalizedName = typeof name === 'string' ? name.trim() : '';
 
     // Check duplicate name
-    if (name && name !== existing.name) {
-      const dup = await dbGet('SELECT id FROM organization_levels WHERE name = ? AND id != ?', [
-        name,
-        id,
-      ]);
+    if (normalizedName && normalizedName !== existing.name) {
+      const dup = await dbGet(
+        'SELECT id FROM organization_levels WHERE LOWER(TRIM(name)) = LOWER(TRIM(?)) AND id != ?',
+        [normalizedName, id]
+      );
       if (dup) return NextResponse.json({ error: 'Tên cấp độ đã tồn tại' }, { status: 400 });
     }
 
     await dbRun(
       `UPDATE organization_levels SET name = ?, multiplier = ?, description = ? WHERE id = ?`,
       [
-        name || existing.name,
+        normalizedName || existing.name,
         multiplier !== undefined ? multiplier : existing.multiplier,
         description !== undefined ? description : existing.description,
         id,
@@ -56,7 +57,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       'UPDATE',
       'organization_levels',
       id,
-      `Cập nhật cấp độ: ${name || existing.name}`
+      `Cập nhật cấp độ: ${normalizedName || existing.name}`
     );
     return NextResponse.json({ message: 'Cập nhật thành công' });
   } catch (error: any) {
@@ -73,10 +74,10 @@ export async function DELETE(
   try {
     const { id: paramId } = await params;
     const token = request.cookies.get('token')?.value;
-    if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!token) return NextResponse.json({ error: 'Chưa đăng nhập' }, { status: 401 });
     const user = await getUserFromToken(token);
     if (!user || user.role !== 'admin')
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return NextResponse.json({ error: 'Không có quyền truy cập' }, { status: 403 });
 
     const id = parseInt(paramId);
     const existing = await dbGet('SELECT * FROM organization_levels WHERE id = ?', [id]);

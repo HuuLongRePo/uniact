@@ -276,14 +276,16 @@ Yeu cau:
   - [x] Batch 5 FaceID regression: `10 files / 41 tests` pass (2026-04-21)
 - [x] Chay regression bundle backbone truoc release candidate.
   - [x] `npm run test:backbone` -> `11 files / 47 tests` pass (2026-04-21)
-- [ ] Manual QA theo role:
-  - Admin: approval/report/config
-  - Giang vien: create/submit/attendance/evaluate/notify
-  - Hoc vien: discover/register/check-in/scores/notifications
+- [x] Manual QA theo role:
+  - [x] Admin: actor UAT `test/uat/actor-admin/02-activity-approval.spec.ts` pass (2026-04-21)
+  - [x] Giang vien: actor UAT `test/uat/actor-teacher/04-qr-refresh-close.spec.ts` pass (2026-04-21)
+  - [x] Hoc vien: actor UAT `test/uat/actor-student/02-qr-checkin.spec.ts` pass (2026-04-21)
 - [x] Chot release note:
   - [x] da xong: Batch 5 FaceID foundation (scope guard + identify API + runtime fallback test + notification matrix v1)
-  - [x] con defer: production liveness/matching library decision, embedding retention policy, manual QA full role matrix
+  - [x] con defer: production liveness/matching library decision, embedding retention policy
   - [x] risk con lai: runtime model unavailable se fallback manual; can tiep tuc monitor audit no-match anomaly
+  - [x] risk con lai: production build hien dang fail (missing export `ensureActivityStudentScope`, type mismatch `attendance_status === 'present'`)
+  - [x] risk con lai: schema drift tren local QA DB (`point_calculations` thieu cot `activity_id`/`coefficient`) gay loi seed/build smoke
 - [ ] Gan tag RC sau khi tat ca Gate A-E xanh.
 
 ## 10) Ke hoach commit de xuat

@@ -42,7 +42,7 @@ export async function GET(_request: NextRequest) {
     const user = await getUserFromSession();
 
     if (!user) {
-      return errorResponse(ApiError.unauthorized('Unauthorized'));
+      return errorResponse(ApiError.unauthorized('Chưa đăng nhập'));
     }
 
     await ensureAlertsReadColumn();
@@ -101,7 +101,7 @@ export async function GET(_request: NextRequest) {
   } catch (error: unknown) {
     console.error('Get alerts error:', error);
     return errorResponse(
-      ApiError.internalError(error instanceof Error ? error.message : 'Internal server error')
+      ApiError.internalError(error instanceof Error ? error.message : 'Lỗi máy chủ nội bộ')
     );
   }
 }
@@ -112,7 +112,7 @@ export async function PUT(request: NextRequest) {
     const user = await getUserFromSession();
 
     if (!user) {
-      return errorResponse(ApiError.unauthorized('Unauthorized'));
+      return errorResponse(ApiError.unauthorized('Chưa đăng nhập'));
     }
 
     await ensureAlertsReadColumn();
@@ -120,7 +120,7 @@ export async function PUT(request: NextRequest) {
     const { alertId, action } = await request.json();
 
     if (!alertId) {
-      return errorResponse(ApiError.badRequest('Alert ID is required'));
+      return errorResponse(ApiError.badRequest('Thiếu Alert ID'));
     }
 
     const numericAlertId = Number(alertId);
@@ -137,7 +137,7 @@ export async function PUT(request: NextRequest) {
       );
     } else if (action === 'resolve') {
       if (user.role !== 'admin' && user.role !== 'teacher') {
-        return errorResponse(ApiError.forbidden('Forbidden'));
+        return errorResponse(ApiError.forbidden('Không có quyền truy cập'));
       }
 
       await dbRun(
@@ -147,14 +147,14 @@ export async function PUT(request: NextRequest) {
         [numericAlertId]
       );
     } else {
-      return errorResponse(ApiError.badRequest('Invalid action'));
+      return errorResponse(ApiError.badRequest('Hành động không hợp lệ'));
     }
 
-    return successResponse({ success: true, message: 'Alert updated successfully' });
+    return successResponse({ success: true, message: 'Cập nhật cảnh báo thành công' });
   } catch (error: unknown) {
     console.error('Update alert error:', error);
     return errorResponse(
-      ApiError.internalError(error instanceof Error ? error.message : 'Internal server error')
+      ApiError.internalError(error instanceof Error ? error.message : 'Lỗi máy chủ nội bộ')
     );
   }
 }

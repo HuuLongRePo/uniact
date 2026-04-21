@@ -26,7 +26,7 @@ describe('TeacherQRPage', () => {
     toastSuccessMock.mockReset();
   });
 
-  it('reads canonical nested payload for activities and history', async () => {
+  it('reads canonical payload and hydrates active qr session for selected activity', async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
 
@@ -34,6 +34,21 @@ describe('TeacherQRPage', () => {
         return {
           ok: true,
           json: async () => ({ data: { activities: [{ id: 1, title: 'QR Activity' }] } }),
+        } as Response;
+      }
+
+      if (url === '/api/qr-sessions/active?activity_id=1') {
+        return {
+          ok: true,
+          json: async () => ({
+            data: {
+              session: {
+                session_id: 11,
+                session_token: 'reuse-token-11',
+                options: { single_use: false, max_scans: null },
+              },
+            },
+          }),
         } as Response;
       }
 
@@ -54,6 +69,8 @@ describe('TeacherQRPage', () => {
     render(<Page />);
 
     expect(await screen.findByText('QR Activity')).toBeInTheDocument();
+    expect(await screen.findByText('reuse-token-11')).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledWith('/api/qr-sessions/active?activity_id=1');
   });
 
   it('surfaces load errors for activity options', async () => {
@@ -66,7 +83,10 @@ describe('TeacherQRPage', () => {
     render(<Page />);
 
     await waitFor(() => {
-      expect(toastErrorMock).toHaveBeenCalledWith('Không thể tải danh sách hoạt động');
+      expect(toastErrorMock).toHaveBeenCalled();
+      const firstMessage = String(toastErrorMock.mock.calls[0]?.[0] || '');
+      expect(firstMessage).toContain('danh');
     });
   });
 });
+

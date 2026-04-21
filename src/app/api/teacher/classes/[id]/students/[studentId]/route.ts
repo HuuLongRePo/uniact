@@ -3,25 +3,41 @@ import { dbGet, dbRun, dbReady } from '@/lib/database';
 import { requireRole } from '@/lib/guards';
 import { ApiError, successResponse, errorResponse } from '@/lib/api-response';
 
-async function assertCanManageClass(user: any, classId: number): Promise<void> {
+type ClassPermissionRow = {
+  class_id: number;
+  is_homeroom_primary: number;
+};
+
+async function assertCanEditClass(user: any, classId: number): Promise<void> {
   if (user.role === 'admin') return;
 
-  const row = await dbGet(
+  const permission = (await dbGet(
     `
-    SELECT c.id
+    SELECT
+      c.id as class_id,
+      CASE
+        WHEN c.teacher_id = ? THEN 1
+        WHEN EXISTS (
+          SELECT 1
+          FROM class_teachers ct_primary
+          WHERE ct_primary.class_id = c.id
+            AND ct_primary.teacher_id = ?
+            AND ct_primary.role = 'primary'
+        ) THEN 1
+        ELSE 0
+      END as is_homeroom_primary
     FROM classes c
-    LEFT JOIN class_teachers ct ON ct.class_id = c.id AND ct.teacher_id = ?
-    WHERE c.id = ? AND (c.teacher_id = ? OR ct.teacher_id IS NOT NULL)
+    WHERE c.id = ?
     `,
-    [user.id, classId, user.id]
-  );
+    [user.id, user.id, classId]
+  )) as ClassPermissionRow | undefined;
 
-  if (!row) {
-    throw ApiError.forbidden('Bạn chưa được phân công lớp này');
+  if (!permission || !Number(permission.is_homeroom_primary)) {
+    throw ApiError.forbidden('Bạn chỉ có quyền chỉnh sửa dữ liệu trên lớp do mình chủ nhiệm');
   }
 }
 
-// DELETE /api/teacher/classes/[id]/students/[studentId] - Xóa sinh viên khỏi lớp
+// DELETE /api/teacher/classes/[id]/students/[studentId] - Xóa học viên khỏi lớp
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; studentId: string }> }
@@ -43,31 +59,31 @@ export async function DELETE(
       return errorResponse(ApiError.validation('ID không hợp lệ'));
     }
 
-    await assertCanManageClass(user, classId);
+    await assertCanEditClass(user, classId);
 
     const row = (await dbGet(`SELECT id, role, class_id FROM users WHERE id = ? LIMIT 1`, [
       sid,
     ])) as { id: number; role: string; class_id: number | null } | undefined;
 
     if (!row || row.role !== 'student') {
-      return errorResponse(ApiError.notFound('Không tìm thấy sinh viên'));
+      return errorResponse(ApiError.notFound('Không tìm thấy học viên'));
     }
 
     if (Number(row.class_id) !== classId) {
-      return errorResponse(ApiError.conflict('Sinh viên không thuộc lớp này'));
+      return errorResponse(ApiError.conflict('Học viên không thuộc lớp này'));
     }
 
     await dbRun(`UPDATE users SET class_id = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [
       sid,
     ]);
 
-    return successResponse({}, 'Xóa sinh viên thành công');
+    return successResponse({}, 'Xóa học viên thành công');
   } catch (error: any) {
     console.error('Remove student from class error:', error);
     return errorResponse(
       error instanceof ApiError
         ? error
-        : ApiError.internalError('Không thể xóa sinh viên', { details: error?.message })
+        : ApiError.internalError('Không thể xóa học viên', { details: error?.message })
     );
   }
 }

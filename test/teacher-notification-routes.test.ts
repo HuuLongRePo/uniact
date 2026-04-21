@@ -64,6 +64,27 @@ describe('teacher notification routes', () => {
     expect(body.message).toContain('2/2');
   });
 
+  it('students notify route resolves recipients from class_ids filter', async () => {
+    mocks.dbAll.mockResolvedValueOnce([{ id: 12 }, { id: 13 }]);
+    const route = await import('../src/app/api/students/notify/route');
+
+    const response = await route.POST({
+      cookies: { get: vi.fn(() => ({ value: 'token-1' })) },
+      json: async () => ({ class_ids: [2], title: 'Nhắc nhở lớp', message: 'Đúng giờ', type: 'info' }),
+    } as any);
+
+    expect(response.status).toBe(200);
+    expect(mocks.dbAll).toHaveBeenCalledWith(
+      expect.stringContaining('class_id IN'),
+      [2]
+    );
+    expect(mocks.sendBulkDatabaseNotifications).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userIds: [12, 13],
+      })
+    );
+  });
+
   it('students notify route rejects teacher sends outside managed scope', async () => {
     const route = await import('../src/app/api/students/notify/route');
 

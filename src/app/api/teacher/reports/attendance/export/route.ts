@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
     const classIds = await getAccessibleClassIds(user);
     if (classIds.length === 0) {
       const buf = await createWorkbookFromSheets([
-        { name: 'Report', rows: [['Khong co du lieu']] },
+        { name: 'Report', rows: [['Không có dữ liệu']] },
       ]);
       return new NextResponse(buf as any, {
         status: 200,

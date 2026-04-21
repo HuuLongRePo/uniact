@@ -169,7 +169,7 @@ describe('GET /api/activities', () => {
       applies_to_student: false,
       applicability_scope: 'class_scope_mismatch',
     });
-    expect(body.activities[1].applicability_reason).toContain('Khong thuoc pham vi');
+    expect(body.activities[1].applicability_reason).toContain('Không thuộc phạm vi');
   });
 
   it('returns mandatory participation signals for assigned students', async () => {

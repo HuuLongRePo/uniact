@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import LoadingSpinner from '@/components/LoadingSpinner';
@@ -13,6 +13,9 @@ interface Student {
   name: string;
   email: string;
   total_points: number;
+  class_id?: number;
+  class_name?: string;
+  is_homeroom_scope?: boolean;
 }
 
 interface NotificationRecord {
@@ -40,6 +43,7 @@ export default function TeacherNotifyStudentsPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [students, setStudents] = useState<Student[]>([]);
+  const [classFilter, setClassFilter] = useState<'all' | string>('all');
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
@@ -69,6 +73,35 @@ export default function TeacherNotifyStudentsPage() {
       fetchScheduled();
     }
   }, [user, authLoading, router]);
+
+  const classOptions = useMemo(
+    () =>
+      Array.from(
+        new Map(
+          students
+            .filter((student) => Number.isInteger(Number(student.class_id)) && Number(student.class_id) > 0)
+            .map((student) => [
+              String(student.class_id),
+              {
+                id: String(student.class_id),
+                name: student.class_name || `Lớp #${student.class_id}`,
+              },
+            ])
+        ).values()
+      ).sort((left, right) => left.name.localeCompare(right.name, 'vi')),
+    [students]
+  );
+
+  const filteredStudents = useMemo(() => {
+    if (classFilter === 'all') {
+      return students;
+    }
+    return students.filter((student) => String(student.class_id || '') === classFilter);
+  }, [students, classFilter]);
+
+  const allVisibleSelected =
+    filteredStudents.length > 0 &&
+    filteredStudents.every((student) => selectedIds.includes(Number(student.id)));
 
   const fetchStudents = async () => {
     try {
@@ -134,11 +167,17 @@ export default function TeacherNotifyStudentsPage() {
   };
 
   const handleSelectAll = () => {
-    if (selectedIds.length === students.length) {
-      setSelectedIds([]);
-    } else {
-      setSelectedIds(students.map((s) => s.id));
+    if (filteredStudents.length === 0) {
+      return;
     }
+
+    const visibleIdSet = new Set(filteredStudents.map((student) => Number(student.id)));
+    if (allVisibleSelected) {
+      setSelectedIds((prev) => prev.filter((id) => !visibleIdSet.has(Number(id))));
+      return;
+    }
+
+    setSelectedIds((prev) => Array.from(new Set([...prev, ...Array.from(visibleIdSet)])));
   };
 
   const handleSend = async () => {
@@ -296,12 +335,31 @@ export default function TeacherNotifyStudentsPage() {
                   onClick={handleSelectAll}
                   className="text-blue-600 hover:underline text-sm font-medium"
                 >
-                  {selectedIds.length === students.length ? 'Bỏ chọn tất cả' : 'Chọn tất cả'}
+                  {allVisibleSelected ? 'Bỏ chọn lớp đang lọc' : 'Chọn lớp đang lọc'}
                 </button>
               </div>
 
+              <div className="mb-3 flex items-center gap-3">
+                <label htmlFor="notify-class-filter" className="text-sm font-medium text-gray-700">
+                  Lọc theo lớp:
+                </label>
+                <select
+                  id="notify-class-filter"
+                  value={classFilter}
+                  onChange={(e) => setClassFilter(e.target.value)}
+                  className="rounded-md border border-gray-300 px-3 py-1.5 text-sm"
+                >
+                  <option value="all">Tất cả lớp</option>
+                  {classOptions.map((cls) => (
+                    <option key={cls.id} value={cls.id}>
+                      {cls.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <div className="max-h-96 overflow-y-auto space-y-2 border border-gray-200 rounded-lg p-3">
-                {students.map((student) => (
+                {filteredStudents.map((student) => (
                   <label
                     key={student.id}
                     className="flex items-center p-3 border rounded hover:bg-gray-50 cursor-pointer transition-colors"
@@ -319,8 +377,8 @@ export default function TeacherNotifyStudentsPage() {
                     <div className="text-sm text-gray-500">{student.total_points} điểm</div>
                   </label>
                 ))}
-                {students.length === 0 && (
-                  <p className="text-gray-500 text-center py-8">Không có học viên trong lớp</p>
+                {filteredStudents.length === 0 && (
+                  <p className="text-gray-500 text-center py-8">Không có học viên trong bộ lọc này</p>
                 )}
               </div>
             </div>

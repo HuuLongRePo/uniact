@@ -21,10 +21,10 @@ export async function PUT(req: NextRequest) {
     const user = await requireAuth(req);
     const body = await req.json();
     const challenge = challengeMap.get(user.id);
-    if (!challenge) return NextResponse.json({ error: 'Challenge missing' }, { status: 400 });
+    if (!challenge) return NextResponse.json({ error: 'Thiếu challenge' }, { status: 400 });
     const ok = await verifyRegistration(user.id, body.response, challenge);
     challengeMap.delete(user.id);
-    if (!ok) return NextResponse.json({ error: 'Verification failed' }, { status: 400 });
+    if (!ok) return NextResponse.json({ error: 'Xác thực thất bại' }, { status: 400 });
     return NextResponse.json({ success: true });
   } catch (err: any) {
     return NextResponse.json(

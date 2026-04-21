@@ -6,8 +6,8 @@ import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
 export async function GET(request: NextRequest) {
   try {
     const user = await getUserFromSession();
-    if (!user) return errorResponse(ApiError.unauthorized('Unauthorized'));
-    if (user.role !== 'student') return errorResponse(ApiError.forbidden('Forbidden'));
+    if (!user) return errorResponse(ApiError.unauthorized('Chưa đăng nhập'));
+    if (user.role !== 'student') return errorResponse(ApiError.forbidden('Không có quyền truy cập'));
 
     // Get awards from student_awards (schema-backed)
     const awards = await dbAll(
@@ -31,6 +31,6 @@ export async function GET(request: NextRequest) {
     return successResponse({ awards, totalPoints });
   } catch (error) {
     console.error('Get award history error:', error);
-    return errorResponse(ApiError.internalError('Failed to fetch award history'));
+    return errorResponse(ApiError.internalError('Không thể tải lịch sử khen thưởng'));
   }
 }

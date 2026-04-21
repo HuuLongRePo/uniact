@@ -6,7 +6,7 @@ export async function GET(req: NextRequest) {
     const userRole = req.headers.get('x-user-role');
 
     if (userRole !== 'admin') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+      return NextResponse.json({ error: 'Chưa xác thực' }, { status: 403 });
     }
 
     const { searchParams } = new URL(req.url);
@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
     const offset = parseInt(searchParams.get('offset') || '0');
 
     if (!query.trim()) {
-      return NextResponse.json({ error: 'Search query required' }, { status: 400 });
+      return NextResponse.json({ error: 'Thiếu từ khóa tìm kiếm' }, { status: 400 });
     }
 
     const searchPattern = `%${query.trim()}%`;
@@ -125,6 +125,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(results);
   } catch (error) {
     console.error('Search error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: 'Lỗi máy chủ nội bộ' }, { status: 500 });
   }
 }

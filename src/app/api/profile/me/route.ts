@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
   try {
     const user = await getUserFromSession();
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Chưa đăng nhập' }, { status: 401 });
     }
 
     // Get full user details
@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
     );
 
     if (!userDetails) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Không tìm thấy người dùng' }, { status: 404 });
     }
 
     // Get additional stats based on role

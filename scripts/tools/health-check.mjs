@@ -24,7 +24,7 @@ try {
   }
 
   if (!response.ok) {
-    console.error(`Health check that bai (${response.status}) tai ${healthUrl}`);
+    console.error(`Health check thất bại (${response.status}) tại ${healthUrl}`);
     console.error(payload ? JSON.stringify(payload, null, 2) : text);
     process.exit(1);
   }
@@ -35,7 +35,7 @@ try {
     console.log(text);
   }
 } catch (error) {
-  console.error(`Khong the ket noi health endpoint ${healthUrl}`);
+  console.error(`Không thể kết nối health endpoint ${healthUrl}`);
   console.error(error instanceof Error ? error.message : String(error));
   process.exit(1);
 }

@@ -91,10 +91,10 @@ describe('Export API - Scoreboard', () => {
     const response = await GET(request)
     expect(response.status).toBe(403)
     const json = await response.json()
-    expect(json.error).toContain('not the teacher for this class')
+    expect(json.error).toContain('phụ trách lớp này')
   })
 
-  it('Học sinh chỉ có thể xuất dữ liệu lớp của mình', async () => {
+  it('Học viên chỉ có thể xuất dữ liệu lớp của mình', async () => {
     mockGetUserFromRequest = vi.fn().mockResolvedValue({ 
       id: 3, 
       role: 'student', 
@@ -120,7 +120,7 @@ describe('Export API - Scoreboard', () => {
     expect(mockDbHelpers.getScoreboardExportData).toHaveBeenCalledWith({ class_id: 1 })
   })
 
-  it('Học sinh không được xuất dữ liệu lớp khác', async () => {
+  it('Học viên không được xuất dữ liệu lớp khác', async () => {
     mockGetUserFromRequest = vi.fn().mockResolvedValue({ 
       id: 3, 
       role: 'student', 
@@ -138,7 +138,7 @@ describe('Export API - Scoreboard', () => {
     const response = await GET(request)
     expect(response.status).toBe(403)
     const json = await response.json()
-    expect(json.error).toContain('Cannot export data for other classes')
+    expect(json.error).toContain('Không có quyền xuất dữ liệu lớp khác')
   })
 
   it('Yêu cầu không xác thực bị từ chối', async () => {
@@ -206,4 +206,3 @@ describe('Export API - Attendance', () => {
     expect(csv).toContain('Hoạt động Văn nghệ')
   })
 })
-

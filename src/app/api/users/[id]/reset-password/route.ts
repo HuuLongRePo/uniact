@@ -61,6 +61,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     );
   } catch (error) {
     console.error('Error resetting password:', error);
-    return errorResponse(ApiError.internalError('Failed to reset password'));
+    return errorResponse(ApiError.internalError('Đặt lại mật khẩu thất bại'));
   }
 }

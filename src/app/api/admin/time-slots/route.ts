@@ -8,8 +8,9 @@ export async function GET(request: NextRequest) {
     await dbReady();
 
     const user = await getUserFromRequest(request);
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    if (user.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (!user) return NextResponse.json({ error: 'Chưa xác thực' }, { status: 401 });
+    if (user.role !== 'admin')
+      return NextResponse.json({ error: 'Không có quyền truy cập' }, { status: 403 });
 
     const searchParams = request.nextUrl.searchParams;
     const activityIdRaw = searchParams.get('activity_id') ?? searchParams.get('activityId');

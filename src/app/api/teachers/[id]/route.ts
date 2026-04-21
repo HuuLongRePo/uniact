@@ -9,12 +9,12 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const user = await getUserFromSession();
 
     if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return NextResponse.json({ error: 'Không có quyền truy cập' }, { status: 403 });
     }
 
     const teacherId = parseInt(id);
     if (!teacherId || isNaN(teacherId)) {
-      return NextResponse.json({ error: 'Invalid teacher ID' }, { status: 400 });
+      return NextResponse.json({ error: 'ID giảng viên không hợp lệ' }, { status: 400 });
     }
 
     // Get teacher info
@@ -27,7 +27,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     );
 
     if (!teacher) {
-      return NextResponse.json({ error: 'Teacher not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Không tìm thấy giảng viên' }, { status: 404 });
     }
 
     // Get classes assigned to teacher

@@ -8,11 +8,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   try {
     const { id } = await params;
     const token = request.cookies.get('token')?.value;
-    if (!token) return errorResponse(ApiError.unauthorized('Unauthorized'));
+    if (!token) return errorResponse(ApiError.unauthorized('Chưa đăng nhập'));
 
     const currentUser = await getUserFromToken(token);
     if (!currentUser || currentUser.role !== 'admin') {
-      return errorResponse(ApiError.forbidden('Forbidden: admin only'));
+      return errorResponse(ApiError.forbidden('Không có quyền truy cập (chỉ admin)'));
     }
 
     const body = await request.json();
@@ -20,13 +20,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const note = body.note || null;
 
     if (!action || (action !== 'approve' && action !== 'reject')) {
-      return errorResponse(ApiError.validation('Invalid action'));
+      return errorResponse(ApiError.validation('Hành động không hợp lệ'));
     }
 
     const suggestion = await dbGet('SELECT * FROM suggested_bonus_points WHERE id = ?', [
       Number(id),
     ]);
-    if (!suggestion) return errorResponse(ApiError.notFound('Not found'));
+    if (!suggestion) return errorResponse(ApiError.notFound('Không tìm thấy dữ liệu'));
 
     const newStatus = action === 'approve' ? 'approved' : 'rejected';
     const updateRes = await dbRun(
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       [newStatus, currentUser.id, Number(id), 'pending']
     );
     if ((updateRes.changes || 0) === 0) {
-      return errorResponse(ApiError.validation('Bonus already approved or rejected'));
+      return errorResponse(ApiError.validation('Đề xuất điểm thưởng đã được duyệt hoặc từ chối'));
     }
 
     // Audit log
@@ -50,9 +50,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       console.error('Audit log error:', auditErr);
     }
 
-    return successResponse({ status: newStatus }, `Bonus ${action}d`);
+    return successResponse(
+      { status: newStatus },
+      action === 'approve' ? 'Duyệt đề xuất điểm thưởng thành công' : 'Từ chối đề xuất điểm thưởng'
+    );
   } catch (err: any) {
     console.error('POST /api/bonus/[id]/approve error:', err);
-    return errorResponse(ApiError.internalError('Internal server error'));
+    return errorResponse(ApiError.internalError('Lỗi máy chủ nội bộ'));
   }
 }

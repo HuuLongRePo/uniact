@@ -371,7 +371,7 @@ export async function DELETE(
     if (error.message === 'MANDATORY_PARTICIPATION') {
       return errorResponse(
         ApiError.validation(
-          'Ban dang nam trong danh sach tham gia bat buoc nen khong the tu huy dang ky'
+          'Bạn đang nằm trong danh sách tham gia bắt buộc nên không thể tự hủy đăng ký'
         )
       );
     }

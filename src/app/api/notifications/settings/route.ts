@@ -6,10 +6,10 @@ import { apiHandler, ApiError, successResponse } from '@/lib/api-response';
 // GET /api/notifications/settings - Lấy cài đặt thông báo
 export const GET = apiHandler(async (request: NextRequest) => {
   const token = request.cookies.get('token')?.value;
-  if (!token) throw ApiError.unauthorized('Unauthorized');
+  if (!token) throw ApiError.unauthorized('Chưa đăng nhập');
 
   const user = await getUserFromToken(token);
-  if (!user) throw ApiError.unauthorized('Unauthorized');
+  if (!user) throw ApiError.unauthorized('Chưa đăng nhập');
 
   // Ensure table exists
   await dbRun(`
@@ -45,10 +45,10 @@ export const GET = apiHandler(async (request: NextRequest) => {
 // PUT /api/notifications/settings - Cập nhật cài đặt
 export const PUT = apiHandler(async (request: NextRequest) => {
   const token = request.cookies.get('token')?.value;
-  if (!token) throw ApiError.unauthorized('Unauthorized');
+  if (!token) throw ApiError.unauthorized('Chưa đăng nhập');
 
   const user = await getUserFromToken(token);
-  if (!user) throw ApiError.unauthorized('Unauthorized');
+  if (!user) throw ApiError.unauthorized('Chưa đăng nhập');
 
   const { email_enabled, new_activity_enabled, reminder_enabled, reminder_days } =
     await request.json();

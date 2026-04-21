@@ -31,7 +31,7 @@ export default function LegacyNewActivityPage() {
       <div className="mx-auto max-w-2xl px-4 sm:px-6 lg:px-8">
         <div className="rounded-lg border border-gray-200 bg-white p-10 text-center shadow-sm">
           <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-green-600" />
-          <p className="mt-4 text-gray-700">Dang chuyen den man tao hoat dong moi...</p>
+          <p className="mt-4 text-gray-700">Đang chuyển đến màn tạo hoạt động mới...</p>
         </div>
       </div>
     </div>

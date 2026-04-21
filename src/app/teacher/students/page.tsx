@@ -297,7 +297,17 @@ export default function TeacherStudentsPage() {
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-600">{student.email}</td>
                         <td className="px-6 py-4 text-sm text-gray-600">
-                          {student.class_name || '-'}
+                          <div className="flex items-center gap-2">
+                            <span>{student.class_name || '-'}</span>
+                            {student.is_homeroom_scope && (
+                              <span
+                                className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800"
+                                title="Học viên thuộc lớp bạn chủ nhiệm"
+                              >
+                                ⭐ Chủ nhiệm
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-900 font-medium">
                           <span className="inline-block px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
@@ -395,7 +405,7 @@ export default function TeacherStudentsPage() {
         </div>
 
         {/* Summary Stats */}
-        <div className="mt-8 grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-5">
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <div className="text-2xl font-bold text-blue-600">{filteredStudents.length}</div>
             <div className="text-sm text-blue-800 mt-1">Học viên hiển thị</div>
@@ -425,6 +435,13 @@ export default function TeacherStudentsPage() {
               {filteredStudents.filter((s) => s.total_score >= 70).length}
             </div>
             <div className="text-sm text-purple-800 mt-1">Đạt chuẩn ≥70 điểm</div>
+          </div>
+        
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+            <div className="text-2xl font-bold text-amber-700">
+              {filteredStudents.filter((s) => s.is_homeroom_scope).length}
+            </div>
+            <div className="text-sm text-amber-900 mt-1">Học viên lớp chủ nhiệm</div>
           </div>
         </div>
       </div>

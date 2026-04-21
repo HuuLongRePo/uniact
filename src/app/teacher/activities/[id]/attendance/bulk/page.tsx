@@ -205,7 +205,7 @@ export default function BulkAttendancePage() {
         body: JSON.stringify({ attendance: attendanceRecords }),
       });
 
-      if (!response.ok) throw new Error('Failed to save attendance');
+      if (!response.ok) throw new Error('Không thể lưu điểm danh');
 
       const result = await response.json();
       toast.success(

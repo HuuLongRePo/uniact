@@ -59,7 +59,7 @@ function parseClassIdArray(
   if (value === undefined) return undefined;
   if (value === null) return [];
   if (!Array.isArray(value)) {
-    errors[fieldName] = `${fieldName} phai la mang ID lop`;
+    errors[fieldName] = `${fieldName} phải là mảng ID lớp`;
     return undefined;
   }
 
@@ -67,13 +67,29 @@ function parseClassIdArray(
   for (const classId of value) {
     const parsedClassId = parsePositiveInt(classId);
     if (parsedClassId === null) {
-      errors[fieldName] = `Moi phan tu trong ${fieldName} phai la so nguyen duong`;
+      errors[fieldName] = `Mỗi phần tử trong ${fieldName} phải là số nguyên dương`;
       return undefined;
     }
     parsedIds.push(parsedClassId);
   }
 
   return Array.from(new Set(parsedIds));
+}
+
+function parseLegacyMandatoryFlag(value: unknown): boolean | null {
+  if (value === undefined) return null;
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'number') {
+    if (value === 1) return true;
+    if (value === 0) return false;
+    return null;
+  }
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === 'true' || normalized === '1') return true;
+    if (normalized === 'false' || normalized === '0') return false;
+  }
+  return null;
 }
 
 function normalizeClassScopes(
@@ -84,7 +100,17 @@ function normalizeClassScopes(
   const hasClassIds = hasOwn(input, 'class_ids');
   const hasMandatoryClassIds = hasOwn(input, 'mandatory_class_ids');
   const hasVoluntaryClassIds = hasOwn(input, 'voluntary_class_ids');
+  const hasLegacyMandatoryFlag = hasOwn(input, 'is_mandatory');
   const hasAnyClassScope = hasClassIds || hasMandatoryClassIds || hasVoluntaryClassIds;
+
+  const legacyMandatoryFlag = parseLegacyMandatoryFlag(input.is_mandatory);
+  if (hasLegacyMandatoryFlag && legacyMandatoryFlag === null) {
+    errors.is_mandatory = 'is_mandatory phải là boolean';
+  }
+
+  if (errors.is_mandatory) {
+    return {};
+  }
 
   if (!hasAnyClassScope) {
     return isCreate
@@ -112,14 +138,28 @@ function normalizeClassScopes(
     return {};
   }
 
+  const shouldLegacyDefaultToVoluntary =
+    hasClassIds &&
+    !hasMandatoryClassIds &&
+    !hasVoluntaryClassIds &&
+    hasLegacyMandatoryFlag &&
+    legacyMandatoryFlag === false;
+
   const normalizedMandatory = Array.from(
     new Set(
-      hasMandatoryClassIds ? mandatoryClassIds || [] : hasClassIds ? legacyClassIds || [] : []
+      hasMandatoryClassIds
+        ? mandatoryClassIds || []
+        : shouldLegacyDefaultToVoluntary
+          ? []
+          : hasClassIds
+            ? legacyClassIds || []
+            : []
     )
   );
   const mandatorySet = new Set(normalizedMandatory);
+  const derivedVoluntaryIds = shouldLegacyDefaultToVoluntary ? legacyClassIds || [] : [];
   const normalizedVoluntary = Array.from(
-    new Set((voluntaryClassIds || []).filter((classId) => !mandatorySet.has(classId)))
+    new Set([...derivedVoluntaryIds, ...(voluntaryClassIds || [])].filter((classId) => !mandatorySet.has(classId)))
   );
 
   return {
@@ -137,7 +177,7 @@ function parseStudentIdArray(
   if (value === undefined) return undefined;
   if (value === null) return [];
   if (!Array.isArray(value)) {
-    errors[fieldName] = `${fieldName} phai la mang ID hoc vien`;
+    errors[fieldName] = `${fieldName} phải là mảng ID học viên`;
     return undefined;
   }
 
@@ -145,7 +185,7 @@ function parseStudentIdArray(
   for (const studentId of value) {
     const parsedStudentId = parsePositiveInt(studentId);
     if (parsedStudentId === null) {
-      errors[fieldName] = `Moi phan tu trong ${fieldName} phai la so nguyen duong`;
+      errors[fieldName] = `Mỗi phần tử trong ${fieldName} phải là số nguyên dương`;
       return undefined;
     }
     parsedIds.push(parsedStudentId);
@@ -194,7 +234,7 @@ function validateActivityBody(
   if (!body || typeof body !== 'object') {
     return {
       errors: {
-        general: 'Du lieu gui len khong hop le',
+        general: 'Dữ liệu gửi lên không hợp lệ',
       },
     };
   }
@@ -206,31 +246,31 @@ function validateActivityBody(
   const hasTitle = hasOwn(input, 'title');
   if (hasTitle) {
     if (typeof input.title !== 'string') {
-      errors.title = 'Tieu de khong hop le';
+      errors.title = 'Tiêu đề không hợp lệ';
     } else {
       const title = input.title.trim();
       if (!title) {
-        errors.title = 'Tieu de la bat buoc';
+        errors.title = 'Tiêu đề là bắt buộc';
       } else if (title.length < 3) {
-        errors.title = 'Tieu de it nhat 3 ky tu';
+        errors.title = 'Tiêu đề ít nhất 3 ký tự';
       } else if (title.length > 200) {
-        errors.title = 'Tieu de toi da 200 ky tu';
+        errors.title = 'Tiêu đề tối đa 200 ký tự';
       } else {
         normalized.title = title;
       }
     }
   } else if (isCreate) {
-    errors.title = 'Tieu de la bat buoc';
+    errors.title = 'Tiêu đề là bắt buộc';
   }
 
   const hasDescription = hasOwn(input, 'description');
   if (hasDescription) {
     if (typeof input.description !== 'string') {
-      errors.description = 'Mo ta khong hop le';
+      errors.description = 'Mô tả không hợp lệ';
     } else {
       const description = input.description.trim();
       if (description.length > 2000) {
-        errors.description = 'Mo ta toi da 2000 ky tu';
+        errors.description = 'Mô tả tối đa 2000 ký tự';
       } else {
         normalized.description = description;
       }
@@ -243,49 +283,49 @@ function validateActivityBody(
   if (hasDateTime) {
     const rawDateTime = input.date_time ?? input.start_time;
     if (typeof rawDateTime !== 'string') {
-      errors.date_time = 'Thoi gian hoat dong khong hop le';
+      errors.date_time = 'Thời gian hoạt động không hợp lệ';
     } else {
       const dateTime = rawDateTime.trim();
       if (!dateTime) {
-        errors.date_time = 'Thoi gian hoat dong la bat buoc';
+        errors.date_time = 'Thời gian hoạt động là bắt buộc';
       } else if (!isValidDateInput(dateTime)) {
-        errors.date_time = 'Thoi gian hoat dong khong hop le';
+        errors.date_time = 'Thời gian hoạt động không hợp lệ';
       } else {
         normalized.date_time = dateTime;
       }
     }
   } else if (isCreate) {
-    errors.date_time = 'Thoi gian hoat dong la bat buoc';
+    errors.date_time = 'Thời gian hoạt động là bắt buộc';
   }
 
   const hasLocation = hasOwn(input, 'location');
   if (hasLocation) {
     if (typeof input.location !== 'string') {
-      errors.location = 'Dia diem khong hop le';
+      errors.location = 'Địa điểm không hợp lệ';
     } else {
       const location = input.location.trim();
       if (!location) {
-        errors.location = 'Dia diem la bat buoc';
+        errors.location = 'Địa điểm là bắt buộc';
       } else if (location.length > 255) {
-        errors.location = 'Dia diem toi da 255 ky tu';
+        errors.location = 'Địa điểm tối đa 255 ký tự';
       } else {
         normalized.location = location;
       }
     }
   } else if (isCreate) {
-    errors.location = 'Dia diem la bat buoc';
+    errors.location = 'Địa điểm là bắt buộc';
   }
 
   const hasMaxParticipants = hasOwn(input, 'max_participants');
   if (hasMaxParticipants) {
     if (input.max_participants === null || input.max_participants === '') {
-      errors.max_participants = 'So luong toi da phai la so nguyen duong';
+      errors.max_participants = 'Số lượng tối đa phải là số nguyên dương';
     } else {
       const parsedMax = parsePositiveInt(input.max_participants);
       if (parsedMax === null) {
-        errors.max_participants = 'So luong toi da phai la so nguyen duong';
+        errors.max_participants = 'Số lượng tối đa phải là số nguyên dương';
       } else if (parsedMax > 5000) {
-        errors.max_participants = 'So luong toi da khong duoc vuot qua 5000';
+        errors.max_participants = 'Số lượng tối đa không được vượt quá 5000';
       } else {
         normalized.max_participants = parsedMax;
       }
@@ -314,11 +354,11 @@ function validateActivityBody(
     if (rawDeadline === null || rawDeadline === '') {
       if (!isCreate) normalized.registration_deadline = null;
     } else if (typeof rawDeadline !== 'string') {
-      errors.registration_deadline = 'Deadline dang ky khong hop le';
+      errors.registration_deadline = 'Hạn đăng ký không hợp lệ';
     } else {
       const registrationDeadline = rawDeadline.trim();
       if (!registrationDeadline || !isValidDateInput(registrationDeadline)) {
-        errors.registration_deadline = 'Deadline dang ky khong hop le';
+        errors.registration_deadline = 'Hạn đăng ký không hợp lệ';
       } else {
         const dateTimeForValidation =
           normalized.date_time ??
@@ -331,7 +371,7 @@ function validateActivityBody(
 
           if (hoursDiff < 24) {
             errors.registration_deadline =
-              'Deadline dang ky phai it nhat 24 gio truoc thoi gian hoat dong';
+              'Hạn đăng ký phải ít nhất 24 giờ trước thời gian hoạt động';
           } else {
             normalized.registration_deadline = registrationDeadline;
           }
@@ -350,7 +390,7 @@ function validateActivityBody(
     } else {
       const parsedTypeId = parsePositiveInt(rawTypeId);
       if (parsedTypeId === null) {
-        errors.activity_type_id = 'Loai hoat dong khong hop le';
+        errors.activity_type_id = 'Loại hoạt động không hợp lệ';
       } else {
         normalized.activity_type_id = parsedTypeId;
       }
@@ -365,7 +405,7 @@ function validateActivityBody(
     } else {
       const parsedOrgLevelId = parsePositiveInt(rawOrgLevelId);
       if (parsedOrgLevelId === null) {
-        errors.organization_level_id = 'Cap to chuc khong hop le';
+        errors.organization_level_id = 'Cấp tổ chức không hợp lệ';
       } else {
         normalized.organization_level_id = parsedOrgLevelId;
       }

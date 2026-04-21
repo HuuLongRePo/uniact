@@ -97,7 +97,7 @@ function normalizeActivityDetail(activity: ActivityDetailRecord) {
     is_mandatory: isMandatory,
     applies_to_student: appliesToStudent,
     applicability_scope: activity.applicability_scope || 'open_scope',
-    applicability_reason: activity.applicability_reason || 'Hoat dong mo cho tat ca hoc vien.',
+    applicability_reason: activity.applicability_reason || 'Hoạt động mở cho tất cả học viên.',
     registration_deadline: activity.registration_deadline,
     qr_enabled: Boolean(activity.qr_enabled),
     can_register:
@@ -417,12 +417,12 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
                 : 'class_scope_mismatch';
       normalizedActivity.applicability_reason =
         normalizedActivity.applicability_scope === 'mandatory_class_scope'
-          ? 'Ap dung vi lop cua ban nam trong nhom bat buoc cua hoat dong.'
+          ? 'Áp dụng vì lớp của bạn nằm trong nhóm bắt buộc của hoạt động.'
           : normalizedActivity.applicability_scope === 'voluntary_class_scope'
-            ? 'Ban co the tu dang ky vi lop cua ban nam trong nhom duoc mo dang ky.'
+            ? 'Bạn có thể tự đăng ký vì lớp của bạn nằm trong nhóm được mở đăng ký.'
             : normalizedActivity.applicability_scope === 'open_scope'
-              ? 'Hoat dong mo cho tat ca hoc vien.'
-              : 'Khong thuoc pham vi cua ban vi hoat dong dang danh rieng cho lop khac.';
+              ? 'Hoạt động mở cho tất cả học viên.'
+              : 'Không thuộc phạm vi của bạn vì hoạt động đang dành riêng cho lớp khác.';
       normalizedActivity.can_register =
         normalizedActivity.can_register && appliesToStudent && !mandatoryClassMatch;
     }

@@ -44,7 +44,7 @@ export default function AttendanceDetailPage() {
     try {
       // Fetch activity details
       const activityRes = await fetch(`/api/activities/${id}`);
-      if (!activityRes.ok) throw new Error('Failed to fetch activity');
+      if (!activityRes.ok) throw new Error('Không thể tải hoạt động');
       const activityData = await activityRes.json();
       setActivity(activityData.data);
 
@@ -70,7 +70,7 @@ export default function AttendanceDetailPage() {
         body: JSON.stringify({ attendance_status: status }),
       });
 
-      if (!res.ok) throw new Error('Failed to update attendance');
+      if (!res.ok) throw new Error('Không thể cập nhật điểm danh');
 
       toast.success('Đã cập nhật điểm danh');
       fetchData();

@@ -6,7 +6,7 @@
  * Modes:
  *   --mode=reset    : Xóa + tạo lại dữ liệu demo + full QA coverage
  *   --mode=demo     : Insert dữ liệu demo nếu DB chưa có dữ liệu
- *   --mode=enhanced : Demo + mở rộng thêm học sinh
+ *   --mode=enhanced : Demo + mở rộng thêm học viên
  *   --mode=minimal  : Chỉ tạo 1 admin
  *   --mode=qa       : Alias của reset (chuẩn kiểm thử đầy đủ)
  * 
@@ -153,16 +153,16 @@ const demoData = {
   ],
 
   classes: [
-    { name: 'D31A', grade: '31', description: 'Lớp D31A - Khóa 31 - Ngành A - 20 học sinh', managerIndex: 0 },
-    { name: 'D31A1', grade: '31', description: 'Lớp D31A1 - Khóa 31 - Ngành A1 - 20 học sinh', managerIndex: 1 },
-    { name: 'D32C', grade: '32', description: 'Lớp D32C - Khóa 32 - Ngành C - 20 học sinh', managerIndex: 2 },
-    { name: 'D33A1', grade: '33', description: 'Lớp D33A1 - Khóa 33 - Ngành A1 - 20 học sinh', managerIndex: 3 },
-    { name: 'D34C2', grade: '34', description: 'Lớp D34C2 - Khóa 34 - Ngành C2 - 20 học sinh', managerIndex: 4 },
-    { name: 'D34B1', grade: '34', description: 'Lớp D34B1 - Khóa 34 - Ngành B1 - 20 học sinh', managerIndex: 0 },
-    { name: 'D35A', grade: '35', description: 'Lớp D35A - Khóa 35 - Ngành A - 20 học sinh', managerIndex: 1 },
-    { name: 'D35B', grade: '35', description: 'Lớp D35B - Khóa 35 - Ngành B - 20 học sinh', managerIndex: 2 },
-    { name: 'D36C', grade: '36', description: 'Lớp D36C - Khóa 36 - Ngành C - 20 học sinh', managerIndex: 3 },
-    { name: 'D36A1', grade: '36', description: 'Lớp D36A1 - Khóa 36 - Ngành A1 - 20 học sinh', managerIndex: 4 }
+    { name: 'D31A', grade: '31', description: 'Lớp D31A - Khóa 31 - Ngành A - 20 học viên', managerIndex: 0 },
+    { name: 'D31A1', grade: '31', description: 'Lớp D31A1 - Khóa 31 - Ngành A1 - 20 học viên', managerIndex: 1 },
+    { name: 'D32C', grade: '32', description: 'Lớp D32C - Khóa 32 - Ngành C - 20 học viên', managerIndex: 2 },
+    { name: 'D33A1', grade: '33', description: 'Lớp D33A1 - Khóa 33 - Ngành A1 - 20 học viên', managerIndex: 3 },
+    { name: 'D34C2', grade: '34', description: 'Lớp D34C2 - Khóa 34 - Ngành C2 - 20 học viên', managerIndex: 4 },
+    { name: 'D34B1', grade: '34', description: 'Lớp D34B1 - Khóa 34 - Ngành B1 - 20 học viên', managerIndex: 0 },
+    { name: 'D35A', grade: '35', description: 'Lớp D35A - Khóa 35 - Ngành A - 20 học viên', managerIndex: 1 },
+    { name: 'D35B', grade: '35', description: 'Lớp D35B - Khóa 35 - Ngành B - 20 học viên', managerIndex: 2 },
+    { name: 'D36C', grade: '36', description: 'Lớp D36C - Khóa 36 - Ngành C - 20 học viên', managerIndex: 3 },
+    { name: 'D36A1', grade: '36', description: 'Lớp D36A1 - Khóa 36 - Ngành A1 - 20 học viên', managerIndex: 4 }
   ],
 
   students: [
@@ -1526,7 +1526,7 @@ async function seedDemo(): Promise<void> {
   console.log(`   ✅ Tạo ${demoData.classes.length} lớp học`)
 
   // Assign seeded homeroom teachers as primary teachers for classes.
-  // Also attach the main UAT teacher account to at least one class so class-management smoke can run.
+  // Also enforce the backbone invariant: every teacher must have at least one homeroom class.
   try {
     for (let i = 0; i < classIds.length; i++) {
       const teacherId = managerIds[demoData.classes[i]?.managerIndex]
@@ -1543,12 +1543,73 @@ async function seedDemo(): Promise<void> {
     const uatTeacherId = Number(uatTeacherRow?.id || 0)
     if (uatTeacherId > 0 && classIds[0]) {
       await dbRun(
-        "INSERT OR IGNORE INTO class_teachers (class_id, teacher_id, role, assigned_at) VALUES (?, ?, 'support', datetime('now'))",
+        "INSERT OR IGNORE INTO class_teachers (class_id, teacher_id, role, assigned_at) VALUES (?, ?, 'assistant', datetime('now'))",
         [classIds[0], uatTeacherId]
       )
     }
+
+    if (!classIds.length) {
+      throw new Error('No classes available for homeroom assignment')
+    }
+
+    const allTeachers = (await dbAll(
+      `SELECT id FROM users WHERE role = 'teacher' ORDER BY id ASC`
+    )) as Array<{ id: number }>
+
+    const seededHomeroomRows = (await dbAll(
+      `
+      SELECT DISTINCT teacher_id
+      FROM classes
+      WHERE teacher_id IS NOT NULL
+      UNION
+      SELECT DISTINCT teacher_id
+      FROM class_teachers
+      WHERE role = 'primary'
+      `
+    )) as Array<{ teacher_id: number }>
+
+    const homeroomTeacherIdSet = new Set(
+      seededHomeroomRows
+        .map((row) => Number(row.teacher_id))
+        .filter((teacherId) => Number.isFinite(teacherId) && teacherId > 0)
+    )
+
+    const missingTeacherIds = allTeachers
+      .map((row) => Number(row.id))
+      .filter((teacherId) => Number.isFinite(teacherId) && teacherId > 0)
+      .filter((teacherId) => !homeroomTeacherIdSet.has(teacherId))
+
+    for (let i = 0; i < missingTeacherIds.length; i++) {
+      const teacherId = missingTeacherIds[i]
+      const fallbackClassId = classIds[i % classIds.length]
+      await dbRun(
+        "INSERT OR IGNORE INTO class_teachers (class_id, teacher_id, role, assigned_at) VALUES (?, ?, 'primary', datetime('now'))",
+        [fallbackClassId, teacherId]
+      )
+      homeroomTeacherIdSet.add(teacherId)
+    }
+
+    const coveredTeacherCount = allTeachers
+      .map((row) => Number(row.id))
+      .filter((teacherId) => Number.isFinite(teacherId) && teacherId > 0)
+      .filter((teacherId) => homeroomTeacherIdSet.has(teacherId)).length
+
+    const unresolvedTeachers = allTeachers.length - coveredTeacherCount
+    if (unresolvedTeachers > 0) {
+      throw new Error(`Teacher homeroom coverage check failed. Missing=${unresolvedTeachers}`)
+    }
+
+    if (missingTeacherIds.length > 0) {
+      console.log(
+        `   ✅ Homeroom auto-assigned for ${missingTeacherIds.length} teacher account(s)`
+      )
+    }
+    console.log(
+      `   ✅ Homeroom coverage: ${coveredTeacherCount}/${allTeachers.length} teacher account(s)`
+    )
   } catch (e) {
-    console.warn('⚠️  Could not assign teachers to classes (non-fatal):', e)
+    console.error('❌ Could not satisfy teacher homeroom assignment invariant:', e)
+    throw e
   }
 
   // 3. Create students
@@ -1597,7 +1658,7 @@ async function seedDemo(): Promise<void> {
     if (!Number.isFinite(requiredCount) || requiredCount <= studentIds.length) return
 
     const extras = requiredCount - studentIds.length
-    console.log(`   ℹ️ Bổ sung ${extras} học sinh để khớp data (max index = ${requiredCount - 1})`)
+    console.log(`   ℹ️ Bổ sung ${extras} học viên để khớp data (max index = ${requiredCount - 1})`)
 
     for (let i = studentIds.length; i < requiredCount; i++) {
       const email = `svx${String(i + 1).padStart(4, '0')}@annd.edu.vn`
@@ -1674,7 +1735,7 @@ async function seedDemo(): Promise<void> {
   const requiredStudents = Math.max(maxStudentIndexFromParticipations, maxStudentIndexFromDevices) + 1
   await ensureStudentCount(requiredStudents)
 
-  console.log(`   ✅ Tạo ${studentIds.length} học sinh`)
+  console.log(`   ✅ Tạo ${studentIds.length} học viên`)
 
   // 3b. Create a specific legacy student used by older E2E/dev assumptions: sv001.12a1@school.edu
   const class12A1 = classIds[0]
@@ -1726,7 +1787,7 @@ async function seedDemo(): Promise<void> {
   const orgLevelIds: number[] = []
   for (const level of demoData.organizationLevels) {
     const result = await dbRun(
-      'INSERT INTO organization_levels (name, multiplier, description) VALUES (?, ?, ?)',
+      'INSERT OR IGNORE INTO organization_levels (name, multiplier, description) VALUES (?, ?, ?)',
       [level.name, level.multiplier, level.description]
     )
     orgLevelIds.push(result.lastID)
@@ -1979,7 +2040,7 @@ async function seedDemo(): Promise<void> {
 
   console.log('\n📊 Tóm tắt dữ liệu demo:')
   console.log(`   👨‍🏫 Cán bộ quản lý: ${demoData.classManagers.length}`)
-  console.log(`   👨‍🎓 Học sinh: ${studentIds.length}`)
+  console.log(`   👨‍🎓 Học viên: ${studentIds.length}`)
   console.log(`   🏫 Lớp học: ${demoData.classes.length}`)
   console.log(`   🎯 Hoạt động: ${demoData.activities.length}`)
   console.log(`   📱 Thiết bị: ${demoData.devices.length}`)
@@ -2362,7 +2423,7 @@ async function seedEnhanced(): Promise<void> {
         email,
         username,
         passwordHash,
-        `Học sinh ${i}`,
+        `Học viên ${i}`,
         'student',
         targetClass.id,
         phoneFromIndex(2000 + i),
@@ -2383,7 +2444,7 @@ async function seedEnhanced(): Promise<void> {
     )
   }
   
-  console.log(`   ✅ Thêm 10 học sinh vào lớp ${targetClass.name || targetClass.id}`)
+  console.log(`   ✅ Thêm 10 học viên vào lớp ${targetClass.name || targetClass.id}`)
   await dbRun('UPDATE users SET updated_at = COALESCE(updated_at, created_at, CURRENT_TIMESTAMP)')
   console.log('\n✅ Enhanced data seeded!')
 }

@@ -56,7 +56,7 @@ describe('LegacyNewActivityPage', () => {
 
     render(<LegacyNewActivityPage />);
 
-    expect(screen.getByText('Dang chuyen den man tao hoat dong moi...')).toBeInTheDocument();
+    expect(screen.getByText('Đang chuyển đến màn tạo hoạt động mới...')).toBeInTheDocument();
 
     await waitFor(() => {
       expect(replaceMock).toHaveBeenCalledWith('/teacher/activities/new');

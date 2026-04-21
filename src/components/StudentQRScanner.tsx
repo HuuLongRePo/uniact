@@ -21,30 +21,60 @@ export function StudentQRScanner({ onScan }: Props) {
   const [error, setError] = useState<string | null>(null);
   const frameRequest = useRef<number | undefined>(undefined);
 
+  function stopScan() {
+    if (frameRequest.current) {
+      cancelAnimationFrame(frameRequest.current);
+      frameRequest.current = undefined;
+    }
+
+    const stream = videoRef.current?.srcObject as MediaStream | undefined;
+    stream?.getTracks().forEach((track) => track.stop());
+
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+
+    setScanState('idle');
+  }
+
   useEffect(() => {
     startScan();
     return () => {
-      if (frameRequest.current) cancelAnimationFrame(frameRequest.current);
-      const stream = videoRef.current?.srcObject as MediaStream | undefined;
-      stream?.getTracks().forEach((t) => t.stop());
+      stopScan();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function startScan() {
+    stopScan();
     setError(null);
     setScanState('scanning');
+
     try {
+      if (!navigator?.mediaDevices?.getUserMedia) {
+        setError('Trinh duyet khong ho tro camera.');
+        setScanState('error');
+        return;
+      }
+
       const mediaStream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'environment' },
       });
+
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream;
-        videoRef.current.play().catch(() => {});
+        videoRef.current.play().catch(() => undefined);
         frameRequest.current = requestAnimationFrame(tick);
       }
     } catch (err: any) {
-      setError('Không truy cập được camera');
+      const errorName = String(err?.name || '');
+      if (errorName === 'NotAllowedError' || errorName === 'SecurityError') {
+        setError('Ban da tu choi quyen camera. Hay cap quyen roi thu lai.');
+      } else if (errorName === 'NotFoundError' || errorName === 'OverconstrainedError') {
+        setError('Khong tim thay camera phu hop tren thiet bi.');
+      } else {
+        setError('Khong truy cap duoc camera.');
+      }
       setScanState('error');
     }
   }
@@ -54,6 +84,7 @@ export function StudentQRScanner({ onScan }: Props) {
       frameRequest.current = requestAnimationFrame(tick);
       return;
     }
+
     const video = videoRef.current;
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
@@ -61,18 +92,19 @@ export function StudentQRScanner({ onScan }: Props) {
       frameRequest.current = requestAnimationFrame(tick);
       return;
     }
+
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    // Simple luminance sampling: we expect token embedded as text below QR for fallback.
-    // Proper decoding would use a library (jsQR / @zxing/browser). Placeholder here.
+
+    // Proper QR decode can be plugged here later (jsQR / @zxing/browser).
     frameRequest.current = requestAnimationFrame(tick);
   }
 
   async function handleManualSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!manualToken.trim()) {
-      toast.error('Nhập dữ liệu mã QR');
+      toast.error('Nhap du lieu ma QR');
       return;
     }
     await submitRawValue(manualToken.trim());
@@ -84,51 +116,50 @@ export function StudentQRScanner({ onScan }: Props) {
       await onScan(rawValue);
       setLastResult(rawValue);
       setScanState('success');
-      toast.success('Điểm danh thành công');
+      toast.success('Diem danh thanh cong');
     } catch (err: any) {
       setScanState('error');
-      setError(err?.message || 'Xác thực thất bại');
-      toast.error('Mã QR không hợp lệ hoặc đã hết hạn');
+      setError(err?.message || 'Xac thuc that bai');
+      toast.error('Ma QR khong hop le hoac da het han');
     }
   }
 
   return (
     <div className="space-y-4">
       <div className="rounded border p-4">
-        <h2 className="font-semibold mb-2">Quét mã QR điểm danh</h2>
+        <h2 className="font-semibold mb-2">Quet ma QR diem danh</h2>
         <video ref={videoRef} className="w-full rounded bg-black" muted playsInline />
         <canvas ref={canvasRef} className="hidden" />
         {scanState === 'success' && (
-          <p className="text-green-600 text-sm mt-2">✔ Đã xác thực: {lastResult.slice(0, 16)}...</p>
+          <p className="text-green-600 text-sm mt-2">Da xac thuc: {lastResult.slice(0, 24)}...</p>
         )}
-        {scanState === 'error' && error && (
-          <p className="text-red-600 text-sm mt-2">Lỗi: {error}</p>
-        )}
+        {scanState === 'error' && error && <p className="text-red-600 text-sm mt-2">Loi: {error}</p>}
         <div className="flex gap-2 mt-3">
           <button
             type="button"
             onClick={startScan}
             className="px-3 py-2 text-sm rounded bg-blue-600 text-white hover:bg-blue-500"
           >
-            Quét lại
+            Quet lai
           </button>
           <button
             type="button"
-            onClick={() => setScanState('idle')}
+            onClick={stopScan}
             className="px-3 py-2 text-sm rounded bg-gray-200 hover:bg-gray-300"
           >
-            Tạm dừng
+            Tam dung
           </button>
         </div>
         <p className="text-xs text-gray-500 mt-2">
-          (Trình quét tối giản - sử dụng mã dự phòng nếu camera không hoạt động)
+          Neu camera gap loi, ban co the dung o nhap thu cong ben duoi.
         </p>
       </div>
+
       <form onSubmit={handleManualSubmit} className="rounded border p-4 space-y-2">
-        <label className="text-sm font-medium">Nhập dữ liệu thô từ mã QR</label>
+        <label className="text-sm font-medium">Nhap du lieu tho tu ma QR</label>
         <input
           className="w-full border rounded px-2 py-1 text-sm"
-          placeholder='Ví dụ: {"s":123,"t":"qr_token"}'
+          placeholder='Vi du: {"s":123,"t":"qr_token"}'
           value={manualToken}
           onChange={(e) => setManualToken(e.target.value)}
         />
@@ -136,7 +167,7 @@ export function StudentQRScanner({ onScan }: Props) {
           type="submit"
           className="px-3 py-2 text-sm rounded bg-green-600 text-white hover:bg-green-500"
         >
-          Điểm danh thủ công
+          Diem danh thu cong
         </button>
       </form>
     </div>

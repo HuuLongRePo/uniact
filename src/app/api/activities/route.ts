@@ -75,14 +75,14 @@ function normalizeStudentActivitySummary(activity: StudentActivitySummaryRecord)
     (startTime - Date.now()) / (1000 * 60 * 60) >= 24;
   const applicabilityReason =
     applicabilityScope === 'mandatory_class_scope'
-      ? 'Ap dung vi lop cua ban nam trong nhom bat buoc cua hoat dong.'
+      ? 'Áp dụng vì lớp của bạn nằm trong nhóm bắt buộc của hoạt động.'
       : applicabilityScope === 'voluntary_class_scope'
-        ? 'Ban co the tu dang ky vi lop cua ban nam trong nhom duoc mo dang ky.'
+        ? 'Bạn có thể tự đăng ký vì lớp của bạn nằm trong nhóm được mở đăng ký.'
         : applicabilityScope === 'class_scope_match'
-          ? 'Ap dung vi lop cua ban nam trong pham vi hoat dong.'
+          ? 'Áp dụng vì lớp của bạn nằm trong phạm vi hoạt động.'
           : applicabilityScope === 'class_scope_mismatch'
-            ? 'Khong thuoc pham vi cua ban vi hoat dong dang danh rieng cho lop khac.'
-            : 'Hoat dong mo cho tat ca hoc vien.';
+            ? 'Không thuộc phạm vi của bạn vì hoạt động đang dành riêng cho lớp khác.'
+            : 'Hoạt động mở cho tất cả học viên.';
 
   return {
     id: Number(activity.id),
@@ -94,6 +94,7 @@ function normalizeStudentActivitySummary(activity: StudentActivitySummaryRecord)
     registration_deadline: activity.registration_deadline,
     status: activity.status,
     approval_status: activity.approval_status,
+    display_status: getActivityDisplayStatus(activity.status, activity.approval_status),
     teacher_name: activity.teacher_name || 'Chưa phân công',
     participant_count: participantCount,
     available_slots:
@@ -117,7 +118,7 @@ function normalizeStudentActivitySummary(activity: StudentActivitySummaryRecord)
 function normalizeWorkflowAwareActivity<T extends WorkflowAwareActivityRecord>(activity: T) {
   return {
     ...activity,
-    status: getActivityDisplayStatus(activity.status, activity.approval_status),
+    display_status: getActivityDisplayStatus(activity.status, activity.approval_status),
   };
 }
 
@@ -148,7 +149,7 @@ export async function GET(request: NextRequest) {
           data = data.map(normalizeWorkflowAwareActivity);
           total = data.length;
           if (statusFilters.length > 0) {
-            data = data.filter((a: any) => statusFilters.includes(a.status));
+            data = data.filter((a: any) => statusFilters.includes(a.display_status));
             total = data.length;
           }
           data = data.slice(offset, offset + limit);
@@ -160,7 +161,7 @@ export async function GET(request: NextRequest) {
           data = data.map(normalizeWorkflowAwareActivity);
           total = data.length;
           if (statusFilters.length > 0) {
-            data = data.filter((a: any) => statusFilters.includes(a.status));
+            data = data.filter((a: any) => statusFilters.includes(a.display_status));
             total = data.length;
           }
           data = data.slice(offset, offset + limit);
@@ -170,7 +171,7 @@ export async function GET(request: NextRequest) {
           data = data.map(normalizeStudentActivitySummary);
           total = data.length;
           if (statusFilters.length > 0) {
-            data = data.filter((a: any) => statusFilters.includes(a.status));
+            data = data.filter((a: any) => statusFilters.includes(a.display_status));
             total = data.length;
           }
           data = data.slice(offset, offset + limit);

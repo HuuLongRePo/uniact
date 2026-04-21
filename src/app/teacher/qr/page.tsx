@@ -20,7 +20,7 @@ interface QRSession {
   session_token: string;
   created_at: string;
   expires_at: string;
-  metadata: string;
+  metadata: unknown;
   activity_title: string;
   activity_date: string;
   attendance_count: number;
@@ -37,6 +37,21 @@ interface BulkScanRecord {
   student_name: string;
   class_name: string;
   scanned_at: string;
+}
+
+function parseQrSessionOptions(raw: unknown): { single_use?: boolean; max_scans?: number | null } {
+  if (!raw) return {};
+  if (typeof raw === 'string') {
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return {};
+    }
+  }
+  if (typeof raw === 'object') {
+    return raw as { single_use?: boolean; max_scans?: number | null };
+  }
+  return {};
 }
 
 async function loadActivityOption(activityId: number): Promise<Activity | null> {
@@ -120,6 +135,50 @@ export default function TeacherQRPage() {
     };
     load();
   }, [searchParams]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const hydrateActiveSession = async () => {
+      if (!selectedActivity) {
+        setCreatedSession(null);
+        setOptions(null);
+        return;
+      }
+
+      setCreatedSession(null);
+      setOptions(null);
+
+      try {
+        const res = await fetch(`/api/qr-sessions/active?activity_id=${selectedActivity}`);
+        if (!res.ok) return;
+
+        const json = await res.json().catch(() => ({}));
+        const session = json?.session ?? json?.data?.session ?? null;
+        const nextSessionId = Number(session?.session_id ?? session?.id);
+        const nextToken = String(session?.session_token ?? session?.token ?? '');
+
+        if (cancelled || !Number.isFinite(nextSessionId) || !nextToken) {
+          return;
+        }
+
+        setCreatedSession({
+          sessionId: nextSessionId,
+          token: nextToken,
+          payload: JSON.stringify({ s: nextSessionId, t: nextToken }),
+        });
+        setOptions(session?.options || null);
+      } catch (err) {
+        console.error('Active QR session hydration error:', err);
+      }
+    };
+
+    hydrateActiveSession();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedActivity]);
 
   // Auto-refresh history when in history tab and auto-refresh is enabled
   useEffect(() => {
@@ -237,7 +296,7 @@ export default function TeacherQRPage() {
         payload: JSON.stringify({ s: nextSessionId, t: nextToken }),
       });
       setOptions(data?.options || null);
-      toast.success('Tạo mã QR thành công');
+      toast.success(data?.reused ? 'Da tai lai phien QR dang hoat dong' : 'Tao ma QR thanh cong');
     } catch (err: any) {
       console.error(err);
       setError(err?.message || 'Lỗi khi tạo phiên');
@@ -595,7 +654,7 @@ export default function TeacherQRPage() {
             {history.length > 0 ? (
               <div className="space-y-3">
                 {history.map((session) => {
-                  const options = session.metadata ? JSON.parse(session.metadata) : {};
+                  const options = parseQrSessionOptions(session.metadata);
                   const isExpired = new Date(session.expires_at) < new Date();
                   return (
                     <div key={session.id} className="border rounded p-4 hover:bg-gray-50">
@@ -649,3 +708,4 @@ export default function TeacherQRPage() {
     </div>
   );
 }
+

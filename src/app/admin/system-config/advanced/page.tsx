@@ -111,7 +111,7 @@ export default function SystemConfigAdvancedPage() {
         body: JSON.stringify({ type: 'email', data: emailConfig }),
       });
 
-      if (!response.ok) throw new Error('Failed to save');
+      if (!response.ok) throw new Error('Không thể lưu cấu hình');
 
       toast.success('Cấu hình email đã lưu!');
     } catch (error: any) {
@@ -130,7 +130,7 @@ export default function SystemConfigAdvancedPage() {
         body: JSON.stringify({ type: 'backup', data: backupConfig }),
       });
 
-      if (!response.ok) throw new Error('Failed to save');
+      if (!response.ok) throw new Error('Không thể lưu cấu hình');
 
       toast.success('Cấu hình backup đã lưu!');
     } catch (error: any) {
@@ -184,7 +184,7 @@ export default function SystemConfigAdvancedPage() {
         }),
       });
 
-      if (!response.ok) throw new Error('Failed to toggle');
+      if (!response.ok) throw new Error('Không thể chuyển trạng thái');
 
       setMaintenanceMode(newMode);
       toast.success(newMode ? 'Chế độ bảo trì đã BẬT' : 'Chế độ bảo trì đã TẮT');

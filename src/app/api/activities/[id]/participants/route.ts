@@ -13,22 +13,22 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       const msg = String(err?.message || '');
       return errorResponse(
         msg.includes('quy')
-          ? ApiError.forbidden('Forbidden')
-          : ApiError.unauthorized('Unauthorized')
+          ? ApiError.forbidden('Không có quyền truy cập')
+          : ApiError.unauthorized('Chưa xác thực')
       );
     }
 
     const { id } = await params;
     const activityId = Number(id);
     if (Number.isNaN(activityId)) {
-      return errorResponse(ApiError.validation('Invalid activity id'));
+      return errorResponse(ApiError.validation('ID hoạt động không hợp lệ'));
     }
 
     const activity = (await dbGet('SELECT id FROM activities WHERE id = ?', [activityId])) as
       | { id: number }
       | undefined;
     if (!activity) {
-      return errorResponse(ApiError.notFound('Activity not found'));
+      return errorResponse(ApiError.notFound('Không tìm thấy hoạt động'));
     }
 
     if (user.role === 'teacher' && !(await teacherCanAccessActivity(Number(user.id), activityId))) {

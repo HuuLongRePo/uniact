@@ -4,13 +4,13 @@ import { apiHandler, ApiError, successResponse } from '@/lib/api-response';
 
 export const POST = apiHandler(async (req: NextRequest) => {
   const teacherId = req.headers.get('x-user-id');
-  if (!teacherId) throw ApiError.unauthorized('Unauthorized');
+  if (!teacherId) throw ApiError.unauthorized('Chưa đăng nhập');
 
   const body = await req.json();
   const { class_id, title, message, type = 'info' } = body;
 
   if (!class_id || !title?.trim() || !message?.trim()) {
-    throw ApiError.validation('Missing required fields: class_id, title, message');
+    throw ApiError.validation('Thiếu trường bắt buộc: class_id, title, message');
   }
 
   // Xác minh giảng viên sở hữu lớp học
@@ -20,14 +20,14 @@ export const POST = apiHandler(async (req: NextRequest) => {
   ]);
 
   if (!classCheck || classCheck.length === 0) {
-    throw ApiError.forbidden('Unauthorized - not your class');
+    throw ApiError.forbidden('Bạn không phụ trách lớp này');
   }
 
   // Lấy tất cả học viên trong lớp
   const students = await dbAll(`SELECT user_id FROM class_members WHERE class_id = ?`, [class_id]);
 
   if (!students || students.length === 0) {
-    throw ApiError.notFound('No students found in this class');
+    throw ApiError.notFound('Không tìm thấy học viên trong lớp này');
   }
 
   // Tạo notifications hàng loạt

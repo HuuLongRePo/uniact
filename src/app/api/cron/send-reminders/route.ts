@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     const cronSecret = process.env.CRON_SECRET || 'dev-secret-change-in-production';
 
     if (authHeader !== `Bearer ${cronSecret}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Chưa xác thực' }, { status: 401 });
     }
 
     console.warn('📢 Starting activity reminder cron job...');

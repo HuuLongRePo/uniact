@@ -128,7 +128,7 @@ export default function UserDetailPage() {
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || 'Failed to delete user');
+        throw new Error(data.error || 'Không thể xóa người dùng');
       }
 
       toast.success('Đã xóa người dùng thành công');
@@ -147,7 +147,7 @@ export default function UserDetailPage() {
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || 'Failed to toggle status');
+        throw new Error(data.error || 'Không thể chuyển trạng thái tài khoản');
       }
 
       const data = await response.json();

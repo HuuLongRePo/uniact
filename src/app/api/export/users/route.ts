@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
   await dbReady();
   const user = await getUserFromRequest(request);
   if (!user || user.role !== 'admin') {
-    return errorResponse(ApiError.forbidden('Forbidden'));
+    return errorResponse(ApiError.forbidden('Không có quyền truy cập'));
   }
 
   const format = request.nextUrl.searchParams.get('format') || 'csv';

@@ -10,7 +10,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const token = request.cookies.get('token')?.value;
 
     if (!token) {
-      return errorResponse(ApiError.unauthorized('Unauthorized'));
+      return errorResponse(ApiError.unauthorized('Chưa đăng nhập'));
     }
 
     const currentUser = await getUserFromToken(token);
@@ -68,7 +68,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       JSON.stringify({
         old_role: oldRole,
         new_role: role,
-        reason: reason || 'No reason provided',
+        reason: reason || 'Không có lý do',
         user_email: user.email,
         user_name: user.name,
       })

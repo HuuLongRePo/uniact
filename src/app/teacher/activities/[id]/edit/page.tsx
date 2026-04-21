@@ -386,7 +386,9 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
       const updateData = await updateRes.json().catch(() => null);
 
       if (!updateRes.ok) {
-        throw new Error(updateData?.message || updateData?.error || 'Khong the cap nhat hoat dong');
+        throw new Error(
+          updateData?.message || updateData?.error || 'Không thể cập nhật hoạt động'
+        );
       }
 
       if (mode === 'submit') {
@@ -425,7 +427,7 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
         <div className="mx-auto max-w-4xl">
           <div className="rounded-lg bg-white p-12 text-center shadow">
             <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-blue-600" />
-            <p className="mt-4 text-gray-600">Dang tai...</p>
+            <p className="mt-4 text-gray-600">Đang tải...</p>
           </div>
         </div>
       </div>

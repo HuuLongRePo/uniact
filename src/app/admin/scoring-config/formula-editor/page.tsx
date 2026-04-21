@@ -208,7 +208,7 @@ export default function FormulaEditorPage() {
         }),
       });
 
-      if (!response.ok) throw new Error('Failed to save formula');
+      if (!response.ok) throw new Error('Không thể lưu công thức');
 
       toast.success('Công thức đã được lưu!');
     } catch (error: any) {

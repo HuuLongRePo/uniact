@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { getTokenFromRequest } from '@/lib/session-cookie';
-import { verifyToken } from '@/lib/auth';
+import { getTokenFromRequest } from './lib/session-cookie';
+import { verifyToken } from './lib/auth-edge';
 
 /**
  * Middleware:
@@ -43,7 +43,7 @@ function isPrivateIP(hostname: string): boolean {
   return false;
 }
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const hostname = request.nextUrl.hostname;
   const pathname = request.nextUrl.pathname;
 
@@ -84,7 +84,7 @@ export function middleware(request: NextRequest) {
     }
 
     try {
-      verifyToken(token);
+      await verifyToken(token);
     } catch {
       console.warn(`🔒 Chặn truy cập với token không hợp lệ: ${pathname}`);
       const url = request.nextUrl.clone();

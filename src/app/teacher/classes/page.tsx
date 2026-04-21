@@ -12,6 +12,9 @@ interface Class {
   name: string;
   studentCount: number;
   grade: string;
+  isHomeroomClass?: boolean;
+  teacherClassRole?: string;
+  canEdit?: boolean;
 }
 
 interface Student {
@@ -23,6 +26,28 @@ interface Student {
 }
 
 type StudentToRemove = Pick<Student, 'id' | 'name' | 'email'> | null;
+
+function normalizeClass(raw: any): Class {
+  const id = Number(raw?.id);
+  const studentCount = Number(raw?.studentCount ?? raw?.student_count ?? 0);
+  const isHomeroomClass = Boolean(raw?.isHomeroomClass ?? raw?.is_homeroom_class ?? false);
+  const teacherClassRole = String(
+    raw?.teacherClassRole ?? raw?.teacher_class_role ?? (isHomeroomClass ? 'primary' : 'none')
+  );
+  const canEdit = Boolean(
+    raw?.canEdit ?? raw?.can_edit ?? (isHomeroomClass || teacherClassRole === 'admin')
+  );
+
+  return {
+    id,
+    name: String(raw?.name ?? ''),
+    grade: String(raw?.grade ?? ''),
+    studentCount: Number.isFinite(studentCount) ? studentCount : 0,
+    isHomeroomClass,
+    teacherClassRole,
+    canEdit,
+  };
+}
 
 export default function TeacherClassManagementPage() {
   const [classes, setClasses] = useState<Class[]>([]);
@@ -46,15 +71,33 @@ export default function TeacherClassManagementPage() {
     }
   }, [selectedClass]);
 
+  useEffect(() => {
+    const selected = classes.find((cls) => cls.id === selectedClass);
+    if (selected && !selected.canEdit) {
+      setShowAddDialog(false);
+      setShowBulkDialog(false);
+      setStudentToRemove(null);
+    }
+  }, [classes, selectedClass]);
+
   async function fetchClasses() {
     try {
       setLoading(true);
       const res = await fetch('/api/teacher/classes');
       if (res.ok) {
         const data = await res.json();
-        setClasses(data.classes || []);
-        if (data.classes && data.classes.length > 0) {
-          setSelectedClass(data.classes[0].id);
+        const normalizedClasses = Array.isArray(data.classes)
+          ? data.classes.map(normalizeClass).filter((cls) => Number.isInteger(cls.id) && cls.id > 0)
+          : [];
+
+        setClasses(normalizedClasses);
+
+        if (normalizedClasses.length > 0) {
+          setSelectedClass((previous) =>
+            previous && normalizedClasses.some((cls) => cls.id === previous)
+              ? previous
+              : normalizedClasses[0].id
+          );
         }
       }
     } catch (error) {
@@ -80,6 +123,11 @@ export default function TeacherClassManagementPage() {
 
   async function handleAddStudent() {
     if (!studentEmail.trim() || !selectedClass) return;
+    const selected = classes.find((cls) => cls.id === selectedClass);
+    if (!selected?.canEdit) {
+      toast.error('Bạn chỉ có quyền chỉnh sửa lớp do mình chủ nhiệm');
+      return;
+    }
 
     try {
       const res = await fetch(`/api/teacher/classes/${selectedClass}/students`, {
@@ -105,6 +153,11 @@ export default function TeacherClassManagementPage() {
 
   async function handleBulkAdd() {
     if (!bulkEmails.trim() || !selectedClass) return;
+    const selected = classes.find((cls) => cls.id === selectedClass);
+    if (!selected?.canEdit) {
+      toast.error('Bạn chỉ có quyền chỉnh sửa lớp do mình chủ nhiệm');
+      return;
+    }
 
     const emails = bulkEmails
       .split('\n')
@@ -140,6 +193,11 @@ export default function TeacherClassManagementPage() {
 
   async function handleRemoveStudent(studentId: number) {
     if (!selectedClass) return;
+    const selected = classes.find((cls) => cls.id === selectedClass);
+    if (!selected?.canEdit) {
+      toast.error('Bạn chỉ có quyền chỉnh sửa lớp do mình chủ nhiệm');
+      return;
+    }
 
     try {
       const res = await fetch(`/api/teacher/classes/${selectedClass}/students/${studentId}`, {
@@ -192,6 +250,8 @@ export default function TeacherClassManagementPage() {
       s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       s.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
+  const currentClass = classes.find((c) => c.id === selectedClass);
+  const canEditCurrentClass = Boolean(currentClass?.canEdit);
 
   if (loading) {
     return <LoadingSpinner message="Đang tải danh sách lớp..." />;
@@ -208,8 +268,6 @@ export default function TeacherClassManagementPage() {
       </div>
     );
   }
-
-  const currentClass = classes.find((c) => c.id === selectedClass);
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -247,6 +305,11 @@ export default function TeacherClassManagementPage() {
                 <span className="ml-2 px-2 py-0.5 rounded-full text-xs bg-white/20">
                   {cls.studentCount || 0}
                 </span>
+                {cls.canEdit ? (
+                  <span className="ml-2 text-xs opacity-90">(CN)</span>
+                ) : (
+                  <span className="ml-2 text-xs opacity-80">(Trợ giảng)</span>
+                )}
               </button>
             ))}
           </div>
@@ -315,15 +378,25 @@ export default function TeacherClassManagementPage() {
             </div>
             <div className="flex gap-2">
               <button
+                disabled={!canEditCurrentClass}
                 onClick={() => setShowAddDialog(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-all"
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
+                  canEditCurrentClass
+                    ? 'bg-blue-600 text-white hover:bg-blue-700'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                }`}
               >
                 <Plus className="w-5 h-5" />
                 Thêm SV
               </button>
               <button
+                disabled={!canEditCurrentClass}
                 onClick={() => setShowBulkDialog(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-all"
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
+                  canEditCurrentClass
+                    ? 'bg-green-600 text-white hover:bg-green-700'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                }`}
               >
                 <Upload className="w-5 h-5" />
                 Thêm hàng loạt
@@ -337,6 +410,11 @@ export default function TeacherClassManagementPage() {
               </button>
             </div>
           </div>
+          {!canEditCurrentClass && (
+            <p className="mt-3 text-sm text-amber-700">
+              Lớp đang chọn chỉ có quyền xem. Bạn chỉ được chỉnh sửa lớp do mình chủ nhiệm.
+            </p>
+          )}
         </div>
 
         {/* Student List */}
@@ -394,6 +472,7 @@ export default function TeacherClassManagementPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <button
+                          disabled={!canEditCurrentClass}
                           onClick={() =>
                             setStudentToRemove({
                               id: student.id,
@@ -401,7 +480,11 @@ export default function TeacherClassManagementPage() {
                               email: student.email,
                             })
                           }
-                          className="text-red-600 hover:text-red-900 font-medium"
+                          className={
+                            canEditCurrentClass
+                              ? 'text-red-600 hover:text-red-900 font-medium'
+                              : 'text-gray-400 cursor-not-allowed font-medium'
+                          }
                         >
                           Xóa
                         </button>

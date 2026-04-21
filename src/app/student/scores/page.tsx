@@ -46,7 +46,7 @@ export default function StudentScoresPage() {
   async function fetchScores() {
     try {
       const res = await fetch('/api/student/scores');
-      if (!res.ok) throw new Error('Failed to fetch scores');
+      if (!res.ok) throw new Error('Không thể tải điểm số');
 
       const data = await res.json();
       const resolvedScores = data.data?.scores || data.scores || [];

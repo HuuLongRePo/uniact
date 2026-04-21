@@ -58,7 +58,7 @@ describe('registration route mandatory participation safeguards', () => {
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.success).toBe(false);
-    expect(String(body.error)).toContain('bat buoc');
+    expect(String(body.error)).toContain('bắt buộc');
     expect(ensureParticipationColumns).toHaveBeenCalled();
     expect(withTransaction).toHaveBeenCalled();
   });

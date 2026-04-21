@@ -38,7 +38,7 @@ const activityDetail = {
   ...existingActivity,
   status: 'published',
   approval_status: 'approved',
-  teacher_name: 'Giao vien A',
+  teacher_name: 'Giảng viên A',
   activity_type: 'Tinh nguyen',
   organization_level: 'Cap truong',
   activity_type_base_points: 10,
@@ -168,7 +168,7 @@ describe('Activities API (unit)', () => {
     expect(body.activity).toMatchObject({
       id: 1,
       title: 'Test Activity',
-      teacher_name: 'Giao vien A',
+      teacher_name: 'Giảng viên A',
       activity_type: 'Tinh nguyen',
       organization_level: 'Cap truong',
     });
@@ -264,7 +264,7 @@ describe('Activities API (unit)', () => {
       applicability_scope: 'class_scope_mismatch',
       can_register: false,
     });
-    expect(body.activity.applicability_reason).toContain('Khong thuoc pham vi');
+    expect(body.activity.applicability_reason).toContain('Không thuộc phạm vi');
   });
 
   it('GET exposes mandatory participation and disables self-cancel', async () => {

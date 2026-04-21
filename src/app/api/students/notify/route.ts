@@ -17,10 +17,39 @@ export async function POST(request: NextRequest) {
       return errorResponse(ApiError.forbidden('Không có quyền truy cập'));
     }
 
-    const { student_ids, title, message, type = 'info' } = await request.json();
+    const { student_ids, class_ids, title, message, type = 'info' } = await request.json();
+
+    const normalizedStudentIds = Array.isArray(student_ids)
+      ? student_ids
+          .map((id: unknown) => Number(id))
+          .filter((id: number) => Number.isInteger(id) && id > 0)
+      : [];
+    const normalizedClassIds = Array.isArray(class_ids)
+      ? class_ids
+          .map((id: unknown) => Number(id))
+          .filter((id: number) => Number.isInteger(id) && id > 0)
+      : [];
+
+    const classStudentIds =
+      normalizedClassIds.length > 0
+        ? (
+            (await dbAll(
+              `SELECT id
+               FROM users
+               WHERE role = 'student'
+                 AND COALESCE(is_active, 1) = 1
+                 AND class_id IN (${normalizedClassIds.map(() => '?').join(',')})`,
+              normalizedClassIds
+            )) as Array<{ id: number }>
+          )
+            .map((row) => Number(row.id))
+            .filter((id) => Number.isInteger(id) && id > 0)
+        : [];
+
+    const targetStudentIds = Array.from(new Set([...normalizedStudentIds, ...classStudentIds]));
 
     // Validation
-    if (!student_ids || !Array.isArray(student_ids) || student_ids.length === 0) {
+    if (targetStudentIds.length === 0) {
       return errorResponse(ApiError.validation('Danh sách học viên không hợp lệ'));
     }
 
@@ -31,8 +60,9 @@ export async function POST(request: NextRequest) {
     // Kiểm tra quyền: teacher chỉ gửi cho học viên trong lớp của mình
     if (user.role === 'teacher') {
       const managedStudentIds = await getTeacherManagedStudentIds(user.id);
-      const invalidStudents = student_ids.filter(
-        (studentId: unknown) => !managedStudentIds.includes(Number(studentId))
+      const managedStudentSet = new Set(managedStudentIds.map((id) => Number(id)));
+      const invalidStudents = targetStudentIds.filter(
+        (studentId: number) => !managedStudentSet.has(studentId)
       );
       if (invalidStudents.length > 0) {
         return errorResponse(
@@ -42,7 +72,7 @@ export async function POST(request: NextRequest) {
     }
 
     const sendResult = await sendBulkDatabaseNotifications({
-      userIds: student_ids,
+      userIds: targetStudentIds,
       type,
       title,
       message,
@@ -52,7 +82,8 @@ export async function POST(request: NextRequest) {
         action: 'teacher_notify_students',
         targetTable: 'notifications',
         details: {
-          recipient_count: student_ids.length,
+          recipient_count: targetStudentIds.length,
+          class_ids: normalizedClassIds,
           title,
           type,
         },
@@ -63,7 +94,7 @@ export async function POST(request: NextRequest) {
 
     return successResponse(
       { successCount },
-      `Đã gửi thông báo cho ${successCount}/${student_ids.length} học viên`
+      `Đã gửi thông báo cho ${successCount}/${targetStudentIds.length} học viên`
     );
   } catch (error: any) {
     console.error('Lỗi gửi thông báo cho học viên:', error);

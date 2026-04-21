@@ -7,14 +7,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   try {
     const { id } = await params;
     const user = await getUserFromSession();
-    if (!user) return errorResponse(ApiError.unauthorized('Unauthorized'));
-    if (user.role !== 'admin') return errorResponse(ApiError.forbidden('Forbidden'));
+    if (!user) return errorResponse(ApiError.unauthorized('Chưa xác thực'));
+    if (user.role !== 'admin')
+      return errorResponse(ApiError.forbidden('Không có quyền truy cập'));
 
     const studentId = id;
     const { points, reason } = await request.json();
 
     if (!points || !reason?.trim()) {
-      return errorResponse(ApiError.validation('Missing required fields'));
+      return errorResponse(ApiError.validation('Thiếu trường bắt buộc'));
     }
 
     const student = await dbGet(
@@ -22,7 +23,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       [studentId]
     );
     if (!student) {
-      return errorResponse(ApiError.notFound('Student not found'));
+      return errorResponse(ApiError.notFound('Không tìm thấy học viên'));
     }
 
     // Store adjustment as a student_scores record (existing table)

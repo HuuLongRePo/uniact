@@ -10,7 +10,7 @@ import { dbGet, dbAll, dbReady } from '@/lib/database';
  */
 export async function GET() {
   if (process.env.NODE_ENV === 'production') {
-    return NextResponse.json({ success: false, error: 'Not found' }, { status: 404 });
+    return NextResponse.json({ success: false, error: 'Không tìm thấy dữ liệu' }, { status: 404 });
   }
 
   try {
@@ -106,7 +106,7 @@ export async function GET() {
   } catch (error) {
     console.error('Error fetching test accounts:', error);
     return NextResponse.json(
-      { success: false, error: 'Failed to fetch test accounts' },
+      { success: false, error: 'Không thể tải tài khoản thử nghiệm' },
       { status: 500 }
     );
   }

@@ -10,6 +10,7 @@ import ActivitySkeleton from '@/components/ActivitySkeleton';
 import EmptyState from '@/components/EmptyState';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { MoreVertical, Edit, Trash2, Send, Copy } from 'lucide-react';
+import { type ActivityDisplayStatus } from '@/lib/activity-workflow';
 
 interface Activity {
   id: number;
@@ -19,6 +20,8 @@ interface Activity {
   location: string;
   max_participants: number;
   status: 'draft' | 'pending' | 'rejected' | 'published' | 'cancelled' | 'completed';
+  display_status: ActivityDisplayStatus;
+  approval_status?: string;
   participant_count: number;
   attended_count: number;
   teacher_name?: string;
@@ -276,6 +279,12 @@ export default function TeacherActivitiesPage() {
   };
 
   const now = Date.now();
+
+  const getDisplayStatus = (activity: Activity) => activity.display_status || activity.status;
+  const isPublished = (activity: Activity) => getDisplayStatus(activity) === 'published';
+  const isCompletedOrCancelled = (activity: Activity) =>
+    getDisplayStatus(activity) === 'completed' || getDisplayStatus(activity) === 'cancelled';
+
   const sortedActivities = [...activities].sort((a, b) => {
     if (sortBy === 'title') {
       return a.title.localeCompare(b.title, 'vi');
@@ -288,24 +297,21 @@ export default function TeacherActivitiesPage() {
 
   const upcomingActivities = sortedActivities.filter((activity) => {
     const activityTime = new Date(activity.date_time).getTime();
-    return activity.status === 'published' && Number.isFinite(activityTime) && activityTime > now;
+    return isPublished(activity) && Number.isFinite(activityTime) && activityTime > now;
   });
 
   const archivedActivities = sortedActivities.filter((activity) => {
     const activityTime = new Date(activity.date_time).getTime();
-    const isPastPublished =
-      activity.status === 'published' && Number.isFinite(activityTime) && activityTime <= now;
-    return isPastPublished || activity.status === 'completed' || activity.status === 'cancelled';
+    const isPastPublished = isPublished(activity) && Number.isFinite(activityTime) && activityTime <= now;
+    return isPastPublished || isCompletedOrCancelled(activity);
   });
 
   const remainingActivities = sortedActivities.filter((activity) => {
     const activityTime = new Date(activity.date_time).getTime();
-    const isUpcomingPublished =
-      activity.status === 'published' && Number.isFinite(activityTime) && activityTime > now;
+    const isUpcomingPublished = isPublished(activity) && Number.isFinite(activityTime) && activityTime > now;
     const isArchived =
-      (activity.status === 'published' && Number.isFinite(activityTime) && activityTime <= now) ||
-      activity.status === 'completed' ||
-      activity.status === 'cancelled';
+      (isPublished(activity) && Number.isFinite(activityTime) && activityTime <= now) ||
+      isCompletedOrCancelled(activity);
 
     return !isUpcomingPublished && !isArchived;
   });
@@ -425,7 +431,7 @@ export default function TeacherActivitiesPage() {
                           {new Date(activity.date_time).toLocaleString('vi-VN')}
                         </div>
                       </div>
-                      {getStatusBadge(activity.status)}
+                      {getStatusBadge(getDisplayStatus(activity))}
                     </div>
                   </div>
                 ))}
@@ -450,7 +456,7 @@ export default function TeacherActivitiesPage() {
                 {archivedActivities.map((activity) => {
                   const activityTime = new Date(activity.date_time).getTime();
                   const isStalePublished =
-                    activity.status === 'published' && Number.isFinite(activityTime) && activityTime <= now;
+                    isPublished(activity) && Number.isFinite(activityTime) && activityTime <= now;
 
                   return (
                   <div
@@ -467,12 +473,12 @@ export default function TeacherActivitiesPage() {
                         <div className="mt-2 text-xs font-medium text-slate-600">
                           {isStalePublished
                             ? 'Đã quá thời điểm diễn ra, cần xác nhận hoàn thành hoặc cập nhật trạng thái.'
-                            : activity.status === 'completed'
+                            : getDisplayStatus(activity) === 'completed'
                               ? 'Hoạt động đã được khép lại ở trạng thái hoàn thành.'
                               : 'Hoạt động đã được khép lại ở trạng thái hủy.'}
                         </div>
                       </div>
-                      {getStatusBadge(activity.status)}
+                      {getStatusBadge(getDisplayStatus(activity))}
                     </div>
                   </div>
                 );})}
@@ -483,9 +489,9 @@ export default function TeacherActivitiesPage() {
           <div className="space-y-4">
           {remainingActivities.map((activity) => {
             const canEditAndResubmit =
-              activity.status === 'draft' || activity.status === 'rejected';
+              getDisplayStatus(activity) === 'draft' || getDisplayStatus(activity) === 'rejected';
             const canCancelPublished =
-              activity.status === 'published' &&
+              getDisplayStatus(activity) === 'published' &&
               (new Date(activity.date_time).getTime() - Date.now()) / (1000 * 60 * 60) > 0;
 
             return (
@@ -498,7 +504,7 @@ export default function TeacherActivitiesPage() {
                   <div className="flex-1">
                     <div className="flex items-start gap-3">
                       <h3 className="text-xl font-semibold text-gray-900">{activity.title}</h3>
-                      {getStatusBadge(activity.status)}
+                      {getStatusBadge(getDisplayStatus(activity))}
                     </div>
                     <p className="text-gray-600 mt-2 line-clamp-2">{activity.description}</p>
                     {activity.teacher_name && (
@@ -574,7 +580,7 @@ export default function TeacherActivitiesPage() {
                         ) : (
                           <>
                             <Send className="w-4 h-4" />
-                            {activity.status === 'rejected'
+                            {getDisplayStatus(activity) === 'rejected'
                               ? 'Chỉnh sửa và gửi lại'
                               : 'Gửi duyệt'}
                           </>
@@ -583,13 +589,13 @@ export default function TeacherActivitiesPage() {
                     </>
                   )}
 
-                  {activity.status === 'pending' && (
+                  {getDisplayStatus(activity) === 'pending' && (
                     <span className="px-4 py-2 bg-yellow-100 text-yellow-800 rounded text-sm font-medium">
                       ⏳ Đã gửi duyệt, đang chờ xử lý
                     </span>
                   )}
 
-                  {activity.status === 'rejected' && (
+                  {getDisplayStatus(activity) === 'rejected' && (
                     <span className="px-4 py-2 bg-red-100 text-red-800 rounded text-sm font-medium">
                       ⚠️ Cần chỉnh sửa và gửi lại
                     </span>

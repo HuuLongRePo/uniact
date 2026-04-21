@@ -40,14 +40,14 @@ export async function POST(request: NextRequest) {
     const classId = body?.class_id ? Number(body.class_id) : null;
 
     const lines: string[] = [];
-    lines.push('Thong ke lop hoc (12 thang gan nhat)');
-    lines.push(`Xuat luc: ${formatDate(new Date(), 'datetime')}`);
+    lines.push('Thống kê lớp học (12 tháng gần nhất)');
+    lines.push(`Xuất lúc: ${formatDate(new Date(), 'datetime')}`);
     lines.push('');
 
     if (classId && !Number.isNaN(classId)) {
       await assertCanAccessClass(user, classId);
       const cls = (await dbGet(`SELECT name FROM classes WHERE id = ?`, [classId])) as any;
-      lines.push(`Lop: ${String(cls?.name || classId)}`);
+      lines.push(`Lớp: ${String(cls?.name || classId)}`);
       lines.push('');
 
       const totalStudentsRow = (await dbGet(
@@ -85,9 +85,9 @@ export async function POST(request: NextRequest) {
       const denom = totalStudents * totalActivities;
       const rate = calculateAttendanceRate(attended, denom).toFixed(1);
 
-      lines.push(`Tong hoc vien: ${totalStudents}`);
-      lines.push(`Tong hoat dong: ${totalActivities}`);
-      lines.push(`Ti le diem danh (attended): ${rate}%`);
+      lines.push(`Tổng học viên: ${totalStudents}`);
+      lines.push(`Tổng hoạt động: ${totalActivities}`);
+      lines.push(`Tỉ lệ điểm danh (attended): ${rate}%`);
     } else {
       const rows = await dbAll(
         `
@@ -99,9 +99,9 @@ export async function POST(request: NextRequest) {
         `
       );
 
-      lines.push('Danh sach lop (toi da 50):');
+      lines.push('Danh sách lớp (tối đa 50):');
       for (const r of rows as any[]) {
-        lines.push(`${String(r.class_name || '')} - ${Number(r.total_students || 0)} hoc vien`);
+        lines.push(`${String(r.class_name || '')} - ${Number(r.total_students || 0)} học viên`);
       }
     }
 

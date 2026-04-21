@@ -3,21 +3,66 @@ import { dbAll, dbGet, dbRun, dbReady } from '@/lib/database';
 import { requireRole } from '@/lib/guards';
 import { ApiError, successResponse, errorResponse } from '@/lib/api-response';
 
-async function assertCanManageClass(user: any, classId: number): Promise<void> {
-  if (user.role === 'admin') return;
+type ClassPermissionRow = {
+  class_id: number;
+  is_homeroom_primary: number;
+  has_any_assignment: number;
+};
 
-  const row = await dbGet(
+async function getClassPermission(user: any, classId: number): Promise<ClassPermissionRow | null> {
+  if (user.role === 'admin') {
+    return {
+      class_id: classId,
+      is_homeroom_primary: 1,
+      has_any_assignment: 1,
+    };
+  }
+
+  const row = (await dbGet(
     `
-    SELECT c.id
+    SELECT
+      c.id as class_id,
+      CASE
+        WHEN c.teacher_id = ? THEN 1
+        WHEN EXISTS (
+          SELECT 1
+          FROM class_teachers ct_primary
+          WHERE ct_primary.class_id = c.id
+            AND ct_primary.teacher_id = ?
+            AND ct_primary.role = 'primary'
+        ) THEN 1
+        ELSE 0
+      END as is_homeroom_primary,
+      CASE
+        WHEN c.teacher_id = ? THEN 1
+        WHEN EXISTS (
+          SELECT 1
+          FROM class_teachers ct_any
+          WHERE ct_any.class_id = c.id
+            AND ct_any.teacher_id = ?
+        ) THEN 1
+        ELSE 0
+      END as has_any_assignment
     FROM classes c
-    LEFT JOIN class_teachers ct ON ct.class_id = c.id AND ct.teacher_id = ?
-    WHERE c.id = ? AND (c.teacher_id = ? OR ct.teacher_id IS NOT NULL)
+    WHERE c.id = ?
     `,
-    [user.id, classId, user.id]
-  );
+    [user.id, user.id, user.id, user.id, classId]
+  )) as ClassPermissionRow | undefined;
 
-  if (!row) {
+  return row || null;
+}
+
+async function assertCanViewClass(user: any, classId: number): Promise<void> {
+  const permission = await getClassPermission(user, classId);
+  if (!permission || !Number(permission.has_any_assignment)) {
     throw ApiError.forbidden('Bạn chưa được phân công lớp này');
+  }
+}
+
+async function assertCanEditClass(user: any, classId: number): Promise<void> {
+  const permission = await getClassPermission(user, classId);
+  if (!permission || !Number(permission.is_homeroom_primary)) {
+    throw ApiError.forbidden('Bạn chỉ có quyền chỉnh sửa dữ liệu trên lớp do mình chủ nhiệm');
   }
 }
 
@@ -39,9 +84,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       return errorResponse(ApiError.validation('ID lớp học không hợp lệ'));
     }
 
-    await assertCanManageClass(user, classId);
+    await assertCanViewClass(user, classId);
 
-    // Lấy danh sách học viên kèm tổng điểm
     const students = await dbAll(
       `SELECT 
         u.id,
@@ -92,7 +136,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return errorResponse(ApiError.validation('ID lớp học không hợp lệ'));
     }
 
-    await assertCanManageClass(user, classId);
+    await assertCanEditClass(user, classId);
 
     const body = await request.json().catch(() => ({}));
     const email = String(body?.email || '')
@@ -108,15 +152,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     )) as { id: number; role: string; class_id: number | null } | undefined;
 
     if (!student) {
-      return errorResponse(ApiError.notFound('Không tìm thấy sinh viên với email này'));
+      return errorResponse(ApiError.notFound('Không tìm thấy học viên với email này'));
     }
 
     if (student.role !== 'student') {
-      return errorResponse(ApiError.validation('Tài khoản này không phải sinh viên'));
+      return errorResponse(ApiError.validation('Tài khoản này không phải học viên'));
     }
 
     if (Number(student.class_id) === classId) {
-      return errorResponse(ApiError.conflict('Sinh viên đã ở trong lớp này'));
+      return errorResponse(ApiError.conflict('Học viên đã ở trong lớp này'));
     }
 
     await dbRun(`UPDATE users SET class_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [
@@ -124,13 +168,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       student.id,
     ]);
 
-    return successResponse({}, 'Thêm sinh viên thành công');
+    return successResponse({}, 'Thêm học viên thành công');
   } catch (error: any) {
     console.error('Add student to class error:', error);
     return errorResponse(
       error instanceof ApiError
         ? error
-        : ApiError.internalError('Không thể thêm sinh viên', { details: error?.message })
+        : ApiError.internalError('Không thể thêm học viên', { details: error?.message })
     );
   }
 }

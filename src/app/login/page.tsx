@@ -14,20 +14,21 @@ export default function LoginPage() {
   const router = useRouter();
   const { user, login } = useAuth(); // Sử dụng login từ AuthContext
 
-  const demoAccountsEnabled = process.env.NEXT_PUBLIC_ENABLE_DEMO_ACCOUNTS === '1';
-  const showDemoAccounts = demoAccountsEnabled;
-  const shouldExplainMissingDemoPanel = !demoAccountsEnabled;
+  const showDemoAccounts =
+    process.env.NODE_ENV !== 'production' || process.env.NEXT_PUBLIC_ENABLE_DEMO_ACCOUNTS === '1';
+  const shouldExplainMissingDemoPanel = !showDemoAccounts && process.env.NODE_ENV === 'production';
 
-  const handleQuickLogin = (email: string, password: string) => {
+  const handleQuickLogin = async (email: string, password: string) => {
     setEmail(email);
     setPassword(password);
-    // Auto-submit sau khi fill
-    setTimeout(() => {
-      const form = document.querySelector('form');
-      if (form) {
-        form.requestSubmit();
-      }
-    }, 100);
+    setLoginError('');
+
+    try {
+      await login(email, password);
+    } catch (err: any) {
+      console.warn('❌ Quick login thất bại:', err.message);
+      setLoginError(err.message || 'Đăng nhập thất bại');
+    }
   };
 
   // Redirect nếu đã login
@@ -157,7 +158,7 @@ export default function LoginPage() {
           </div>
           {shouldExplainMissingDemoPanel && (
             <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-              Quick login đang tắt. Bật <code className="rounded bg-amber-100 px-1">NEXT_PUBLIC_ENABLE_DEMO_ACCOUNTS=1</code> để hiện panel tài khoản demo cả trên production lẫn local/dev.
+              Demo account panel hiện chỉ hiển thị khi bạn bật <code className="rounded bg-amber-100 px-1">NEXT_PUBLIC_ENABLE_DEMO_ACCOUNTS=1</code> và <code className="rounded bg-amber-100 px-1">ENABLE_DEMO_ACCOUNTS=1</code> trên production.
             </div>
           )}
         </form>

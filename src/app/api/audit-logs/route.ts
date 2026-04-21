@@ -7,7 +7,7 @@ import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
 export async function GET(request: NextRequest) {
   try {
     const user = await getUserFromRequest(request);
-    if (!user) return errorResponse(ApiError.unauthorized('Unauthorized'));
+    if (!user) return errorResponse(ApiError.unauthorized('Chưa đăng nhập'));
 
     const params = request.nextUrl?.searchParams;
     const page = Math.max(Number(params?.get('page') || '1'), 1);
@@ -90,6 +90,6 @@ export async function GET(request: NextRequest) {
     return successResponse({ logs, meta: { total, page, per_page } });
   } catch (error: any) {
     console.error('Get audit logs error:', error);
-    return errorResponse(ApiError.internalError('Internal server error'));
+    return errorResponse(ApiError.internalError('Lỗi máy chủ nội bộ'));
   }
 }

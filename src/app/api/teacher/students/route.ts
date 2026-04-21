@@ -21,11 +21,11 @@ export async function GET(request: NextRequest) {
 
     const allClasses = (await dbAll(
       `
-      SELECT c.id, c.name, c.grade
+      SELECT c.id, c.name, c.grade, c.teacher_id
       FROM classes c
       ORDER BY c.grade ASC, c.name ASC
       `
-    )) as Array<{ id: number; name: string; grade: string }>;
+    )) as Array<{ id: number; name: string; grade: string; teacher_id: number | null }>;
 
     if (allClasses.length === 0) {
       return successResponse(
@@ -39,6 +39,27 @@ export async function GET(request: NextRequest) {
     }
 
     const classIds = allClasses.map((item) => Number(item.id));
+    const homeroomClassRows = (await dbAll(
+      `
+      SELECT DISTINCT class_id
+      FROM class_teachers
+      WHERE teacher_id = ?
+        AND role = 'primary'
+      `,
+      [user.id]
+    )) as Array<{ class_id: number }>;
+
+    const homeroomClassIdSet = new Set<number>(
+      allClasses
+        .filter((item) => Number(item.teacher_id || 0) === Number(user.id))
+        .map((item) => Number(item.id))
+    );
+    for (const row of homeroomClassRows) {
+      const classIdValue = Number(row.class_id);
+      if (Number.isFinite(classIdValue) && classIdValue > 0) {
+        homeroomClassIdSet.add(classIdValue);
+      }
+    }
 
     // Teacher hiện có thể xem toàn bộ lớp/học viên trên surface này.
     // Permission mutation chi tiết vẫn do từng route nghiệp vụ kiểm soát.
@@ -66,6 +87,7 @@ export async function GET(request: NextRequest) {
         u.avatar_url,
         u.class_id,
         c.name as class_name,
+        c.teacher_id as class_teacher_id,
         COUNT(DISTINCT p.id) as activities_count
       FROM users u
       LEFT JOIN classes c ON c.id = u.class_id
@@ -73,7 +95,7 @@ export async function GET(request: NextRequest) {
         AND p.attendance_status IN ('attended', 'registered')
       WHERE u.role = 'student'
         AND ${whereClause}
-      GROUP BY u.id, u.email, u.name, u.avatar_url, u.class_id, c.name
+      GROUP BY u.id, u.email, u.name, u.avatar_url, u.class_id, c.name, c.teacher_id
       ORDER BY u.name ASC
       `,
       params
@@ -84,6 +106,7 @@ export async function GET(request: NextRequest) {
       avatar_url?: string;
       class_id: number;
       class_name: string;
+      class_teacher_id: number | null;
       activities_count: number;
     }>;
 
@@ -100,7 +123,10 @@ export async function GET(request: NextRequest) {
         return String(left.name).localeCompare(String(right.name));
       });
 
-    const classes = allClasses;
+    const classes = allClasses.map((item) => ({
+      ...item,
+      is_homeroom_class: homeroomClassIdSet.has(Number(item.id)),
+    }));
 
     return successResponse({
       students: students.map((student) => ({
@@ -109,6 +135,7 @@ export async function GET(request: NextRequest) {
         total_score: student.total_points,
         activity_count: student.activities_count,
         attended_count: 0,
+        is_homeroom_scope: homeroomClassIdSet.has(Number(student.class_id || 0)),
       })),
       classes,
       total: students.length,

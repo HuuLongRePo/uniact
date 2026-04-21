@@ -6,8 +6,8 @@ import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
 export async function GET(request: NextRequest) {
   try {
     const user = await getUserFromSession();
-    if (!user) return errorResponse(ApiError.unauthorized('Unauthorized'));
-    if (user.role !== 'student') return errorResponse(ApiError.forbidden('Forbidden'));
+    if (!user) return errorResponse(ApiError.unauthorized('Chưa đăng nhập'));
+    if (user.role !== 'student') return errorResponse(ApiError.forbidden('Không có quyền truy cập'));
 
     // Tổng điểm hiện tại dựa trên student_scores
     const result: any = await dbGet(
@@ -52,6 +52,6 @@ export async function GET(request: NextRequest) {
     return successResponse({ awards: upcomingAwards });
   } catch (error: any) {
     console.error('Get upcoming awards error:', error);
-    return errorResponse(ApiError.internalError(error.message || 'Internal server error'));
+    return errorResponse(ApiError.internalError(error.message || 'Lỗi máy chủ nội bộ'));
   }
 }

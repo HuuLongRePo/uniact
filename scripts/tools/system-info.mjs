@@ -23,7 +23,7 @@ const info = {
   platform: `${os.platform()} ${os.release()}`,
   arch: os.arch(),
   node: process.version,
-  cpu_model: primaryCpu?.model ?? "Khong xac dinh",
+  cpu_model: primaryCpu?.model ?? "Không xác định",
   cpu_cores: cpus.length,
   total_memory: formatBytes(os.totalmem()),
   free_memory: formatBytes(os.freemem()),

@@ -144,7 +144,7 @@ export default function ActivityDialog({
   const fetchActivityData = async () => {
     try {
       const res = await fetch(`/api/activities/${activityId}`);
-      if (!res.ok) throw new Error('Failed to fetch activity');
+      if (!res.ok) throw new Error('Không thể tải hoạt động');
 
       const data = await res.json();
       const activity = data.activity;

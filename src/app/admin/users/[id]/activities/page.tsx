@@ -100,7 +100,7 @@ export default function AdminUserActivitiesPage() {
         const params = new URLSearchParams({ page: '1', limit: '200', teacher_id: String(userId) });
         const res = await fetch(`/api/admin/activities?${params.toString()}`);
         const json = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(json?.error || 'Không thể tải hoạt động của giáo viên');
+        if (!res.ok) throw new Error(json?.error || 'Không thể tải hoạt động của giảng viên');
         setTeacherActivities((json.activities || []) as TeacherActivityRow[]);
       } else {
         setStudentActivities([]);
@@ -183,7 +183,7 @@ export default function AdminUserActivitiesPage() {
         </div>
       ) : user?.role === 'teacher' ? (
         <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-bold mb-4">Hoạt động được tạo (admin view)</h2>
+          <h2 className="text-xl font-bold mb-4">Hoạt động đã tạo (góc nhìn quản trị)</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b text-left">

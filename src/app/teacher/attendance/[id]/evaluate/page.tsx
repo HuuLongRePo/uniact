@@ -81,7 +81,7 @@ export default function EvaluateParticipationPage() {
         fetch('/api/admin/scoring-config'),
       ]);
 
-      if (!partRes.ok) throw new Error('Failed to fetch participation');
+      if (!partRes.ok) throw new Error('Không thể tải thông tin tham gia');
 
       const partData = await partRes.json();
       setParticipation(partData.data);

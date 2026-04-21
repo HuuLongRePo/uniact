@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
 
     const classIds = await getAccessibleClassIds(user);
     if (classIds.length === 0) {
-      const pdf = createSimplePdf(['Bao cao tham gia hoat dong', 'Khong co du lieu']);
+      const pdf = createSimplePdf(['Báo cáo tham gia hoạt động', 'Không có dữ liệu']);
       return new NextResponse(pdf as any, {
         status: 200,
         headers: {
@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
     );
 
     const lines: string[] = [];
-    lines.push('Bao cao tham gia hoat dong (12 thang gan nhat)');
+    lines.push('Báo cáo tham gia hoạt động (12 tháng gần nhất)');
     lines.push(`Xuat luc: ${formatDate(new Date(), 'datetime')}`);
     lines.push('');
     lines.push('Student | Code | Class | Total | Joined | Rate% | Score');
@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
         `${String(r.student_name || '')} | ${String(r.student_code || '')} | ${String(r.class_name || '')} | ${total} | ${joined} | ${rate} | ${score}`
       );
       if (lines.length > 120) {
-        lines.push('... (cat bot dong de tranh file qua lon)');
+        lines.push('... (cắt bớt dòng để tránh file quá lớn)');
         break;
       }
     }

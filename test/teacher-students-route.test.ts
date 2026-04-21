@@ -14,7 +14,10 @@ describe('GET /api/teacher/students', () => {
     vi.doMock('@/lib/database', () => ({
       dbAll: vi.fn(async (sql: string) => {
         if (sql.includes('SELECT c.id, c.name, c.grade') && sql.includes('FROM classes c')) {
-          return [{ id: 10, name: 'CTK42A', grade: 'K42' }];
+          return [{ id: 10, name: 'CTK42A', grade: 'K42', teacher_id: 7 }];
+        }
+        if (sql.includes('FROM class_teachers') && sql.includes("role = 'primary'")) {
+          return [];
         }
         if (sql.includes('FROM users u') && sql.includes('GROUP BY u.id')) {
           return [
@@ -25,6 +28,7 @@ describe('GET /api/teacher/students', () => {
               avatar_url: null,
               class_id: 10,
               class_name: 'CTK42A',
+              class_teacher_id: 7,
               activities_count: 4,
             },
           ];
@@ -61,6 +65,11 @@ describe('GET /api/teacher/students', () => {
       activities_count: 4,
       activity_count: 4,
       attended_count: 0,
+      is_homeroom_scope: true,
+    });
+    expect(body.classes[0]).toMatchObject({
+      id: 10,
+      is_homeroom_class: true,
     });
     expect(body.total).toBe(1);
   });
@@ -119,9 +128,12 @@ describe('GET /api/teacher/students', () => {
     const dbAllMock = vi.fn(async (sql: string, params?: any[]) => {
       if (sql.includes('SELECT c.id, c.name, c.grade') && sql.includes('FROM classes c')) {
         return [
-          { id: 10, name: 'CTK42A', grade: 'K42' },
-          { id: 11, name: 'CTK42B', grade: 'K42' },
+          { id: 10, name: 'CTK42A', grade: 'K42', teacher_id: 7 },
+          { id: 11, name: 'CTK42B', grade: 'K42', teacher_id: 9 },
         ];
+      }
+      if (sql.includes('FROM class_teachers') && sql.includes("role = 'primary'")) {
+        return [];
       }
       if (sql.includes('FROM users u') && sql.includes('u.class_id = ?')) {
         expect(params).toContain(11);
@@ -133,6 +145,7 @@ describe('GET /api/teacher/students', () => {
             avatar_url: null,
             class_id: 11,
             class_name: 'CTK42B',
+            class_teacher_id: 9,
             activities_count: 1,
           },
         ];
@@ -168,6 +181,71 @@ describe('GET /api/teacher/students', () => {
       id: 301,
       class_id: 11,
       total_points: 5,
+      is_homeroom_scope: false,
     });
+    expect(body.classes[0]).toMatchObject({ id: 10, is_homeroom_class: true });
+    expect(body.classes[1]).toMatchObject({ id: 11, is_homeroom_class: false });
+  });
+
+  it('marks homeroom scope using class_teachers primary mapping when classes.teacher_id differs', async () => {
+    vi.doMock('@/lib/guards', () => ({
+      requireApiRole: async () => ({ id: 7, role: 'teacher', name: 'Teacher A' }),
+    }));
+
+    vi.doMock('@/lib/database', () => ({
+      dbAll: vi.fn(async (sql: string) => {
+        if (sql.includes('SELECT c.id, c.name, c.grade') && sql.includes('FROM classes c')) {
+          return [
+            { id: 10, name: 'CTK42A', grade: 'K42', teacher_id: 9 },
+            { id: 11, name: 'CTK42B', grade: 'K42', teacher_id: 9 },
+          ];
+        }
+        if (sql.includes('FROM class_teachers') && sql.includes("role = 'primary'")) {
+          return [{ class_id: 11 }];
+        }
+        if (sql.includes('FROM users u') && sql.includes('GROUP BY u.id')) {
+          return [
+            {
+              id: 501,
+              email: 'student3@example.com',
+              name: 'Le Thi C',
+              avatar_url: null,
+              class_id: 11,
+              class_name: 'CTK42B',
+              class_teacher_id: 9,
+              activities_count: 2,
+            },
+          ];
+        }
+        if (sql.includes('WITH participation_totals AS')) {
+          return [
+            {
+              student_id: 501,
+              participation_points: 8,
+              award_points: 1,
+              adjustment_points: 0,
+              final_total: 9,
+            },
+          ];
+        }
+        return [];
+      }),
+    }));
+
+    const route = await import('../src/app/api/teacher/students/route');
+    const res: any = await route.GET({
+      url: 'http://localhost/api/teacher/students?class_id=11',
+    } as any);
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+    expect(body.students[0]).toMatchObject({
+      id: 501,
+      class_id: 11,
+      is_homeroom_scope: true,
+    });
+    expect(body.classes[0]).toMatchObject({ id: 10, is_homeroom_class: false });
+    expect(body.classes[1]).toMatchObject({ id: 11, is_homeroom_class: true });
   });
 });

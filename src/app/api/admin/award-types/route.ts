@@ -7,12 +7,12 @@ export async function GET(request: NextRequest) {
   try {
     const token = request.cookies.get('token')?.value;
     if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Chưa đăng nhập' }, { status: 401 });
     }
 
     const user = await getUserFromToken(token);
     if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return NextResponse.json({ error: 'Không có quyền truy cập' }, { status: 403 });
     }
 
     const awardTypes = await dbAll(
@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error getting award types:', error);
-    return NextResponse.json({ error: 'Failed to get award types' }, { status: 500 });
+    return NextResponse.json({ error: 'Không thể tải danh sách loại khen thưởng' }, { status: 500 });
   }
 }
 
@@ -43,19 +43,19 @@ export async function POST(request: NextRequest) {
   try {
     const token = request.cookies.get('token')?.value;
     if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Chưa đăng nhập' }, { status: 401 });
     }
 
     const user = await getUserFromToken(token);
     if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return NextResponse.json({ error: 'Không có quyền truy cập' }, { status: 403 });
     }
 
     const body = await request.json();
     const { name, description, min_points } = body;
 
     if (!name) {
-      return NextResponse.json({ error: 'Name is required' }, { status: 400 });
+      return NextResponse.json({ error: 'Thiếu tên loại khen thưởng' }, { status: 400 });
     }
 
     // Check if name already exists
@@ -92,6 +92,6 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error creating award type:', error);
-    return NextResponse.json({ error: 'Failed to create award type' }, { status: 500 });
+    return NextResponse.json({ error: 'Không thể tạo loại khen thưởng' }, { status: 500 });
   }
 }

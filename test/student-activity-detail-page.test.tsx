@@ -208,7 +208,7 @@ describe('StudentActivityDetailPage registration conflict flow', () => {
               applies_to_student: false,
               applicability_scope: 'class_scope_mismatch',
               applicability_reason:
-                'Khong thuoc pham vi cua ban vi hoat dong dang danh rieng cho lop khac.',
+                'Không thuộc phạm vi của bạn vì hoạt động đang dành riêng cho lớp khác.',
               base_points: 10,
               registration_deadline: '2099-04-14T08:00:00.000Z',
             },
@@ -225,9 +225,9 @@ describe('StudentActivityDetailPage registration conflict flow', () => {
     render(<StudentActivityDetailPage />);
 
     expect(await screen.findByText('Hoat dong lop khac')).toBeInTheDocument();
-    expect(screen.getByText('Khong thuoc pham vi cua ban')).toBeInTheDocument();
+    expect(screen.getByText('Không thuộc phạm vi của bạn')).toBeInTheDocument();
     expect(
-      screen.getByText('Khong thuoc pham vi cua ban vi hoat dong dang danh rieng cho lop khac.')
+      screen.getByText('Không thuộc phạm vi của bạn vì hoạt động đang dành riêng cho lớp khác.')
     ).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Đăng ký ngay/i })).not.toBeInTheDocument();
   });

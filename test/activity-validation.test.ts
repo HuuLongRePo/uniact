@@ -85,8 +85,46 @@ describe('activity-validation helpers', () => {
       class_ids: [],
       mandatory_class_ids: [],
       voluntary_class_ids: [],
+      mandatory_student_ids: [],
+      voluntary_student_ids: [],
+      applies_to_all_students: false,
       registration_deadline: null,
       activity_type_id: null,
+    })
+  })
+
+  it('maps legacy is_mandatory=false with class_ids to voluntary scope on create', () => {
+    const eventTime = new Date(Date.now() + 96 * 60 * 60 * 1000).toISOString()
+
+    const result = validateCreateActivityBody({
+      title: 'Legacy voluntary',
+      date_time: eventTime,
+      location: 'Hall',
+      max_participants: 30,
+      class_ids: [5, 6],
+      is_mandatory: false,
+    })
+
+    expect(result.errors).toEqual({})
+    expect(result.data?.class_ids).toEqual([5, 6])
+    expect(result.data?.mandatory_class_ids).toEqual([])
+    expect(result.data?.voluntary_class_ids).toEqual([5, 6])
+  })
+
+  it('maps legacy is_mandatory=false with class_ids to voluntary scope on update', () => {
+    const result = validateUpdateActivityBody({
+      class_ids: [7],
+      is_mandatory: false,
+    })
+
+    expect(result.errors).toEqual({})
+    expect(result.data).toEqual({
+      class_ids: [7],
+      mandatory_class_ids: [],
+      voluntary_class_ids: [7],
+      applies_to_all_students: false,
+      mandatory_student_ids: [],
+      voluntary_student_ids: [],
     })
   })
 })

@@ -6,7 +6,7 @@ export async function GET(request: NextRequest) {
   try {
     const user = await getUserFromSession();
     if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Chưa đăng nhập' }, { status: 401 });
     }
 
     const config = await dbGet('SELECT config_value FROM system_config WHERE config_key = ?', [
@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ formula });
   } catch (error) {
     console.error('Get scoring formula error:', error);
-    return NextResponse.json({ error: 'Failed to get formula' }, { status: 500 });
+    return NextResponse.json({ error: 'Không thể tải công thức tính điểm' }, { status: 500 });
   }
 }
 
@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
   try {
     const user = await getUserFromSession();
     if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Chưa đăng nhập' }, { status: 401 });
     }
 
     const { formula } = await request.json();
@@ -70,9 +70,9 @@ export async function POST(request: NextRequest) {
       ]);
     }
 
-    return NextResponse.json({ message: 'Formula saved successfully' });
+    return NextResponse.json({ message: 'Lưu công thức thành công' });
   } catch (error) {
     console.error('Save scoring formula error:', error);
-    return NextResponse.json({ error: 'Failed to save formula' }, { status: 500 });
+    return NextResponse.json({ error: 'Không thể lưu công thức tính điểm' }, { status: 500 });
   }
 }

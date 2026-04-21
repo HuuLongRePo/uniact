@@ -3,6 +3,82 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --app-surface-base: #ffffff;
+  --app-surface-elevated: #f8fafc;
+  --app-surface-muted: #f1f5f9;
+  --app-surface-soft: #e2e8f0;
+  --app-text-strong: #111827;
+  --app-text-default: #374151;
+  --app-text-muted: #6b7280;
+  --app-border-default: #d1d5db;
+  --app-border-soft: #e5e7eb;
+  --app-overlay: rgba(15, 23, 42, 0.55);
+  --app-link: #1d4ed8;
+  --app-action-primary-bg: #1d4ed8;
+  --app-action-primary-bg-hover: #1e40af;
+  --app-action-primary-text: #f8fafc;
+  --app-action-secondary-bg: #ffffff;
+  --app-action-secondary-text: #0f172a;
+  --app-action-secondary-border: #cbd5e1;
+  --app-scrollbar-track: #e2e8f0;
+  --app-scrollbar-thumb: #94a3b8;
+  --app-scrollbar-thumb-hover: #64748b;
+  --quick-login-fab-bg: var(--app-action-primary-bg);
+  --quick-login-fab-bg-hover: var(--app-action-primary-bg-hover);
+  --quick-login-fab-text: var(--app-action-primary-text);
+  --quick-login-panel-bg: var(--app-surface-base);
+  --quick-login-panel-surface: var(--app-surface-elevated);
+  --quick-login-panel-border: var(--app-border-default);
+  --quick-login-panel-shadow: 0 20px 45px rgba(15, 23, 42, 0.2);
+  --quick-login-text-primary: var(--app-text-strong);
+  --quick-login-text-secondary: var(--app-text-default);
+  --quick-login-text-muted: var(--app-text-muted);
+  --quick-login-header-bg-start: #1d4ed8;
+  --quick-login-header-bg-end: #1e3a8a;
+  --quick-login-header-text: #f8fafc;
+  --quick-login-header-button-hover: rgba(248, 250, 252, 0.16);
+  --quick-login-warning-bg: #fffbeb;
+  --quick-login-warning-border: #fcd34d;
+  --quick-login-warning-text: #854d0e;
+  --quick-login-role-admin-bg: #fff1f2;
+  --quick-login-role-admin-border: #fecdd3;
+  --quick-login-role-admin-hover: #ffe4e6;
+  --quick-login-role-admin-title: #9f1239;
+  --quick-login-role-teacher-bg: #f0fdf4;
+  --quick-login-role-teacher-border: #bbf7d0;
+  --quick-login-role-teacher-hover: #dcfce7;
+  --quick-login-role-teacher-title: #166534;
+  --quick-login-role-student-bg: #eff6ff;
+  --quick-login-role-student-border: #bfdbfe;
+  --quick-login-role-student-hover: #dbeafe;
+  --quick-login-role-student-title: #1e3a8a;
+  --quick-login-card-bg: var(--app-surface-base);
+  --quick-login-card-border: var(--app-border-default);
+  --quick-login-card-border-hover: var(--app-link);
+  --quick-login-card-hover: var(--app-surface-muted);
+  --quick-login-copy-bg: var(--app-action-secondary-bg);
+  --quick-login-copy-border: var(--app-action-secondary-border);
+  --quick-login-copy-hover: var(--app-surface-muted);
+  --quick-login-copy-text: var(--app-action-secondary-text);
+  --quick-login-success: #15803d;
+  --quick-login-focus-ring: #0ea5e9;
+  --quick-login-panel-grid:
+    radial-gradient(circle at 100% 0%, rgba(37, 99, 235, 0.1) 0, rgba(37, 99, 235, 0) 36%),
+    linear-gradient(180deg, rgba(148, 163, 184, 0.12), rgba(148, 163, 184, 0));
+  --quick-login-search-shell: rgba(248, 250, 252, 0.22);
+  --quick-login-search-shell-text: #eff6ff;
+  --quick-login-search-bg: var(--app-surface-base);
+  --quick-login-search-border: #93c5fd;
+  --quick-login-search-border-focus: var(--app-link);
+  --quick-login-search-text: var(--app-text-strong);
+  --quick-login-search-placeholder: var(--app-text-muted);
+  --quick-login-search-icon: var(--app-text-default);
+  --quick-login-search-result-bg: #eff6ff;
+  --quick-login-search-result-border: #93c5fd;
+  --quick-login-search-result-title: #1e3a8a;
+  --quick-login-search-empty-bg: var(--app-surface-elevated);
+  --quick-login-search-empty-border: var(--app-border-default);
+  --quick-login-search-empty-text: var(--app-text-default);
 }
 
 @theme inline {
@@ -13,10 +89,172 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme='light']) {
     --background: #0a0a0a;
     --foreground: #ededed;
+    --app-surface-base: #0f172a;
+    --app-surface-elevated: #111827;
+    --app-surface-muted: #1e293b;
+    --app-surface-soft: #334155;
+    --app-text-strong: #f8fafc;
+    --app-text-default: #cbd5e1;
+    --app-text-muted: #94a3b8;
+    --app-border-default: #334155;
+    --app-border-soft: #1f2937;
+    --app-overlay: rgba(2, 6, 23, 0.72);
+    --app-link: #60a5fa;
+    --app-action-primary-bg: #2563eb;
+    --app-action-primary-bg-hover: #3b82f6;
+    --app-action-primary-text: #f8fafc;
+    --app-action-secondary-bg: #0f172a;
+    --app-action-secondary-text: #f8fafc;
+    --app-action-secondary-border: #334155;
+    --app-scrollbar-track: #0f172a;
+    --app-scrollbar-thumb: #475569;
+    --app-scrollbar-thumb-hover: #64748b;
+    --quick-login-fab-bg: var(--app-action-primary-bg);
+    --quick-login-fab-bg-hover: var(--app-action-primary-bg-hover);
+    --quick-login-fab-text: var(--app-action-primary-text);
+    --quick-login-panel-bg: var(--app-surface-base);
+    --quick-login-panel-surface: var(--app-surface-elevated);
+    --quick-login-panel-border: var(--app-border-default);
+    --quick-login-panel-shadow: 0 24px 55px rgba(2, 6, 23, 0.65);
+    --quick-login-text-primary: var(--app-text-strong);
+    --quick-login-text-secondary: var(--app-text-default);
+    --quick-login-text-muted: var(--app-text-muted);
+    --quick-login-header-bg-start: #1e3a8a;
+    --quick-login-header-bg-end: #1e40af;
+    --quick-login-header-text: #e2e8f0;
+    --quick-login-header-button-hover: rgba(226, 232, 240, 0.18);
+    --quick-login-warning-bg: #2a2009;
+    --quick-login-warning-border: #b45309;
+    --quick-login-warning-text: #fcd34d;
+    --quick-login-role-admin-bg: #2f1620;
+    --quick-login-role-admin-border: #7f1d3f;
+    --quick-login-role-admin-hover: #3a1c28;
+    --quick-login-role-admin-title: #fda4af;
+    --quick-login-role-teacher-bg: #132b1f;
+    --quick-login-role-teacher-border: #166534;
+    --quick-login-role-teacher-hover: #173427;
+    --quick-login-role-teacher-title: #86efac;
+    --quick-login-role-student-bg: #11253e;
+    --quick-login-role-student-border: #1d4ed8;
+    --quick-login-role-student-hover: #15304f;
+    --quick-login-role-student-title: #93c5fd;
+    --quick-login-card-bg: var(--app-surface-base);
+    --quick-login-card-border: var(--app-border-default);
+    --quick-login-card-border-hover: var(--app-link);
+    --quick-login-card-hover: var(--app-surface-muted);
+    --quick-login-copy-bg: var(--app-action-secondary-bg);
+    --quick-login-copy-border: var(--app-action-secondary-border);
+    --quick-login-copy-hover: var(--app-surface-muted);
+    --quick-login-copy-text: var(--app-action-secondary-text);
+    --quick-login-success: #4ade80;
+    --quick-login-focus-ring: #38bdf8;
+    --quick-login-panel-grid:
+      radial-gradient(circle at 100% 0%, rgba(59, 130, 246, 0.2) 0, rgba(59, 130, 246, 0) 38%),
+      linear-gradient(180deg, rgba(30, 41, 59, 0.34), rgba(30, 41, 59, 0));
+    --quick-login-search-shell: rgba(15, 23, 42, 0.4);
+    --quick-login-search-shell-text: #e2e8f0;
+    --quick-login-search-bg: var(--app-surface-base);
+    --quick-login-search-border: var(--app-border-default);
+    --quick-login-search-border-focus: var(--quick-login-focus-ring);
+    --quick-login-search-text: var(--app-text-strong);
+    --quick-login-search-placeholder: var(--app-text-muted);
+    --quick-login-search-icon: var(--app-text-default);
+    --quick-login-search-result-bg: #11243d;
+    --quick-login-search-result-border: #1d4ed8;
+    --quick-login-search-result-title: #dbeafe;
+    --quick-login-search-empty-bg: var(--app-surface-elevated);
+    --quick-login-search-empty-border: var(--app-border-default);
+    --quick-login-search-empty-text: var(--app-text-default);
   }
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  --background: #0a0a0a;
+  --foreground: #ededed;
+  --app-surface-base: #0f172a;
+  --app-surface-elevated: #111827;
+  --app-surface-muted: #1e293b;
+  --app-surface-soft: #334155;
+  --app-text-strong: #f8fafc;
+  --app-text-default: #cbd5e1;
+  --app-text-muted: #94a3b8;
+  --app-border-default: #334155;
+  --app-border-soft: #1f2937;
+  --app-overlay: rgba(2, 6, 23, 0.72);
+  --app-link: #60a5fa;
+  --app-action-primary-bg: #2563eb;
+  --app-action-primary-bg-hover: #3b82f6;
+  --app-action-primary-text: #f8fafc;
+  --app-action-secondary-bg: #0f172a;
+  --app-action-secondary-text: #f8fafc;
+  --app-action-secondary-border: #334155;
+  --app-scrollbar-track: #0f172a;
+  --app-scrollbar-thumb: #475569;
+  --app-scrollbar-thumb-hover: #64748b;
+  --quick-login-fab-bg: var(--app-action-primary-bg);
+  --quick-login-fab-bg-hover: var(--app-action-primary-bg-hover);
+  --quick-login-fab-text: var(--app-action-primary-text);
+  --quick-login-panel-bg: var(--app-surface-base);
+  --quick-login-panel-surface: var(--app-surface-elevated);
+  --quick-login-panel-border: var(--app-border-default);
+  --quick-login-panel-shadow: 0 24px 55px rgba(2, 6, 23, 0.65);
+  --quick-login-text-primary: var(--app-text-strong);
+  --quick-login-text-secondary: var(--app-text-default);
+  --quick-login-text-muted: var(--app-text-muted);
+  --quick-login-header-bg-start: #1e3a8a;
+  --quick-login-header-bg-end: #1e40af;
+  --quick-login-header-text: #e2e8f0;
+  --quick-login-header-button-hover: rgba(226, 232, 240, 0.18);
+  --quick-login-warning-bg: #2a2009;
+  --quick-login-warning-border: #b45309;
+  --quick-login-warning-text: #fcd34d;
+  --quick-login-role-admin-bg: #2f1620;
+  --quick-login-role-admin-border: #7f1d3f;
+  --quick-login-role-admin-hover: #3a1c28;
+  --quick-login-role-admin-title: #fda4af;
+  --quick-login-role-teacher-bg: #132b1f;
+  --quick-login-role-teacher-border: #166534;
+  --quick-login-role-teacher-hover: #173427;
+  --quick-login-role-teacher-title: #86efac;
+  --quick-login-role-student-bg: #11253e;
+  --quick-login-role-student-border: #1d4ed8;
+  --quick-login-role-student-hover: #15304f;
+  --quick-login-role-student-title: #93c5fd;
+  --quick-login-card-bg: var(--app-surface-base);
+  --quick-login-card-border: var(--app-border-default);
+  --quick-login-card-border-hover: var(--app-link);
+  --quick-login-card-hover: var(--app-surface-muted);
+  --quick-login-copy-bg: var(--app-action-secondary-bg);
+  --quick-login-copy-border: var(--app-action-secondary-border);
+  --quick-login-copy-hover: var(--app-surface-muted);
+  --quick-login-copy-text: var(--app-action-secondary-text);
+  --quick-login-success: #4ade80;
+  --quick-login-focus-ring: #38bdf8;
+  --quick-login-panel-grid:
+    radial-gradient(circle at 100% 0%, rgba(59, 130, 246, 0.2) 0, rgba(59, 130, 246, 0) 38%),
+    linear-gradient(180deg, rgba(30, 41, 59, 0.34), rgba(30, 41, 59, 0));
+  --quick-login-search-shell: rgba(15, 23, 42, 0.4);
+  --quick-login-search-shell-text: #e2e8f0;
+  --quick-login-search-bg: var(--app-surface-base);
+  --quick-login-search-border: var(--app-border-default);
+  --quick-login-search-border-focus: var(--quick-login-focus-ring);
+  --quick-login-search-text: var(--app-text-strong);
+  --quick-login-search-placeholder: var(--app-text-muted);
+  --quick-login-search-icon: var(--app-text-default);
+  --quick-login-search-result-bg: #11243d;
+  --quick-login-search-result-border: #1d4ed8;
+  --quick-login-search-result-title: #dbeafe;
+  --quick-login-search-empty-bg: var(--app-surface-elevated);
+  --quick-login-search-empty-border: var(--app-border-default);
+  --quick-login-search-empty-text: var(--app-text-default);
+  color-scheme: dark;
 }
 
 body {
@@ -28,29 +266,113 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+button:not(:disabled),
+a[href],
+[role='button']:not([aria-disabled='true']) {
+  cursor: pointer;
+}
+
+button:disabled,
+[aria-disabled='true'] {
+  cursor: not-allowed;
+}
+
+:root[data-theme] body {
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+
+:root[data-theme='dark'] a {
+  color: var(--app-link);
+}
+
+:root[data-theme='dark'] .bg-white {
+  background-color: var(--app-surface-base) !important;
+}
+
+:root[data-theme='dark'] .bg-gray-50 {
+  background-color: var(--app-surface-elevated) !important;
+}
+
+:root[data-theme='dark'] .bg-gray-100 {
+  background-color: var(--app-surface-muted) !important;
+}
+
+:root[data-theme='dark'] .bg-gray-200 {
+  background-color: var(--app-surface-soft) !important;
+}
+
+:root[data-theme='dark'] .text-gray-900 {
+  color: var(--app-text-strong) !important;
+}
+
+:root[data-theme='dark'] .text-gray-800,
+:root[data-theme='dark'] .text-gray-700 {
+  color: var(--app-text-default) !important;
+}
+
+:root[data-theme='dark'] .text-gray-600,
+:root[data-theme='dark'] .text-gray-500,
+:root[data-theme='dark'] .text-gray-400 {
+  color: var(--app-text-muted) !important;
+}
+
+:root[data-theme='dark'] .placeholder-gray-500::placeholder {
+  color: var(--app-text-muted) !important;
+}
+
+:root[data-theme='dark'] .border-gray-100,
+:root[data-theme='dark'] .border-gray-200,
+:root[data-theme='dark'] .border-gray-300,
+:root[data-theme='dark'] .border-gray-400 {
+  border-color: var(--app-border-default) !important;
+}
+
+:root[data-theme='dark'] .hover\:bg-gray-50:hover,
+:root[data-theme='dark'] .hover\:bg-gray-100:hover {
+  background-color: var(--app-surface-muted) !important;
+}
+
+:root[data-theme='dark'] .hover\:bg-gray-200:hover {
+  background-color: var(--app-surface-soft) !important;
+}
+
+:root[data-theme='dark'] .hover\:text-gray-900:hover {
+  color: var(--app-text-strong) !important;
+}
+
+:root[data-theme='dark'] .shadow-sm,
+:root[data-theme='dark'] .shadow,
+:root[data-theme='dark'] .shadow-lg,
+:root[data-theme='dark'] .shadow-xl,
+:root[data-theme='dark'] .shadow-2xl {
+  --tw-shadow-color: rgba(2, 6, 23, 0.65);
+}
+
 /* Custom Scrollbar for Sidebar */
 .scrollbar-thin::-webkit-scrollbar {
   width: 6px;
 }
 
 .scrollbar-thin::-webkit-scrollbar-track {
-  background: #1f2937;
+  background: var(--app-scrollbar-track);
   border-radius: 10px;
 }
 
 .scrollbar-thin::-webkit-scrollbar-thumb {
-  background: #4b5563;
+  background: var(--app-scrollbar-thumb);
   border-radius: 10px;
 }
 
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-  background: #6b7280;
+  background: var(--app-scrollbar-thumb-hover);
 }
 
 /* Firefox scrollbar */
 .scrollbar-thin {
   scrollbar-width: thin;
-  scrollbar-color: #4b5563 #1f2937;
+  scrollbar-color: var(--app-scrollbar-thumb) var(--app-scrollbar-track);
 }
 
 /* Mobile optimization */

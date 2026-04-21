@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
   try {
     const currentUser = await getUserFromRequest(req);
     if (!currentUser || currentUser.role !== 'admin') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+      return NextResponse.json({ error: 'Chưa xác thực' }, { status: 403 });
     }
 
     await ensureUserColumns();
@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
     const { users, dry_run = false } = body;
 
     if (!Array.isArray(users) || users.length === 0) {
-      return NextResponse.json({ error: 'Users array is required' }, { status: 400 });
+      return NextResponse.json({ error: 'Danh sách người dùng là bắt buộc' }, { status: 400 });
     }
 
     const results = {
@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
           results.errors.push({
             row: rowNum,
             email: user.email,
-            error: 'Invalid email format',
+            error: 'Định dạng email không hợp lệ',
           });
           continue;
         }
@@ -116,7 +116,7 @@ export async function POST(req: NextRequest) {
           results.errors.push({
             row: rowNum,
             email: user.email,
-            error: 'User already exists',
+            error: 'Người dùng đã tồn tại',
             severity: 'warning',
           });
           continue;
@@ -213,6 +213,6 @@ export async function POST(req: NextRequest) {
     });
   } catch (error) {
     console.error('User import error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: 'Lỗi máy chủ nội bộ' }, { status: 500 });
   }
 }

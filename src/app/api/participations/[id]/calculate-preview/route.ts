@@ -11,7 +11,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const { id } = await params;
     const user = await getUserFromSession();
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Chưa đăng nhập' }, { status: 401 });
     }
 
     const participationId = parseInt(id);
@@ -28,13 +28,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     );
 
     if (!participation) {
-      return NextResponse.json({ error: 'Participation not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Không tìm thấy dữ liệu tham gia' }, { status: 404 });
     }
 
     // Get scoring rule
     const rule = await dbGet('SELECT * FROM scoring_rules WHERE id = 1');
     if (!rule) {
-      return NextResponse.json({ error: 'Scoring rule not found' }, { status: 500 });
+      return NextResponse.json({ error: 'Không tìm thấy quy tắc tính điểm' }, { status: 500 });
     }
 
     // Get multipliers
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     );
 
     if (!activityType || !orgLevel || !achievement) {
-      return NextResponse.json({ error: 'Missing multipliers' }, { status: 500 });
+      return NextResponse.json({ error: 'Thiếu hệ số tính điểm' }, { status: 500 });
     }
 
     // Calculate base

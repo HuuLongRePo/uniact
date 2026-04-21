@@ -6,8 +6,9 @@ import { dbAll } from '@/lib/database';
 export async function GET(request: NextRequest) {
   try {
     const user = await getUserFromSession();
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    if (user.role !== 'student') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (!user) return NextResponse.json({ error: 'Chưa đăng nhập' }, { status: 401 });
+    if (user.role !== 'student')
+      return NextResponse.json({ error: 'Không có quyền truy cập' }, { status: 403 });
 
     const searchParams = request.nextUrl.searchParams;
     const typeFilter = searchParams.get('type'); // lọc theo tên loại giải thưởng

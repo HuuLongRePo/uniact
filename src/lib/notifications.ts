@@ -6,6 +6,11 @@
  */
 
 import { dbRun, dbGet, dbAll, dbHelpers } from './database';
+import { createRealtimeEventForUser, recordRealtimeMetric } from '@/lib/realtime-notifications';
+import {
+  RealtimeNotificationActionButton,
+  RealtimeNotificationPriority,
+} from '@/lib/realtime-notification-model';
 
 // ============ STRATEGY PATTERN ============
 
@@ -99,8 +104,14 @@ export async function sendDatabaseNotification(params: {
   message: string;
   relatedTable?: string | null;
   relatedId?: number | null;
+  eventType?: string;
+  actorId?: number | null;
+  priority?: RealtimeNotificationPriority;
+  ttlSeconds?: number;
+  actionButtons?: RealtimeNotificationActionButton[];
+  metadata?: unknown;
 }) {
-  await dbRun(
+  const result = await dbRun(
     `INSERT INTO notifications (user_id, type, title, message, related_table, related_id, is_read)
      VALUES (?, ?, ?, ?, ?, ?, 0)`,
     [
@@ -112,6 +123,50 @@ export async function sendDatabaseNotification(params: {
       params.relatedId || null,
     ]
   );
+
+  const notificationId = Number(result.lastID || 0);
+  let eventId: number | null = null;
+
+  try {
+    const realtimeEvent = await createRealtimeEventForUser({
+      userId: params.userId,
+      notificationId,
+      eventType: params.eventType || params.type || 'notification',
+      actorId: params.actorId || null,
+      priority: params.priority || 'normal',
+      ttlSeconds: params.ttlSeconds,
+      actionButtons: params.actionButtons || [],
+      notificationType: params.type,
+      title: params.title,
+      message: params.message,
+      relatedTable: params.relatedTable || null,
+      relatedId: params.relatedId || null,
+      metadata: params.metadata || null,
+    });
+
+    eventId = realtimeEvent.event_id;
+    await recordRealtimeMetric({
+      metricType: 'delivery_success',
+      userId: params.userId,
+      eventId,
+      details: {
+        event_type: realtimeEvent.event_type,
+        notification_id: notificationId,
+      },
+    });
+  } catch (realtimeError) {
+    console.error('Realtime event creation error:', realtimeError);
+    await recordRealtimeMetric({
+      metricType: 'delivery_fail',
+      userId: params.userId,
+      details: {
+        reason: 'realtime_event_creation_failed',
+        notification_id: notificationId,
+      },
+    }).catch(() => undefined);
+  }
+
+  return { notificationId, eventId };
 }
 
 export async function sendBulkDatabaseNotifications(params: {
@@ -122,12 +177,19 @@ export async function sendBulkDatabaseNotifications(params: {
   relatedTable?: string | null;
   relatedId?: number | null;
   audit?: NotificationAuditEvent;
+  eventType?: string;
+  actorId?: number | null;
+  priority?: RealtimeNotificationPriority;
+  ttlSeconds?: number;
+  actionButtons?: RealtimeNotificationActionButton[];
+  metadata?: unknown;
 }) {
   const uniqueUserIds = Array.from(
     new Set(params.userIds.map((value) => Number(value)).filter((value) => Number.isInteger(value) && value > 0))
   );
 
   let created = 0;
+  let failed = 0;
   for (const userId of uniqueUserIds) {
     try {
       await sendDatabaseNotification({
@@ -137,10 +199,25 @@ export async function sendBulkDatabaseNotifications(params: {
         message: params.message,
         relatedTable: params.relatedTable,
         relatedId: params.relatedId,
+        eventType: params.eventType,
+        actorId: params.actorId,
+        priority: params.priority,
+        ttlSeconds: params.ttlSeconds,
+        actionButtons: params.actionButtons,
+        metadata: params.metadata,
       });
       created += 1;
     } catch (error) {
       console.error(`Failed to send notification to user ${userId}:`, error);
+      failed += 1;
+      await recordRealtimeMetric({
+        metricType: 'delivery_fail',
+        userId,
+        details: {
+          reason: 'notification_insert_failed',
+          error: error instanceof Error ? error.message : 'unknown_error',
+        },
+      }).catch(() => undefined);
     }
   }
 
@@ -156,7 +233,7 @@ export async function sendBulkDatabaseNotifications(params: {
     );
   }
 
-  return { created, targetCount: uniqueUserIds.length };
+  return { created, targetCount: uniqueUserIds.length, failed };
 }
 
 export async function getTeacherManagedStudentIds(teacherId: number): Promise<number[]> {

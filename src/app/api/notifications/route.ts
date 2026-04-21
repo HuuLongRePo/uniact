@@ -8,12 +8,12 @@ export async function GET(request: NextRequest) {
   try {
     const token = request.cookies.get('token')?.value;
     if (!token) {
-      return errorResponse(ApiError.unauthorized('Unauthorized'));
+      return errorResponse(ApiError.unauthorized('Chưa đăng nhập'));
     }
 
     const user = await getUserFromToken(token);
     if (!user) {
-      return errorResponse(ApiError.unauthorized('Unauthorized'));
+      return errorResponse(ApiError.unauthorized('Chưa đăng nhập'));
     }
 
     const { searchParams } = new URL(request.url);
@@ -83,12 +83,12 @@ export async function POST(request: NextRequest) {
   try {
     const token = request.cookies.get('token')?.value;
     if (!token) {
-      return errorResponse(ApiError.unauthorized('Unauthorized'));
+      return errorResponse(ApiError.unauthorized('Chưa đăng nhập'));
     }
 
     const user = await getUserFromToken(token);
     if (!user || (user.role !== 'admin' && user.role !== 'teacher')) {
-      return errorResponse(ApiError.forbidden('Forbidden'));
+      return errorResponse(ApiError.forbidden('Không có quyền truy cập'));
     }
 
     const { user_id, user_ids, type, title, message, related_table, related_id } =
@@ -149,12 +149,12 @@ export async function DELETE(request: NextRequest) {
   try {
     const token = request.cookies.get('token')?.value;
     if (!token) {
-      return errorResponse(ApiError.unauthorized('Unauthorized'));
+      return errorResponse(ApiError.unauthorized('Chưa đăng nhập'));
     }
 
     const user = await getUserFromToken(token);
     if (!user) {
-      return errorResponse(ApiError.unauthorized('Unauthorized'));
+      return errorResponse(ApiError.unauthorized('Chưa đăng nhập'));
     }
 
     const { searchParams } = new URL(request.url);
@@ -162,7 +162,7 @@ export async function DELETE(request: NextRequest) {
     const deleteAll = searchParams.get('all') === '1';
 
     if (!notificationId && !deleteAll) {
-      return errorResponse(ApiError.validation('Provide id parameter or all=1 to delete all'));
+      return errorResponse(ApiError.validation('Cần cung cấp `id` hoặc `all=1` để xóa'));
     }
 
     let deletedCount = 0;
@@ -178,12 +178,12 @@ export async function DELETE(request: NextRequest) {
       ]);
 
       if (!notification) {
-        return errorResponse(ApiError.notFound('Notification not found'));
+        return errorResponse(ApiError.notFound('Không tìm thấy thông báo'));
       }
 
       // User can only delete their own notifications
       if (notification.user_id !== user.id) {
-        return errorResponse(ApiError.forbidden('Forbidden'));
+        return errorResponse(ApiError.forbidden('Không có quyền truy cập'));
       }
 
       const result = await dbRun('DELETE FROM notifications WHERE id = ?', [notification.id]);
@@ -192,9 +192,7 @@ export async function DELETE(request: NextRequest) {
 
     return successResponse(
       { deleted: deletedCount },
-      deleteAll
-        ? `Deleted all ${deletedCount} notifications`
-        : `Deleted ${deletedCount} notification(s)`
+      deleteAll ? `Đã xóa toàn bộ ${deletedCount} thông báo` : `Đã xóa ${deletedCount} thông báo`
     );
   } catch (error: any) {
     console.error('Delete notification error:', error);

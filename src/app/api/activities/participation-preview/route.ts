@@ -28,6 +28,22 @@ function normalizeIds(values: unknown): number[] {
   );
 }
 
+function parseLegacyMandatoryFlag(value: unknown): boolean | null {
+  if (value === undefined) return null;
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'number') {
+    if (value === 1) return true;
+    if (value === 0) return false;
+    return null;
+  }
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === 'true' || normalized === '1') return true;
+    if (normalized === 'false' || normalized === '0') return false;
+  }
+  return null;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const user = await requireApiRole(request, ['teacher', 'admin']);
@@ -40,6 +56,13 @@ export async function POST(request: NextRequest) {
     const hasVoluntary = Array.isArray(body?.voluntary_class_ids);
     const hasMandatoryStudents = Array.isArray(body?.mandatory_student_ids);
     const hasVoluntaryStudents = Array.isArray(body?.voluntary_student_ids);
+    const hasLegacyMandatoryFlag =
+      !!body && typeof body === 'object' && Object.prototype.hasOwnProperty.call(body, 'is_mandatory');
+    const legacyMandatoryFlag = parseLegacyMandatoryFlag(body?.is_mandatory);
+
+    if (hasLegacyMandatoryFlag && legacyMandatoryFlag === null) {
+      return errorResponse(ApiError.validation('Trường is_mandatory không hợp lệ'));
+    }
 
     if (!hasLegacy && !hasMandatory && !hasVoluntary && !hasMandatoryStudents && !hasVoluntaryStudents) {
       return errorResponse(
@@ -49,12 +72,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const useLegacyAsVoluntary =
+      hasLegacy &&
+      !hasMandatory &&
+      !hasVoluntary &&
+      hasLegacyMandatoryFlag &&
+      legacyMandatoryFlag === false;
+
     const rawMandatoryClassIds = hasMandatory
       ? normalizeIds(body.mandatory_class_ids)
+      : useLegacyAsVoluntary
+        ? []
       : hasLegacy
         ? normalizeIds(body.class_ids)
         : [];
-    const rawVoluntaryClassIds = normalizeIds(body.voluntary_class_ids);
+    const rawVoluntaryClassIds = hasVoluntary
+      ? normalizeIds(body.voluntary_class_ids)
+      : useLegacyAsVoluntary
+        ? normalizeIds(body.class_ids)
+        : [];
     const overlappedClassIds = rawVoluntaryClassIds.filter((classId) =>
       rawMandatoryClassIds.includes(classId)
     );

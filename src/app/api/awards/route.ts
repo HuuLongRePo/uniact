@@ -8,12 +8,12 @@ export async function GET(request: NextRequest) {
   try {
     const user = await getUserFromRequest(request);
     if (!user) {
-      return errorResponse(ApiError.unauthorized('Unauthorized'));
+      return errorResponse(ApiError.unauthorized('Chưa đăng nhập'));
     }
 
     // Only teachers and admins can view award suggestions
     if (user.role !== 'teacher' && user.role !== 'admin') {
-      return errorResponse(ApiError.forbidden('Forbidden'));
+      return errorResponse(ApiError.forbidden('Không có quyền truy cập'));
     }
 
     const params = request.nextUrl?.searchParams;
@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     return successResponse({ suggestions });
   } catch (error: any) {
     console.error('Get award suggestions error:', error);
-    return errorResponse(ApiError.internalError('Internal server error'));
+    return errorResponse(ApiError.internalError('Lỗi máy chủ nội bộ'));
   }
 }
 
@@ -33,12 +33,12 @@ export async function POST(request: NextRequest) {
   try {
     const user = await getUserFromRequest(request);
     if (!user) {
-      return errorResponse(ApiError.unauthorized('Unauthorized'));
+      return errorResponse(ApiError.unauthorized('Chưa đăng nhập'));
     }
 
     // Only teachers and admins can create suggestions
     if (user.role !== 'teacher' && user.role !== 'admin') {
-      return errorResponse(ApiError.forbidden('Forbidden'));
+      return errorResponse(ApiError.forbidden('Không có quyền truy cập'));
     }
 
     const body = await request.json();
@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
     if (action === 'generate') {
       // Generate suggestions automatically based on scores
       const count = await dbHelpers.generateAwardSuggestions();
-      return successResponse({ count }, `Generated ${count} award suggestions`);
+      return successResponse({ count }, `Đã tạo ${count} đề xuất khen thưởng`);
     }
 
     if (action === 'create' && student_id && award_type_id) {
@@ -58,16 +58,16 @@ export async function POST(request: NextRequest) {
           Number(award_type_id),
           user.id
         );
-        return successResponse({ suggestion_id: result.lastID }, 'Award suggestion created', 201);
+        return successResponse({ suggestion_id: result.lastID }, 'Tạo đề xuất khen thưởng thành công', 201);
       } catch (err: any) {
-        return errorResponse(ApiError.validation(err.message || 'Failed to create suggestion'));
+        return errorResponse(ApiError.validation(err.message || 'Không thể tạo đề xuất'));
       }
     }
 
-    return errorResponse(ApiError.validation('Invalid action or missing parameters'));
+    return errorResponse(ApiError.validation('Hành động không hợp lệ hoặc thiếu tham số'));
   } catch (error: any) {
     console.error('Create award suggestion error:', error);
-    return errorResponse(ApiError.internalError('Internal server error'));
+    return errorResponse(ApiError.internalError('Lỗi máy chủ nội bộ'));
   }
 }
 
@@ -76,19 +76,19 @@ export async function PUT(request: NextRequest) {
   try {
     const user = await getUserFromRequest(request);
     if (!user) {
-      return errorResponse(ApiError.unauthorized('Unauthorized'));
+      return errorResponse(ApiError.unauthorized('Chưa đăng nhập'));
     }
 
     // Only admins can approve/reject suggestions
     if (user.role !== 'admin') {
-      return errorResponse(ApiError.forbidden('Forbidden: Only admins can approve/reject awards'));
+      return errorResponse(ApiError.forbidden('Không có quyền truy cập (chỉ admin duyệt/từ chối khen thưởng)'));
     }
 
     const body = await request.json();
     const { suggestion_id, action, note } = body;
 
     if (!suggestion_id || !action || (action !== 'approve' && action !== 'reject')) {
-      return errorResponse(ApiError.validation('Invalid parameters'));
+      return errorResponse(ApiError.validation('Tham số không hợp lệ'));
     }
 
     try {
@@ -113,7 +113,7 @@ export async function PUT(request: NextRequest) {
         } catch (awardNotifyErr) {
           console.error('Award approval notification error:', awardNotifyErr);
         }
-        return successResponse({}, 'Award suggestion approved');
+        return successResponse({}, 'Duyệt đề xuất khen thưởng thành công');
       } else {
         await dbHelpers.rejectAwardSuggestion(Number(suggestion_id), user.id, note || null);
         // Notification for rejection (optional)
@@ -136,13 +136,13 @@ export async function PUT(request: NextRequest) {
         } catch (awardRejectNotifyErr) {
           console.error('Award rejection notification error:', awardRejectNotifyErr);
         }
-        return successResponse({}, 'Award suggestion rejected');
+        return successResponse({}, 'Từ chối đề xuất khen thưởng');
       }
     } catch (err: any) {
-      return errorResponse(ApiError.validation(err.message || 'Failed to process suggestion'));
+      return errorResponse(ApiError.validation(err.message || 'Không thể xử lý đề xuất'));
     }
   } catch (error: any) {
     console.error('Process award suggestion error:', error);
-    return errorResponse(ApiError.internalError('Internal server error'));
+    return errorResponse(ApiError.internalError('Lỗi máy chủ nội bộ'));
   }
 }

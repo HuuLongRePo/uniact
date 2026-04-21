@@ -34,7 +34,7 @@ const child = spawn(process.platform === "win32" ? `${npmCommand} ${npmArgs.join
 });
 
 child.on("error", (error) => {
-  console.error(`Khong the chay npm script '${npmScript}': ${error.message}`);
+  console.error(`Không thể chạy npm script '${npmScript}': ${error.message}`);
   process.exit(1);
 });
 

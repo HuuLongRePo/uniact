@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     return successResponse({ suggestions: rows });
   } catch (err: any) {
     console.error('GET /api/bonus error:', err);
-    return errorResponse(ApiError.internalError('Internal server error'));
+    return errorResponse(ApiError.internalError('Lỗi máy chủ nội bộ'));
   }
 }
 
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
     const evidence_url = body.evidence_url || null;
 
     if (!student_id || isNaN(points)) {
-      return errorResponse(ApiError.validation('Missing required fields: student_id and points'));
+      return errorResponse(ApiError.validation('Thiếu trường bắt buộc: student_id và points'));
     }
 
     if (!Number.isInteger(student_id) || student_id <= 0) {
@@ -83,9 +83,9 @@ export async function POST(request: NextRequest) {
       console.error('Audit log error:', auditErr);
     }
 
-    return successResponse({ suggestion_id: res.lastID }, 'Bonus suggestion created', 201);
+    return successResponse({ suggestion_id: res.lastID }, 'Tạo đề xuất điểm thưởng thành công', 201);
   } catch (err: any) {
     console.error('POST /api/bonus error:', err);
-    return errorResponse(ApiError.internalError('Internal server error'));
+    return errorResponse(ApiError.internalError('Lỗi máy chủ nội bộ'));
   }
 }

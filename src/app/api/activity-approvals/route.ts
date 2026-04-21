@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     return successResponse({ approvals: filtered || [] });
   } catch (error: any) {
     console.error('Get approvals error:', error);
-    return errorResponse(ApiError.internalError('Internal server error'));
+    return errorResponse(ApiError.internalError('Lỗi máy chủ nội bộ'));
   }
 }
 
@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { approval_id, action, note } = body;
     if (!approval_id || !action || (action !== 'approved' && action !== 'rejected')) {
-      return errorResponse(ApiError.validation('Invalid payload'));
+      return errorResponse(ApiError.validation('Dữ liệu gửi lên không hợp lệ'));
     }
 
     const row = (await dbGet(
@@ -38,16 +38,16 @@ export async function POST(request: NextRequest) {
       [Number(approval_id)]
     )) as { id: number } | undefined;
 
-    if (!row) return errorResponse(ApiError.notFound('Approval not found'));
+    if (!row) return errorResponse(ApiError.notFound('Không tìm thấy yêu cầu duyệt'));
 
     try {
       await dbHelpers.decideApproval(Number(approval_id), user.id, action, note || null);
     } catch (error: any) {
       if (String(error?.message || '').includes('already processed')) {
-        return errorResponse(ApiError.conflict('Approval already processed'));
+        return errorResponse(ApiError.conflict('Yêu cầu duyệt đã được xử lý'));
       }
       if (String(error?.message || '').includes('not found')) {
-        return errorResponse(ApiError.notFound('Approval not found'));
+        return errorResponse(ApiError.notFound('Không tìm thấy yêu cầu duyệt'));
       }
       throw error;
     }
@@ -55,6 +55,6 @@ export async function POST(request: NextRequest) {
     return successResponse({ approved: true }, `Approval ${action}`);
   } catch (error: any) {
     console.error('Decide approval error:', error);
-    return errorResponse(ApiError.internalError('Internal server error'));
+    return errorResponse(ApiError.internalError('Lỗi máy chủ nội bộ'));
   }
 }

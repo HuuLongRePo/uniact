@@ -7,7 +7,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const { id } = await params;
     const user = await getUserFromSession();
     if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Chưa đăng nhập' }, { status: 401 });
     }
 
     const { name, point_multiplier, description } = await request.json();
@@ -35,7 +35,7 @@ export async function DELETE(
     const { id } = await params;
     const user = await getUserFromSession();
     if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Chưa đăng nhập' }, { status: 401 });
     }
 
     await dbRun('DELETE FROM organization_levels WHERE id = ?', [id]);

@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { dbAll, dbRun } from '@/lib/database';
+import { dbAll, dbHelpers, dbRun } from '@/lib/database';
 import { cache } from '@/lib/cache';
 import { requireApiRole } from '@/lib/guards';
 import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
@@ -9,11 +9,7 @@ export async function GET(request: NextRequest) {
   try {
     await requireApiRole(request, ['admin']);
 
-    const levels = await dbAll(
-      `SELECT id, name, multiplier, description, created_at
-       FROM organization_levels
-       ORDER BY multiplier DESC`
-    );
+    const levels = await dbHelpers.getOrganizationLevels();
 
     return successResponse(levels);
   } catch (error: any) {
@@ -43,7 +39,14 @@ export async function POST(request: NextRequest) {
       return errorResponse(ApiError.validation('Multiplier phải là số không âm'));
     }
 
-    const existing = await dbAll('SELECT id FROM organization_levels WHERE name = ?', [name]);
+    const normalizedName = String(name).trim();
+    if (!normalizedName) {
+      return errorResponse(ApiError.validation('Tên cấp tổ chức không được để trống'));
+    }
+
+    const existing = await dbAll('SELECT id FROM organization_levels WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))', [
+      normalizedName,
+    ]);
     if (existing.length > 0) {
       return errorResponse(ApiError.conflict('Tên cấp tổ chức đã tồn tại'));
     }
@@ -51,7 +54,7 @@ export async function POST(request: NextRequest) {
     const result = await dbRun(
       `INSERT INTO organization_levels (name, multiplier, description, created_at)
        VALUES (?, ?, ?, datetime('now'))`,
-      [name, multiplier, description || null]
+      [normalizedName, multiplier, description || null]
     );
 
     cache.invalidatePrefix('organization_levels');
@@ -64,12 +67,12 @@ export async function POST(request: NextRequest) {
         'CREATE',
         'organization_levels',
         result.lastID,
-        JSON.stringify({ name, multiplier, description }),
+        JSON.stringify({ name: normalizedName, multiplier, description }),
       ]
     );
 
     return successResponse(
-      { id: result.lastID, name, multiplier, description },
+      { id: result.lastID, name: normalizedName, multiplier, description },
       'Tạo cấp tổ chức thành công',
       201
     );

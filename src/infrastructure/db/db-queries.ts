@@ -87,6 +87,61 @@ function buildActivityStudentAssignments(activityData: any): ActivityStudentAssi
   ];
 }
 
+async function enforceOrganizationLevelsIntegrity(): Promise<void> {
+  try {
+    await withTransaction(async () => {
+      const duplicateGroups = (await dbAll(
+        `
+        SELECT
+          LOWER(TRIM(name)) AS normalized_name,
+          MIN(id) AS canonical_id,
+          GROUP_CONCAT(id) AS all_ids,
+          COUNT(*) AS duplicate_count
+        FROM organization_levels
+        GROUP BY LOWER(TRIM(name))
+        HAVING COUNT(*) > 1
+        `
+      )) as Array<{
+        normalized_name: string;
+        canonical_id: number;
+        all_ids: string;
+        duplicate_count: number;
+      }>;
+
+      for (const group of duplicateGroups || []) {
+        const canonicalId = Number(group.canonical_id);
+        const allIds = String(group.all_ids || '')
+          .split(',')
+          .map((id) => Number(id))
+          .filter((id) => Number.isInteger(id) && id > 0);
+        const duplicateIds = allIds.filter((id) => id !== canonicalId);
+
+        if (!Number.isInteger(canonicalId) || canonicalId <= 0 || duplicateIds.length === 0) {
+          continue;
+        }
+
+        const placeholders = duplicateIds.map(() => '?').join(', ');
+
+        await dbRun(
+          `UPDATE activities
+           SET organization_level_id = ?
+           WHERE organization_level_id IN (${placeholders})`,
+          [canonicalId, ...duplicateIds]
+        );
+
+        await dbRun(`DELETE FROM organization_levels WHERE id IN (${placeholders})`, duplicateIds);
+      }
+    });
+
+    await dbRun(
+      `CREATE UNIQUE INDEX IF NOT EXISTS idx_organization_levels_name_normalized_unique
+       ON organization_levels(LOWER(TRIM(name)))`
+    );
+  } catch (error) {
+    console.warn('Failed to enforce organization_levels integrity:', error);
+  }
+}
+
 async function materializeMandatoryParticipationsForActivity(
   activityId: number
 ): Promise<{ created: number; upgraded: number }> {
@@ -762,6 +817,7 @@ export const dbHelpers = {
   },
   getOrganizationLevels: async (): Promise<OrganizationLevel[]> => {
     return cache.get('organization_levels:all', CACHE_TTL.ORGANIZATION_LEVELS, async () => {
+      await enforceOrganizationLevelsIntegrity();
       return (await dbAll(
         'SELECT * FROM organization_levels ORDER BY multiplier DESC'
       )) as OrganizationLevel[];

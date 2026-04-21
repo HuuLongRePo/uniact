@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
 
     const user = await getUserFromRequest(request);
     if (!user) {
-      return errorResponse(ApiError.unauthorized('Unauthorized'));
+      return errorResponse(ApiError.unauthorized('Chưa đăng nhập'));
     }
 
     // Only teachers and admins can export

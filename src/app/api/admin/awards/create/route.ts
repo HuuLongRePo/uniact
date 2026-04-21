@@ -25,8 +25,8 @@ export async function POST(request: NextRequest) {
     await dbReady();
     const user = await getUserFromRequest(request);
 
-    if (!user) return errorResponse(ApiError.unauthorized('Unauthorized'));
-    if (user.role !== 'admin') return errorResponse(ApiError.forbidden('Forbidden'));
+    if (!user) return errorResponse(ApiError.unauthorized('Chưa đăng nhập'));
+    if (user.role !== 'admin') return errorResponse(ApiError.forbidden('Không có quyền truy cập'));
 
     const body: CreateAwardRequest = await request.json();
     const { student_id, award_type, award_type_id, award_name, points, description, issue_date } =
@@ -34,11 +34,11 @@ export async function POST(request: NextRequest) {
 
     // Validate
     if (!student_id || !award_name || !points) {
-      return errorResponse(ApiError.validation('Missing required fields'));
+      return errorResponse(ApiError.validation('Thiếu trường bắt buộc'));
     }
 
     if (points <= 0) {
-      return errorResponse(ApiError.validation('Points must be positive'));
+      return errorResponse(ApiError.validation('Điểm phải lớn hơn 0'));
     }
 
     // Kiểm tra student tồn tại
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
     ])) as any;
 
     if (!student) {
-      return errorResponse(ApiError.notFound('Student not found'));
+      return errorResponse(ApiError.notFound('Không tìm thấy học viên'));
     }
 
     // Resolve award_type_id
@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
     if (!resolvedAwardTypeId) {
       const lookupName = (award_name || award_type || '').trim();
       if (!lookupName) {
-        return errorResponse(ApiError.validation('Missing award type'));
+        return errorResponse(ApiError.validation('Thiếu loại khen thưởng'));
       }
 
       const awardType = (await dbGet('SELECT id FROM award_types WHERE lower(name) = lower(?)', [
@@ -75,13 +75,13 @@ export async function POST(request: NextRequest) {
 
     if (!resolvedAwardTypeId) {
       return errorResponse(
-        ApiError.validation('Award type not found. Create it in Admin > Award Types first.')
+        ApiError.validation('Không tìm thấy loại khen thưởng. Vui lòng tạo trước trong Admin > Award Types.')
       );
     }
 
     const reasonParts = [award_name?.trim()].filter(Boolean);
     if (description?.trim()) reasonParts.push(description.trim());
-    const reason = reasonParts.join(' - ') || 'Manual award';
+    const reason = reasonParts.join(' - ') || 'Khen thưởng thủ công';
 
     // Create student_award
     const awardedAt = issue_date?.trim() || null;
@@ -144,6 +144,6 @@ export async function POST(request: NextRequest) {
     );
   } catch (error: any) {
     console.error('Error creating award:', error);
-    return errorResponse(ApiError.internalError(error.message || 'Failed to create award'));
+    return errorResponse(ApiError.internalError(error.message || 'Không thể tạo khen thưởng'));
   }
 }

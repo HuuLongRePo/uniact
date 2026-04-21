@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import Sidebar from '@/components/Sidebar';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { RealtimeNotificationBridge } from '@/components/realtime/RealtimeNotificationBridge';
 import { usePathname } from 'next/navigation';
 
 export default function AuthContent({ children }: { children: React.ReactNode }) {
@@ -21,6 +22,7 @@ export default function AuthContent({ children }: { children: React.ReactNode })
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-green-50">
       {shouldShowSidebar && <Sidebar />}
+      {user && <RealtimeNotificationBridge />}
 
       <div className={shouldShowSidebar ? 'lg:ml-64 ml-0' : ''}>
         <ErrorBoundary>{children}</ErrorBoundary>

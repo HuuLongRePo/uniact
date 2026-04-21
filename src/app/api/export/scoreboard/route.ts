@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
   try {
     const user = await getUserFromRequest(request);
     if (!user) {
-      return errorResponse(ApiError.unauthorized('Unauthorized'));
+      return errorResponse(ApiError.unauthorized('Chưa đăng nhập'));
     }
 
     const params = request.nextUrl.searchParams;
@@ -19,24 +19,22 @@ export async function GET(request: NextRequest) {
     if (user.role === 'student') {
       // Students can only export their own class data
       if (!user.class_id) {
-        return errorResponse(ApiError.forbidden('Student not assigned to any class'));
+        return errorResponse(ApiError.forbidden('Học viên chưa được gán vào lớp'));
       }
       if (class_id && class_id !== user.class_id) {
-        return errorResponse(ApiError.forbidden('Forbidden: Cannot export data for other classes'));
+        return errorResponse(ApiError.forbidden('Không có quyền xuất dữ liệu lớp khác'));
       }
     }
 
     if (user.role === 'teacher') {
       if (!class_id) {
-        return errorResponse(ApiError.validation('`class_id` is required for teachers'));
+        return errorResponse(ApiError.validation('Giảng viên cần cung cấp `class_id`'));
       }
       // Verify teacher is assigned to the requested class
       const teacherClasses = await dbAll('SELECT id FROM classes WHERE teacher_id = ?', [user.id]);
       const isAuthorized = teacherClasses.some((c) => c.id === class_id);
       if (!isAuthorized) {
-        return errorResponse(
-          ApiError.forbidden('Forbidden: You are not the teacher for this class')
-        );
+        return errorResponse(ApiError.forbidden('Bạn không phụ trách lớp này'));
       }
     }
     // Admin has no restrictions
@@ -47,7 +45,7 @@ export async function GET(request: NextRequest) {
     });
 
     if (!data || data.length === 0) {
-      return successResponse({ rows: 0 }, 'No data to export', 200);
+      return successResponse({ rows: 0 }, 'Không có dữ liệu để xuất', 200);
     }
 
     // --- CSV Generation ---
@@ -72,6 +70,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (error: any) {
     console.error('Export scoreboard error:', error);
-    return errorResponse(ApiError.internalError('Internal Server Error'));
+    return errorResponse(ApiError.internalError('Lỗi máy chủ nội bộ'));
   }
 }

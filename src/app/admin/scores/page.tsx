@@ -167,7 +167,7 @@ export default function AdminStudentScoresPage() {
         fetch('/api/classes'),
       ]);
 
-      if (!scoresRes.ok) throw new Error('Failed to fetch scores');
+      if (!scoresRes.ok) throw new Error('Không thể tải điểm số');
 
       const scoresData = await scoresRes.json();
       setScores(scoresData.scores || scoresData.data?.scores || []);

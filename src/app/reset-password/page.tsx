@@ -30,7 +30,7 @@ export default function PasswordResetPage() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to request reset');
+        throw new Error('Không thể gửi yêu cầu đặt lại mật khẩu');
       }
 
       const result = await response.json();

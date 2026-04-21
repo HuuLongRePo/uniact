@@ -64,7 +64,7 @@ export default function ScoringConfigPage() {
     try {
       setLoading(true);
       const res = await fetch('/api/admin/scoring-config');
-      if (!res.ok) throw new Error('Failed to fetch config');
+      if (!res.ok) throw new Error('Không thể tải cấu hình');
       const data = await res.json();
       setConfig(data);
     } catch (error: any) {

@@ -34,7 +34,7 @@ export default function AdjustScorePage() {
     try {
       setLoading(true);
       const res = await fetch(`/api/admin/users/${userId}`);
-      if (!res.ok) throw new Error('Failed to fetch student');
+      if (!res.ok) throw new Error('Không thể tải thông tin học viên');
       const data = await res.json();
       setStudent(data);
     } catch (error) {

@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
     const { email } = body;
 
     if (!email) {
-      return NextResponse.json({ error: 'Email is required' }, { status: 400 });
+      return NextResponse.json({ error: 'Email là bắt buộc' }, { status: 400 });
     }
 
     // Tìm user by email

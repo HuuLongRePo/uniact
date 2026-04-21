@@ -54,13 +54,13 @@ export default function ParticipantsPage() {
 
       // Fetch activity info
       const activityRes = await fetch(`/api/activities/${activityId}`);
-      if (!activityRes.ok) throw new Error('Failed to fetch activity');
+      if (!activityRes.ok) throw new Error('Không thể tải hoạt động');
       const activityData = await activityRes.json();
       setActivity(activityData?.activity ?? activityData?.data?.activity ?? activityData);
 
       // Fetch participations
       const participationsRes = await fetch(`/api/activities/${activityId}/participants`);
-      if (!participationsRes.ok) throw new Error('Failed to fetch participants');
+      if (!participationsRes.ok) throw new Error('Không thể tải danh sách người tham gia');
       const participationsData = await participationsRes.json();
       const participationList =
         participationsData?.participations ?? participationsData?.data?.participations ?? [];
@@ -83,7 +83,7 @@ export default function ParticipantsPage() {
       }
     } catch (error: unknown) {
       console.error('Error fetching data:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to load data');
+      toast.error(error instanceof Error ? error.message : 'Không thể tải dữ liệu');
     } finally {
       setLoading(false);
     }
@@ -106,7 +106,7 @@ export default function ParticipantsPage() {
 
       if (!res.ok) {
         const error = await res.json();
-        throw new Error(error.error || 'Failed to evaluate');
+        throw new Error(error.error || 'Không thể đánh giá');
       }
 
       const data = await res.json();
@@ -165,7 +165,7 @@ export default function ParticipantsPage() {
         body: JSON.stringify({ class_id: classId }),
       });
 
-      if (!res.ok) throw new Error('Failed to add class');
+      if (!res.ok) throw new Error('Không thể thêm lớp');
       const data = await res.json();
       toast.success(`Đã thêm ${data.added_count || 0} học viên`);
       fetchData();
@@ -197,7 +197,7 @@ export default function ParticipantsPage() {
         body: JSON.stringify({ student_ids: studentIds }),
       });
 
-      if (!res.ok) throw new Error('Failed to remove');
+      if (!res.ok) throw new Error('Không thể xóa học viên');
       const data = await res.json();
       toast.success(`Đã xóa ${data.removed_count || 0} học viên`);
       setSelectedIds(new Set());
@@ -213,7 +213,7 @@ export default function ParticipantsPage() {
   const handleExport = async () => {
     try {
       const res = await fetch(`/api/activities/${activityId}/participants/export`);
-      if (!res.ok) throw new Error('Export failed');
+      if (!res.ok) throw new Error('Xuất dữ liệu thất bại');
 
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
@@ -412,7 +412,7 @@ export default function ParticipantsPage() {
       {/* Participants table */}
       {participations.length === 0 ? (
         <div className="bg-white rounded-lg shadow p-8 text-center">
-          <p className="text-gray-500">Chưa có học sinh đăng ký</p>
+          <p className="text-gray-500">Chưa có học viên đăng ký</p>
         </div>
       ) : (
         <div className="bg-white rounded-lg shadow overflow-hidden">
@@ -429,7 +429,7 @@ export default function ParticipantsPage() {
                     />
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Học sinh
+                    Học viên
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                     Trạng thái

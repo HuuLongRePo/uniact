@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const token = request.cookies.get('token')?.value;
-    if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!token) return NextResponse.json({ error: 'Chưa đăng nhập' }, { status: 401 });
 
     const user = await getUserFromToken(token);
     if (!user || user.role !== 'admin') {
@@ -28,19 +28,23 @@ export async function POST(request: NextRequest) {
     }
 
     const { name, multiplier, description } = await request.json();
-    if (!name || multiplier === undefined) {
+    const normalizedName = String(name || '').trim();
+    if (!normalizedName || multiplier === undefined) {
       return NextResponse.json({ error: 'Thiếu tên hoặc multiplier' }, { status: 400 });
     }
 
     // Kiểm tra trùng tên
-    const existing = await dbGet('SELECT id FROM organization_levels WHERE name = ?', [name]);
+    const existing = await dbGet(
+      'SELECT id FROM organization_levels WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))',
+      [normalizedName]
+    );
     if (existing) {
       return NextResponse.json({ error: 'Tên cấp độ đã tồn tại' }, { status: 400 });
     }
 
     const result = await dbRun(
       `INSERT INTO organization_levels (name, multiplier, description, created_at) VALUES (?, ?, ?, datetime('now'))`,
-      [name, multiplier, description || null]
+      [normalizedName, multiplier, description || null]
     );
 
     await dbHelpers.createAuditLog(
@@ -48,7 +52,7 @@ export async function POST(request: NextRequest) {
       'CREATE',
       'organization_levels',
       result.lastID || null,
-      `Tạo cấp độ tổ chức: ${name}`
+      `Tạo cấp độ tổ chức: ${normalizedName}`
     );
 
     return NextResponse.json(

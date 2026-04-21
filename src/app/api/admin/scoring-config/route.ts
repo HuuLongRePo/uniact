@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
   try {
     const token = request.cookies.get('token')?.value;
     if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Chưa xác thực' }, { status: 401 });
     }
 
     const user = await getUserFromToken(token);
@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
   } catch (error: any) {
     console.error('Get scoring config error:', error);
     return NextResponse.json(
-      { error: 'Internal server error', details: error.message },
+      { error: 'Lỗi máy chủ nội bộ', details: error.message },
       { status: 500 }
     );
   }
@@ -57,7 +57,7 @@ export async function PUT(request: NextRequest) {
   try {
     const token = request.cookies.get('token')?.value;
     if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Chưa xác thực' }, { status: 401 });
     }
 
     const user = await getUserFromToken(token);
@@ -70,7 +70,7 @@ export async function PUT(request: NextRequest) {
 
     // Validate
     if (!type || !data) {
-      return NextResponse.json({ error: 'Missing type or data' }, { status: 400 });
+      return NextResponse.json({ error: 'Thiếu loại hoặc dữ liệu cấu hình' }, { status: 400 });
     }
 
     switch (type) {
@@ -133,7 +133,7 @@ export async function PUT(request: NextRequest) {
         break;
 
       default:
-        return NextResponse.json({ error: 'Invalid type' }, { status: 400 });
+        return NextResponse.json({ error: 'Loại cấu hình không hợp lệ' }, { status: 400 });
     }
 
     // Audit log
@@ -174,7 +174,7 @@ export async function PUT(request: NextRequest) {
   } catch (error: any) {
     console.error('Update scoring config error:', error);
     return NextResponse.json(
-      { error: 'Internal server error', details: error.message },
+      { error: 'Lỗi máy chủ nội bộ', details: error.message },
       { status: 500 }
     );
   }
@@ -185,7 +185,7 @@ export async function POST(request: NextRequest) {
   try {
     const token = request.cookies.get('token')?.value;
     if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Chưa xác thực' }, { status: 401 });
     }
 
     const user = await getUserFromToken(token);
@@ -198,7 +198,7 @@ export async function POST(request: NextRequest) {
 
     // Validate
     if (!name || !formula) {
-      return NextResponse.json({ error: 'Missing name or formula' }, { status: 400 });
+      return NextResponse.json({ error: 'Thiếu tên hoặc công thức' }, { status: 400 });
     }
 
     // Insert new scoring rule
@@ -226,7 +226,7 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error('Create scoring rule error:', error);
     return NextResponse.json(
-      { error: 'Internal server error', details: error.message },
+      { error: 'Lỗi máy chủ nội bộ', details: error.message },
       { status: 500 }
     );
   }

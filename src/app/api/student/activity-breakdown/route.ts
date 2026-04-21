@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Activity breakdown error:', error);
     return errorResponse(
-      error instanceof ApiError ? error : ApiError.internalError('Internal server error')
+      error instanceof ApiError ? error : ApiError.internalError('Lỗi máy chủ nội bộ')
     );
   }
 }

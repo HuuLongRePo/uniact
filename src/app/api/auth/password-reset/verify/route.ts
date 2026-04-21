@@ -23,11 +23,11 @@ export async function POST(request: NextRequest) {
 
     // Validate
     if (!token || !otp || !new_password) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+      return NextResponse.json({ error: 'Thiếu trường bắt buộc' }, { status: 400 });
     }
 
     if (new_password !== confirm_password) {
-      return NextResponse.json({ error: 'Passwords do not match' }, { status: 400 });
+      return NextResponse.json({ error: 'Mật khẩu xác nhận không khớp' }, { status: 400 });
     }
 
     if (new_password.length < 8) {
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
     );
 
     if (!resetToken) {
-      return NextResponse.json({ error: 'Invalid or expired OTP' }, { status: 400 });
+      return NextResponse.json({ error: 'OTP không hợp lệ hoặc đã hết hạn' }, { status: 400 });
     }
 
     // Hash password mới

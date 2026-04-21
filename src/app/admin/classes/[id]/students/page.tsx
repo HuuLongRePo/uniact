@@ -112,11 +112,11 @@ export default function ClassStudentsPage({ params }: PageProps) {
         setClassSummary(data.classSummary || null);
         setSelectedStudents(new Set());
       } else {
-        toast.error(data.error || 'Không thể tải danh sách học sinh');
+        toast.error(data.error || 'Không thể tải danh sách học viên');
       }
     } catch (error) {
       console.error('Fetch students error:', error);
-      toast.error('Lỗi khi tải danh sách học sinh');
+      toast.error('Lỗi khi tải danh sách học viên');
     } finally {
       setIsListLoading(false);
     }
@@ -134,11 +134,11 @@ export default function ClassStudentsPage({ params }: PageProps) {
         fetchStudents();
       } else {
         const data = await response.json();
-        toast.error(data.error || 'Không thể xóa học sinh');
+        toast.error(data.error || 'Không thể xóa học viên');
       }
     } catch (error) {
       console.error('Remove student error:', error);
-      toast.error('Lỗi khi xóa học sinh');
+      toast.error('Lỗi khi xóa học viên');
     }
   };
 
@@ -309,7 +309,7 @@ export default function ClassStudentsPage({ params }: PageProps) {
           <button onClick={() => router.back()} className="text-blue-600 hover:text-blue-800 mb-2">
             ← Quay lại
           </button>
-          <h1 className="text-3xl font-bold">Danh sách học sinh lớp</h1>
+          <h1 className="text-3xl font-bold">Danh sách học viên lớp</h1>
         </div>
       </div>
 

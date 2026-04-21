@@ -36,6 +36,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { resolveClientFetchUrl } from '@/lib/client-fetch-url';
 
 interface NavItem {
   label: string;
@@ -57,7 +58,7 @@ export default function Sidebar() {
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
-    if (user && user.role === 'student') {
+    if (user) {
       fetchUnreadCount();
       const interval = setInterval(fetchUnreadCount, 30000);
       return () => clearInterval(interval);
@@ -70,7 +71,7 @@ export default function Sidebar() {
 
   const fetchUnreadCount = async () => {
     try {
-      const res = await fetch('/api/notifications');
+      const res = await fetch(resolveClientFetchUrl('/api/notifications'));
       const data = await res.json();
       if (res.ok) {
         setUnreadCount(data.meta?.total_unread || 0);
@@ -122,6 +123,7 @@ export default function Sidebar() {
       items: [
         { label: 'Báo cáo tham gia', href: '/admin/reports/participation', icon: FileText },
         { label: 'Báo cáo tùy chỉnh', href: '/admin/reports/custom', icon: PieChart },
+        { label: 'Thông báo', href: '/admin/notifications', icon: Bell, badge: unreadCount },
         { label: 'Tìm kiếm nâng cao', href: '/admin/search', icon: Users },
         { label: 'Cảnh báo', href: '/admin/alerts', icon: AlertTriangle },
         { label: 'Nhật ký hệ thống', href: '/admin/audit', icon: FileText },
@@ -177,6 +179,7 @@ export default function Sidebar() {
     {
       title: 'THÔNG BÁO & KHẢO SÁT',
       items: [
+        { label: 'Hộp thư thông báo', href: '/teacher/notifications', icon: Bell, badge: unreadCount },
         { label: 'Thông báo học viên', href: '/teacher/notify-students', icon: Bell },
         { label: 'Khảo sát', href: '/teacher/polls', icon: ClipboardCheck },
         { label: 'Cảnh báo', href: '/teacher/alerts', icon: AlertTriangle },

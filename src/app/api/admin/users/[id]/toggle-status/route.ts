@@ -20,7 +20,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const userId = parseInt(id);
 
     if (isNaN(userId)) {
-      return errorResponse(ApiError.validation('Invalid user ID'));
+      return errorResponse(ApiError.validation('ID người dùng không hợp lệ'));
     }
 
     // Cannot deactivate yourself
@@ -30,7 +30,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     const user = await dbGet('SELECT id, is_active FROM users WHERE id = ?', [userId]);
     if (!user) {
-      return errorResponse(ApiError.notFound('User not found'));
+      return errorResponse(ApiError.notFound('Không tìm thấy người dùng'));
     }
 
     // Toggle status
@@ -56,7 +56,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   } catch (error) {
     console.error('Toggle user status error:', error);
     return errorResponse(
-      error instanceof ApiError ? error : ApiError.internalError('Failed to toggle user status')
+      error instanceof ApiError ? error : ApiError.internalError('Cập nhật trạng thái người dùng thất bại')
     );
   }
 }

@@ -179,7 +179,7 @@ export async function GET(request: NextRequest) {
   } catch (error: any) {
     console.error('Get templates error:', error);
     return errorResponse(
-      error instanceof ApiError ? error : ApiError.internalError('Failed to get templates')
+      error instanceof ApiError ? error : ApiError.internalError('Lấy danh sách mẫu thất bại')
     );
   }
 }
@@ -226,7 +226,7 @@ export async function DELETE(request: NextRequest) {
   } catch (error: any) {
     console.error('Delete template error:', error);
     return errorResponse(
-      error instanceof ApiError ? error : ApiError.internalError('Failed to delete template')
+      error instanceof ApiError ? error : ApiError.internalError('Xóa mẫu thất bại')
     );
   }
 }

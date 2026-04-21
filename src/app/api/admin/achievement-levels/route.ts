@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
   try {
     const user = await getUserFromSession();
     if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return NextResponse.json({ error: 'Không có quyền truy cập' }, { status: 403 });
     }
 
     const levels = await dbAll(
@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
   try {
     const user = await getUserFromSession();
     if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return NextResponse.json({ error: 'Không có quyền truy cập' }, { status: 403 });
     }
 
     const body = await request.json();
@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     if (!name || multiplier === undefined) {
       return NextResponse.json(
         {
-          error: 'Missing required fields: name, multiplier',
+          error: 'Thiếu trường bắt buộc: name, multiplier',
         },
         { status: 400 }
       );
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
     if (typeof multiplier !== 'number' || multiplier < 0) {
       return NextResponse.json(
         {
-          error: 'Multiplier must be a positive number',
+          error: 'Multiplier phải là số dương',
         },
         { status: 400 }
       );
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
     if (existing.length > 0) {
       return NextResponse.json(
         {
-          error: 'Achievement level name already exists',
+          error: 'Tên mức thành tích đã tồn tại',
         },
         { status: 409 }
       );

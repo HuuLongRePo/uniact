@@ -6,10 +6,10 @@ import { apiHandler, ApiError, successResponse } from '@/lib/api-response';
 // POST /api/notifications/read - Đánh dấu đã đọc
 export const POST = apiHandler(async (request: NextRequest) => {
   const token = request.cookies.get('token')?.value;
-  if (!token) throw ApiError.unauthorized('Unauthorized');
+  if (!token) throw ApiError.unauthorized('Chưa đăng nhập');
 
   const user = await getUserFromToken(token);
-  if (!user) throw ApiError.unauthorized('Unauthorized');
+  if (!user) throw ApiError.unauthorized('Chưa đăng nhập');
 
   const { id, ids } = await request.json();
 

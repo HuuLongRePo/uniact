@@ -8,7 +8,7 @@ export async function PUT(request: NextRequest) {
   try {
     const user = await getUserFromSession();
     if (!user) {
-      return errorResponse(ApiError.unauthorized('Unauthorized'));
+      return errorResponse(ApiError.unauthorized('Chưa đăng nhập'));
     }
 
     const { name, email, currentPassword, newPassword } = await request.json();
@@ -20,14 +20,14 @@ export async function PUT(request: NextRequest) {
         user.id,
       ]);
       if (existing) {
-        return errorResponse(ApiError.validation('Email already in use'));
+        return errorResponse(ApiError.validation('Email đã được sử dụng'));
       }
     }
 
     // If changing password, verify current password
     if (newPassword) {
       if (!currentPassword) {
-        return errorResponse(ApiError.validation('Current password required'));
+        return errorResponse(ApiError.validation('Cần nhập mật khẩu hiện tại'));
       }
 
       const userWithPassword = await dbGet('SELECT password FROM users WHERE id = ?', [user.id]);
@@ -36,7 +36,7 @@ export async function PUT(request: NextRequest) {
         : false;
 
       if (!validPassword) {
-        return errorResponse(ApiError.validation('Invalid current password'));
+        return errorResponse(ApiError.validation('Mật khẩu hiện tại không đúng'));
       }
 
       const hashedPassword = await bcrypt.hash(newPassword, 10);
@@ -53,6 +53,6 @@ export async function PUT(request: NextRequest) {
     return successResponse({});
   } catch (error: any) {
     console.error('Update profile error:', error);
-    return errorResponse(ApiError.internalError(error.message || 'Internal server error'));
+    return errorResponse(ApiError.internalError(error.message || 'Lỗi máy chủ nội bộ'));
   }
 }

@@ -18,7 +18,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const { id } = await params;
     const suggestionId = parseInt(id, 10);
     if (Number.isNaN(suggestionId)) {
-      return errorResponse(ApiError.validation('Invalid id'));
+      return errorResponse(ApiError.validation('ID không hợp lệ'));
     }
 
     const body = await request.json().catch(() => ({}));
@@ -62,10 +62,10 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   } catch (error: any) {
     console.error('Error approving award:', error);
     if (error?.message === 'Suggestion not found') {
-      return errorResponse(ApiError.notFound('Suggestion not found'));
+      return errorResponse(ApiError.notFound('Không tìm thấy đề xuất'));
     }
     if (error?.message === 'Suggestion already processed') {
-      return errorResponse(ApiError.conflict('Suggestion already processed'));
+      return errorResponse(ApiError.conflict('Đề xuất đã được xử lý'));
     }
     return errorResponse(ApiError.internalError(error?.message || 'Internal server error'));
   }

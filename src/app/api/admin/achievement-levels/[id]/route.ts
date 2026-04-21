@@ -8,7 +8,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   try {
     const user = await getUserFromSession();
     if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return NextResponse.json({ error: 'Không có quyền truy cập' }, { status: 403 });
     }
 
     const { id } = await params;
@@ -18,7 +18,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     // Check if exists
     const existing = await dbGet('SELECT id FROM achievement_levels WHERE id = ?', [id]);
     if (!existing) {
-      return NextResponse.json({ error: 'Achievement level not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Không tìm thấy mức thành tích' }, { status: 404 });
     }
 
     // Build update query
@@ -33,7 +33,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       if (typeof multiplier !== 'number' || multiplier < 0) {
         return NextResponse.json(
           {
-            error: 'Multiplier must be a positive number',
+            error: 'Multiplier phải là số dương',
           },
           { status: 400 }
         );
@@ -47,7 +47,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     if (updates.length === 0) {
-      return NextResponse.json({ error: 'No fields to update' }, { status: 400 });
+      return NextResponse.json({ error: 'Không có trường nào để cập nhật' }, { status: 400 });
     }
 
     values.push(id);
@@ -64,7 +64,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       [user.id, 'UPDATE', 'achievement_levels', id, JSON.stringify(body)]
     );
 
-    return NextResponse.json({ success: true, message: 'Achievement level updated successfully' });
+    return NextResponse.json({ success: true, message: 'Cập nhật mức thành tích thành công' });
   } catch (error: any) {
     console.error('Error updating achievement level:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -79,14 +79,14 @@ export async function DELETE(
   try {
     const user = await getUserFromSession();
     if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return NextResponse.json({ error: 'Không có quyền truy cập' }, { status: 403 });
     }
 
     const { id } = await params;
     // Check if exists
     const existing = await dbGet('SELECT id, name FROM achievement_levels WHERE id = ?', [id]);
     if (!existing) {
-      return NextResponse.json({ error: 'Achievement level not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Không tìm thấy mức thành tích' }, { status: 404 });
     }
 
     // Check if used in participations
@@ -98,7 +98,7 @@ export async function DELETE(
       return NextResponse.json(
         {
           error:
-            'Cannot delete achievement level that is in use. Please reassign participations first.',
+            'Không thể xóa mức thành tích đang được sử dụng. Vui lòng gán lại dữ liệu tham gia trước.',
         },
         { status: 400 }
       );
@@ -116,7 +116,7 @@ export async function DELETE(
       [user.id, 'DELETE', 'achievement_levels', id, JSON.stringify({ name: existing.name })]
     );
 
-    return NextResponse.json({ success: true, message: 'Achievement level deleted successfully' });
+    return NextResponse.json({ success: true, message: 'Xóa mức thành tích thành công' });
   } catch (error: any) {
     console.error('Error deleting achievement level:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });

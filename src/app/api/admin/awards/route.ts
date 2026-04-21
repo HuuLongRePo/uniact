@@ -9,8 +9,8 @@ export async function GET(request: NextRequest) {
   try {
     await dbReady();
     const user = await getUserFromRequest(request);
-    if (!user) return errorResponse(ApiError.unauthorized('Unauthorized'));
-    if (user.role !== 'admin') return errorResponse(ApiError.forbidden('Forbidden'));
+    if (!user) return errorResponse(ApiError.unauthorized('Chưa đăng nhập'));
+    if (user.role !== 'admin') return errorResponse(ApiError.forbidden('Không có quyền truy cập'));
 
     const status = request.nextUrl?.searchParams?.get('status') as
       | 'pending'
@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     return successResponse({ suggestions });
   } catch (error: any) {
     console.error('Admin get award suggestions error:', error);
-    return errorResponse(ApiError.internalError('Internal server error'));
+    return errorResponse(ApiError.internalError('Lỗi máy chủ nội bộ'));
   }
 }
 
@@ -31,21 +31,21 @@ export async function POST(request: NextRequest) {
   try {
     await dbReady();
     const user = await getUserFromRequest(request);
-    if (!user) return errorResponse(ApiError.unauthorized('Unauthorized'));
-    if (user.role !== 'admin') return errorResponse(ApiError.forbidden('Forbidden'));
+    if (!user) return errorResponse(ApiError.unauthorized('Chưa đăng nhập'));
+    if (user.role !== 'admin') return errorResponse(ApiError.forbidden('Không có quyền truy cập'));
 
     const body = await request.json().catch(() => ({}));
     const { action } = body as { action?: string };
 
     if (action !== 'generate') {
-      return errorResponse(ApiError.validation('Invalid action'));
+      return errorResponse(ApiError.validation('Hành động không hợp lệ'));
     }
 
     const count = await dbHelpers.generateAwardSuggestions();
-    return successResponse({ count }, `Generated ${count} award suggestions`);
+    return successResponse({ count }, `Đã tạo ${count} đề xuất khen thưởng`);
   } catch (error: any) {
     console.error('Admin generate award suggestions error:', error);
-    return errorResponse(ApiError.internalError('Internal server error'));
+    return errorResponse(ApiError.internalError('Lỗi máy chủ nội bộ'));
   }
 }
 
@@ -54,8 +54,8 @@ export async function PUT(request: NextRequest) {
   try {
     await dbReady();
     const user = await getUserFromRequest(request);
-    if (!user) return errorResponse(ApiError.unauthorized('Unauthorized'));
-    if (user.role !== 'admin') return errorResponse(ApiError.forbidden('Forbidden'));
+    if (!user) return errorResponse(ApiError.unauthorized('Chưa đăng nhập'));
+    if (user.role !== 'admin') return errorResponse(ApiError.forbidden('Không có quyền truy cập'));
 
     const body = await request.json();
     const { suggestion_id, action, note } = body as {
@@ -65,7 +65,7 @@ export async function PUT(request: NextRequest) {
     };
 
     if (!suggestion_id || !action || (action !== 'approve' && action !== 'reject')) {
-      return errorResponse(ApiError.validation('Invalid parameters'));
+      return errorResponse(ApiError.validation('Tham số không hợp lệ'));
     }
 
     if (action === 'approve') {
@@ -73,10 +73,10 @@ export async function PUT(request: NextRequest) {
         await dbHelpers.approveAwardSuggestion(Number(suggestion_id), user.id, note || null);
       } catch (err: any) {
         if (err?.message === 'Suggestion not found')
-          return errorResponse(ApiError.notFound('Suggestion not found'));
+          return errorResponse(ApiError.notFound('Không tìm thấy đề xuất'));
         if (err?.message === 'Suggestion already processed')
-          return errorResponse(ApiError.conflict('Suggestion already processed'));
-        return errorResponse(ApiError.validation(err?.message || 'Failed to approve suggestion'));
+          return errorResponse(ApiError.conflict('Đề xuất đã được xử lý'));
+        return errorResponse(ApiError.validation(err?.message || 'Không thể duyệt đề xuất'));
       }
 
       // Best-effort notification
@@ -97,17 +97,17 @@ export async function PUT(request: NextRequest) {
         console.error('Award approval notification error:', notifyErr);
       }
 
-      return successResponse({}, 'Award suggestion approved');
+      return successResponse({}, 'Duyệt đề xuất khen thưởng thành công');
     }
 
     try {
       await dbHelpers.rejectAwardSuggestion(Number(suggestion_id), user.id, note || null);
     } catch (err: any) {
       if (err?.message === 'Suggestion not found')
-        return errorResponse(ApiError.notFound('Suggestion not found'));
+        return errorResponse(ApiError.notFound('Không tìm thấy đề xuất'));
       if (err?.message === 'Suggestion already processed')
-        return errorResponse(ApiError.conflict('Suggestion already processed'));
-      return errorResponse(ApiError.validation(err?.message || 'Failed to reject suggestion'));
+        return errorResponse(ApiError.conflict('Đề xuất đã được xử lý'));
+      return errorResponse(ApiError.validation(err?.message || 'Không thể từ chối đề xuất'));
     }
 
     // Best-effort notification
@@ -128,9 +128,9 @@ export async function PUT(request: NextRequest) {
       console.error('Award rejection notification error:', notifyErr);
     }
 
-    return successResponse({}, 'Award suggestion rejected');
+    return successResponse({}, 'Từ chối đề xuất khen thưởng');
   } catch (error: any) {
     console.error('Admin process award suggestion error:', error);
-    return errorResponse(ApiError.internalError(error.message || 'Internal server error'));
+    return errorResponse(ApiError.internalError(error.message || 'Lỗi máy chủ nội bộ'));
   }
 }

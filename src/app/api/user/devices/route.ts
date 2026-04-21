@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
   try {
     const user = await getUserFromSession();
     if (!user) {
-      return errorResponse(ApiError.unauthorized('Unauthorized'));
+      return errorResponse(ApiError.unauthorized('Chưa đăng nhập'));
     }
 
     const devices = await dbAll(
@@ -32,14 +32,14 @@ export async function DELETE(request: NextRequest) {
   try {
     const user = await getUserFromSession();
     if (!user) {
-      return errorResponse(ApiError.unauthorized('Unauthorized'));
+      return errorResponse(ApiError.unauthorized('Chưa đăng nhập'));
     }
 
     const { searchParams } = new URL(request.url);
     const deviceId = searchParams.get('deviceId');
 
     if (!deviceId) {
-      return errorResponse(ApiError.validation('deviceId required'));
+      return errorResponse(ApiError.validation('Thiếu deviceId'));
     }
 
     // Verify ownership
@@ -49,7 +49,7 @@ export async function DELETE(request: NextRequest) {
     ]);
 
     if (!device || device.length === 0) {
-      return errorResponse(ApiError.notFound('Device not found or not owned by user'));
+      return errorResponse(ApiError.notFound('Không tìm thấy thiết bị hoặc bạn không sở hữu thiết bị này'));
     }
 
     await dbRun('DELETE FROM devices WHERE id = ?', [deviceId]);
@@ -61,7 +61,7 @@ export async function DELETE(request: NextRequest) {
       [user.id, 'DELETE_DEVICE', 'devices', deviceId, JSON.stringify({ device_id: deviceId })]
     );
 
-    return successResponse({}, 'Device removed');
+    return successResponse({}, 'Đã xóa thiết bị');
   } catch (error: any) {
     console.error('Error deleting device:', error);
     return errorResponse(ApiError.internalError(error.message));

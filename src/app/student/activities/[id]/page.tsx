@@ -216,8 +216,8 @@ export default function StudentActivityDetailPage() {
   const applicabilityReason =
     activity.applicability_reason ||
     (appliesToStudent
-      ? 'Hoat dong nay dang ap dung cho ban.'
-      : 'Hoat dong nay hien khong ap dung cho ban.');
+      ? 'Hoạt động này đang áp dụng cho bạn.'
+      : 'Hoạt động này hiện không áp dụng cho bạn.');
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -267,7 +267,7 @@ export default function StudentActivityDetailPage() {
             }`}
           >
             <h2 className="mb-2 text-xl font-bold">
-              {appliesToStudent ? 'Pham vi ap dung' : 'Khong thuoc pham vi cua ban'}
+              {appliesToStudent ? 'Phạm vi áp dụng' : 'Không thuộc phạm vi của bạn'}
             </h2>
             <p className={appliesToStudent ? 'text-green-700' : 'text-amber-800'}>
               {applicabilityReason}
@@ -402,7 +402,7 @@ export default function StudentActivityDetailPage() {
               </div>
             ) : !appliesToStudent ? (
               <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded text-center">
-                Hoat dong nay hien khong ap dung cho ban nen ban khong the tu dang ky
+                Hoạt động này hiện không áp dụng cho bạn nên bạn không thể tự đăng ký
               </div>
             ) : isRegistrationClosed ? (
               <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded text-center">

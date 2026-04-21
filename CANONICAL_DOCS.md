@@ -28,6 +28,9 @@ Read these first.
 ### F. Diagram support
 7. `docs/SYSTEM_FLOWS_DIAGRAM.md`
 
+### G. Codex IDE execution handoff
+8. `docs/codex-ide-transition-pack.md`
+
 ---
 
 ## 2. Reading order by objective
@@ -38,6 +41,8 @@ Read these first.
 3. `PRODUCT_AND_BUSINESS.md`
 4. `ENGINEERING_STATE.md`
 5. `RELEASE_AND_QA.md`
+6. `docs/release-backbone-batch-todos.md`
+7. `docs/codex-ide-transition-pack.md`
 
 ### If you want to understand the product and business logic
 1. `README.md`
