@@ -205,16 +205,16 @@ Yeu cau:
 ### Viec can lam
 - [ ] Admin enrollment:
   - upload/camera -> tao embedding -> luu DB an toan
-- [ ] Giang vien runtime scan:
-  - camera stream
-  - matching threshold + quality/liveness checks
+- [x] Giang vien runtime scan:
+  - [x] camera stream (`/teacher/attendance/face`)
+  - [x] matching threshold + quality/liveness checks (candidate preview + runtime bridge)
 - [x] Face training authorization:
   - [x] Admin duoc train/enroll khuon mat toan truong.
   - [x] Giang vien chi duoc train/enroll hoc vien thuoc cac lop chu nhiem (primary/homeroom).
   - [x] Chan thao tac voi hoc vien ngoai pham vi + tra loi 403 ro rang + co audit log.
   - [x] Bo sung route UI teacher: `/teacher/biometrics` (du lieu scope homeroom).
-- [ ] Hoc vien thong bao realtime:
-  - "Ban da duoc diem danh thanh cong"
+- [x] Hoc vien thong bao realtime:
+  - [x] "Ban da duoc diem danh thanh cong" qua `sendDatabaseNotification` trong `/api/attendance/face`
 - [x] Thiet ke API FaceID:
   - [x] enroll (`/api/biometric/enroll`)
   - [x] train (`/api/admin/biometrics/students/[id]/training`)
@@ -227,7 +227,9 @@ Yeu cau:
 ### Definition of Done
 - [ ] FaceID co API/frame on dinh (co the pilot truoc model production).
 - [ ] Notification trigger matrix duoc duyet lam chuan.
-- [ ] Test runtime fallback (runtime_unavailable, low_quality, multi_faces) pass.
+- [x] Test runtime fallback (runtime_unavailable, low_quality, multi_faces) pass.
+  - [x] `test/face-attendance-route.test.ts`
+  - [x] `test/teacher-face-attendance-page.test.tsx`
 
 ### Decision Gates (neu can)
 - [ ] Thu vien matching/liveness chinh thuc cho production.

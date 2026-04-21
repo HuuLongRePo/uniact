@@ -5,6 +5,7 @@ const mockDbAll = vi.fn();
 const mockDbRun = vi.fn();
 const mockRequireApiAuth = vi.fn();
 const mockVerifyFaceAttendanceRuntime = vi.fn();
+const mockSendDatabaseNotification = vi.fn();
 
 vi.mock('@/lib/database', () => ({
   dbGet: (...args: any[]) => mockDbGet(...args),
@@ -21,7 +22,7 @@ vi.mock('@/lib/biometrics/attendance-runtime-bridge', () => ({
 }));
 
 vi.mock('@/lib/notifications', () => ({
-  sendDatabaseNotification: (...args: any[]) => mockDbRun(...args),
+  sendDatabaseNotification: (...args: any[]) => mockSendDatabaseNotification(...args),
 }));
 
 describe('POST /api/attendance/face', () => {
@@ -34,6 +35,8 @@ describe('POST /api/attendance/face', () => {
     mockRequireApiAuth.mockResolvedValue({ id: 12, role: 'teacher' });
     mockDbRun.mockResolvedValue({ changes: 1, lastID: 1 });
     mockVerifyFaceAttendanceRuntime.mockReset();
+    mockSendDatabaseNotification.mockReset();
+    mockSendDatabaseNotification.mockResolvedValue({ notificationId: 1, eventId: 1 });
   });
 
   it('fails closed when runtime capability is still unavailable', async () => {
@@ -153,6 +156,15 @@ describe('POST /api/attendance/face', () => {
       runtime_mode: 'runtime_ready',
     });
     expect(mockDbRun).toHaveBeenCalled();
+    expect(mockSendDatabaseNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 3001,
+        type: 'success',
+        title: expect.stringMatching(/Face attendance/i),
+        relatedTable: 'activities',
+        relatedId: 91,
+      })
+    );
   });
 
   it('blocks when student biometric profile is not ready', async () => {
@@ -351,6 +363,7 @@ describe('POST /api/attendance/face', () => {
       verification_method: 'upstream_verified',
       runtime_mode: 'runtime_ready',
     });
+    expect(mockSendDatabaseNotification).not.toHaveBeenCalled();
   });
 
   it('returns runtime-bridge verification metadata when candidate embedding branch succeeds', async () => {
