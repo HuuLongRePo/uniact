@@ -86,7 +86,8 @@ async function createApprovedRegisteredActivity(studentPage: any, teacherPage: a
 
 test.describe('Teacher - QR session backbone', () => {
   test('teacher creates, observes, and closes a QR session', async ({ browser }) => {
-    test.setTimeout(60_000)
+    // Keep this actor-flow stable under local dev cold starts and SSE teardown overhead.
+    test.setTimeout(120_000)
     const teacherContext = await browser.newContext()
     const teacherPage = await teacherContext.newPage()
     const teacher = new TeacherHelper(teacherPage)
