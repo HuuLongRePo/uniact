@@ -403,6 +403,54 @@ Yeu cau:
 - Cap nhat docs/release-backbone-batch-todos.md va commit rieng theo batch.
 ```
 
+## 9.2) Batch uu tien nong sau RC - Navbar audit + dai trung tu UI shell
+
+### Muc tieu
+
+- Audit toan bo navbar theo tung actor de dam bao moi link dan dung chuc nang, khong trung nghia, khong thieu luong quan trong.
+- Dai trung tu lop UI shell theo huong hien dai hon nhung khong doi nghiep vu: theme light/dark/system, responsive, typography, contrast, mat do thong tin va tinh de doc.
+- Chuan hoa nhan tieng Viet co dau o lop giao dien chung; loai bo text tieng Anh, text khong dau va cac nhom muc lap y.
+
+### Viec can lam
+
+- [ ] Audit navbar admin/giang vien/hoc vien doi chieu voi route thuc te trong repo.
+- [ ] Bo sung muc con thieu neu route/chuc nang da ton tai va can truy cap truc tiep trong vai tro do.
+- [ ] Loai bo hoac gop cac muc lap nghia, dat ten ngan gon, dung nghiep vu.
+- [ ] Refactor `Sidebar` thanh shell dieu huong co style thong nhat, contrast tot, mobile-first va dark mode doc ro.
+- [ ] Nang cap `AuthContent` va global shell background/spacing de cac trang trong app dong bo hon ma khong pha layout hien co.
+- [ ] Chot typography stack offline-friendly, hien dai hon va bo sung rule xu ly noi dung dai, bang rong, text wrap.
+- [ ] Tiep tuc quet nhanh nhan UI chung co text tieng Anh/khong dau o lop shell, toolbar, button va heading de doi sang tieng Viet co dau.
+- [ ] Chay test navbar/shell lien quan + build va commit rieng.
+
+### Prompt bo sung (copy de chay batch nay)
+
+```text
+Ban dong vai Principal Product Designer + Senior Frontend Engineer. Muc tieu la dai trung tu UI shell va navbar cua UniAct, NHUNG khong duoc lam sai chuc nang, khong duoc cat bo tien ich dang co, chi duoc cai tien.
+1) Navbar audit theo actor:
+- Kiem tra admin / giang vien / hoc vien.
+- Moi muc trong navbar phai dan den route/chuc nang dung muc dich.
+- Doi chieu voi route hien co trong repo de xem actor do con thieu chuc nang nao dang ton tai ma chua duoc dua len navbar.
+- Loai bo cac muc lap y nghia, dat lai nhan ro rang, tieng Viet co dau, ngan gon.
+2) UI shell modernization:
+- Dai trung tu shell chung (sidebar, background, spacing, header shell, badge, section title, card feel, responsive).
+- Ho tro light/dark/system va uu tien Windows dark mode van doc ro.
+- Typography hien dai, offline-friendly, khong phu thuoc internet; uu tien stack dep tren Windows/macOS.
+- Kiem soat noi dung dai: wrap text, table overflow, card spacing, title/subtitle, action groups.
+3) Content polish:
+- Doi text tieng Anh hoac khong dau trong lop UI chung sang tieng Viet co dau.
+- Ra soat noi dung trung lap, nhom chuc nang gan nhau, doi ten de de hieu hon.
+4) Safety:
+- Khong doi API contract.
+- Khong doi nghiep vu.
+- Khong xoa tinh nang dang co.
+- Chinh o lop giao dien, navigation, token va text shell; thay doi o page rieng chi khi can thiet de khop shell moi.
+Yeu cau thi hanh:
+- Liet ke file can sua truoc khi code.
+- Patch lon vua phai, co gia tri release, tranh sua lan man.
+- Chay test navbar/shell lien quan va `npm run build`.
+- Cap nhat docs/release-backbone-batch-todos.md sau khi xong.
+```
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix

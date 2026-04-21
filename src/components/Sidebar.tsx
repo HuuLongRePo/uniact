@@ -5,35 +5,37 @@ import { useAuth } from '@/contexts/AuthContext';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import {
-  LayoutDashboard,
-  Calendar,
-  Users,
-  UserCheck,
-  ClipboardCheck,
-  Bell,
   AlertTriangle,
   Award,
-  Settings,
-  Menu,
-  X,
-  BookOpen,
-  Target,
-  FileText,
-  QrCode,
-  Trophy,
-  Laptop,
-  User,
-  School,
-  CheckSquare,
   BarChart3,
-  Sliders,
-  Clock,
-  PieChart,
-  Palette,
-  Database,
-  LogOut,
+  Bell,
+  BookOpen,
+  CheckSquare,
   ChevronLeft,
   ChevronRight,
+  ClipboardCheck,
+  Clock,
+  Database,
+  FileText,
+  LayoutDashboard,
+  Laptop,
+  LogOut,
+  Menu,
+  Palette,
+  PieChart,
+  QrCode,
+  School,
+  ScanFace,
+  Search,
+  Settings,
+  Sliders,
+  Sparkles,
+  Target,
+  Trophy,
+  User,
+  UserCheck,
+  Users,
+  X,
 } from 'lucide-react';
 import { resolveClientFetchUrl } from '@/lib/client-fetch-url';
 
@@ -42,11 +44,35 @@ interface NavItem {
   href: string;
   icon: React.ComponentType<{ className?: string }>;
   badge?: number;
+  keywords?: string[];
 }
 
 interface NavSection {
   title?: string;
   items: NavItem[];
+}
+
+const SIDEBAR_EXPANDED_WIDTH = '18rem';
+const SIDEBAR_COLLAPSED_WIDTH = '5.5rem';
+
+function dedupeNavigation(sections: NavSection[]): NavSection[] {
+  return sections
+    .map((section) => {
+      const seen = new Set<string>();
+      const items = section.items.filter((item) => {
+        if (seen.has(item.href)) {
+          return false;
+        }
+        seen.add(item.href);
+        return true;
+      });
+
+      return {
+        ...section,
+        items,
+      };
+    })
+    .filter((section) => section.items.length > 0);
 }
 
 export default function Sidebar() {
@@ -57,11 +83,16 @@ export default function Sidebar() {
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
-    if (user) {
-      fetchUnreadCount();
-      const interval = setInterval(fetchUnreadCount, 30000);
-      return () => clearInterval(interval);
+    if (!user) {
+      return;
     }
+
+    void fetchUnreadCount();
+    const interval = setInterval(() => {
+      void fetchUnreadCount();
+    }, 30000);
+
+    return () => clearInterval(interval);
   }, [user]);
 
   useEffect(() => {
@@ -73,50 +104,57 @@ export default function Sidebar() {
       const res = await fetch(resolveClientFetchUrl('/api/notifications'));
       const data = await res.json();
       if (res.ok) {
-        setUnreadCount(data.meta?.total_unread || 0);
+        setUnreadCount(data.meta?.total_unread || data.data?.meta?.total_unread || 0);
       }
     } catch (error) {
       console.error('Fetch unread count error:', error);
     }
   };
 
-  if (!user) return null;
+  if (!user) {
+    return null;
+  }
 
-  const adminNavigation: NavSection[] = [
+  const adminNavigation = dedupeNavigation([
     {
-      title: 'TỔNG QUAN',
-      items: [{ label: 'Tổng quan quản trị', href: '/admin/dashboard', icon: LayoutDashboard }],
+      title: 'Tổng quan',
+      items: [{ label: 'Bảng điều khiển', href: '/admin/dashboard', icon: LayoutDashboard }],
     },
     {
-      title: 'THÔNG BÁO & CẢNH BÁO',
+      title: 'Thông báo và cảnh báo',
       items: [
         { label: 'Thông báo', href: '/admin/notifications', icon: Bell, badge: unreadCount },
         { label: 'Cảnh báo', href: '/admin/alerts', icon: AlertTriangle },
       ],
     },
     {
-      title: 'NGƯỜI DÙNG & LỚP',
+      title: 'Người dùng và lớp học',
       items: [
         { label: 'Người dùng', href: '/admin/users', icon: Users },
+        { label: 'Giảng viên', href: '/admin/teachers', icon: User },
+        { label: 'Học viên', href: '/admin/students', icon: School },
         { label: 'Lớp học', href: '/admin/classes', icon: School },
         { label: 'Import người dùng', href: '/admin/users/import', icon: FileText },
       ],
     },
     {
-      title: 'HOẠT ĐỘNG & ĐIỂM DANH',
+      title: 'Hoạt động và điểm danh',
       items: [
-        { label: 'Quản lý hoạt động', href: '/admin/activities', icon: Calendar },
+        { label: 'Quản lý hoạt động', href: '/admin/activities', icon: BookOpen },
         { label: 'Phê duyệt hoạt động', href: '/admin/approvals', icon: CheckSquare },
+        { label: 'Mẫu hoạt động', href: '/admin/activity-templates', icon: Sparkles },
+        { label: 'Loại hoạt động', href: '/admin/activity-types', icon: Target },
         { label: 'Điểm danh', href: '/admin/attendance', icon: UserCheck },
         { label: 'Khung thời gian', href: '/admin/time-slots', icon: Clock },
       ],
     },
     {
-      title: 'ĐIỂM, THƯỞNG & XẾP HẠNG',
+      title: 'Điểm, thưởng và xếp hạng',
       items: [
-        { label: 'Điểm cá nhân', href: '/admin/scores', icon: BarChart3 },
-        { label: 'Bảng xếp hạng', href: '/admin/leaderboard', icon: BarChart3 },
-        { label: 'Tính điểm', href: '/admin/scoring', icon: BarChart3 },
+        { label: 'Điểm học viên', href: '/admin/scores', icon: BarChart3 },
+        { label: 'Bảng xếp hạng', href: '/admin/leaderboard', icon: Trophy },
+        { label: 'Bảng điểm tổng hợp', href: '/admin/scoreboard', icon: PieChart },
+        { label: 'Tính điểm', href: '/admin/scoring', icon: CheckSquare },
         { label: 'Cấu hình tính điểm', href: '/admin/scoring-config', icon: Sliders },
         { label: 'Khen thưởng', href: '/admin/awards', icon: Award },
         { label: 'Loại khen thưởng', href: '/admin/award-types', icon: Trophy },
@@ -125,121 +163,112 @@ export default function Sidebar() {
       ],
     },
     {
-      title: 'BÁO CÁO & TRA SOÁT',
+      title: 'Báo cáo và hệ thống',
       items: [
-        { label: 'Báo cáo tham gia', href: '/admin/reports/participation', icon: FileText },
-        { label: 'Báo cáo tùy chỉnh', href: '/admin/reports/custom', icon: PieChart },
-        { label: 'Tìm kiếm nâng cao', href: '/admin/search', icon: Users },
+        { label: 'Báo cáo', href: '/admin/reports', icon: FileText },
+        { label: 'Tìm kiếm nâng cao', href: '/admin/search', icon: Search },
         { label: 'Nhật ký hệ thống', href: '/admin/audit', icon: FileText },
-      ],
-    },
-    {
-      title: 'CẤU HÌNH & HỆ THỐNG',
-      items: [
-        { label: 'Loại hoạt động', href: '/admin/activity-types', icon: BookOpen },
         { label: 'Cấp độ tổ chức', href: '/admin/organization-levels', icon: Target },
         { label: 'Cài đặt QR', href: '/admin/system-config/qr-settings', icon: QrCode },
+        { label: 'Thiết kế QR', href: '/admin/system-config/qr-design', icon: Palette },
         {
           label: 'Chính sách điểm danh',
           href: '/admin/system-config/attendance-policy',
           icon: Sliders,
         },
-        { label: 'Thiết kế QR', href: '/admin/system-config/qr-design', icon: Palette },
         {
           label: 'Hạn chót phê duyệt',
           href: '/admin/system-config/approval-deadline',
           icon: Clock,
         },
-        { label: 'Cấu hình nâng cao', href: '/admin/system-config/advanced', icon: Settings },
+        { label: 'Sinh trắc học', href: '/admin/biometrics', icon: ScanFace },
         { label: 'Cài đặt hệ thống', href: '/admin/settings', icon: Settings },
+        { label: 'Cấu hình nâng cao', href: '/admin/system-config/advanced', icon: Sliders },
         { label: 'Sức khỏe hệ thống', href: '/admin/system-health', icon: BarChart3 },
-        { label: 'Sao lưu & Phục hồi', href: '/admin/backup', icon: Database },
+        { label: 'Sao lưu và phục hồi', href: '/admin/backup', icon: Database },
       ],
     },
-  ];
+  ]);
 
-  const teacherNavigation: NavSection[] = [
+  const teacherNavigation = dedupeNavigation([
     {
-      title: 'TỔNG QUAN',
-      items: [{ label: 'Tổng quan giảng viên', href: '/teacher/dashboard', icon: LayoutDashboard }],
+      title: 'Tổng quan',
+      items: [{ label: 'Bảng điều khiển', href: '/teacher/dashboard', icon: LayoutDashboard }],
     },
     {
-      title: 'THÔNG BÁO & KHẢO SÁT',
+      title: 'Thông báo và tương tác',
       items: [
-        {
-          label: 'Hộp thư thông báo',
-          href: '/teacher/notifications',
-          icon: Bell,
-          badge: unreadCount,
-        },
-        { label: 'Thông báo học viên', href: '/teacher/notify-students', icon: Bell },
+        { label: 'Thông báo', href: '/teacher/notifications', icon: Bell, badge: unreadCount },
+        { label: 'Gửi thông báo', href: '/teacher/notify-students', icon: Bell },
         { label: 'Khảo sát', href: '/teacher/polls', icon: ClipboardCheck },
         { label: 'Cảnh báo', href: '/teacher/alerts', icon: AlertTriangle },
       ],
     },
     {
-      title: 'QUẢN LÝ HOẠT ĐỘNG',
+      title: 'Quản lý lớp và hoạt động',
       items: [
         { label: 'Hoạt động của tôi', href: '/teacher/activities', icon: BookOpen },
         { label: 'Phê duyệt', href: '/teacher/approvals', icon: CheckSquare },
-        { label: 'Học viên', href: '/teacher/students', icon: Users },
         { label: 'Lớp học', href: '/teacher/classes', icon: School },
+        { label: 'Học viên', href: '/teacher/students', icon: Users },
       ],
     },
     {
-      title: 'ĐIỂM DANH & ĐÁNH GIÁ',
+      title: 'Điểm danh và đánh giá',
       items: [
         { label: 'Điểm danh', href: '/teacher/attendance', icon: UserCheck },
+        { label: 'Điểm danh QR', href: '/teacher/qr', icon: QrCode },
+        { label: 'Điểm danh khuôn mặt', href: '/teacher/attendance/face', icon: ScanFace },
         { label: 'Chính sách điểm danh', href: '/teacher/attendance/policy', icon: Sliders },
-        { label: 'QR điểm danh', href: '/teacher/qr', icon: QrCode },
+        { label: 'Sinh trắc học', href: '/teacher/biometrics', icon: ScanFace },
       ],
     },
     {
-      title: 'BÁO CÁO',
+      title: 'Báo cáo và thành tích',
       items: [
         { label: 'Báo cáo tham gia', href: '/teacher/reports/participation', icon: FileText },
+        { label: 'Báo cáo điểm danh', href: '/teacher/reports/attendance', icon: PieChart },
+        { label: 'Đề xuất khen thưởng', href: '/teacher/awards/suggestions', icon: Award },
+        { label: 'Đề xuất cộng điểm', href: '/teacher/bonus-proposal', icon: BarChart3 },
       ],
     },
-  ];
+  ]);
 
-  const studentNavigation: NavSection[] = [
+  const studentNavigation = dedupeNavigation([
     {
-      title: 'TỔNG QUAN',
-      items: [{ label: 'Tổng quan học viên', href: '/student/dashboard', icon: LayoutDashboard }],
+      title: 'Tổng quan',
+      items: [{ label: 'Bảng điều khiển', href: '/student/dashboard', icon: LayoutDashboard }],
     },
     {
-      title: 'THÔNG BÁO & TIỆN ÍCH',
+      title: 'Thông báo và tiện ích',
       items: [
         { label: 'Thông báo', href: '/student/notifications', icon: Bell, badge: unreadCount },
-        { label: 'Quét QR', href: '/student/check-in', icon: QrCode },
+        { label: 'Quét QR điểm danh', href: '/student/check-in', icon: QrCode },
         { label: 'Khảo sát', href: '/student/polls', icon: ClipboardCheck },
-        { label: 'Thiết bị', href: '/student/devices', icon: Laptop },
-        { label: 'Hồ sơ', href: '/student/profile', icon: User },
+        { label: 'Thiết bị đăng nhập', href: '/student/devices', icon: Laptop },
+        { label: 'Hồ sơ cá nhân', href: '/student/profile', icon: User },
       ],
     },
     {
-      title: 'HOẠT ĐỘNG CỦA TÔI',
+      title: 'Hoạt động',
       items: [
-        { label: 'Đăng ký hoạt động', href: '/student/activities', icon: ClipboardCheck },
+        { label: 'Khám phá hoạt động', href: '/student/activities', icon: Sparkles },
         { label: 'Hoạt động của tôi', href: '/student/my-activities', icon: BookOpen },
-        { label: 'Lịch sử', href: '/student/history', icon: FileText },
+        { label: 'Lịch sử tham gia', href: '/student/history', icon: Clock },
+        { label: 'Gợi ý hoạt động', href: '/student/recommendations', icon: Target },
+        { label: 'Mẹo thành tích', href: '/student/achievements/tips', icon: Sparkles },
       ],
     },
     {
-      title: 'ĐIỂM & GIẢI THƯỞNG',
+      title: 'Điểm và khen thưởng',
       items: [
-        { label: 'Điểm số', href: '/student/points', icon: BarChart3 },
-        { label: 'Bảng điểm', href: '/student/scores', icon: BarChart3 },
+        { label: 'Điểm rèn luyện', href: '/student/points', icon: BarChart3 },
+        { label: 'Bảng điểm', href: '/student/scores', icon: PieChart },
         { label: 'Bảng xếp hạng', href: '/student/ranking', icon: Trophy },
-        { label: 'Phân tích điểm', href: '/student/points', icon: PieChart },
-        { label: 'Giải thưởng', href: '/student/awards', icon: Trophy },
+        { label: 'Giải thưởng', href: '/student/awards', icon: Award },
       ],
     },
-    {
-      title: 'TIỆN ÍCH',
-      items: [{ label: 'Lịch sử', href: '/student/history', icon: Clock }],
-    },
-  ];
+  ]);
 
   const navigation =
     user.role === 'admin'
@@ -249,22 +278,26 @@ export default function Sidebar() {
         : studentNavigation;
 
   const isActive = (path: string) => {
-    if (path === '/dashboard') {
-      return pathname === path;
+    if (pathname === path) {
+      return true;
     }
+
     if (path === '/teacher/attendance' && pathname?.startsWith('/teacher/attendance/policy')) {
       return false;
     }
-    if (pathname === path) return true;
-    if (pathname?.startsWith(path + '/')) return true;
-    if (
-      path === '/activities' &&
-      pathname?.startsWith('/activities') &&
-      !pathname.includes('activity-types')
-    ) {
+
+    if (path === '/teacher/attendance' && pathname?.startsWith('/teacher/attendance/face')) {
+      return false;
+    }
+
+    if (path === '/admin/settings' && pathname?.startsWith('/admin/system-config')) {
+      return false;
+    }
+
+    if (pathname?.startsWith(`${path}/`)) {
       return true;
     }
-    if (path === '/admin/approvals' && pathname?.includes('approvals')) return true;
+
     return false;
   };
 
@@ -273,80 +306,93 @@ export default function Sidebar() {
     await logout();
   };
 
+  const roleLabel =
+    user.role === 'admin' ? 'Quản trị viên' : user.role === 'teacher' ? 'Giảng viên' : 'Học viên';
+
   return (
     <>
       <button
-        onClick={() => setMobileOpen(!mobileOpen)}
-        className="fixed left-4 top-4 z-50 rounded-lg bg-gray-900 p-3 text-white shadow-xl transition-all hover:bg-gray-800 active:bg-gray-700 lg:hidden"
-        aria-label="Mở hoặc đóng menu"
-        style={{ minWidth: '44px', minHeight: '44px' }}
+        onClick={() => setMobileOpen((current) => !current)}
+        className="fixed left-4 top-4 z-50 rounded-2xl border border-white/20 bg-slate-950/90 p-3 text-white shadow-2xl shadow-slate-950/30 backdrop-blur xl:hidden"
+        aria-label="Mở hoặc đóng điều hướng"
+        style={{ minWidth: '48px', minHeight: '48px' }}
       >
-        {mobileOpen ? <X className="h-7 w-7" /> : <Menu className="h-7 w-7" />}
+        {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
       </button>
 
       {mobileOpen && (
         <div
-          className="fixed inset-0 z-30 bg-black/50 backdrop-blur-sm lg:hidden"
+          className="fixed inset-0 z-30 bg-slate-950/50 backdrop-blur-sm xl:hidden"
           onClick={() => setMobileOpen(false)}
         />
       )}
 
-      <div
-        className={`
-          fixed left-0 top-0 z-40 flex h-screen flex-col overflow-y-auto bg-gradient-to-b from-gray-900 to-gray-800 text-white shadow-2xl
-          transition-all duration-300 ease-in-out
-          ${collapsed ? 'w-64 lg:w-20' : 'w-64'}
-          ${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-        `}
+      <aside
+        className={`fixed left-0 top-0 z-40 flex h-screen flex-col overflow-hidden border-r border-white/10 bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.22),_transparent_34%),linear-gradient(180deg,_rgba(15,23,42,0.98),_rgba(15,23,42,0.94))] text-white shadow-2xl shadow-slate-950/30 transition-all duration-300 ease-out ${
+          collapsed ? 'xl:w-[5.5rem]' : 'xl:w-72'
+        } ${mobileOpen ? 'translate-x-0' : '-translate-x-full xl:translate-x-0'} w-72`}
+        style={
+          {
+            '--sidebar-expanded-width': SIDEBAR_EXPANDED_WIDTH,
+            '--sidebar-collapsed-width': SIDEBAR_COLLAPSED_WIDTH,
+          } as React.CSSProperties
+        }
       >
-        <div className="flex items-center justify-between border-b border-gray-700 px-4 py-5">
-          {!collapsed ? (
-            <div className="flex items-center space-x-2">
-              <span className="text-2xl">UniAct</span>
-              <div className="flex flex-col">
-                <span className="text-sm font-bold text-blue-400">UniAct</span>
-                <span className="text-xs text-gray-400">Cổng hoạt động</span>
+        <div className="border-b border-white/10 px-4 py-5">
+          <div className={`flex items-center ${collapsed ? 'justify-center' : 'justify-between'}`}>
+            {!collapsed ? (
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-400 via-sky-500 to-emerald-400 text-lg font-semibold text-slate-950 shadow-lg shadow-cyan-500/20">
+                  UA
+                </div>
+                <div className="min-w-0">
+                  <div className="truncate text-base font-semibold tracking-[0.04em]">UniAct</div>
+                  <div className="truncate text-xs text-slate-300">
+                    Cổng điều phối hoạt động và điểm danh
+                  </div>
+                </div>
               </div>
-            </div>
-          ) : (
-            <span className="mx-auto text-2xl">UA</span>
-          )}
+            ) : (
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-400 via-sky-500 to-emerald-400 text-lg font-semibold text-slate-950 shadow-lg shadow-cyan-500/20">
+                UA
+              </div>
+            )}
+          </div>
         </div>
 
-        <div className={`border-b border-gray-700 px-4 py-4 ${collapsed ? 'text-center' : ''}`}>
+        <div className={`border-b border-white/10 px-4 py-4 ${collapsed ? 'text-center' : ''}`}>
           {!collapsed ? (
-            <>
-              <div className="mb-2 flex items-center space-x-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-green-400 to-blue-500 font-bold text-white">
-                  {user.name?.charAt(0) || 'U'}
+            <div className="rounded-2xl border border-white/10 bg-white/6 p-3 backdrop-blur">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/12 text-sm font-semibold text-white">
+                  {user.name?.charAt(0)?.toUpperCase() || 'U'}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-white">{user.name}</p>
-                  <p className="truncate text-xs text-gray-400">{user.email}</p>
+                  <p className="truncate text-sm font-semibold text-white">{user.name}</p>
+                  <p className="truncate text-xs text-slate-300">{user.email}</p>
                 </div>
               </div>
-              <div className="inline-flex items-center rounded-full border border-green-500/30 bg-green-500/20 px-2 py-1 text-xs font-medium text-green-400">
-                {user.role === 'admin' && 'Quản trị viên'}
-                {user.role === 'teacher' && 'Giảng viên'}
-                {user.role === 'student' && 'Học viên'}
+              <div className="mt-3 inline-flex items-center rounded-full border border-emerald-400/20 bg-emerald-400/12 px-2.5 py-1 text-xs font-medium text-emerald-200">
+                {roleLabel}
               </div>
-            </>
+            </div>
           ) : (
-            <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-green-400 to-blue-500 font-bold text-white">
-              {user.name?.charAt(0) || 'U'}
+            <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-2xl bg-white/12 text-sm font-semibold text-white">
+              {user.name?.charAt(0)?.toUpperCase() || 'U'}
             </div>
           )}
         </div>
 
-        <nav className="scrollbar-thin flex-1 space-y-4 overflow-x-hidden overflow-y-auto px-2 py-4 pb-6">
-          {navigation.map((section, idx) => (
-            <div key={idx}>
+        <nav className="scrollbar-thin flex-1 space-y-5 overflow-y-auto px-3 py-5">
+          {navigation.map((section) => (
+            <section key={section.title ?? section.items[0]?.href}>
               {!collapsed && section.title && (
-                <h3 className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-gray-400">
+                <h3 className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
                   {section.title}
                 </h3>
               )}
-              <div className="space-y-1">
+
+              <div className="space-y-1.5">
                 {section.items.map((item) => {
                   const Icon = item.icon;
                   const active = isActive(item.href);
@@ -355,19 +401,25 @@ export default function Sidebar() {
                     <Link
                       key={item.href}
                       href={item.href}
-                      className={`
-                        flex min-h-[44px] items-center rounded-lg px-3 py-3 transition-all duration-200
-                        ${active ? 'bg-gradient-to-r from-green-500 to-green-600 text-white shadow-lg shadow-green-500/50' : 'text-gray-300 hover:bg-gray-700/50 hover:text-white'}
-                        ${collapsed ? 'justify-center' : 'justify-start'}
-                      `}
+                      className={`group flex min-h-[46px] items-center rounded-2xl border px-3 py-3 transition-all duration-200 ${
+                        active
+                          ? 'border-cyan-300/40 bg-gradient-to-r from-cyan-400/18 via-sky-400/14 to-emerald-400/14 text-white shadow-lg shadow-cyan-950/20'
+                          : 'border-transparent text-slate-200 hover:border-white/8 hover:bg-white/8 hover:text-white'
+                      } ${collapsed ? 'justify-center' : 'justify-start'}`}
                       title={collapsed ? item.label : undefined}
                     >
-                      <Icon className={`${collapsed ? '' : 'mr-3'} h-5 w-5 flex-shrink-0`} />
+                      <Icon
+                        className={`${collapsed ? '' : 'mr-3'} h-5 w-5 flex-shrink-0 ${
+                          active ? 'text-cyan-200' : 'text-slate-300 group-hover:text-white'
+                        }`}
+                      />
                       {!collapsed && (
                         <>
-                          <span className="flex-1 text-sm font-medium">{item.label}</span>
+                          <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                            {item.label}
+                          </span>
                           {item.badge && item.badge > 0 && (
-                            <span className="ml-auto rounded-full bg-red-500 px-2 py-0.5 text-xs font-bold text-white">
+                            <span className="ml-3 rounded-full bg-rose-500 px-2 py-0.5 text-[11px] font-semibold text-white shadow-sm shadow-rose-950/30">
                               {item.badge > 9 ? '9+' : item.badge}
                             </span>
                           )}
@@ -377,17 +429,16 @@ export default function Sidebar() {
                   );
                 })}
               </div>
-            </div>
+            </section>
           ))}
         </nav>
 
-        <div className="flex-shrink-0 space-y-2 border-t border-gray-700 bg-gray-900/50 p-4">
+        <div className="space-y-2 border-t border-white/10 bg-slate-950/30 p-4 backdrop-blur">
           <button
             onClick={handleLogout}
-            className={`
-              flex w-full min-h-[44px] items-center rounded-lg px-3 py-3 text-gray-300 transition-all duration-200 hover:bg-red-600/20 hover:text-red-400
-              ${collapsed ? 'justify-center' : 'justify-start'}
-            `}
+            className={`flex min-h-[46px] w-full items-center rounded-2xl border border-transparent px-3 py-3 text-slate-200 transition-all duration-200 hover:border-rose-400/20 hover:bg-rose-500/10 hover:text-rose-100 ${
+              collapsed ? 'justify-center' : 'justify-start'
+            }`}
             title={collapsed ? 'Đăng xuất' : undefined}
           >
             <LogOut className={`${collapsed ? '' : 'mr-3'} h-5 w-5`} />
@@ -395,14 +446,14 @@ export default function Sidebar() {
           </button>
 
           <button
-            onClick={() => setCollapsed(!collapsed)}
-            className="hidden w-full items-center justify-center rounded-lg px-3 py-2 text-gray-400 transition-all duration-200 hover:bg-gray-700/50 hover:text-white lg:flex"
-            title={collapsed ? 'Mở rộng' : 'Thu gọn'}
+            onClick={() => setCollapsed((current) => !current)}
+            className="hidden min-h-[42px] w-full items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-slate-300 transition-all duration-200 hover:bg-white/10 hover:text-white xl:flex"
+            title={collapsed ? 'Mở rộng menu' : 'Thu gọn menu'}
           >
             {collapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
           </button>
         </div>
-      </div>
+      </aside>
     </>
   );
 }

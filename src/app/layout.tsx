@@ -29,10 +29,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="vi" suppressHydrationWarning>
       <head>
-        {/* Removed external Google Fonts for offline LAN usage. Using system UI fonts. */}
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="color-scheme" content="light dark" />
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP_SCRIPT }} />
       </head>
-      <body>
+      <body className="font-sans">
         <ClientProviders>{children}</ClientProviders>
       </body>
     </html>

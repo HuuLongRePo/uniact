@@ -3,6 +3,8 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --app-shell-bg-start: #f5f7fb;
+  --app-shell-bg-end: #edf4f8;
   --app-surface-base: #ffffff;
   --app-surface-elevated: #f8fafc;
   --app-surface-muted: #f1f5f9;
@@ -96,7 +98,9 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-sans:
+    'Segoe UI Variable Display', 'Inter Variable', 'Inter', 'SF Pro Display', 'Segoe UI',
+    'Helvetica Neue', ui-sans-serif, system-ui, sans-serif;
   --font-mono: ui-monospace, monospace;
 }
 
@@ -104,6 +108,8 @@
   :root:not([data-theme='light']) {
     --background: #0a0a0a;
     --foreground: #ededed;
+    --app-shell-bg-start: #07111f;
+    --app-shell-bg-end: #0b1422;
     --app-surface-base: #0f172a;
     --app-surface-elevated: #111827;
     --app-surface-muted: #1e293b;
@@ -202,6 +208,8 @@
 :root[data-theme='dark'] {
   --background: #0a0a0a;
   --foreground: #ededed;
+  --app-shell-bg-start: #07111f;
+  --app-shell-bg-end: #0b1422;
   --app-surface-base: #0f172a;
   --app-surface-elevated: #111827;
   --app-surface-muted: #1e293b;
@@ -297,15 +305,66 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family:
-    'Inter',
-    -apple-system,
-    BlinkMacSystemFont,
-    'Segoe UI',
-    Arial,
-    sans-serif;
+    'Segoe UI Variable Display', 'Inter Variable', 'Inter', 'SF Pro Display', 'Segoe UI',
+    'Helvetica Neue', 'Segoe UI', Arial, sans-serif;
   font-feature-settings: 'cv11', 'ss01';
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  line-height: 1.55;
+  text-rendering: optimizeLegibility;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+::selection {
+  background: rgba(14, 165, 233, 0.24);
+  color: inherit;
+}
+
+main,
+section,
+article,
+aside,
+header,
+footer {
+  min-width: 0;
+}
+
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
+}
+
+p,
+li,
+td,
+th,
+label,
+input,
+textarea,
+select,
+button {
+  overflow-wrap: anywhere;
+}
+
+table {
+  width: 100%;
+}
+
+th,
+td {
+  vertical-align: top;
+}
+
+code,
+pre {
+  font-family: 'Cascadia Code', 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
 }
 
 button:not(:disabled),
@@ -322,7 +381,8 @@ button:disabled,
 :root[data-theme] body {
   transition:
     background-color 0.2s ease,
-    color 0.2s ease;
+    color 0.2s ease,
+    background 0.2s ease;
 }
 
 :root[data-theme='dark'] a {
@@ -634,6 +694,38 @@ button:disabled,
   scrollbar-color: var(--app-scrollbar-thumb) var(--app-scrollbar-track);
 }
 
+.page-shell {
+  margin-inline: auto;
+  width: min(100%, 88rem);
+  padding-inline: clamp(1rem, 2vw, 1.75rem);
+  padding-block: clamp(1.25rem, 2vw, 2rem);
+}
+
+.page-surface {
+  border: 1px solid color-mix(in srgb, var(--app-border-default) 78%, transparent);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.84)),
+    var(--app-surface-base);
+  box-shadow:
+    0 18px 45px rgba(15, 23, 42, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(18px);
+}
+
+:root[data-theme='dark'] .page-surface {
+  background:
+    linear-gradient(180deg, rgba(15, 23, 42, 0.92), rgba(15, 23, 42, 0.84)), var(--app-surface-base);
+  box-shadow:
+    0 20px 50px rgba(2, 6, 23, 0.34),
+    inset 0 1px 0 rgba(148, 163, 184, 0.08);
+}
+
+.content-card {
+  border-radius: 1.5rem;
+  border: 1px solid color-mix(in srgb, var(--app-border-default) 72%, transparent);
+  background: var(--app-surface-base);
+}
+
 /* Mobile optimization */
 @media (max-width: 1024px) {
   /* Prevent horizontal scroll */
@@ -650,6 +742,11 @@ button:disabled,
   /* Smooth scrolling */
   html {
     scroll-behavior: smooth;
+  }
+
+  .page-shell {
+    padding-inline: 1rem;
+    padding-block: 1rem;
   }
 }
 
