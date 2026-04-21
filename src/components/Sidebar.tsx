@@ -211,7 +211,7 @@ export default function Sidebar() {
       title: 'THÔNG BÁO & TIỆN ÍCH',
       items: [
         { label: 'Thông báo', href: '/student/notifications', icon: Bell, badge: unreadCount },
-        { label: 'Quét QR', href: '/student/activities', icon: QrCode },
+        { label: 'Quét QR', href: '/student/check-in', icon: QrCode },
         { label: 'Khảo sát', href: '/student/polls', icon: ClipboardCheck },
         { label: 'Thiết bị', href: '/student/devices', icon: Laptop },
         { label: 'Hồ sơ', href: '/student/profile', icon: User },

@@ -9,6 +9,10 @@ import {
   RealtimeNotificationActionButton,
   RealtimeNotificationEvent,
 } from '@/lib/realtime-notification-model';
+import {
+  executeNotificationAction,
+  resolveNotificationActionButtons,
+} from '@/lib/notification-actions';
 
 type ApiNotificationItem = {
   id: number;
@@ -19,6 +23,7 @@ type ApiNotificationItem = {
   related_id: number | null;
   is_read: number;
   created_at: string;
+  action_buttons?: unknown;
 };
 
 const POLLING_INTERVAL_MS = 15000;
@@ -38,7 +43,7 @@ function adaptApiNotificationToRealtime(
     target_user_ids: [],
     priority: 'normal',
     ttl_seconds: 7,
-    action_buttons: [],
+    action_buttons: normalizeActionButtons(notification.action_buttons),
     notification: {
       id: notification.id,
       type: notification.type || 'system',
@@ -55,26 +60,20 @@ function adaptApiNotificationToRealtime(
 function resolveFallbackActionButtons(
   event: RealtimeNotificationEvent
 ): RealtimeNotificationActionButton[] {
-  const fallbackButtons: RealtimeNotificationActionButton[] = [];
-
-  if (event.notification.related_table === 'activities' && event.notification.related_id) {
-    fallbackButtons.push({
-      id: 'view_detail',
-      label: 'Xem chi tiết',
-      action: 'open_detail',
-      href: `/activities/${event.notification.related_id}`,
-      variant: 'primary',
-    });
-  }
-
-  fallbackButtons.push({
+  const fallbackButtons = resolveNotificationActionButtons({
+    type: event.notification.type,
+    related_table: event.notification.related_table,
+    related_id: event.notification.related_id,
+    action_buttons: event.action_buttons,
+  });
+  const dismissButton: RealtimeNotificationActionButton = {
     id: 'dismiss',
     label: 'Bỏ qua',
     action: 'dismiss',
     variant: 'secondary',
-  });
+  };
 
-  return fallbackButtons.slice(0, 3);
+  return [...fallbackButtons, dismissButton].slice(0, 3);
 }
 
 export function RealtimeNotificationBridge() {
@@ -85,6 +84,7 @@ export function RealtimeNotificationBridge() {
   const reconnectAttemptsRef = useRef(0);
   const activeRef = useRef(false);
   const knownNotificationIdsRef = useRef<Set<number>>(new Set());
+  const shownToastKeysRef = useRef<Set<string>>(new Set());
   const lastEventIdRef = useRef(0);
 
   const clearReconnectTimer = () => {
@@ -102,6 +102,21 @@ export function RealtimeNotificationBridge() {
   };
 
   const showRealtimeToast = (event: RealtimeNotificationEvent) => {
+    const notificationId = toSafeInteger(event.notification?.id, 0);
+    const dedupeKey =
+      notificationId > 0 ? `notification:${notificationId}` : `event:${event.event_id}`;
+    const toastId =
+      event.event_id > 0
+        ? `realtime-notification-${event.event_id}`
+        : notificationId > 0
+          ? `realtime-notification-notification-${notificationId}`
+          : `realtime-notification-${dedupeKey}`;
+
+    if (shownToastKeysRef.current.has(dedupeKey)) {
+      return;
+    }
+    shownToastKeysRef.current.add(dedupeKey);
+
     const normalizedButtons = normalizeActionButtons(event.action_buttons);
     const buttons =
       normalizedButtons.length > 0 ? normalizedButtons : resolveFallbackActionButtons(event);
@@ -128,19 +143,9 @@ export function RealtimeNotificationBridge() {
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
                 onClick={() => {
-                  if (button.href) {
-                    window.location.href = button.href;
-                  } else if (button.action !== 'dismiss') {
-                    window.dispatchEvent(
-                      new CustomEvent('realtime-notification-action', {
-                        detail: {
-                          event,
-                          button,
-                        },
-                      })
-                    );
+                  if (button.action !== 'dismiss' || button.href) {
+                    executeNotificationAction(button);
                   }
-
                   toast.dismiss(toastItem.id);
                 }}
               >
@@ -151,7 +156,7 @@ export function RealtimeNotificationBridge() {
         </div>
       ),
       {
-        id: `realtime-notification-${event.event_id}`,
+        id: toastId,
         duration,
       }
     );
@@ -242,7 +247,7 @@ export function RealtimeNotificationBridge() {
           return;
         }
 
-        const eventId = toSafeInteger((payload as RealtimeNotificationEvent).event_id, 0);
+        const eventId = toSafeInteger(payload.event_id, 0);
         if (eventId > 0) {
           lastEventIdRef.current = Math.max(lastEventIdRef.current, eventId);
         }
@@ -279,6 +284,7 @@ export function RealtimeNotificationBridge() {
     clearReconnectTimer();
     stopPolling();
     knownNotificationIdsRef.current = new Set();
+    shownToastKeysRef.current = new Set();
     lastEventIdRef.current = 0;
 
     void fetchNotificationsForPolling(true).catch(() => undefined);

@@ -2,6 +2,20 @@ import { NextRequest, NextResponse } from 'next/server';
 import { dbAll, dbGet, dbRun } from '@/lib/database';
 import { getUserFromToken } from '@/lib/auth';
 import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
+import { ensureRealtimeNotificationTables } from '@/lib/realtime-notifications';
+
+function parseActionButtons(raw: unknown) {
+  if (!raw || typeof raw !== 'string') {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
 
 // GET /api/notifications - Lấy danh sách thông báo của user
 export async function GET(request: NextRequest) {
@@ -37,6 +51,7 @@ export async function GET(request: NextRequest) {
         FOREIGN KEY (user_id) REFERENCES users(id)
       )
     `);
+    await ensureRealtimeNotificationTables();
 
     let whereClause = 'WHERE user_id = ?';
     const params: any[] = [user.id];
@@ -59,12 +74,29 @@ export async function GET(request: NextRequest) {
 
     // Get notifications
     const notifications = await dbAll(
-      `SELECT * FROM notifications ${whereClause} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+      `SELECT
+         n.*,
+         (
+           SELECT nre.action_buttons_json
+           FROM notification_realtime_events nre
+           WHERE nre.notification_id = n.id
+           ORDER BY nre.id DESC
+           LIMIT 1
+         ) as action_buttons
+       FROM notifications n
+       ${whereClause.replace('WHERE ', 'WHERE n.')}
+       ORDER BY n.created_at DESC
+      LIMIT ? OFFSET ?`,
       [...params, per_page, offset]
     );
 
+    const normalizedNotifications = (notifications || []).map((notification: any) => ({
+      ...notification,
+      action_buttons: parseActionButtons(notification.action_buttons),
+    }));
+
     return successResponse({
-      notifications,
+      notifications: normalizedNotifications,
       meta: {
         total: totalRow.total,
         total_unread: unreadRow.unread,

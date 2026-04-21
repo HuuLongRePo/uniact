@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
+import { getCameraAccessErrorMessage, requestPreferredCameraStream } from '@/lib/camera-stream';
 
 type ScanState = 'idle' | 'scanning' | 'success' | 'error';
 
@@ -51,14 +52,8 @@ export function StudentQRScanner({ onScan }: Props) {
     setScanState('scanning');
 
     try {
-      if (!navigator?.mediaDevices?.getUserMedia) {
-        setError('Trinh duyet khong ho tro camera.');
-        setScanState('error');
-        return;
-      }
-
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment' },
+      const mediaStream = await requestPreferredCameraStream({
+        facingMode: 'environment',
       });
 
       if (videoRef.current) {
@@ -66,15 +61,8 @@ export function StudentQRScanner({ onScan }: Props) {
         videoRef.current.play().catch(() => undefined);
         frameRequest.current = requestAnimationFrame(tick);
       }
-    } catch (err: any) {
-      const errorName = String(err?.name || '');
-      if (errorName === 'NotAllowedError' || errorName === 'SecurityError') {
-        setError('Ban da tu choi quyen camera. Hay cap quyen roi thu lai.');
-      } else if (errorName === 'NotFoundError' || errorName === 'OverconstrainedError') {
-        setError('Khong tim thay camera phu hop tren thiet bi.');
-      } else {
-        setError('Khong truy cap duoc camera.');
-      }
+    } catch (err: unknown) {
+      setError(getCameraAccessErrorMessage(err));
       setScanState('error');
     }
   }

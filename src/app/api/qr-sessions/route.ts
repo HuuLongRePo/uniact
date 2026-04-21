@@ -215,7 +215,7 @@ export async function POST(request: NextRequest) {
               id: 'open_checkin',
               label: 'Quet QR ngay',
               action: 'open_link',
-              href: `/student/activities/${activityId}/check-in`,
+              href: `/student/check-in?activityId=${activityId}`,
               variant: 'primary',
             },
           ],

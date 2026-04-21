@@ -5,6 +5,14 @@ import toast from 'react-hot-toast';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useEffectEventCompat } from '@/lib/useEffectEventCompat';
+import {
+  executeNotificationAction,
+  resolveNotificationActionButtons,
+} from '@/lib/notification-actions';
+import {
+  normalizeActionButtons,
+  RealtimeNotificationActionButton,
+} from '@/lib/realtime-notification-model';
 
 interface NotificationItem {
   id: number;
@@ -15,6 +23,7 @@ interface NotificationItem {
   related_id: number | null;
   is_read: number;
   created_at: string;
+  action_buttons?: unknown;
 }
 
 interface NotificationSettings {
@@ -148,6 +157,16 @@ export default function NotificationInbox({
       console.error('Mark notification read error:', error);
       toast.error('Không thể đánh dấu đã đọc');
     }
+  };
+
+  const handleNotificationAction = async (
+    notification: NotificationItem,
+    button: RealtimeNotificationActionButton
+  ) => {
+    if (!notification.is_read) {
+      await markAsRead(notification.id);
+    }
+    executeNotificationAction(button);
   };
 
   const markSelectedAsRead = async () => {
@@ -411,51 +430,82 @@ export default function NotificationInbox({
           </div>
         ) : (
           <div className="space-y-3">
-            {notifications.map((notification) => (
-              <div
-                key={notification.id}
-                data-notification-id={notification.id}
-                className={`flex items-start gap-3 rounded-lg border p-4 ${
-                  notification.is_read
-                    ? 'border-gray-200 bg-white text-gray-900 shadow-sm'
-                    : 'border-blue-300 bg-blue-50 text-gray-900 shadow-sm'
-                }`}
-              >
-                <input
-                  type="checkbox"
-                  className="mt-1 h-4 w-4"
-                  checked={selectedIds.has(notification.id)}
-                  onChange={() => {
-                    setSelectedIds((prev) => {
-                      const next = new Set(prev);
-                      if (next.has(notification.id)) next.delete(notification.id);
-                      else next.add(notification.id);
-                      return next;
-                    });
-                  }}
-                />
-                <div className="flex flex-1 items-start justify-between gap-3">
-                  <div className="flex flex-1 gap-3">
-                    <span className="text-2xl">{getNotificationIcon(notification.type)}</span>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900">{notification.title}</h3>
-                      <p className="mt-1 text-gray-700">{notification.message}</p>
-                      <p className="mt-2 text-sm text-gray-500">
-                        {formatDate(notification.created_at)}
-                      </p>
+            {notifications.map((notification) => {
+              const normalizedActionButtons = normalizeActionButtons(notification.action_buttons);
+              const actionButtons =
+                normalizedActionButtons.length > 0
+                  ? normalizedActionButtons
+                  : resolveNotificationActionButtons(notification);
+
+              return (
+                <div
+                  key={notification.id}
+                  data-notification-id={notification.id}
+                  className={`flex items-start gap-3 rounded-lg border p-4 ${
+                    notification.is_read
+                      ? 'border-gray-200 bg-white text-gray-900 shadow-sm'
+                      : 'border-blue-300 bg-blue-50 text-gray-900 shadow-sm'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    className="mt-1 h-4 w-4"
+                    checked={selectedIds.has(notification.id)}
+                    onChange={() => {
+                      setSelectedIds((prev) => {
+                        const next = new Set(prev);
+                        if (next.has(notification.id)) {
+                          next.delete(notification.id);
+                        } else {
+                          next.add(notification.id);
+                        }
+                        return next;
+                      });
+                    }}
+                  />
+                  <div className="flex flex-1 items-start justify-between gap-3">
+                    <div className="flex flex-1 gap-3">
+                      <span className="text-2xl">{getNotificationIcon(notification.type)}</span>
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-gray-900">{notification.title}</h3>
+                        <p className="mt-1 text-gray-700">{notification.message}</p>
+                        <p className="mt-2 text-sm text-gray-500">
+                          {formatDate(notification.created_at)}
+                        </p>
+                        {actionButtons.length > 0 && (
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {actionButtons.map((button) => (
+                              <button
+                                key={`${notification.id}-${button.id}`}
+                                type="button"
+                                onClick={() => void handleNotificationAction(notification, button)}
+                                className={`rounded px-3 py-1.5 text-xs font-medium ${
+                                  button.variant === 'primary'
+                                    ? 'bg-blue-600 text-white hover:bg-blue-700'
+                                    : button.variant === 'danger'
+                                      ? 'bg-red-600 text-white hover:bg-red-700'
+                                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                }`}
+                              >
+                                {button.label}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
+                    {!notification.is_read && (
+                      <button
+                        onClick={() => markAsRead(notification.id)}
+                        className="text-sm font-medium text-blue-600 hover:text-blue-700"
+                      >
+                        Đánh dấu đã đọc
+                      </button>
+                    )}
                   </div>
-                  {!notification.is_read && (
-                    <button
-                      onClick={() => markAsRead(notification.id)}
-                      className="text-sm font-medium text-blue-600 hover:text-blue-700"
-                    >
-                      Đánh dấu đã đọc
-                    </button>
-                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 

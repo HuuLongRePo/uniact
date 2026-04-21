@@ -9,6 +9,7 @@ import {
   FaceDetectionError,
   FACE_BIOMETRIC_RUNTIME_ENABLED,
 } from '@/lib/biometrics/face-runtime';
+import { requestPreferredCameraStream } from '@/lib/camera-stream';
 
 function getCameraCaptureErrorMessage(error: unknown) {
   if (error instanceof FaceBiometricUnavailableError) {
@@ -70,12 +71,10 @@ export default function TeacherFaceAttendancePage() {
       throw new Error('Trình duyệt không hỗ trợ camera');
     }
 
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: {
-        width: { ideal: 1280 },
-        height: { ideal: 720 },
-        facingMode: 'user',
-      },
+    const stream = await requestPreferredCameraStream({
+      facingMode: 'user',
+      width: 1280,
+      height: 720,
     });
 
     if (videoRef.current) {

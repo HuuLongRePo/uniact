@@ -31,6 +31,12 @@ interface Activity {
   organization_level_id?: number;
 }
 
+interface ActiveQrSessionSummary {
+  id: number;
+  session_id: number;
+  expires_at: string;
+}
+
 type ActivityFilter =
   | 'all'
   | 'draft'
@@ -73,6 +79,9 @@ export default function TeacherActivitiesPage() {
     type: 'submit' | 'cancel' | 'clone' | 'delete' | null;
     id: number | null;
   }>({ type: null, id: null });
+  const [activeQrSessions, setActiveQrSessions] = useState<Record<number, ActiveQrSessionSummary>>(
+    {}
+  );
 
   const getErrorMessage = (error: unknown, fallback: string) =>
     error instanceof Error ? error.message : fallback;
@@ -110,6 +119,68 @@ export default function TeacherActivitiesPage() {
   useEffect(() => {
     fetchActivities();
   }, [page, filter, fetchActivities]);
+
+  useEffect(() => {
+    if (activities.length === 0) {
+      setActiveQrSessions({});
+      return;
+    }
+
+    let cancelled = false;
+
+    const fetchActiveQrSessions = async () => {
+      const publishedActivities = activities.filter(
+        (activity) => getDisplayStatus(activity) === 'published'
+      );
+
+      if (publishedActivities.length === 0) {
+        if (!cancelled) {
+          setActiveQrSessions({});
+        }
+        return;
+      }
+
+      const entries = await Promise.all(
+        publishedActivities.map(async (activity) => {
+          try {
+            const res = await fetch(`/api/qr-sessions/active?activity_id=${activity.id}`);
+            if (!res.ok) return null;
+
+            const data = await res.json();
+            const session = data?.data?.session || data?.session;
+            if (!session?.session_id) return null;
+
+            return [
+              activity.id,
+              {
+                id: Number(session.id || session.session_id),
+                session_id: Number(session.session_id),
+                expires_at: String(session.expires_at || ''),
+              },
+            ] as const;
+          } catch {
+            return null;
+          }
+        })
+      );
+
+      if (cancelled) return;
+
+      setActiveQrSessions(
+        Object.fromEntries(
+          entries.filter((entry): entry is readonly [number, ActiveQrSessionSummary] =>
+            Boolean(entry)
+          )
+        )
+      );
+    };
+
+    void fetchActiveQrSessions();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activities]);
 
   useEffect(() => {
     setPage(1);
@@ -510,6 +581,7 @@ export default function TeacherActivitiesPage() {
               const canCancelPublished =
                 getDisplayStatus(activity) === 'published' &&
                 (new Date(activity.date_time).getTime() - Date.now()) / (1000 * 60 * 60) > 0;
+              const activeQrSession = activeQrSessions[activity.id];
 
               return (
                 <div
@@ -572,6 +644,15 @@ export default function TeacherActivitiesPage() {
                     >
                       👁️ Xem chi tiết
                     </Link>
+
+                    {activeQrSession && (
+                      <Link
+                        href={`/teacher/qr?activityId=${activity.id}&sessionId=${activeQrSession.session_id}`}
+                        className="px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 transition text-sm"
+                      >
+                        ✅ Điểm danh
+                      </Link>
+                    )}
 
                     {canEditAndResubmit && (
                       <>

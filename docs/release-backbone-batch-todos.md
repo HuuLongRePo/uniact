@@ -358,6 +358,51 @@ Yeu cau:
 - [x] Tat ca Gate A-E da xanh (2026-04-21).
 - [x] Gan tag RC noi bo `internal-rc-2026-04-21` sau khi xac nhan build + backbone regression + docs release (2026-04-21).
 
+## 9.1) Batch uu tien nong sau RC - QR / Notification action / Mobile camera
+
+### Muc tieu
+
+- Sua dung muc dich tab QR cho hoc vien, dua hoc vien vao luong check-in truc tiep.
+- Cho phep notification inbox va push toast co nut hanh dong de vao ngay man hinh can xu ly.
+- Giam loi camera tren mobile cho FaceID/QR bang fallback `getUserMedia` thuc dung hon.
+- Chan thong bao day bi lap lai va bo sung CTA `Diem danh` ngay tren trang quan ly hoat dong khi QR session dang mo.
+
+### Viec can lam
+
+- [x] Doi tab `Quet QR` cua hoc vien sang `/student/check-in` thay vi dan ve danh sach hoat dong.
+- [x] Tao trang `/student/check-in` dung scanner chung, cho phep nhan `activityId` va parse QR token/session linh hoat.
+- [x] Redirect route cu `/student/activities/[id]/check-in` ve luong check-in moi de giu backward compatibility.
+- [x] Cap nhat notification QR-started de action button di thang toi trang check-in moi.
+- [x] Mo rong `/api/notifications` de tra ve `action_buttons` cho inbox.
+- [x] Bo sung action button trong inbox thong bao va toast realtime.
+- [x] Dedupe push toast theo `notification.id` / `event_id` de tranh cung 1 thong bao lap lai nhieu lan.
+- [x] Them helper camera fallback dung chung cho QR scanner + FaceID login/attendance.
+- [x] Trang quan ly hoat dong cua giang vien hien CTA `Diem danh` neu activity dang co active QR session.
+- [ ] Chay lai cum test/build/lint cho batch uu tien nong va commit rieng.
+
+### Prompt bo sung (copy de chay batch nay)
+
+```text
+Ban dong vai Senior Fullstack Release Engineer. Day batch uu tien nong len lam truoc:
+1) Student check-in:
+- Tab `Quet QR` cua hoc vien phai mo dung man hinh check-in, khong dan ve danh sach tong hop.
+- Duy tri backward compatibility cho route cu neu notification/link cu van tro toi.
+2) Notification action:
+- Ca inbox thong bao va push toast deu phai co nut hanh dong neu event co `action_buttons`.
+- Vi du notification mo diem danh thi hoc vien bam 1 nut la vao thang luong diem danh.
+- Chan duplicate push toast cho cung 1 notification.
+3) Mobile camera:
+- Nghien cuu va harden `getUserMedia` de mobile browser de xin camera de hon, uu tien attendance va login bang khuon mat.
+- Tra thong diep loi tieng Viet de debug nhanh.
+4) Teacher activity management:
+- Neu activity dang co active QR session thi hien nut `Diem danh` ngay tren card de teacher vao nhanh.
+Yeu cau:
+- Liet ke file can sua truoc khi code.
+- Patch nho nhung co gia tri release.
+- Chay test/lint/build cum lien quan.
+- Cap nhat docs/release-backbone-batch-todos.md va commit rieng theo batch.
+```
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix
