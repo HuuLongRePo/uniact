@@ -63,8 +63,10 @@ Yeu cau thi hanh:
 - [x] Gate D - Attendance on dinh
   - QR session, validate, duplicate-safe, thong bao check-in
   - [x] Regression Gate D: `5 files / 19 tests` pass (2026-04-21)
-- [ ] Gate E - Scoring/bonus/report on dinh
+- [x] Gate E - Scoring/bonus/report on dinh
   - complete activity, point persistence, score ledger, rankings/reports
+  - [x] Dong bo fallback tong diem cho admin leaderboard/rankings khi score ledger chua tra du record, giu backward compatibility voi aggregate report hien tai (2026-04-21)
+  - [x] Regression Gate E: `10 files / 38 tests` pass (2026-04-21)
 
 ---
 

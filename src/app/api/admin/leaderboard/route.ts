@@ -38,14 +38,22 @@ export async function GET(request: NextRequest) {
     const ledgers = await getFinalScoreLedgerByStudentIds(studentRows.map((student) => student.user_id));
 
     const leaderboard = studentRows
-      .map((student) => ({
-        user_id: student.user_id,
-        name: student.name,
-        email: student.email,
-        class_name: student.class_name,
-        total_points: ledgers.get(Number(student.user_id))?.final_total || 0,
-        activities_count: Number(student.activities_count || 0),
-      }))
+      .map((student) => {
+        const fallbackTotalPoints = Number((student as { total_points?: unknown }).total_points || 0);
+        const ledgerTotalPoints = Number(ledgers.get(Number(student.user_id))?.final_total || 0);
+
+        return {
+          user_id: student.user_id,
+          name: student.name,
+          email: student.email,
+          class_name: student.class_name,
+          total_points:
+            ledgerTotalPoints > 0 || fallbackTotalPoints === 0
+              ? ledgerTotalPoints
+              : fallbackTotalPoints,
+          activities_count: Number(student.activities_count || 0),
+        };
+      })
       .sort((left, right) => {
         if (right.total_points !== left.total_points) {
           return right.total_points - left.total_points;

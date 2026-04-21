@@ -17,6 +17,11 @@ interface RankingRecord {
   avg_points: string | number;
 }
 
+function toNumber(value: unknown): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
 export async function GET(req: NextRequest) {
   try {
     await requireApiRole(req, ['admin']);
@@ -158,6 +163,8 @@ export async function GET(req: NextRequest) {
       activity_points: number;
       activity_count: number;
       award_count: number;
+      award_points?: number;
+      total_points?: number;
     }>;
 
     const ledgers = await getFinalScoreLedgerByStudentIds(
@@ -166,9 +173,15 @@ export async function GET(req: NextRequest) {
 
     const rankedResults: RankingRecord[] = rankingRows
       .map((row) => {
-        const activityCount = Number(row.activity_count || 0);
+        const activityCount = toNumber(row.activity_count);
         const ledger = ledgers.get(Number(row.student_id));
-        const totalPoints = ledger?.final_total || 0;
+        const fallbackTotalPoints =
+          toNumber(row.total_points) || toNumber(row.activity_points) + toNumber(row.award_points);
+        const ledgerTotalPoints = toNumber(ledger?.final_total);
+        const totalPoints =
+          ledgerTotalPoints > 0 || fallbackTotalPoints === 0
+            ? ledgerTotalPoints
+            : fallbackTotalPoints;
 
         return {
           rank: 0,
@@ -179,10 +192,10 @@ export async function GET(req: NextRequest) {
           class_name: row.class_name || 'N/A',
           total_points: totalPoints,
           activity_count: activityCount,
-          award_count: Number(row.award_count || 0),
+          award_count: toNumber(row.award_count),
           avg_points:
             activityCount > 0
-              ? Number((Number(row.activity_points || 0) / activityCount).toFixed(2))
+              ? Number((toNumber(row.activity_points) / activityCount).toFixed(2))
               : 0,
         };
       })
