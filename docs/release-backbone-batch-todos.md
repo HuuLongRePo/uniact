@@ -49,12 +49,13 @@ Yeu cau thi hanh:
 - Chay test cum login/theme lien quan va bao cao PASS/FAIL ro rang.
 - Cap nhat checklist trong docs/release-backbone-batch-todos.md ngay sau khi xong.
 ```
-- [ ] Gate B - Activity workflow on dinh
+- [x] Gate B - Activity workflow on dinh
   - draft -> requested -> approved/rejected -> published
   - teacher submit + admin approve/reject + audit log
   - [x] Dong bo approval history presentation voi state machine canonical (`pending_approval`) va giu backward compatibility cho du lieu cu (`requested`) (2026-04-21)
   - [x] Dong bo admin approval queue page voi canonical `successResponse` va preserve workflow API errors tren `/api/activity-approvals` (2026-04-21)
   - [x] Dong bo admin approval queue action toast voi API message va reset approval dialog state giua cac lan mo dong (2026-04-21)
+  - [x] Regression Gate B: `12 files / 53 tests` pass (2026-04-21)
 - [ ] Gate C - Student registration on dinh
   - discover/register/cancel, policy + conflict + capacity race-safe
 - [ ] Gate D - Attendance on dinh
