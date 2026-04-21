@@ -58,6 +58,7 @@ Yeu cau thi hanh:
   - [x] Regression Gate B: `12 files / 53 tests` pass (2026-04-21)
 - [ ] Gate C - Student registration on dinh
   - discover/register/cancel, policy + conflict + capacity race-safe
+  - [x] Dong bo trang `student/my-activities` voi canonical `successResponse` cua `/api/activities/my-registrations` va bo sung regression UI (2026-04-21)
 - [ ] Gate D - Attendance on dinh
   - QR session, validate, duplicate-safe, thong bao check-in
 - [ ] Gate E - Scoring/bonus/report on dinh

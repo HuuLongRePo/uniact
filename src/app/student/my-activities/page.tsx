@@ -61,13 +61,19 @@ export default function MyActivitiesPage() {
     try {
       const response = await fetch('/api/activities/my-registrations');
       const data = await response.json();
+      const payload = data?.data ?? data;
+      const nextRegistrations = payload?.registrations ?? {
+        upcoming: [],
+        completed: [],
+        cancelled: [],
+      };
 
       if (response.ok) {
-        setRegistrations(data.registrations);
+        setRegistrations(nextRegistrations);
 
         // Check for upcoming activities (within 24 hours)
         const now = new Date();
-        const upcoming24h = data.registrations.upcoming.filter((reg: Registration) => {
+        const upcoming24h = nextRegistrations.upcoming.filter((reg: Registration) => {
           const activityTime = new Date(reg.date_time);
           const hoursUntil = (activityTime.getTime() - now.getTime()) / (1000 * 60 * 60);
           return hoursUntil > 0 && hoursUntil <= 24;
