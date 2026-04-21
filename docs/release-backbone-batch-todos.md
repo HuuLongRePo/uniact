@@ -203,8 +203,9 @@ Yeu cau:
 - Phan quyen training khuon mat theo dung pham vi quan ly.
 
 ### Viec can lam
-- [ ] Admin enrollment:
-  - upload/camera -> tao embedding -> luu DB an toan
+- [x] Admin enrollment:
+  - [x] candidate preview tu upload/camera (`/api/biometric/candidate-preview`)
+  - [x] luu embedding ma hoa qua training route (`/api/admin/biometrics/students/[id]/training`)
 - [x] Giang vien runtime scan:
   - [x] camera stream (`/teacher/attendance/face`)
   - [x] matching threshold + quality/liveness checks (candidate preview + runtime bridge)
@@ -226,7 +227,8 @@ Yeu cau:
   - [x] De xuat v1 da bo sung o bang "Notification trigger matrix (v1)"
 
 ### Definition of Done
-- [ ] FaceID co API/frame on dinh (co the pilot truoc model production).
+- [x] FaceID co API/frame on dinh (co the pilot truoc model production).
+  - [x] Regression batch 5: `10 files / 41 tests` pass (2026-04-21)
 - [ ] Notification trigger matrix duoc duyet lam chuan.
 - [x] Test runtime fallback (runtime_unavailable, low_quality, multi_faces) pass.
   - [x] `test/face-attendance-route.test.ts`
@@ -287,7 +289,8 @@ Yeu cau:
 - [ ] Commit 2: Batch 2 realtime infra + toast UI
 - [ ] Commit 3: Batch 3 notification scope + is_mandatory flow
 - [ ] Commit 4: Batch 4 QR session reuse + realtime attendance trigger
-- [ ] Commit 5: Batch 5 FaceID foundation + notification matrix
+- [x] Commit 5: Batch 5 FaceID foundation + notification matrix
+  - [x] Split commits: `194c4eb`, `de6900c`, `0e1e5bb`, `9e221ac`
 - [ ] Commit 6: Final regression fixes + release docs
 
 ---
