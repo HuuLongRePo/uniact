@@ -111,6 +111,35 @@ function getActivityTypeNames(payload: unknown): string[] {
     .filter((name): name is string => Boolean(name));
 }
 
+function getStatusBadge(status: ParticipationRecord['status']) {
+  switch (status) {
+    case 'participated':
+      return (
+        <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-800">
+          Tham gia
+        </span>
+      );
+    case 'attended':
+      return (
+        <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-800">
+          Có mặt
+        </span>
+      );
+    case 'not_participated':
+      return (
+        <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-medium text-red-800">
+          Không tham gia
+        </span>
+      );
+    default:
+      return (
+        <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-800">
+          {status}
+        </span>
+      );
+  }
+}
+
 export default function ParticipationReportsPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
@@ -288,35 +317,6 @@ export default function ParticipationReportsPage() {
     }
   };
 
-  const getStatusBadge = (status: ParticipationRecord['status']) => {
-    switch (status) {
-      case 'participated':
-        return (
-          <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-800">
-            Tham gia
-          </span>
-        );
-      case 'attended':
-        return (
-          <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-800">
-            Có mặt
-          </span>
-        );
-      case 'not_participated':
-        return (
-          <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-medium text-red-800">
-            Không tham gia
-          </span>
-        );
-      default:
-        return (
-          <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-800">
-            {status}
-          </span>
-        );
-    }
-  };
-
   if (authLoading || loading) {
     return <LoadingSpinner />;
   }
@@ -329,302 +329,145 @@ export default function ParticipationReportsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mb-6">
+    <div className="page-shell">
+      <section className="page-surface overflow-hidden rounded-[1.75rem]">
+        <div className="border-b border-gray-200 px-5 py-5 sm:px-7">
           <button
             onClick={() => router.back()}
-            className="mb-4 flex items-center text-blue-600 hover:text-blue-700"
+            className="mb-4 inline-flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-700"
           >
-            <ArrowLeft className="mr-2 h-4 w-4" />
+            <ArrowLeft className="h-4 w-4" />
             Quay lại
           </button>
 
-          <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="flex items-center gap-2 text-2xl font-bold text-gray-900">
-                  <Activity className="h-6 w-6 text-blue-600" />
-                  Báo cáo tham gia hoạt động
-                </h1>
-                <p className="mt-2 text-gray-600">
-                  Theo dõi tỷ lệ tham gia của học viên theo lớp, hoạt động và điểm số tích lũy.
-                </p>
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="max-w-3xl">
+              <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-emerald-800">
+                <Activity className="h-3.5 w-3.5" />
+                Báo cáo tham gia
               </div>
-              <button
-                onClick={handleExport}
-                className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white transition-colors hover:bg-blue-700"
-              >
-                <Download className="h-4 w-4" />
-                Xuất PDF
-              </button>
+              <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">
+                Báo cáo tham gia hoạt động
+              </h1>
+              <p className="mt-2 text-sm leading-6 text-gray-600 sm:text-base">
+                Theo dõi tỷ lệ tham gia, trạng thái có mặt và điểm số tích lũy của học viên theo
+                lớp, loại hoạt động và từng lượt tham gia cụ thể.
+              </p>
             </div>
-          </div>
-        </div>
 
-        <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-4">
-          <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-            <div className="mb-1 text-sm text-gray-600">Tổng lượt tham gia</div>
-            <div className="text-3xl font-bold text-blue-600">{stats.total}</div>
-          </div>
-          <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-            <div className="mb-1 text-sm text-gray-600">Đã tham gia</div>
-            <div className="text-3xl font-bold text-green-600">{stats.participated}</div>
-          </div>
-          <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-            <div className="mb-1 text-sm text-gray-600">Có mặt</div>
-            <div className="text-3xl font-bold text-blue-500">{stats.attended}</div>
-          </div>
-          <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-            <div className="mb-1 text-sm text-gray-600">Không tham gia</div>
-            <div className="text-3xl font-bold text-red-600">{stats.notParticipated}</div>
-          </div>
-        </div>
-
-        <div className="mb-6 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-          <div className="flex gap-4">
             <button
-              onClick={() => setViewMode('summary')}
-              className={`rounded-lg px-4 py-2 font-medium transition-colors ${
-                viewMode === 'summary'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
+              onClick={handleExport}
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
             >
-              Tóm tắt
-            </button>
-            <button
-              onClick={() => setViewMode('details')}
-              className={`rounded-lg px-4 py-2 font-medium transition-colors ${
-                viewMode === 'details'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              Chi tiết
+              <Download className="h-4 w-4" />
+              Xuất PDF
             </button>
           </div>
         </div>
 
-        {viewMode === 'summary' ? (
-          <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="border-b border-gray-200 bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
-                      Học viên
-                    </th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
-                      Mã sinh viên
-                    </th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Lớp</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
-                      Tổng hoạt động
-                    </th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
-                      Đã tham gia
-                    </th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
-                      Tỷ lệ tham gia
-                    </th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
-                      Tổng điểm
-                    </th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
-                      Điểm trung bình
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {summary.map((item) => (
-                    <tr key={item.student_id} className="transition-colors hover:bg-gray-50">
-                      <td className="px-4 py-4 text-sm font-medium text-gray-900">
-                        {item.student_name}
-                      </td>
-                      <td className="px-4 py-4 text-sm text-gray-600">{item.student_code}</td>
-                      <td className="px-4 py-4 text-sm text-gray-600">{item.class_name}</td>
-                      <td className="px-4 py-4 text-sm font-medium text-gray-900">
-                        {item.total_activities}
-                      </td>
-                      <td className="px-4 py-4 text-sm font-medium text-green-600">
-                        {item.participated_count}
-                      </td>
-                      <td className="px-4 py-4">
-                        <span
-                          className={`rounded-full px-3 py-1 text-xs font-medium ${
-                            item.participation_rate >= 80
-                              ? 'bg-green-100 text-green-800'
-                              : item.participation_rate >= 50
-                                ? 'bg-yellow-100 text-yellow-800'
-                                : 'bg-red-100 text-red-800'
-                          }`}
-                        >
-                          {item.participation_rate.toFixed(1)}%
-                        </span>
-                      </td>
-                      <td className="px-4 py-4 text-sm font-medium text-blue-600">
-                        {item.total_score.toFixed(1)}
-                      </td>
-                      <td className="px-4 py-4 text-sm font-medium text-blue-600">
-                        {item.avg_score.toFixed(1)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+        <div className="space-y-6 px-5 py-6 sm:px-7">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <div className="content-card p-4">
+              <div className="text-sm text-gray-600">Tổng lượt tham gia</div>
+              <div className="mt-2 text-3xl font-bold text-blue-600">{stats.total}</div>
+            </div>
+            <div className="content-card p-4">
+              <div className="text-sm text-gray-600">Đã tham gia</div>
+              <div className="mt-2 text-3xl font-bold text-green-600">{stats.participated}</div>
+            </div>
+            <div className="content-card p-4">
+              <div className="text-sm text-gray-600">Có mặt</div>
+              <div className="mt-2 text-3xl font-bold text-blue-500">{stats.attended}</div>
+            </div>
+            <div className="content-card p-4">
+              <div className="text-sm text-gray-600">Không tham gia</div>
+              <div className="mt-2 text-3xl font-bold text-red-600">{stats.notParticipated}</div>
             </div>
           </div>
-        ) : (
-          <>
-            <div className="mb-6 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-              <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-3">
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700">
-                    <Search className="mr-1 inline h-4 w-4" />
-                    Tìm kiếm
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Tên học viên hoặc hoạt động..."
-                    value={searchTerm}
-                    onChange={(event) => setSearchTerm(event.target.value)}
-                    className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700">
-                    <Filter className="mr-1 inline h-4 w-4" />
-                    Lớp
-                  </label>
-                  <select
-                    value={filters.classId}
-                    onChange={(event) => setFilters({ ...filters, classId: event.target.value })}
-                    className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">-- Tất cả lớp --</option>
-                    {classes.map((classItem) => (
-                      <option key={classItem.id} value={classItem.name}>
-                        {classItem.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700">
-                    Loại hoạt động
-                  </label>
-                  <select
-                    value={filters.activityType}
-                    onChange={(event) =>
-                      setFilters({ ...filters, activityType: event.target.value })
-                    }
-                    className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">-- Tất cả loại --</option>
-                    {activityTypes.map((type) => (
-                      <option key={type} value={type}>
-                        {type}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700">Trạng thái</label>
-                  <select
-                    value={filters.status}
-                    onChange={(event) => setFilters({ ...filters, status: event.target.value })}
-                    className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">-- Tất cả --</option>
-                    <option value="participated">Tham gia</option>
-                    <option value="attended">Có mặt</option>
-                    <option value="not_participated">Không tham gia</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700">Từ ngày</label>
-                  <input
-                    type="date"
-                    value={filters.dateStart}
-                    onChange={(event) => setFilters({ ...filters, dateStart: event.target.value })}
-                    className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700">Đến ngày</label>
-                  <input
-                    type="date"
-                    value={filters.dateEnd}
-                    onChange={(event) => setFilters({ ...filters, dateEnd: event.target.value })}
-                    className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-            </div>
 
-            <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
+          <div className="content-card p-3">
+            <div className="flex flex-wrap gap-3">
+              {[
+                { id: 'summary', label: 'Tóm tắt' },
+                { id: 'details', label: 'Chi tiết' },
+              ].map((option) => (
+                <button
+                  key={option.id}
+                  onClick={() => setViewMode(option.id as typeof viewMode)}
+                  className={`rounded-2xl px-4 py-2.5 text-sm font-semibold transition-colors ${
+                    viewMode === option.id
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {viewMode === 'summary' ? (
+            <div className="content-card overflow-hidden">
               <div className="overflow-x-auto">
-                <table className="w-full">
+                <table className="min-w-[980px]">
                   <thead className="border-b border-gray-200 bg-gray-50">
                     <tr>
-                      <th
-                        onClick={() => handleSort('student')}
-                        className="cursor-pointer px-4 py-3 text-left text-sm font-semibold text-gray-900 hover:bg-gray-100"
-                      >
-                        Học viên {sortBy === 'student' && (sortOrder === 'asc' ? '↑' : '↓')}
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
+                        Học viên
                       </th>
                       <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
-                        Lớp
+                        Mã sinh viên
                       </th>
-                      <th
-                        onClick={() => handleSort('activity')}
-                        className="cursor-pointer px-4 py-3 text-left text-sm font-semibold text-gray-900 hover:bg-gray-100"
-                      >
-                        Hoạt động {sortBy === 'activity' && (sortOrder === 'asc' ? '↑' : '↓')}
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Lớp</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
+                        Tổng hoạt động
                       </th>
                       <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
-                        Loại
-                      </th>
-                      <th
-                        onClick={() => handleSort('date')}
-                        className="cursor-pointer px-4 py-3 text-left text-sm font-semibold text-gray-900 hover:bg-gray-100"
-                      >
-                        Ngày {sortBy === 'date' && (sortOrder === 'asc' ? '↑' : '↓')}
+                        Đã tham gia
                       </th>
                       <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
-                        Trạng thái
+                        Tỷ lệ tham gia
                       </th>
-                      <th
-                        onClick={() => handleSort('score')}
-                        className="cursor-pointer px-4 py-3 text-left text-sm font-semibold text-gray-900 hover:bg-gray-100"
-                      >
-                        Điểm {sortBy === 'score' && (sortOrder === 'asc' ? '↑' : '↓')}
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
+                        Tổng điểm
+                      </th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
+                        Điểm trung bình
                       </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
-                    {filteredRecords.map((record) => (
-                      <tr
-                        key={`${record.activity_id}-${record.student_id}`}
-                        className="transition-colors hover:bg-gray-50"
-                      >
+                    {summary.map((item) => (
+                      <tr key={item.student_id} className="transition-colors hover:bg-gray-50">
                         <td className="px-4 py-4 text-sm font-medium text-gray-900">
-                          {record.student_name}
+                          {item.student_name}
                         </td>
-                        <td className="px-4 py-4 text-sm text-gray-600">{record.class_name}</td>
+                        <td className="px-4 py-4 text-sm text-gray-600">{item.student_code}</td>
+                        <td className="px-4 py-4 text-sm text-gray-600">{item.class_name}</td>
+                        <td className="px-4 py-4 text-sm font-medium text-gray-900">
+                          {item.total_activities}
+                        </td>
+                        <td className="px-4 py-4 text-sm font-medium text-green-600">
+                          {item.participated_count}
+                        </td>
+                        <td className="px-4 py-4">
+                          <span
+                            className={`rounded-full px-3 py-1 text-xs font-medium ${
+                              item.participation_rate >= 80
+                                ? 'bg-green-100 text-green-800'
+                                : item.participation_rate >= 50
+                                  ? 'bg-yellow-100 text-yellow-800'
+                                  : 'bg-red-100 text-red-800'
+                            }`}
+                          >
+                            {item.participation_rate.toFixed(1)}%
+                          </span>
+                        </td>
                         <td className="px-4 py-4 text-sm font-medium text-blue-600">
-                          {record.activity_name}
+                          {item.total_score.toFixed(1)}
                         </td>
-                        <td className="px-4 py-4 text-sm text-gray-600">{record.activity_type}</td>
-                        <td className="px-4 py-4 text-sm text-gray-600">
-                          {new Date(record.date).toLocaleDateString('vi-VN')}
-                        </td>
-                        <td className="px-4 py-4">{getStatusBadge(record.status)}</td>
-                        <td className="px-4 py-4 text-sm font-semibold text-blue-600">
-                          {record.score.toFixed(1)}
+                        <td className="px-4 py-4 text-sm font-medium text-blue-600">
+                          {item.avg_score.toFixed(1)}
                         </td>
                       </tr>
                     ))}
@@ -632,16 +475,175 @@ export default function ParticipationReportsPage() {
                 </table>
               </div>
             </div>
+          ) : (
+            <>
+              <div className="content-card p-4 sm:p-5">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-gray-700">
+                      <Search className="mr-1 inline h-4 w-4" />
+                      Tìm kiếm
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Tên học viên hoặc hoạt động..."
+                      value={searchTerm}
+                      onChange={(event) => setSearchTerm(event.target.value)}
+                      className="w-full rounded-2xl border border-gray-300 px-4 py-2.5 focus:border-transparent focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-gray-700">
+                      <Filter className="mr-1 inline h-4 w-4" />
+                      Lớp
+                    </label>
+                    <select
+                      value={filters.classId}
+                      onChange={(event) => setFilters({ ...filters, classId: event.target.value })}
+                      className="w-full rounded-2xl border border-gray-300 px-4 py-2.5 focus:border-transparent focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Tất cả lớp</option>
+                      {classes.map((classItem) => (
+                        <option key={classItem.id} value={classItem.name}>
+                          {classItem.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-gray-700">
+                      Loại hoạt động
+                    </label>
+                    <select
+                      value={filters.activityType}
+                      onChange={(event) =>
+                        setFilters({ ...filters, activityType: event.target.value })
+                      }
+                      className="w-full rounded-2xl border border-gray-300 px-4 py-2.5 focus:border-transparent focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Tất cả loại</option>
+                      {activityTypes.map((type) => (
+                        <option key={type} value={type}>
+                          {type}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
 
-            {filteredRecords.length === 0 && (
-              <div className="rounded-lg border border-gray-200 bg-white p-12 text-center shadow-sm">
-                <Activity className="mx-auto mb-4 h-16 w-16 text-gray-400" />
-                <p className="text-lg text-gray-600">Không có dữ liệu tham gia</p>
+                <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-gray-700">Trạng thái</label>
+                    <select
+                      value={filters.status}
+                      onChange={(event) => setFilters({ ...filters, status: event.target.value })}
+                      className="w-full rounded-2xl border border-gray-300 px-4 py-2.5 focus:border-transparent focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Tất cả trạng thái</option>
+                      <option value="participated">Tham gia</option>
+                      <option value="attended">Có mặt</option>
+                      <option value="not_participated">Không tham gia</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-gray-700">Từ ngày</label>
+                    <input
+                      type="date"
+                      value={filters.dateStart}
+                      onChange={(event) => setFilters({ ...filters, dateStart: event.target.value })}
+                      className="w-full rounded-2xl border border-gray-300 px-4 py-2.5 focus:border-transparent focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-gray-700">Đến ngày</label>
+                    <input
+                      type="date"
+                      value={filters.dateEnd}
+                      onChange={(event) => setFilters({ ...filters, dateEnd: event.target.value })}
+                      className="w-full rounded-2xl border border-gray-300 px-4 py-2.5 focus:border-transparent focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
               </div>
-            )}
-          </>
-        )}
-      </div>
+
+              <div className="content-card overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="min-w-[1040px]">
+                    <thead className="border-b border-gray-200 bg-gray-50">
+                      <tr>
+                        <th
+                          onClick={() => handleSort('student')}
+                          className="cursor-pointer px-4 py-3 text-left text-sm font-semibold text-gray-900 hover:bg-gray-100"
+                        >
+                          Học viên {sortBy === 'student' && (sortOrder === 'asc' ? '↑' : '↓')}
+                        </th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
+                          Lớp
+                        </th>
+                        <th
+                          onClick={() => handleSort('activity')}
+                          className="cursor-pointer px-4 py-3 text-left text-sm font-semibold text-gray-900 hover:bg-gray-100"
+                        >
+                          Hoạt động {sortBy === 'activity' && (sortOrder === 'asc' ? '↑' : '↓')}
+                        </th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
+                          Loại
+                        </th>
+                        <th
+                          onClick={() => handleSort('date')}
+                          className="cursor-pointer px-4 py-3 text-left text-sm font-semibold text-gray-900 hover:bg-gray-100"
+                        >
+                          Ngày {sortBy === 'date' && (sortOrder === 'asc' ? '↑' : '↓')}
+                        </th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
+                          Trạng thái
+                        </th>
+                        <th
+                          onClick={() => handleSort('score')}
+                          className="cursor-pointer px-4 py-3 text-left text-sm font-semibold text-gray-900 hover:bg-gray-100"
+                        >
+                          Điểm {sortBy === 'score' && (sortOrder === 'asc' ? '↑' : '↓')}
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {filteredRecords.map((record) => (
+                        <tr
+                          key={`${record.activity_id}-${record.student_id}`}
+                          className="transition-colors hover:bg-gray-50"
+                        >
+                          <td className="px-4 py-4 text-sm font-medium text-gray-900">
+                            {record.student_name}
+                          </td>
+                          <td className="px-4 py-4 text-sm text-gray-600">{record.class_name}</td>
+                          <td className="px-4 py-4 text-sm font-medium text-blue-600">
+                            {record.activity_name}
+                          </td>
+                          <td className="px-4 py-4 text-sm text-gray-600">{record.activity_type}</td>
+                          <td className="px-4 py-4 text-sm text-gray-600">
+                            {new Date(record.date).toLocaleDateString('vi-VN')}
+                          </td>
+                          <td className="px-4 py-4">{getStatusBadge(record.status)}</td>
+                          <td className="px-4 py-4 text-sm font-semibold text-blue-600">
+                            {record.score.toFixed(1)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {filteredRecords.length === 0 && (
+                <div className="content-card p-12 text-center">
+                  <Activity className="mx-auto mb-4 h-16 w-16 text-gray-400" />
+                  <p className="text-lg text-gray-600">Không có dữ liệu tham gia</p>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </section>
     </div>
   );
 }

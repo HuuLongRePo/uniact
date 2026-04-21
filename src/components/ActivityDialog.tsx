@@ -411,13 +411,13 @@ export default function ActivityDialog({
 
       const createdActivityId = activityId || data.activity?.id;
       if (!createdActivityId) {
-        throw new Error('KhÃ´ng xÃ¡c Ä‘á»‹nh Ä‘Æ°á»£c hoáº¡t Ä‘á»™ng vá»«a lÆ°u');
+        throw new Error('Không xác định được hoạt động vừa lưu');
       }
 
       if (files.length > 0) {
         const uploaded = await uploadFiles(createdActivityId);
         if (!uploaded) {
-          throw new Error('KhÃ´ng thá»ƒ táº£i file lÃªn');
+          throw new Error('Không thể tải file lên');
         }
       }
 
@@ -431,8 +431,8 @@ export default function ActivityDialog({
           throw new Error(
             submitData.error ||
               (activityId
-                ? 'Hoáº¡t Ä‘á»™ng Ä‘Ã£ Ä‘Æ°á»£c cáº­p nháº­t nhÆ°ng gá»­i phÃª duyá»‡t tháº¥t báº¡i'
-                : 'Hoáº¡t Ä‘á»™ng Ä‘Ã£ Ä‘Æ°á»£c lÆ°u nhÃ¡p nhÆ°ng gá»­i phÃª duyá»‡t tháº¥t báº¡i')
+                ? 'Hoạt động đã được cập nhật nhưng gửi phê duyệt thất bại'
+                : 'Hoạt động đã được lưu nháp nhưng gửi phê duyệt thất bại')
           );
         }
       }

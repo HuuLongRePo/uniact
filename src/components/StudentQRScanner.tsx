@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
+import { CheckCircle2, CircleAlert, Pause, RotateCcw } from 'lucide-react';
 import { getCameraAccessErrorMessage, requestPreferredCameraStream } from '@/lib/camera-stream';
 
 type ScanState = 'idle' | 'scanning' | 'success' | 'error';
@@ -92,7 +93,7 @@ export function StudentQRScanner({ onScan }: Props) {
   async function handleManualSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!manualToken.trim()) {
-      toast.error('Nhap du lieu ma QR');
+      toast.error('Nhập dữ liệu mã QR');
       return;
     }
     await submitRawValue(manualToken.trim());
@@ -104,62 +105,94 @@ export function StudentQRScanner({ onScan }: Props) {
       await onScan(rawValue);
       setLastResult(rawValue);
       setScanState('success');
-      toast.success('Diem danh thanh cong');
+      toast.success('Điểm danh thành công');
     } catch (err: any) {
       setScanState('error');
-      setError(err?.message || 'Xac thuc that bai');
-      toast.error('Ma QR khong hop le hoac da het han');
+      setError(err?.message || 'Xác thực thất bại');
+      toast.error('Mã QR không hợp lệ hoặc đã hết hạn');
     }
   }
 
   return (
-    <div className="space-y-4">
-      <div className="rounded border p-4">
-        <h2 className="font-semibold mb-2">Quet ma QR diem danh</h2>
-        <video ref={videoRef} className="w-full rounded bg-black" muted playsInline />
-        <canvas ref={canvasRef} className="hidden" />
-        {scanState === 'success' && (
-          <p className="text-green-600 text-sm mt-2">Da xac thuc: {lastResult.slice(0, 24)}...</p>
-        )}
-        {scanState === 'error' && error && (
-          <p className="text-red-600 text-sm mt-2">Loi: {error}</p>
-        )}
-        <div className="flex gap-2 mt-3">
-          <button
-            type="button"
-            onClick={startScan}
-            className="px-3 py-2 text-sm rounded bg-blue-600 text-white hover:bg-blue-500"
-          >
-            Quet lai
-          </button>
-          <button
-            type="button"
-            onClick={stopScan}
-            className="px-3 py-2 text-sm rounded bg-gray-200 hover:bg-gray-300"
-          >
-            Tam dung
-          </button>
+    <div className="space-y-5">
+      <section className="content-card overflow-hidden">
+        <div className="border-b border-gray-200 px-4 py-3 sm:px-5">
+          <h2 className="text-base font-semibold text-gray-900 sm:text-lg">Quét mã QR điểm danh</h2>
+          <p className="mt-1 text-sm text-gray-600">
+            Ứng dụng ưu tiên camera sau trên điện thoại để quét nhanh và ổn định hơn.
+          </p>
         </div>
-        <p className="text-xs text-gray-500 mt-2">
-          Neu camera gap loi, ban co the dung o nhap thu cong ben duoi.
-        </p>
-      </div>
 
-      <form onSubmit={handleManualSubmit} className="rounded border p-4 space-y-2">
-        <label className="text-sm font-medium">Nhap du lieu tho tu ma QR</label>
-        <input
-          className="w-full border rounded px-2 py-1 text-sm"
-          placeholder='Vi du: {"s":123,"t":"qr_token"}'
-          value={manualToken}
-          onChange={(e) => setManualToken(e.target.value)}
-        />
-        <button
-          type="submit"
-          className="px-3 py-2 text-sm rounded bg-green-600 text-white hover:bg-green-500"
-        >
-          Diem danh thu cong
-        </button>
-      </form>
+        <div className="space-y-4 p-4 sm:p-5">
+          <div className="overflow-hidden rounded-2xl border border-gray-200 bg-black/95">
+            <video ref={videoRef} className="aspect-video w-full object-cover" muted playsInline />
+          </div>
+          <canvas ref={canvasRef} className="hidden" />
+
+          {scanState === 'success' && (
+            <div className="rounded-2xl border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800">
+              <div className="inline-flex items-center gap-2 font-medium">
+                <CheckCircle2 className="h-4 w-4" />
+                Đã xác thực
+              </div>
+              <div className="mt-1 break-all">{lastResult.slice(0, 52)}...</div>
+            </div>
+          )}
+          {scanState === 'error' && error && (
+            <div className="rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              <div className="inline-flex items-center gap-2 font-medium">
+                <CircleAlert className="h-4 w-4" />
+                Lỗi camera hoặc xác thực
+              </div>
+              <div className="mt-1">{error}</div>
+            </div>
+          )}
+
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={startScan}
+              className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+            >
+              <RotateCcw className="h-4 w-4" />
+              Quét lại
+            </button>
+            <button
+              type="button"
+              onClick={stopScan}
+              className="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-gray-100 px-3.5 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-200"
+            >
+              <Pause className="h-4 w-4" />
+              Tạm dừng
+            </button>
+          </div>
+
+          <p className="text-xs text-gray-500">
+            Nếu camera bị từ chối quyền hoặc thiết bị không nhận diện được, bạn có thể nhập dữ liệu
+            QR thủ công ở phần bên dưới.
+          </p>
+        </div>
+      </section>
+
+      <section className="content-card p-4 sm:p-5">
+        <form onSubmit={handleManualSubmit} className="space-y-3">
+          <label className="block text-sm font-medium text-gray-700">
+            Nhập dữ liệu thô từ mã QR
+          </label>
+          <textarea
+            className="min-h-24 w-full rounded-2xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-transparent focus:ring-2 focus:ring-blue-500"
+            placeholder='Ví dụ: {"s":123,"t":"qr_token"}'
+            value={manualToken}
+            onChange={(event) => setManualToken(event.target.value)}
+          />
+          <button
+            type="submit"
+            className="inline-flex items-center rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-700"
+          >
+            Điểm danh thủ công
+          </button>
+        </form>
+      </section>
     </div>
   );
 }

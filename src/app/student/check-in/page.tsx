@@ -69,27 +69,46 @@ export default function StudentCheckInPage() {
   const activityId = searchParams.get('activityId');
 
   return (
-    <div className="mx-auto max-w-xl space-y-6 py-6">
-      <header>
-        <h1 className="text-xl font-semibold">Điểm danh hoạt động</h1>
-        <p className="text-sm text-gray-600">
-          Quét QR hoặc dán dữ liệu mã QR để xác thực tham gia
-          {activityId ? ` cho hoạt động #${activityId}` : ''}.
-        </p>
-      </header>
-      <StudentQRScanner
-        onScan={async (rawValue) => {
-          const payload = parseQrPayload(rawValue);
-          const result = await validateAttendance(payload);
-          toast.success(result?.message || 'Điểm danh thành công');
-        }}
-      />
-      <section className="space-y-2 text-xs text-gray-500">
-        <p>
-          Mã QR hiện chứa cả <code>session_id</code> và <code>qr_token</code>. Nếu camera không nhận
-          dạng, bạn có thể dán nguyên dữ liệu QR vào ô nhập thủ công bên dưới.
-        </p>
-        <p>Mã hết hạn: tạo lại bởi giảng viên. Nếu báo hết hạn hãy yêu cầu phiên mới.</p>
+    <div className="page-shell">
+      <section className="page-surface overflow-hidden rounded-[1.75rem]">
+        <div className="border-b border-gray-200 px-5 py-5 sm:px-7">
+          <div className="max-w-3xl space-y-2">
+            <div className="inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold tracking-wide text-blue-800">
+              Điểm danh QR
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">Điểm danh hoạt động</h1>
+            <p className="text-sm leading-6 text-gray-600 sm:text-base">
+              Quét QR hoặc dán dữ liệu QR để xác thực tham gia. Hệ thống sẽ tự kiểm tra phiên điểm
+              danh còn hiệu lực và trạng thái đăng ký của bạn.
+            </p>
+            {activityId && (
+              <div className="inline-flex rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700">
+                Hoạt động #{activityId}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="space-y-6 px-5 py-6 sm:px-7">
+          <StudentQRScanner
+            onScan={async (rawValue) => {
+              const payload = parseQrPayload(rawValue);
+              const result = await validateAttendance(payload);
+              toast.success(result?.message || 'Điểm danh thành công');
+            }}
+          />
+
+          <section className="content-card space-y-2 p-4 text-xs text-gray-600 sm:p-5">
+            <p>
+              Mã QR hợp lệ phải chứa cả <code>session_id</code> và <code>qr_token</code>. Nếu camera
+              không nhận diện được, bạn có thể dán nguyên dữ liệu QR để điểm danh thủ công.
+            </p>
+            <p>
+              Nếu báo hết hạn, phiên QR đã đóng hoặc đã đổi mã mới. Hãy liên hệ giảng viên để mở lại
+              phiên điểm danh.
+            </p>
+          </section>
+        </div>
       </section>
     </div>
   );

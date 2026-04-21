@@ -413,14 +413,22 @@ Yeu cau:
 
 ### Viec can lam
 
-- [ ] Audit navbar admin/giang vien/hoc vien doi chieu voi route thuc te trong repo.
-- [ ] Bo sung muc con thieu neu route/chuc nang da ton tai va can truy cap truc tiep trong vai tro do.
-- [ ] Loai bo hoac gop cac muc lap nghia, dat ten ngan gon, dung nghiep vu.
-- [ ] Refactor `Sidebar` thanh shell dieu huong co style thong nhat, contrast tot, mobile-first va dark mode doc ro.
-- [ ] Nang cap `AuthContent` va global shell background/spacing de cac trang trong app dong bo hon ma khong pha layout hien co.
-- [ ] Chot typography stack offline-friendly, hien dai hon va bo sung rule xu ly noi dung dai, bang rong, text wrap.
-- [ ] Tiep tuc quet nhanh nhan UI chung co text tieng Anh/khong dau o lop shell, toolbar, button va heading de doi sang tieng Viet co dau.
-- [ ] Chay test navbar/shell lien quan + build va commit rieng.
+- [x] Audit navbar admin/giang vien/hoc vien doi chieu voi route thuc te trong repo.
+  - [x] Script doi chieu `href` trong `Sidebar` voi route thuc te: `69/69` hop le.
+- [x] Bo sung muc con thieu neu route/chuc nang da ton tai va can truy cap truc tiep trong vai tro do.
+  - [x] Teacher: bo sung quick-link `notifications/history`, `notifications/settings`.
+  - [x] Student: bo sung quick-link `alerts`.
+  - [x] Admin: bo sung quick-link `audit-logs`.
+- [x] Loai bo hoac gop cac muc lap nghia, dat ten ngan gon, dung nghiep vu.
+- [x] Refactor `Sidebar` thanh shell dieu huong co style thong nhat, contrast tot, mobile-first va dark mode doc ro.
+- [x] Nang cap `AuthContent` va global shell background/spacing de cac trang trong app dong bo hon ma khong pha layout hien co.
+- [x] Chot typography stack offline-friendly, hien dai hon va bo sung rule xu ly noi dung dai, bang rong, text wrap.
+- [x] Tiep tuc quet nhanh nhan UI chung co text tieng Anh/khong dau o lop shell, toolbar, button va heading de doi sang tieng Viet co dau.
+- [x] Uu tien sua cac trang bao cao giang vien co mojibake/khong dau o heading, filter, badge va bang du lieu.
+- [x] Chuan hoa thong diep save/submit user-facing o `ActivityDialog` de khong con loi ma hoa.
+- [x] Chay test navbar/shell lien quan + build va commit rieng.
+  - [x] `npm.cmd test -- test/sidebar-teacher-links.test.tsx test/teacher-attendance-page.test.tsx test/teacher-participation-page.test.tsx test/notification-inbox.test.tsx`
+  - [x] `npm.cmd run build`
 
 ### Prompt bo sung (copy de chay batch nay)
 

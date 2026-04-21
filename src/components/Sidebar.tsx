@@ -168,6 +168,7 @@ export default function Sidebar() {
         { label: 'Báo cáo', href: '/admin/reports', icon: FileText },
         { label: 'Tìm kiếm nâng cao', href: '/admin/search', icon: Search },
         { label: 'Nhật ký hệ thống', href: '/admin/audit', icon: FileText },
+        { label: 'Nhật ký chi tiết', href: '/admin/audit-logs', icon: FileText },
         { label: 'Cấp độ tổ chức', href: '/admin/organization-levels', icon: Target },
         { label: 'Cài đặt QR', href: '/admin/system-config/qr-settings', icon: QrCode },
         { label: 'Thiết kế QR', href: '/admin/system-config/qr-design', icon: Palette },
@@ -200,6 +201,8 @@ export default function Sidebar() {
       items: [
         { label: 'Thông báo', href: '/teacher/notifications', icon: Bell, badge: unreadCount },
         { label: 'Gửi thông báo', href: '/teacher/notify-students', icon: Bell },
+        { label: 'Lịch sử gửi', href: '/teacher/notifications/history', icon: Clock },
+        { label: 'Cài đặt thông báo', href: '/teacher/notifications/settings', icon: Settings },
         { label: 'Khảo sát', href: '/teacher/polls', icon: ClipboardCheck },
         { label: 'Cảnh báo', href: '/teacher/alerts', icon: AlertTriangle },
       ],
@@ -243,6 +246,7 @@ export default function Sidebar() {
       title: 'Thông báo và tiện ích',
       items: [
         { label: 'Thông báo', href: '/student/notifications', icon: Bell, badge: unreadCount },
+        { label: 'Cảnh báo', href: '/student/alerts', icon: AlertTriangle },
         { label: 'Quét QR điểm danh', href: '/student/check-in', icon: QrCode },
         { label: 'Khảo sát', href: '/student/polls', icon: ClipboardCheck },
         { label: 'Thiết bị đăng nhập', href: '/student/devices', icon: Laptop },
