@@ -4,11 +4,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter, useParams } from 'next/navigation';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import { useEffectEventCompat } from '@/lib/useEffectEventCompat';
 import {
   Calendar,
   MapPin,
   Users,
-  Award,
   Clock,
   FileText,
   CheckCircle,
@@ -100,9 +100,9 @@ export default function AdminActivityDetailPage() {
       return;
     }
     if (user && activityId) {
-      fetchActivity();
+      void fetchActivity();
     }
-  }, [user, authLoading, activityId]);
+  }, [user, authLoading, activityId, router, fetchActivity]);
 
   useEffect(() => {
     setParticipantPage(1);
@@ -141,7 +141,7 @@ export default function AdminActivityDetailPage() {
     });
   }, [participants, participantSearch, participantStatusFilter, participantClassFilter]);
 
-  const fetchActivity = async () => {
+  const fetchActivity = useEffectEventCompat(async () => {
     try {
       setLoading(true);
       const [activityRes, participantsRes, historyRes] = await Promise.all([
@@ -170,7 +170,7 @@ export default function AdminActivityDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  });
 
   const handleApprovalAction = (action: 'approve' | 'reject') => {
     setApprovalAction(action);
@@ -204,9 +204,9 @@ export default function AdminActivityDetailPage() {
           (approvalAction === 'approve' ? 'Đã phê duyệt hoạt động' : 'Đã từ chối hoạt động')
       );
       setShowApprovalModal(false);
-      fetchActivity();
-    } catch (error: any) {
-      toast.error(error.message || 'Có lỗi xảy ra khi xử lý phê duyệt');
+      void fetchActivity();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Có lỗi xảy ra khi xử lý phê duyệt');
     } finally {
       setSubmitting(false);
     }
@@ -223,8 +223,8 @@ export default function AdminActivityDetailPage() {
 
       toast.success(data.message || 'Đã hủy hoạt động');
       router.push('/admin/activities');
-    } catch (error: any) {
-      toast.error(error.message || 'Không thể hủy hoạt động');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Không thể hủy hoạt động');
     }
   };
 
