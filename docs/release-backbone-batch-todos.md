@@ -4,6 +4,7 @@ Ngay cap nhat: 2026-04-21
 Muc tieu: Release he thong theo duong xuong song, sua loi va mo rong tinh nang theo tung batch nho, tranh qua tai context.
 
 ## 1) Nguyen tac van hanh (bat buoc)
+
 - [ ] Plan first, code later: moi batch phai audit pham vi file va root cause truoc khi code.
 - [ ] Commit nho, lien tuc: ket thuc moi batch va test pass thi tao 1 commit rieng.
 - [ ] Gioi han output: chi review patch/hunk va ham thay doi, khong dump toan bo file dai.
@@ -13,6 +14,7 @@ Muc tieu: Release he thong theo duong xuong song, sua loi va mo rong tinh nang t
 - [ ] Tinh nang moi: chi lam sau khi batch truoc da xanh test.
 
 ## 2) Rule tam dung khi can quyet dinh nghiep vu
+
 - [ ] Neu gap quyet dinh logic nghiep vu (mo rong quyen, doi contract API, doi state machine), DUNG implement.
 - [ ] Tao "Decision Gate" trong issue/PR voi:
   - context
@@ -22,6 +24,7 @@ Muc tieu: Release he thong theo duong xuong song, sua loi va mo rong tinh nang t
 - [ ] Chi tiep tuc code sau khi Product Owner xac nhan lua chon.
 
 ## 3) Backbone release gates (P0)
+
 - [x] Gate A - Auth/session on dinh
   - login/logout/me + middleware + role guard
   - khong loop redirect, khong mat session ngau nhien
@@ -32,8 +35,13 @@ Muc tieu: Release he thong theo duong xuong song, sua loi va mo rong tinh nang t
     - [x] khoi phuc cursor pointer tren tat ca vung click duoc (button/card/link/action surface), tranh mat dau hieu tuong tac khi hover.
     - [x] enforce contrast ratio toi thieu WCAG AA (>= 4.5:1 cho text thuong) khi doi mau chu/nen button va text tren cac surface.
     - [x] chot bo mau chuan he thong dua tren design tokens (light/dark/system), bao dam icon, border, text, button states (default/hover/active/focus/disabled) deu doc ro.
+  - [x] Dark-mode accessibility hardening follow-up (2026-04-21):
+    - [x] Dua "Thong bao" len som nhat co the trong dieu huong admin/giang vien/hoc vien.
+    - [x] Mo rong token mapping cho `bg-*`, `text-*`, `border-*`, hover, divide va form controls khi Windows/system dark mode dang bat.
+    - [x] Harden rieng inbox thong bao de khong bi chim noi dung tren surface nhat mau.
 
 ### Prompt bo sung (copy de chay ngay - UI interaction/contrast)
+
 ```text
 Ban dong vai Senior Frontend Developer + UI/UX Engineer. Hay harden toan he thong theo 3 muc tieu:
 1) Interaction affordance:
@@ -50,6 +58,27 @@ Yeu cau thi hanh:
 - Chay test cum login/theme lien quan va bao cao PASS/FAIL ro rang.
 - Cap nhat checklist trong docs/release-backbone-batch-todos.md ngay sau khi xong.
 ```
+
+### Prompt bo sung (copy de chay ngay - dark mode/doc duoc)
+
+```text
+Ban dong vai Senior Frontend Accessibility Engineer. Uu tien xu ly dark mode truoc:
+1) Dieu huong:
+- Dua "Thong bao" len dau hoac rat som trong menu cua moi role.
+- Giu badge unread doc duoc tren nen toi.
+2) Windows dark mode compatibility:
+- Xem app nhu dang chay voi `prefers-color-scheme: dark`.
+- Ra soat utility class mau pho bien (`bg-*`, `text-*`, `border-*`, hover, divide, input/select/textarea`) va map ve token dark on dinh.
+- Uu tien sua bang global tokens/overrides de giam sua tung page.
+3) Verification:
+- Chay lint/test/build cum lien quan.
+- Bao cao ro file da sua, lenh da chay, risk con lai.
+Yeu cau:
+- Patch lon vua phai, co gia tri release, tranh chia qua nho.
+- Khong dump full file.
+- Cap nhat docs/release-backbone-batch-todos.md sau khi xong.
+```
+
 - [x] Gate B - Activity workflow on dinh
   - draft -> requested -> approved/rejected -> published
   - teacher submit + admin approve/reject + audit log
@@ -72,10 +101,13 @@ Yeu cau thi hanh:
 ---
 
 ## 4) Batch 1 - System Audit + UI text refactor + bug Organization Level
+
 ### Muc tieu
+
 - Chuan hoa ngon ngu he thong va tim root cause loi lap "Cap do to chuc".
 
 ### Viec can lam
+
 - [x] Audit text UI:
   - dich text Anh con sot sang Viet
   - bo sung dau tieng Viet
@@ -92,6 +124,7 @@ Yeu cau thi hanh:
 - [x] Don tiep cac thong diep API tieng Anh con sot (uu tien endpoint user-facing).
 
 ### Definition of Done
+
 - [x] Co danh sach file thay doi ro rang.
 - [x] Co root cause chinh xac cho bug duplicate.
 - [x] Co test/regression test bao ve bug fix.
@@ -99,10 +132,13 @@ Yeu cau thi hanh:
 ---
 
 ## 5) Batch 2 - Realtime notification infrastructure
+
 ### Muc tieu
+
 - Dung khung thong bao realtime cho Admin/Giang vien/Hoc vien.
 
 ### Viec can lam
+
 - [x] Chon transport phu hop stack hien tai (uu tien SSE neu don gian va on dinh voi Next route handlers).
 - [x] Dinh nghia event model:
   - event_type, actor_id, target_user_ids, priority, ttl_seconds, action_buttons
@@ -117,22 +153,27 @@ Yeu cau thi hanh:
   - reconnect log
 
 ### Definition of Done
+
 - [x] Realtime event di qua end-to-end trong moi role (them test stream/bridge cho student + teacher + admin).
 - [x] Toast hien dung TTL + action callback.
 - [x] Test route + UI component pass.
 
 ### Decision Gates (neu can)
+
 - [ ] Can chot 1 trong 2: SSE-only hay Socket hybrid.
 - [ ] Can chot chinh sach retry/backoff va rate-limit push.
 
 ---
 
 ## 6) Batch 3 - Notification scope + class participation flexibility
+
 ### Muc tieu
+
 - Nang cap filter thong bao cua giang vien va co che tham gia tu nguyen.
 - Chuan hoa logic giang vien chu nhiem va nhan dien pham vi quan ly tren UI.
 
 ### Viec can lam
+
 - [x] UI danh dau "hoc vien chu nhiem" trong danh sach.
 - [x] Cap nhat data model giang vien - lop:
   - moi giang vien phai chu nhiem it nhat 1 lop trong seed/init data
@@ -150,15 +191,18 @@ Yeu cau thi hanh:
 - [x] Dam bao backward compatibility du lieu cu.
 
 ### Definition of Done
+
 - [x] Teacher gui thong bao theo lop va theo danh sach hoc vien thanh cong.
 - [x] Luong mandatory/voluntary dung trong UI + API + DB.
 - [x] Test regression route/page pass.
 
 ### Decision Gates (neu can)
+
 - [ ] Quyen gui lien lop cua giang vien: tam mo hay gioi han theo config.
 - [ ] Uu tien mandatory khi trung rule voi voluntary.
 
 ### Prompt bo sung (copy de chay batch nay)
+
 ```text
 Ban dong vai Senior Fullstack Developer. Hay cap nhat he thong theo logic giang vien chu nhiem:
 1) Database + Seed:
@@ -180,10 +224,13 @@ Yeu cau:
 ---
 
 ## 7) Batch 4 - QR attendance completion + realtime integration
+
 ### Muc tieu
+
 - Sua loi refresh mat QR + thong bao realtime khi bat dau diem danh.
 
 ### Viec can lam
+
 - [x] Frontend attendance page:
   - khi reload, goi API lay active session truoc
   - neu con hieu luc -> hien QR cu, khong tao moi
@@ -196,23 +243,28 @@ Yeu cau:
 - [x] Bo sung man hinh hoc vien "Quet QR diem danh" (camera flow + permission UX).
 
 ### Definition of Done
+
 - [x] Reload khong lam mat session QR con hieu luc.
 - [x] Sinh vien nhan thong bao dung doi tuong, dung thoi diem.
 - [x] E2E actor flow pass.
   - UAT pass: `test/uat/actor-teacher/04-qr-refresh-close.spec.ts` + `test/uat/actor-student/02-qr-checkin.spec.ts` (2026-04-21).
 
 ### Decision Gates (neu can)
+
 - [ ] Session reuse policy: 1 session/activity hay nhieu session theo khung gio.
 - [ ] TTL default cho QR theo nghiep vu.
 
 ---
 
 ## 8) Batch 5 - FaceID foundation + notification auto-flow recommendations
+
 ### Muc tieu
+
 - Dung khung FaceID va de xuat day du trigger thong bao he thong.
 - Phan quyen training khuon mat theo dung pham vi quan ly.
 
 ### Viec can lam
+
 - [x] Admin enrollment:
   - [x] candidate preview tu upload/camera (`/api/biometric/candidate-preview`)
   - [x] luu embedding ma hoa qua training route (`/api/admin/biometrics/students/[id]/training`)
@@ -237,6 +289,7 @@ Yeu cau:
   - [x] De xuat v1 da bo sung o bang "Notification trigger matrix (v1)"
 
 ### Definition of Done
+
 - [x] FaceID co API/frame on dinh (co the pilot truoc model production).
   - [x] Regression batch 5: `10 files / 41 tests` pass (2026-04-21)
 - [ ] Notification trigger matrix duoc duyet lam chuan.
@@ -245,20 +298,23 @@ Yeu cau:
   - [x] `test/teacher-face-attendance-page.test.tsx`
 
 ### Decision Gates (neu can)
+
 - [ ] Thu vien matching/liveness chinh thuc cho production.
 - [ ] Chinh sach luu tru embedding + ma hoa + retention.
 
 ### Notification trigger matrix (v1)
-| Hanh dong | Event key | Nguoi nhan | Priority | TTL (giay) | Action button de xuat |
-| --- | --- | --- | --- | --- | --- |
-| Bat dau diem danh QR | `attendance_qr_started` | Hoc vien mandatory + voluntary da dang ky | high | 600 | `Xem chi tiet` (den trang check-in) |
-| Face attendance thanh cong | `face_attendance_recorded` | Hoc vien vua duoc ghi nhan | high | 300 | `Xem hoat dong` |
-| Face attendance fallback manual (runtime/quality/multi-faces) | `face_attendance_manual_fallback` | Giang vien dang thao tac | normal | 120 | `Mo giao dien manual` |
-| Biometric enrollment cap nhat thanh cong | `biometric_enrollment_update` | Hoc vien + giang vien chu nhiem | normal | 3600 | `Xem trang khuon mat` |
-| Biometric training hoan tat | `biometric_training_update` | Hoc vien + giang vien chu nhiem | normal | 3600 | `Xem trang khuon mat` |
-| Biometric identify no-match lap lai > N lan / 5 phut | `biometric_identify_anomaly` | Admin van hanh | high | 900 | `Xem audit` |
+
+| Hanh dong                                                     | Event key                         | Nguoi nhan                                | Priority | TTL (giay) | Action button de xuat               |
+| ------------------------------------------------------------- | --------------------------------- | ----------------------------------------- | -------- | ---------- | ----------------------------------- |
+| Bat dau diem danh QR                                          | `attendance_qr_started`           | Hoc vien mandatory + voluntary da dang ky | high     | 600        | `Xem chi tiet` (den trang check-in) |
+| Face attendance thanh cong                                    | `face_attendance_recorded`        | Hoc vien vua duoc ghi nhan                | high     | 300        | `Xem hoat dong`                     |
+| Face attendance fallback manual (runtime/quality/multi-faces) | `face_attendance_manual_fallback` | Giang vien dang thao tac                  | normal   | 120        | `Mo giao dien manual`               |
+| Biometric enrollment cap nhat thanh cong                      | `biometric_enrollment_update`     | Hoc vien + giang vien chu nhiem           | normal   | 3600       | `Xem trang khuon mat`               |
+| Biometric training hoan tat                                   | `biometric_training_update`       | Hoc vien + giang vien chu nhiem           | normal   | 3600       | `Xem trang khuon mat`               |
+| Biometric identify no-match lap lai > N lan / 5 phut          | `biometric_identify_anomaly`      | Admin van hanh                            | high     | 900        | `Xem audit`                         |
 
 ### Prompt bo sung (copy de chay batch nay)
+
 ```text
 Ban dong vai System Architect + Senior Fullstack Developer. Hay bo sung logic training khuon mat:
 1) Role scope:
@@ -282,6 +338,7 @@ Yeu cau:
 ---
 
 ## 9) Test + release execution checklist
+
 - [x] Chay test theo batch (chi nhom lien quan), fix do den truoc khi merge.
   - [x] Batch 5 FaceID regression: `10 files / 41 tests` pass (2026-04-21)
 - [x] Chay regression bundle backbone truoc release candidate.
@@ -302,6 +359,7 @@ Yeu cau:
 - [x] Gan tag RC noi bo `internal-rc-2026-04-21` sau khi xac nhan build + backbone regression + docs release (2026-04-21).
 
 ## 10) Ke hoach commit de xuat
+
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix
 - [ ] Commit 2: Batch 2 realtime infra + toast UI
 - [ ] Commit 3: Batch 3 notification scope + is_mandatory flow
@@ -314,22 +372,27 @@ Yeu cau:
 ---
 
 ## 11) Codex IDE handoff (chuyen han tu VSCode)
+
 ### Muc tieu
+
 - Dung Codex IDE lam moi truong code chinh, giu on dinh luong release backbone.
 
 ### Tai lieu vao cua session
+
 - [x] Da tao goi handoff: `docs/codex-ide-transition-pack.md`
 - [x] Da tao prompt clone may moi: `docs/codex-clone-coreflows-prompt.md`
 - [ ] Bat dau moi session bang prompt khoi dong trong handoff pack.
 - [x] Lam viec theo workflow: Audit -> Patch nho -> Test cum -> Update docs -> Commit.
 
 ### Prompt khoi dong rut gon
+
 ```text
 Dung prompt trong docs/codex-clone-coreflows-prompt.md.
 Prompt nay da gom thu tu xu ly blocker + workflow batch + format bao cao.
 ```
 
 ### Checklist chuyen doi
+
 - [x] Xac nhan env local trong Codex IDE (`.env`, migrate, seed:qa, build/start) o muc build/test backbone cho batch blocker (2026-04-21).
 - [ ] Chot branch lam viec cho batch hien tai.
 - [ ] Chay test cum lien quan truoc va sau khi sua.

@@ -300,7 +300,7 @@ export default function NotificationInbox({
   );
 
   return (
-    <div className="min-h-screen p-6 bg-gray-50">
+    <div className="min-h-screen bg-gray-50 p-6 text-gray-900">
       <div className="mx-auto max-w-5xl">
         <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
           <div>
@@ -380,7 +380,7 @@ export default function NotificationInbox({
           )}
         </div>
 
-        <div className="mb-4 flex items-center justify-between rounded-lg bg-gray-100 px-3 py-2">
+        <div className="mb-4 flex items-center justify-between rounded-lg border border-gray-200 bg-gray-100 px-3 py-2">
           <div className="flex items-center gap-2">
             <input
               type="checkbox"
@@ -404,7 +404,7 @@ export default function NotificationInbox({
         {loading ? (
           <LoadingSpinner />
         ) : notifications.length === 0 ? (
-          <div className="rounded-lg bg-white py-12 text-center">
+          <div className="rounded-lg border border-gray-200 bg-white py-12 text-center shadow-sm">
             <p className="text-lg text-gray-600">
               {filter === 'unread' ? 'Không có thông báo chưa đọc' : 'Chưa có thông báo nào'}
             </p>
@@ -416,7 +416,9 @@ export default function NotificationInbox({
                 key={notification.id}
                 data-notification-id={notification.id}
                 className={`flex items-start gap-3 rounded-lg border p-4 ${
-                  notification.is_read ? 'border-gray-200 bg-white' : 'border-blue-300 bg-blue-50'
+                  notification.is_read
+                    ? 'border-gray-200 bg-white text-gray-900 shadow-sm'
+                    : 'border-blue-300 bg-blue-50 text-gray-900 shadow-sm'
                 }`}
               >
                 <input
@@ -480,7 +482,7 @@ export default function NotificationInbox({
 
       {showSettingsModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-          <div className="w-full max-w-md rounded-lg bg-white p-6">
+          <div className="w-full max-w-md rounded-lg border border-gray-200 bg-white p-6 shadow-xl">
             <h2 className="mb-4 text-2xl font-bold text-gray-900">Cài đặt thông báo</h2>
             <div className="space-y-4">
               <label className="flex items-center justify-between text-gray-700">
