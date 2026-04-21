@@ -60,8 +60,9 @@ Yeu cau thi hanh:
   - discover/register/cancel, policy + conflict + capacity race-safe
   - [x] Dong bo trang `student/my-activities` voi canonical `successResponse` cua `/api/activities/my-registrations` va bo sung regression UI (2026-04-21)
   - [x] Regression Gate C: `9 files / 17 tests` pass (2026-04-21)
-- [ ] Gate D - Attendance on dinh
+- [x] Gate D - Attendance on dinh
   - QR session, validate, duplicate-safe, thong bao check-in
+  - [x] Regression Gate D: `5 files / 19 tests` pass (2026-04-21)
 - [ ] Gate E - Scoring/bonus/report on dinh
   - complete activity, point persistence, score ledger, rankings/reports
 
