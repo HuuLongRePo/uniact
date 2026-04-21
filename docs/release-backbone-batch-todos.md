@@ -53,6 +53,7 @@ Yeu cau thi hanh:
   - draft -> requested -> approved/rejected -> published
   - teacher submit + admin approve/reject + audit log
   - [x] Dong bo approval history presentation voi state machine canonical (`pending_approval`) va giu backward compatibility cho du lieu cu (`requested`) (2026-04-21)
+  - [x] Dong bo admin approval queue page voi canonical `successResponse` va preserve workflow API errors tren `/api/activity-approvals` (2026-04-21)
 - [ ] Gate C - Student registration on dinh
   - discover/register/cancel, policy + conflict + capacity race-safe
 - [ ] Gate D - Attendance on dinh

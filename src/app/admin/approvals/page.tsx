@@ -30,9 +30,11 @@ export default function AdminApprovalsPage() {
       const response = await fetch(`/api/admin/activities/pending?page=${page}&limit=20`);
       if (!response.ok) throw new Error('Không thể tải danh sách hoạt động');
       const data = await response.json();
-      setActivities(data.activities || []);
+      const payload = data?.data ?? data;
+      const nextActivities = payload?.activities || [];
+      setActivities(nextActivities);
       setPagination(
-        data.pagination || { page, limit: 20, total: data.activities?.length || 0, pages: 1 }
+        payload?.pagination || { page, limit: 20, total: nextActivities.length || 0, pages: 1 }
       );
     } catch (error: any) {
       console.error('Error:', error);

@@ -17,7 +17,12 @@ export async function GET(request: NextRequest) {
     return successResponse({ approvals: filtered || [] });
   } catch (error: any) {
     console.error('Get approvals error:', error);
-    return errorResponse(ApiError.internalError('Lỗi máy chủ nội bộ'));
+    return errorResponse(
+      error instanceof ApiError ||
+        (error && typeof error.status === 'number' && typeof error.code === 'string')
+        ? error
+        : ApiError.internalError('Lỗi máy chủ nội bộ')
+    );
   }
 }
 
@@ -55,6 +60,11 @@ export async function POST(request: NextRequest) {
     return successResponse({ approved: true }, `Approval ${action}`);
   } catch (error: any) {
     console.error('Decide approval error:', error);
-    return errorResponse(ApiError.internalError('Lỗi máy chủ nội bộ'));
+    return errorResponse(
+      error instanceof ApiError ||
+        (error && typeof error.status === 'number' && typeof error.code === 'string')
+        ? error
+        : ApiError.internalError('Lỗi máy chủ nội bộ')
+    );
   }
 }
