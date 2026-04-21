@@ -108,6 +108,39 @@ export default function AdminActivityDetailPage() {
     setParticipantPage(1);
   }, [participantSearch, participantStatusFilter, participantClassFilter, activeTab]);
 
+  const participantClasses = useMemo(
+    () =>
+      Array.from(
+        new Set(participants.map((participant) => participant.class_name).filter(Boolean))
+      ) as string[],
+    [participants]
+  );
+
+  const filteredParticipants = useMemo(() => {
+    const normalizedSearch = participantSearch.trim().toLowerCase();
+
+    return participants.filter((participant) => {
+      const matchesSearch =
+        normalizedSearch.length === 0 ||
+        participant.user_name.toLowerCase().includes(normalizedSearch) ||
+        participant.user_email.toLowerCase().includes(normalizedSearch);
+
+      const normalizedAttendance =
+        participant.attendance_status === 'present'
+          ? 'present'
+          : participant.attendance_status === 'absent'
+            ? 'absent'
+            : 'registered';
+
+      const matchesStatus =
+        participantStatusFilter === 'all' || normalizedAttendance === participantStatusFilter;
+      const matchesClass =
+        participantClassFilter === 'all' || participant.class_name === participantClassFilter;
+
+      return matchesSearch && matchesStatus && matchesClass;
+    });
+  }, [participants, participantSearch, participantStatusFilter, participantClassFilter]);
+
   const fetchActivity = async () => {
     try {
       setLoading(true);
@@ -267,39 +300,6 @@ export default function AdminActivityDetailPage() {
     completed: 'Hoàn thành',
     cancelled: 'Đã hủy',
   };
-
-  const participantClasses = useMemo(
-    () =>
-      Array.from(
-        new Set(participants.map((participant) => participant.class_name).filter(Boolean))
-      ) as string[],
-    [participants]
-  );
-
-  const filteredParticipants = useMemo(() => {
-    const normalizedSearch = participantSearch.trim().toLowerCase();
-
-    return participants.filter((participant) => {
-      const matchesSearch =
-        normalizedSearch.length === 0 ||
-        participant.user_name.toLowerCase().includes(normalizedSearch) ||
-        participant.user_email.toLowerCase().includes(normalizedSearch);
-
-      const normalizedAttendance =
-        participant.attendance_status === 'present'
-          ? 'present'
-          : participant.attendance_status === 'absent'
-            ? 'absent'
-            : 'registered';
-
-      const matchesStatus =
-        participantStatusFilter === 'all' || normalizedAttendance === participantStatusFilter;
-      const matchesClass =
-        participantClassFilter === 'all' || participant.class_name === participantClassFilter;
-
-      return matchesSearch && matchesStatus && matchesClass;
-    });
-  }, [participants, participantSearch, participantStatusFilter, participantClassFilter]);
 
   const totalParticipantPages = Math.max(
     1,

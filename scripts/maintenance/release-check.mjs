@@ -1,8 +1,12 @@
 #!/usr/bin/env node
 import { spawnSync } from 'node:child_process';
+import { rmSync } from 'node:fs';
 
-const cleanNextArtifacts = 'rm -rf .next';
 const coreLintTargets = 'src/app src/lib src/infrastructure';
+
+function cleanNextArtifacts() {
+  rmSync('.next', { recursive: true, force: true });
+}
 
 const fullChecks = [
   { name: 'Format check', cmd: 'npm run format:check' },
@@ -16,7 +20,24 @@ const fullChecks = [
   },
   {
     name: 'Build',
-    cmd: `${cleanNextArtifacts} && npm run build`,
+    beforeRun: cleanNextArtifacts,
+    cmd: 'npm run build',
+  },
+];
+
+const rcChecks = [
+  {
+    name: 'Type check (release config)',
+    cmd: 'npx tsc --project tsconfig.release.json --noEmit --pretty false',
+  },
+  {
+    name: 'Production build',
+    beforeRun: cleanNextArtifacts,
+    cmd: 'npm run production:build',
+  },
+  {
+    name: 'Backbone regression',
+    cmd: 'npm run test:backbone',
   },
 ];
 
@@ -29,11 +50,16 @@ const fastChecks = [
 ];
 
 const modeArg = process.argv.find((arg) => arg.startsWith('--mode='));
-const mode = modeArg?.split('=')[1] ?? 'full';
-const checks = mode === 'fast' ? fastChecks : fullChecks;
+const mode = modeArg?.split('=')[1] ?? 'rc';
+const checksByMode = {
+  full: fullChecks,
+  rc: rcChecks,
+  fast: fastChecks,
+};
+const checks = checksByMode[mode];
 
-if (!['full', 'fast'].includes(mode)) {
-  console.error(`Invalid mode: ${mode}. Use --mode=full or --mode=fast`);
+if (!['full', 'rc', 'fast'].includes(mode)) {
+  console.error(`Invalid mode: ${mode}. Use --mode=full, --mode=rc or --mode=fast`);
   process.exit(2);
 }
 
@@ -43,6 +69,9 @@ let failed = 0;
 
 for (const check of checks) {
   console.log(`\n=== ${check.name} ===`);
+  if (typeof check.beforeRun === 'function') {
+    check.beforeRun();
+  }
   const result = spawnSync(check.cmd, {
     shell: true,
     stdio: 'inherit',
