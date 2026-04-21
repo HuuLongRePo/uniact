@@ -1,9 +1,10 @@
+import { NextRequest } from 'next/server';
 import { requireApiRole } from '@/lib/guards';
 import { successResponse, ApiError, errorResponse } from '@/lib/api-response';
 import { dbGet } from '@/lib/database';
 import { getFaceRuntimeCapability } from '@/lib/biometrics/runtime-capability';
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
     await requireApiRole(request, ['admin']);
 

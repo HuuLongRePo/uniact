@@ -298,8 +298,13 @@ export async function POST(request: NextRequest) {
     console.error('Generate custom report error:', error);
     return errorResponse(
       error instanceof ApiError ||
-        (error && typeof error.status === 'number' && typeof error.code === 'string')
-        ? error
+        ((error &&
+          typeof error === 'object' &&
+          'status' in error &&
+          typeof error.status === 'number' &&
+          'code' in error &&
+          typeof error.code === 'string') as boolean)
+        ? (error as ApiError)
         : ApiError.internalError(
             error instanceof Error ? error.message : 'Không thể tạo báo cáo tùy chỉnh'
           )

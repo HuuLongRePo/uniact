@@ -55,7 +55,7 @@ interface Participant {
   user_email: string;
   class_name: string | null;
   registered_at: string;
-  attendance_status: 'attended' | 'absent' | 'registered' | 'not_participated' | null;
+  attendance_status: 'present' | 'absent' | 'registered' | 'not_participated' | null;
   achievement_level: 'excellent' | 'good' | 'average' | 'participated' | null;
   points_earned: number;
 }

@@ -32,12 +32,21 @@ function utf8Decode(data: Uint8Array): string {
   return new TextDecoder().decode(data);
 }
 
+function toArrayBuffer(data: Uint8Array): ArrayBuffer {
+  return data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) as ArrayBuffer;
+}
+
 async function verifyHmacSha256(secret: string, payload: string, signature: Uint8Array): Promise<boolean> {
   const keyData = new TextEncoder().encode(secret);
   const key = await crypto.subtle.importKey('raw', keyData, { name: 'HMAC', hash: 'SHA-256' }, false, [
     'verify',
   ]);
-  return crypto.subtle.verify('HMAC', key, signature, new TextEncoder().encode(payload));
+  return crypto.subtle.verify(
+    'HMAC',
+    key,
+    toArrayBuffer(signature),
+    toArrayBuffer(new TextEncoder().encode(payload))
+  );
 }
 
 export async function verifyToken(token: string): Promise<JwtPayload> {

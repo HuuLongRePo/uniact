@@ -19,7 +19,9 @@
 export { db, dbRun, dbGet, dbAll, dbReady, withTransaction } from '../infrastructure/db/db-core';
 export { ensureAdminUser, insertDefaultData } from '../infrastructure/db/db-setup';
 export { ensureActivityClassParticipationMode } from '../infrastructure/db/activity-class-schema';
+export { ensureActivityStudentScope } from '../infrastructure/db/activity-student-scope-schema';
 export { ensureParticipationColumns } from '../infrastructure/db/participation-schema';
+export { ensurePointCalculationColumns } from '../infrastructure/db/point-calculation-schema';
 export { dbHelpers } from '../infrastructure/db/db-queries';
 
 // Initialize database on module load

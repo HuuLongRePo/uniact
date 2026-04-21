@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { apiHandler, ApiError, successResponse } from '@/lib/api-response';
 import { requireApiRole } from '@/lib/guards';
 import { sendBulkDatabaseNotifications } from '@/lib/notifications';
+import { normalizeActionButtons } from '@/lib/realtime-notification-model';
 
 const actionButtonSchema = z
   .object({
@@ -57,6 +58,8 @@ export const POST = apiHandler(async (request: NextRequest) => {
     throw ApiError.validation('Không có người nhận hợp lệ');
   }
 
+  const normalizedActionButtons = normalizeActionButtons(parsedBody.action_buttons);
+
   const sendResult = await sendBulkDatabaseNotifications({
     userIds: targetUserIds,
     type: parsedBody.type,
@@ -68,7 +71,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
     actorId: actor.id,
     priority: parsedBody.priority,
     ttlSeconds: parsedBody.ttl_seconds,
-    actionButtons: parsedBody.action_buttons,
+    actionButtons: normalizedActionButtons,
     metadata: parsedBody.metadata
       ? {
           ...parsedBody.metadata,
@@ -84,7 +87,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
       target_user_ids: targetUserIds,
       priority: parsedBody.priority,
       ttl_seconds: parsedBody.ttl_seconds,
-      action_buttons: parsedBody.action_buttons,
+      action_buttons: normalizedActionButtons,
       delivery: sendResult,
     },
     `Đã push ${sendResult.created}/${sendResult.targetCount} thông báo`

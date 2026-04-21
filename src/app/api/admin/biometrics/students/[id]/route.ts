@@ -1,3 +1,4 @@
+import { NextRequest } from 'next/server';
 import { requireApiRole } from '@/lib/guards';
 import { successResponse, ApiError, errorResponse } from '@/lib/api-response';
 import { dbGet, dbRun } from '@/lib/database';
@@ -8,7 +9,7 @@ function computeReady(enrollmentStatus: string, trainingStatus: string) {
   return FACE_BIOMETRIC_RUNTIME_ENABLED && enrollmentStatus === 'ready' && trainingStatus === 'trained';
 }
 
-export async function PUT(request: Request, context: { params: Promise<{ id: string }> }) {
+export async function PUT(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     await requireApiRole(request, ['admin']);
     await ensureStudentBiometricSchema();

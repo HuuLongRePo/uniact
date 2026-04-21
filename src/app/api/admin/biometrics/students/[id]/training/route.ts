@@ -1,3 +1,4 @@
+import { NextRequest } from 'next/server';
 import { requireApiRole } from '@/lib/guards';
 import { successResponse, ApiError, errorResponse } from '@/lib/api-response';
 import { dbGet, dbHelpers, dbRun } from '@/lib/database';
@@ -10,7 +11,7 @@ function computeReady(enrollmentStatus: string, trainingStatus: string) {
   return FACE_BIOMETRIC_RUNTIME_ENABLED && enrollmentStatus === 'ready' && trainingStatus === 'trained';
 }
 
-export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
+export async function POST(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     const user = await requireApiRole(request, ['admin', 'teacher']);
     await ensureStudentBiometricSchema();

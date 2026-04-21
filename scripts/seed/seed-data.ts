@@ -59,6 +59,19 @@ function dbExec(sql: string): Promise<void> {
   })
 }
 
+async function ensurePointCalculationSeedColumns(): Promise<void> {
+  const columns = await dbAll("PRAGMA table_info('point_calculations')") as Array<{ name?: string | null }>
+  const names = new Set(columns.map((column) => String(column?.name || '')))
+
+  if (!names.has('activity_id')) {
+    await dbRun('ALTER TABLE point_calculations ADD COLUMN activity_id INTEGER')
+  }
+
+  if (!names.has('coefficient')) {
+    await dbRun('ALTER TABLE point_calculations ADD COLUMN coefficient REAL DEFAULT 1')
+  }
+}
+
 function usernameFromEmail(email: string): string {
   return String(email)
     .split('@')[0]
@@ -2477,6 +2490,7 @@ async function main() {
   try {
     await ensureUserSeedColumns().catch(() => {})
     await ensureCaseCoverageTables().catch(() => {})
+    await ensurePointCalculationSeedColumns().catch(() => {})
 
     switch (mode) {
       case 'reset':

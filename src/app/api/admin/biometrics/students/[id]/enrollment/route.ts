@@ -1,10 +1,11 @@
+import { NextRequest } from 'next/server';
 import { requireApiRole } from '@/lib/guards';
 import { successResponse, ApiError, errorResponse } from '@/lib/api-response';
 import { dbGet, dbHelpers, dbRun } from '@/lib/database';
 import { ensureStudentBiometricSchema } from '@/infrastructure/db/student-biometric-schema';
 import { getTeacherStudentHomeroomScope } from '@/lib/teacher-student-scope';
 
-export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
+export async function POST(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     const user = await requireApiRole(request, ['admin', 'teacher']);
     await ensureStudentBiometricSchema();

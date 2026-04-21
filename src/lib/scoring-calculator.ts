@@ -2,7 +2,7 @@
  * Point Calculation Engine
  */
 
-import { dbRun, dbGet, dbAll } from './database';
+import { dbRun, dbGet, dbAll, ensurePointCalculationColumns } from './database';
 import { cache } from './cache';
 import { CalculationInput, CalculationResult } from './scoring-types';
 
@@ -111,6 +111,8 @@ export class ScoringCalculator {
   static async saveCalculation(participationId: number, result: CalculationResult): Promise<void> {
     const { totalPoints, breakdown } = result;
     const effectiveCoefficient = breakdown.type * breakdown.level * breakdown.achievement;
+
+    await ensurePointCalculationColumns();
 
     const participation = await dbGet(
       'SELECT student_id, activity_id FROM participations WHERE id = ?',

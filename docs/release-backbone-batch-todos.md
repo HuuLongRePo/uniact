@@ -284,8 +284,8 @@ Yeu cau:
   - [x] da xong: Batch 5 FaceID foundation (scope guard + identify API + runtime fallback test + notification matrix v1)
   - [x] con defer: production liveness/matching library decision, embedding retention policy
   - [x] risk con lai: runtime model unavailable se fallback manual; can tiep tuc monitor audit no-match anomaly
-  - [x] risk con lai: production build hien dang fail (missing export `ensureActivityStudentScope`, type mismatch `attendance_status === 'present'`)
-  - [x] risk con lai: schema drift tren local QA DB (`point_calculations` thieu cot `activity_id`/`coefficient`) gay loi seed/build smoke
+  - [x] da fix blocker build (2026-04-21): re-export `ensureActivityStudentScope`, dong bo type admin participants voi contract `present/absent/not_participated`
+  - [x] da harden schema drift (2026-04-21): tu bo sung cot `activity_id`/`coefficient` cho `point_calculations` trong scoring + seed
 - [ ] Gan tag RC sau khi tat ca Gate A-E xanh.
 
 ## 10) Ke hoach commit de xuat
@@ -296,6 +296,7 @@ Yeu cau:
 - [x] Commit 5: Batch 5 FaceID foundation + notification matrix
   - [x] Split commits: `194c4eb`, `de6900c`, `0e1e5bb`, `9e221ac`
 - [x] Commit 6: Final regression fixes + release docs
+- [x] Commit 7: Production build hardening + point_calculations schema self-heal
 
 ---
 
@@ -307,7 +308,7 @@ Yeu cau:
 - [x] Da tao goi handoff: `docs/codex-ide-transition-pack.md`
 - [x] Da tao prompt clone may moi: `docs/codex-clone-coreflows-prompt.md`
 - [ ] Bat dau moi session bang prompt khoi dong trong handoff pack.
-- [ ] Lam viec theo workflow: Audit -> Patch nho -> Test cum -> Update docs -> Commit.
+- [x] Lam viec theo workflow: Audit -> Patch nho -> Test cum -> Update docs -> Commit.
 
 ### Prompt khoi dong rut gon
 ```text
@@ -316,7 +317,7 @@ Prompt nay da gom thu tu xu ly blocker + workflow batch + format bao cao.
 ```
 
 ### Checklist chuyen doi
-- [ ] Xac nhan env local trong Codex IDE (`.env`, migrate, seed:qa, build/start).
+- [x] Xac nhan env local trong Codex IDE (`.env`, migrate, seed:qa, build/start) o muc build/test backbone cho batch blocker (2026-04-21).
 - [ ] Chot branch lam viec cho batch hien tai.
 - [ ] Chay test cum lien quan truoc va sau khi sua.
 - [ ] Cap nhat lai checklist batch + risk/defer ngay trong file nay.

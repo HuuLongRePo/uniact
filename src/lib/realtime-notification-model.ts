@@ -89,13 +89,15 @@ export function normalizeActionButtons(
       const nextVariant: RealtimeNotificationActionVariant =
         variant === 'primary' || variant === 'danger' ? variant : 'secondary';
 
-      return {
+      const normalizedButton: RealtimeNotificationActionButton = {
         id: id || `action_${index + 1}`,
         label,
         action: action || 'open_link',
         ...(href ? { href } : {}),
         variant: nextVariant,
       };
+
+      return normalizedButton;
     })
     .filter((button): button is RealtimeNotificationActionButton => Boolean(button));
 

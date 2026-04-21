@@ -99,10 +99,12 @@ export async function GET(request: NextRequest) {
         })()
       : null;
 
+    const totalCount = Number(total?.total || 0);
+
     return successResponse({
       students: studentsWithTotals,
       summary: {
-        total: total?.total || 0,
+        total: totalCount,
         activity_count: studentsWithTotals.reduce((sum, student) => sum + Number(student.activity_count || 0), 0),
         attended_count: studentsWithTotals.reduce((sum, student) => sum + Number(student.attended_count || 0), 0),
         total_points: filteredTotals.reduce((sum, points) => sum + points, 0),
@@ -113,8 +115,8 @@ export async function GET(request: NextRequest) {
       pagination: {
         page,
         limit,
-        total,
-        totalPages: Math.ceil(total / limit),
+        total: totalCount,
+        totalPages: Math.ceil(totalCount / limit),
       },
     });
   } catch (error: any) {

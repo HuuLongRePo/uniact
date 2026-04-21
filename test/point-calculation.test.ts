@@ -22,6 +22,7 @@ vi.mock('../src/lib/database', () => ({
   withTransaction: vi.fn((callback: any) => callback()),
   ensureAdminUser: vi.fn(() => Promise.resolve()),
   insertDefaultData: vi.fn(() => Promise.resolve()),
+  ensurePointCalculationColumns: vi.fn(() => Promise.resolve()),
   dbHelpers: {}
 }))
 
@@ -54,11 +55,9 @@ beforeAll(async () => {
       CREATE TABLE point_calculations (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         participation_id INTEGER,
+        activity_id INTEGER,
         base_points REAL,
-        type_multiplier REAL,
-        level_multiplier REAL,
-        achievement_multiplier REAL,
-        subtotal REAL,
+        coefficient REAL DEFAULT 1,
         bonus_points REAL,
         penalty_points REAL,
         total_points REAL,
@@ -190,8 +189,9 @@ describe('PointCalculationService - Lưu kết quả', () => {
     
     expect(calc).toBeDefined()
     expect(calc.total_points).toBeCloseTo(result.totalPoints, 1)
+    expect(calc.activity_id).toBe(1)
     expect(calc.base_points).toBe(result.breakdown.base)
-    expect(calc.formula).toContain('=')
+    expect(calc.coefficient).toBeCloseTo(1.5, 1)
   })
 
   it('Lưu điểm vào student_scores table', async () => {

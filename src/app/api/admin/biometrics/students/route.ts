@@ -1,3 +1,4 @@
+import { NextRequest } from 'next/server';
 import { requireApiRole } from '@/lib/guards';
 import { successResponse, ApiError, errorResponse } from '@/lib/api-response';
 import { dbAll } from '@/lib/database';
@@ -8,7 +9,7 @@ function computeReady(enrollmentStatus: string, trainingStatus: string) {
   return FACE_BIOMETRIC_RUNTIME_ENABLED && enrollmentStatus === 'ready' && trainingStatus === 'trained';
 }
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
     const user = await requireApiRole(request, ['admin', 'teacher']);
     await ensureStudentBiometricSchema();
