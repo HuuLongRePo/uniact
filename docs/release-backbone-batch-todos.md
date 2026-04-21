@@ -221,8 +221,9 @@ Yeu cau:
   - [x] preview candidate (`/api/biometric/candidate-preview`)
   - [x] identify (`/api/biometric/identify`)
   - [x] audit trail cho luong train/enroll/identify
-- [ ] De xuat matrix trigger thong bao:
-  - Hanh dong -> Nguoi nhan -> Priority -> TTL
+- [x] De xuat matrix trigger thong bao:
+  - [x] Hanh dong -> Nguoi nhan -> Priority -> TTL
+  - [x] De xuat v1 da bo sung o bang "Notification trigger matrix (v1)"
 
 ### Definition of Done
 - [ ] FaceID co API/frame on dinh (co the pilot truoc model production).
@@ -234,6 +235,16 @@ Yeu cau:
 ### Decision Gates (neu can)
 - [ ] Thu vien matching/liveness chinh thuc cho production.
 - [ ] Chinh sach luu tru embedding + ma hoa + retention.
+
+### Notification trigger matrix (v1)
+| Hanh dong | Event key | Nguoi nhan | Priority | TTL (giay) | Action button de xuat |
+| --- | --- | --- | --- | --- | --- |
+| Bat dau diem danh QR | `attendance_qr_started` | Hoc vien mandatory + voluntary da dang ky | high | 600 | `Xem chi tiet` (den trang check-in) |
+| Face attendance thanh cong | `face_attendance_recorded` | Hoc vien vua duoc ghi nhan | high | 300 | `Xem hoat dong` |
+| Face attendance fallback manual (runtime/quality/multi-faces) | `face_attendance_manual_fallback` | Giang vien dang thao tac | normal | 120 | `Mo giao dien manual` |
+| Biometric enrollment cap nhat thanh cong | `biometric_enrollment_update` | Hoc vien + giang vien chu nhiem | normal | 3600 | `Xem trang khuon mat` |
+| Biometric training hoan tat | `biometric_training_update` | Hoc vien + giang vien chu nhiem | normal | 3600 | `Xem trang khuon mat` |
+| Biometric identify no-match lap lai > N lan / 5 phut | `biometric_identify_anomaly` | Admin van hanh | high | 900 | `Xem audit` |
 
 ### Prompt bo sung (copy de chay batch nay)
 ```text
