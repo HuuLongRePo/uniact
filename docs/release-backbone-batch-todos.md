@@ -215,8 +215,12 @@ Yeu cau:
   - [x] Bo sung route UI teacher: `/teacher/biometrics` (du lieu scope homeroom).
 - [ ] Hoc vien thong bao realtime:
   - "Ban da duoc diem danh thanh cong"
-- [ ] Thiet ke API FaceID:
-  - enroll, train, preview candidate, identify, audit
+- [x] Thiet ke API FaceID:
+  - [x] enroll (`/api/biometric/enroll`)
+  - [x] train (`/api/admin/biometrics/students/[id]/training`)
+  - [x] preview candidate (`/api/biometric/candidate-preview`)
+  - [x] identify (`/api/biometric/identify`)
+  - [x] audit trail cho luong train/enroll/identify
 - [ ] De xuat matrix trigger thong bao:
   - Hanh dong -> Nguoi nhan -> Priority -> TTL
 
