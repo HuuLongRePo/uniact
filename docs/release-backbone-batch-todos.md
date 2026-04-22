@@ -1215,7 +1215,7 @@ Yeu cau:
 - [x] Commit 19: landing contrast rescue v2 + scanner/inbox polish (batch 9.19) (`c304ca7`)
 - [x] Commit 20: biometric pages camera helper alignment + tests (batch 9.20) (`b9c18a3`)
 - [x] Commit 21: navbar actor integrity + dedupe hardening + landing dark/system rescue (batch 9.21) (`176eec4`)
-- [ ] Commit 22: server-side push notification dedupe guard + tests (batch 9.22)
+- [x] Commit 22: server-side push notification dedupe guard + tests (batch 9.22) (`cf46bf7`)
 
 ---
 
