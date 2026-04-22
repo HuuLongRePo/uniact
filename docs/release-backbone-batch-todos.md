@@ -1401,6 +1401,7 @@ Yeu cau:
 - [x] Commit 22: server-side push notification dedupe guard + tests (batch 9.22) (`cf46bf7`)
 - [x] Commit 23: attendance CTA hardening + projector quick action + camera helper + landing contrast v4 (batch 9.23) (`a58233c`)
 - [x] Commit 24: actor route namespace integrity hardening (batch 9.25) (`1be6968`)
+- [x] Commit 25: dark mode button-link contrast guard + theme regression test (batch 9.26) (`e32de41`)
 
 ---
 
