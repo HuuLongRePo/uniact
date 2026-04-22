@@ -142,7 +142,7 @@ export default function NotificationHistoryPage() {
 
     if (user?.role !== 'teacher' && user?.role !== 'admin') {
       toast.error('Chỉ giảng viên hoặc quản trị viên mới được xem lịch sử thông báo');
-      router.push('/dashboard');
+      router.push('/teacher/dashboard');
       return;
     }
 

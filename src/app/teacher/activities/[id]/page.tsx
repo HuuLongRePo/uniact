@@ -33,7 +33,7 @@ export default function TeacherActivityOverviewPage() {
 
     if (user && user.role !== 'teacher' && user.role !== 'admin') {
       toast.error('Chỉ giảng viên mới có quyền truy cập trang này');
-      router.push('/dashboard');
+      router.push('/teacher/dashboard');
       return;
     }
 

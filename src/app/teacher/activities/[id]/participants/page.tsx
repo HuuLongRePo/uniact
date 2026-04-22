@@ -273,7 +273,10 @@ export default function ParticipantsPage() {
     <div className="max-w-7xl mx-auto p-6">
       {/* Header */}
       <div className="mb-6">
-        <Link href="/activities" className="text-green-600 hover:text-green-800 mb-2 inline-block">
+        <Link
+          href="/teacher/activities"
+          className="text-green-600 hover:text-green-800 mb-2 inline-block"
+        >
           ← Quay lại danh sách hoạt động
         </Link>
         <div className="flex items-center justify-between mb-4">

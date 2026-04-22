@@ -72,7 +72,7 @@ export default function BulkAttendancePage() {
 
     if (user?.role !== 'teacher' && user?.role !== 'admin') {
       toast.error('Chỉ giảng viên mới có quyền điểm danh');
-      router.push('/dashboard');
+      router.push('/teacher/dashboard');
       return;
     }
 

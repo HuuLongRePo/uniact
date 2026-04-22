@@ -65,7 +65,7 @@ export default function QRSessionsPage() {
 
     if (user?.role !== 'teacher' && user?.role !== 'admin') {
       toast.error('Chỉ giảng viên mới có quyền xem trang này');
-      router.push('/dashboard');
+      router.push('/teacher/dashboard');
       return;
     }
 

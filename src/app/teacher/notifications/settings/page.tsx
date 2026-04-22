@@ -67,7 +67,7 @@ export default function NotificationSettingsPage() {
 
     if (user?.role !== 'teacher' && user?.role !== 'admin') {
       toast.error('Chỉ giảng viên hoặc quản trị viên mới được quản lý cài đặt thông báo');
-      router.push('/dashboard');
+      router.push('/teacher/dashboard');
       return;
     }
 

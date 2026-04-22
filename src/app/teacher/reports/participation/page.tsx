@@ -207,7 +207,7 @@ export default function ParticipationReportsPage() {
 
     if (user?.role !== 'teacher' && user?.role !== 'admin') {
       toast.error('Chỉ giảng viên mới có quyền xem báo cáo');
-      router.push('/dashboard');
+      router.push('/teacher/dashboard');
       return;
     }
 

@@ -1312,6 +1312,34 @@ Yeu cau:
 - [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests)
 - [x] `npm.cmd run release:check:full` -> PASS (4/4 checks, lint warnings legacy scope khong block)
 
+## 9.25) Batch tiep theo - actor route namespace integrity hardening
+
+### Muc tieu
+
+- Khoa chan drift route namespace o cac trang actor (admin/student/teacher), tranh deep-link sai namespace sau cac dot refactor UI lon.
+- Sua cac redirect generic va static link lech actor namespace trong teacher pages.
+- Bo sung regression test route integrity cho toan bo actor de phat hien som route sai/khong ton tai.
+
+### Viec can lam
+
+- [x] Teacher route hotfix:
+  - [x] sua redirect `router.push('/dashboard')` sang `/teacher/dashboard` tren cac trang teacher detail/report/notification.
+  - [x] sua link quay lai participants page tu `/activities` thanh `/teacher/activities`.
+- [x] Regression test route integrity:
+  - [x] tao test quet `src/app/{admin,student,teacher}` de chan `router.push('/dashboard')` generic.
+  - [x] assert moi static `href="/..."` trong actor pages dung namespace actor va tro toi route co that.
+- [x] Verification:
+  - [x] test route integrity luc dau phat hien loi namespace `/activities` trong teacher participants page.
+  - [x] sau khi fix, test/build/backbone/release-check deu xanh.
+
+### Verification
+
+- [x] `npm.cmd test -- test/teacher-route-integrity.test.ts test/sidebar-teacher-links.test.tsx test/student-dashboard-links.test.ts` -> PASS (3 files / 12 tests)
+- [x] `npm.cmd run lint -- --file "test/teacher-route-integrity.test.ts"` -> PASS (0 warning)
+- [x] `npm.cmd run build` -> PASS
+- [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests)
+- [x] `npm.cmd run release:check:full` -> PASS (4/4 checks, lint warnings legacy scope khong block)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix
