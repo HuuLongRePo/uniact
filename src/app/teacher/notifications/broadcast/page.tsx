@@ -331,7 +331,9 @@ export default function BroadcastNotificationsPage() {
                   <input
                     type="text"
                     value={formData.title}
-                    onChange={(event) => setFormData((prev) => ({ ...prev, title: event.target.value }))}
+                    onChange={(event) =>
+                      setFormData((prev) => ({ ...prev, title: event.target.value }))
+                    }
                     placeholder="Nhập tiêu đề thông báo"
                     className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
@@ -341,7 +343,9 @@ export default function BroadcastNotificationsPage() {
                   <label className="mb-2 block text-sm font-medium text-gray-700">Nội dung *</label>
                   <textarea
                     value={formData.message}
-                    onChange={(event) => setFormData((prev) => ({ ...prev, message: event.target.value }))}
+                    onChange={(event) =>
+                      setFormData((prev) => ({ ...prev, message: event.target.value }))
+                    }
                     placeholder="Nhập nội dung thông báo"
                     rows={4}
                     className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -350,7 +354,9 @@ export default function BroadcastNotificationsPage() {
 
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div>
-                    <label className="mb-2 block text-sm font-medium text-gray-700">Đối tượng nhận *</label>
+                    <label className="mb-2 block text-sm font-medium text-gray-700">
+                      Đối tượng nhận *
+                    </label>
                     <select
                       value={formData.target_type}
                       onChange={(event) =>
@@ -369,14 +375,20 @@ export default function BroadcastNotificationsPage() {
                   </div>
 
                   <div>
-                    <label className="mb-2 block text-sm font-medium text-gray-700">Thời gian gửi (tùy chọn)</label>
+                    <label className="mb-2 block text-sm font-medium text-gray-700">
+                      Thời gian gửi (tùy chọn)
+                    </label>
                     <input
                       type="datetime-local"
                       value={formData.scheduled_at}
-                      onChange={(event) => setFormData((prev) => ({ ...prev, scheduled_at: event.target.value }))}
+                      onChange={(event) =>
+                        setFormData((prev) => ({ ...prev, scheduled_at: event.target.value }))
+                      }
                       className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
-                    <p className="mt-1 text-xs text-gray-500">Để trống nếu muốn lưu nháp hoặc gửi ngay.</p>
+                    <p className="mt-1 text-xs text-gray-500">
+                      Để trống nếu muốn lưu nháp hoặc gửi ngay.
+                    </p>
                   </div>
                 </div>
 
@@ -471,16 +483,23 @@ export default function BroadcastNotificationsPage() {
           ) : (
             <div className="grid grid-cols-1 gap-4">
               {notifications.map((notification) => (
-                <article key={notification.id} className="content-card p-6 transition hover:shadow-md">
+                <article
+                  key={notification.id}
+                  className="content-card p-6 transition hover:shadow-md"
+                >
                   <div className="mb-4 flex items-start justify-between gap-4">
                     <div className="flex-1">
                       <div className="mb-2 flex items-center gap-3">
                         <h3 className="text-lg font-bold text-gray-900">{notification.title}</h3>
-                        <span className={`rounded-full px-3 py-1 text-sm font-medium ${getStatusColor(notification.status)}`}>
+                        <span
+                          className={`rounded-full px-3 py-1 text-sm font-medium ${getStatusColor(notification.status)}`}
+                        >
                           {getStatusLabel(notification.status)}
                         </span>
                       </div>
-                      <p className="mb-3 whitespace-pre-wrap text-gray-700">{notification.message}</p>
+                      <p className="mb-3 whitespace-pre-wrap text-gray-700">
+                        {notification.message}
+                      </p>
 
                       <div className="flex flex-wrap gap-4 text-sm text-gray-600">
                         <span className="inline-flex items-center gap-1">

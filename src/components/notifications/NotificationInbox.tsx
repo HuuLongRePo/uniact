@@ -5,8 +5,14 @@ import toast from 'react-hot-toast';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useEffectEventCompat } from '@/lib/useEffectEventCompat';
-import { executeNotificationAction, resolveNotificationActionButtons } from '@/lib/notification-actions';
-import { normalizeActionButtons, RealtimeNotificationActionButton } from '@/lib/realtime-notification-model';
+import {
+  executeNotificationAction,
+  resolveNotificationActionButtons,
+} from '@/lib/notification-actions';
+import {
+  normalizeActionButtons,
+  RealtimeNotificationActionButton,
+} from '@/lib/realtime-notification-model';
 
 interface NotificationItem {
   id: number;
@@ -34,7 +40,10 @@ interface NotificationInboxProps {
 
 const PER_PAGE = 20;
 
-export default function NotificationInbox({ title = 'Thông báo', showSettings = false }: NotificationInboxProps) {
+export default function NotificationInbox({
+  title = 'Thông báo',
+  showSettings = false,
+}: NotificationInboxProps) {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -137,7 +146,9 @@ export default function NotificationInbox({ title = 'Thông báo', showSettings 
         throw new Error('Không thể đánh dấu đã đọc');
       }
 
-      setNotifications((prev) => prev.map((item) => (item.id === id ? { ...item, is_read: 1 } : item)));
+      setNotifications((prev) =>
+        prev.map((item) => (item.id === id ? { ...item, is_read: 1 } : item))
+      );
       setUnreadCount((prev) => Math.max(0, prev - 1));
     } catch (error) {
       console.error('Mark notification read error:', error);
@@ -169,8 +180,12 @@ export default function NotificationInbox({ title = 'Thông báo', showSettings 
       }
 
       const selected = new Set(selectedIds);
-      const newlyRead = notifications.filter((item) => selected.has(item.id) && !item.is_read).length;
-      setNotifications((prev) => prev.map((item) => (selected.has(item.id) ? { ...item, is_read: 1 } : item)));
+      const newlyRead = notifications.filter(
+        (item) => selected.has(item.id) && !item.is_read
+      ).length;
+      setNotifications((prev) =>
+        prev.map((item) => (selected.has(item.id) ? { ...item, is_read: 1 } : item))
+      );
       setSelectedIds(new Set());
       setUnreadCount((prev) => Math.max(0, prev - newlyRead));
       toast.success('Đã đánh dấu đã đọc cho thông báo đã chọn');
@@ -218,7 +233,9 @@ export default function NotificationInbox({ title = 'Thông báo', showSettings 
       }
 
       const selected = new Set(selectedIds);
-      const deletedUnread = notifications.filter((item) => selected.has(item.id) && !item.is_read).length;
+      const deletedUnread = notifications.filter(
+        (item) => selected.has(item.id) && !item.is_read
+      ).length;
       setNotifications((prev) => prev.filter((item) => !selected.has(item.id)));
       setSelectedIds(new Set());
       setUnreadCount((prev) => Math.max(0, prev - deletedUnread));
@@ -282,14 +299,20 @@ export default function NotificationInbox({ title = 'Thông báo', showSettings 
     return date.toLocaleDateString('vi-VN');
   };
 
-  const hasAnyUnreadOnPage = useMemo(() => notifications.some((item) => !item.is_read), [notifications]);
+  const hasAnyUnreadOnPage = useMemo(
+    () => notifications.some((item) => !item.is_read),
+    [notifications]
+  );
 
   return (
     <div className="page-shell">
       <section className="page-surface overflow-hidden rounded-[1.75rem] px-5 py-6 sm:px-7">
         <header className="mb-6 flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 data-testid="notifications-heading" className="text-2xl font-bold text-gray-900 sm:text-3xl">
+            <h1
+              data-testid="notifications-heading"
+              className="text-2xl font-bold text-gray-900 sm:text-3xl"
+            >
               {title}
             </h1>
             {unreadCount > 0 ? (
@@ -441,7 +464,9 @@ export default function NotificationInbox({ title = 'Thông báo', showSettings 
                       <div className="flex-1">
                         <h3 className="font-semibold text-gray-900">{notification.title}</h3>
                         <p className="mt-1 text-gray-700">{notification.message}</p>
-                        <p className="mt-2 text-sm text-gray-500">{formatDate(notification.created_at)}</p>
+                        <p className="mt-2 text-sm text-gray-500">
+                          {formatDate(notification.created_at)}
+                        </p>
                         {actionButtons.length > 0 && (
                           <div className="mt-3 flex flex-wrap gap-2">
                             {actionButtons.map((button) => (
@@ -514,7 +539,9 @@ export default function NotificationInbox({ title = 'Thông báo', showSettings 
                   type="checkbox"
                   className="h-5 w-5"
                   checked={settings.email_enabled}
-                  onChange={(event) => setSettings((prev) => ({ ...prev, email_enabled: event.target.checked }))}
+                  onChange={(event) =>
+                    setSettings((prev) => ({ ...prev, email_enabled: event.target.checked }))
+                  }
                 />
               </label>
               <label className="flex items-center justify-between text-gray-700">
@@ -534,7 +561,9 @@ export default function NotificationInbox({ title = 'Thông báo', showSettings 
                   type="checkbox"
                   className="h-5 w-5"
                   checked={settings.reminder_enabled}
-                  onChange={(event) => setSettings((prev) => ({ ...prev, reminder_enabled: event.target.checked }))}
+                  onChange={(event) =>
+                    setSettings((prev) => ({ ...prev, reminder_enabled: event.target.checked }))
+                  }
                 />
               </label>
               {settings.reminder_enabled && (

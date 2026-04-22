@@ -38,9 +38,14 @@ const pushNotificationSchema = z.object({
 export const POST = apiHandler(async (request: NextRequest) => {
   const limiter = rateLimit(request, PUSH_RATE_LIMIT_MAX, PUSH_RATE_LIMIT_WINDOW_MS);
   if (!limiter.allowed) {
-    throw new ApiError('RATE_LIMITED', 'Ban dang gui thong bao qua nhanh, vui long thu lai sau.', 429, {
-      retry_after_ms: Math.max(0, Number(limiter.resetAt || Date.now()) - Date.now()),
-    });
+    throw new ApiError(
+      'RATE_LIMITED',
+      'Ban dang gui thong bao qua nhanh, vui long thu lai sau.',
+      429,
+      {
+        retry_after_ms: Math.max(0, Number(limiter.resetAt || Date.now()) - Date.now()),
+      }
+    );
   }
 
   const actor = await requireApiRole(request, ['admin', 'teacher']);

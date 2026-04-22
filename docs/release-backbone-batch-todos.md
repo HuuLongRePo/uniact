@@ -364,6 +364,7 @@ Yeu cau:
   - [x] da harden schema drift (2026-04-21): tu bo sung cot `activity_id`/`coefficient` cho `point_calculations` trong scoring + seed
   - [x] Internal RC summary cap nhat: `docs/INTERNAL_RC_SUMMARY_2026-04-21.md`
   - [x] Full release check pass (2026-04-21): `npm.cmd run release:check:full`
+  - [x] Re-run full release check pass (2026-04-22): `npm.cmd run release:check:full` (4/4 checks)
 - [x] Tat ca Gate A-E da xanh (2026-04-21).
 - [x] Gan tag RC noi bo `internal-rc-2026-04-21` sau khi xac nhan build + backbone regression + docs release (2026-04-21).
 
@@ -611,6 +612,7 @@ Yeu cau thi hanh:
 - [x] `npm.cmd test -- test/biometric-production-policy.test.ts test/biometric-cleanup-cron-route.test.ts test/admin-biometric-readiness-route.test.ts test/biometric-runtime-capability.test.ts test/attendance-runtime-bridge.test.ts test/biometric-identify-route.test.ts test/admin-system-health-page.test.tsx` -> PASS (7 files / 19 tests)
 - [x] `npm.cmd run build` -> PASS
 - [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests)
+- [x] `npm.cmd run release:check:full` -> PASS (4/4 checks)
 
 ## 10) Ke hoach commit de xuat
 
@@ -648,6 +650,7 @@ Prompt nay da gom thu tu xu ly blocker + workflow batch + format bao cao.
 ### Checklist chuyen doi
 
 - [x] Xac nhan env local trong Codex IDE (`.env`, migrate, seed:qa, build/start) o muc build/test backbone cho batch blocker (2026-04-21).
-- [ ] Chot branch lam viec cho batch hien tai.
+- [x] Chot branch lam viec cho batch hien tai.
+  - [x] Branch hien tai: `main`
 - [x] Chay test cum lien quan truoc va sau khi sua.
 - [x] Cap nhat lai checklist batch + risk/defer ngay trong file nay.

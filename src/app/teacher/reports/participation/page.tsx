@@ -418,7 +418,9 @@ export default function ParticipationReportsPage() {
                       <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
                         Mã sinh viên
                       </th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Lớp</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
+                        Lớp
+                      </th>
                       <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
                         Tổng hoạt động
                       </th>
@@ -533,7 +535,9 @@ export default function ParticipationReportsPage() {
 
                 <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
                   <div>
-                    <label className="mb-2 block text-sm font-medium text-gray-700">Trạng thái</label>
+                    <label className="mb-2 block text-sm font-medium text-gray-700">
+                      Trạng thái
+                    </label>
                     <select
                       value={filters.status}
                       onChange={(event) => setFilters({ ...filters, status: event.target.value })}
@@ -550,7 +554,9 @@ export default function ParticipationReportsPage() {
                     <input
                       type="date"
                       value={filters.dateStart}
-                      onChange={(event) => setFilters({ ...filters, dateStart: event.target.value })}
+                      onChange={(event) =>
+                        setFilters({ ...filters, dateStart: event.target.value })
+                      }
                       className="w-full rounded-2xl border border-gray-300 px-4 py-2.5 focus:border-transparent focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
@@ -619,7 +625,9 @@ export default function ParticipationReportsPage() {
                           <td className="px-4 py-4 text-sm font-medium text-blue-600">
                             {record.activity_name}
                           </td>
-                          <td className="px-4 py-4 text-sm text-gray-600">{record.activity_type}</td>
+                          <td className="px-4 py-4 text-sm text-gray-600">
+                            {record.activity_type}
+                          </td>
                           <td className="px-4 py-4 text-sm text-gray-600">
                             {new Date(record.date).toLocaleDateString('vi-VN')}
                           </td>

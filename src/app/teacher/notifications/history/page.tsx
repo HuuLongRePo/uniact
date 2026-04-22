@@ -96,8 +96,7 @@ function getHistoryPayload(payload: unknown): {
   return {
     records: data.data?.records ?? data.records ?? [],
     notifications: data.data?.notifications ?? data.notifications ?? [],
-    summary:
-      data.data?.summary ??
+    summary: data.data?.summary ??
       data.summary ?? {
         total_notifications: 0,
         total_recipients: 0,
@@ -296,7 +295,8 @@ export default function NotificationHistoryPage() {
                 Lịch sử thông báo
               </h1>
               <p className="mt-2 text-sm leading-6 text-gray-600 sm:text-base">
-                Theo dõi độ phủ gửi, tỷ lệ đọc và các thông báo có hiệu suất thấp để tối ưu nội dung.
+                Theo dõi độ phủ gửi, tỷ lệ đọc và các thông báo có hiệu suất thấp để tối ưu nội
+                dung.
               </p>
             </div>
             <button
@@ -330,11 +330,16 @@ export default function NotificationHistoryPage() {
             </div>
           </div>
 
-          <div className="content-card border-orange-200 bg-orange-50 p-6" data-testid="notification-low-read-section">
+          <div
+            className="content-card border-orange-200 bg-orange-50 p-6"
+            data-testid="notification-low-read-section"
+          >
             <div className="mb-4 flex items-start gap-3">
               <AlertTriangle className="mt-0.5 h-5 w-5 text-orange-600" />
               <div>
-                <h2 className="text-lg font-semibold text-orange-900">Thông báo có tỷ lệ đọc thấp</h2>
+                <h2 className="text-lg font-semibold text-orange-900">
+                  Thông báo có tỷ lệ đọc thấp
+                </h2>
                 <p className="text-sm text-orange-800">
                   Cân nhắc điều chỉnh tiêu đề, nội dung hoặc thời điểm gửi cho nhóm dưới đây.
                 </p>
@@ -350,19 +355,27 @@ export default function NotificationHistoryPage() {
                 {summary.low_read_notifications.map((item) => (
                   <div key={item.id} className="rounded-lg bg-white/80 p-4 shadow-sm">
                     <div className="text-sm font-semibold text-gray-900">{item.title}</div>
-                    <div className="mt-2 text-xs text-gray-500">{item.target_names || 'Tất cả nhóm phù hợp'}</div>
+                    <div className="mt-2 text-xs text-gray-500">
+                      {item.target_names || 'Tất cả nhóm phù hợp'}
+                    </div>
                     <div className="mt-3 grid grid-cols-3 gap-2 text-sm">
                       <div>
                         <div className="text-xs uppercase tracking-wide text-gray-400">Nhận</div>
-                        <div className="mt-1 font-semibold text-blue-700">{item.delivered_count}</div>
+                        <div className="mt-1 font-semibold text-blue-700">
+                          {item.delivered_count}
+                        </div>
                       </div>
                       <div>
                         <div className="text-xs uppercase tracking-wide text-gray-400">Đã đọc</div>
                         <div className="mt-1 font-semibold text-emerald-700">{item.read_count}</div>
                       </div>
                       <div>
-                        <div className="text-xs uppercase tracking-wide text-gray-400">Chưa đọc</div>
-                        <div className="mt-1 font-semibold text-orange-800">{item.unread_count}</div>
+                        <div className="text-xs uppercase tracking-wide text-gray-400">
+                          Chưa đọc
+                        </div>
+                        <div className="mt-1 font-semibold text-orange-800">
+                          {item.unread_count}
+                        </div>
                       </div>
                     </div>
                     <div className="mt-3 text-sm text-orange-900">
@@ -396,7 +409,9 @@ export default function NotificationHistoryPage() {
                 </label>
                 <select
                   value={filters.className}
-                  onChange={(event) => setFilters((prev) => ({ ...prev, className: event.target.value }))}
+                  onChange={(event) =>
+                    setFilters((prev) => ({ ...prev, className: event.target.value }))
+                  }
                   className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">-- Tất cả lớp --</option>
@@ -408,10 +423,14 @@ export default function NotificationHistoryPage() {
                 </select>
               </div>
               <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700">Trạng thái đọc</label>
+                <label className="mb-2 block text-sm font-medium text-gray-700">
+                  Trạng thái đọc
+                </label>
                 <select
                   value={filters.readStatus}
-                  onChange={(event) => setFilters((prev) => ({ ...prev, readStatus: event.target.value }))}
+                  onChange={(event) =>
+                    setFilters((prev) => ({ ...prev, readStatus: event.target.value }))
+                  }
                   className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">-- Tất cả --</option>
@@ -425,7 +444,9 @@ export default function NotificationHistoryPage() {
                   <input
                     type="date"
                     value={filters.dateStart}
-                    onChange={(event) => setFilters((prev) => ({ ...prev, dateStart: event.target.value }))}
+                    onChange={(event) =>
+                      setFilters((prev) => ({ ...prev, dateStart: event.target.value }))
+                    }
                     className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -434,7 +455,9 @@ export default function NotificationHistoryPage() {
                   <input
                     type="date"
                     value={filters.dateEnd}
-                    onChange={(event) => setFilters((prev) => ({ ...prev, dateEnd: event.target.value }))}
+                    onChange={(event) =>
+                      setFilters((prev) => ({ ...prev, dateEnd: event.target.value }))
+                    }
                     className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -450,18 +473,24 @@ export default function NotificationHistoryPage() {
                     <th
                       onClick={() => {
                         setSortBy('student');
-                        setSortOrder((current) => (sortBy === 'student' && current === 'asc' ? 'desc' : 'asc'));
+                        setSortOrder((current) =>
+                          sortBy === 'student' && current === 'asc' ? 'desc' : 'asc'
+                        );
                       }}
                       className="cursor-pointer px-4 py-3 text-left text-sm font-semibold text-gray-900 hover:bg-gray-100"
                     >
                       Học viên {sortIndicator('student')}
                     </th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Lớp</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Thông báo</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
+                      Thông báo
+                    </th>
                     <th
                       onClick={() => {
                         setSortBy('sent_at');
-                        setSortOrder((current) => (sortBy === 'sent_at' && current === 'asc' ? 'desc' : 'asc'));
+                        setSortOrder((current) =>
+                          sortBy === 'sent_at' && current === 'asc' ? 'desc' : 'asc'
+                        );
                       }}
                       className="cursor-pointer px-4 py-3 text-left text-sm font-semibold text-gray-900 hover:bg-gray-100"
                     >
@@ -470,22 +499,32 @@ export default function NotificationHistoryPage() {
                     <th
                       onClick={() => {
                         setSortBy('read_at');
-                        setSortOrder((current) => (sortBy === 'read_at' && current === 'asc' ? 'desc' : 'asc'));
+                        setSortOrder((current) =>
+                          sortBy === 'read_at' && current === 'asc' ? 'desc' : 'asc'
+                        );
                       }}
                       className="cursor-pointer px-4 py-3 text-left text-sm font-semibold text-gray-900 hover:bg-gray-100"
                     >
                       Đọc lúc {sortIndicator('read_at')}
                     </th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Trạng thái</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Thiết bị</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
+                      Trạng thái
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
+                      Thiết bị
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {filteredRecords.map((record) => (
                     <tr key={record.id} className="transition-colors hover:bg-gray-50">
-                      <td className="px-4 py-4 text-sm font-medium text-gray-900">{record.student_name}</td>
+                      <td className="px-4 py-4 text-sm font-medium text-gray-900">
+                        {record.student_name}
+                      </td>
                       <td className="px-4 py-4 text-sm text-gray-600">{record.class_name}</td>
-                      <td className="px-4 py-4 text-sm text-blue-600">{record.notification_title}</td>
+                      <td className="px-4 py-4 text-sm text-blue-600">
+                        {record.notification_title}
+                      </td>
                       <td className="px-4 py-4 text-sm text-gray-600">
                         {new Date(record.sent_at).toLocaleString('vi-VN')}
                       </td>
@@ -506,7 +545,9 @@ export default function NotificationHistoryPage() {
                         )}
                       </td>
                       <td className="px-4 py-4 text-sm text-gray-600">
-                        {record.read_on_device === 'unknown' ? 'Không theo dõi' : record.read_on_device}
+                        {record.read_on_device === 'unknown'
+                          ? 'Không theo dõi'
+                          : record.read_on_device}
                       </td>
                     </tr>
                   ))}
@@ -523,7 +564,9 @@ export default function NotificationHistoryPage() {
           </div>
 
           {broadcasts.length > 0 && (
-            <div className="text-right text-sm text-gray-500">Đang theo dõi {broadcasts.length} chiến dịch gần nhất.</div>
+            <div className="text-right text-sm text-gray-500">
+              Đang theo dõi {broadcasts.length} chiến dịch gần nhất.
+            </div>
           )}
         </div>
       </section>

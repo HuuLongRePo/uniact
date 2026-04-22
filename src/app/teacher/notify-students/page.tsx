@@ -56,7 +56,9 @@ export default function TeacherNotifyStudentsPage() {
   const [scheduled, setScheduled] = useState<ScheduledNotification[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [scheduledLoading, setScheduledLoading] = useState(false);
-  const [notificationToCancel, setNotificationToCancel] = useState<ScheduledNotification | null>(null);
+  const [notificationToCancel, setNotificationToCancel] = useState<ScheduledNotification | null>(
+    null
+  );
 
   const [scheduleDate, setScheduleDate] = useState('');
   const [scheduleTime, setScheduleTime] = useState('');
@@ -79,7 +81,10 @@ export default function TeacherNotifyStudentsPage() {
       Array.from(
         new Map(
           students
-            .filter((student) => Number.isInteger(Number(student.class_id)) && Number(student.class_id) > 0)
+            .filter(
+              (student) =>
+                Number.isInteger(Number(student.class_id)) && Number(student.class_id) > 0
+            )
             .map((student) => [
               String(student.class_id),
               {
@@ -98,7 +103,8 @@ export default function TeacherNotifyStudentsPage() {
   }, [students, classFilter]);
 
   const allVisibleSelected =
-    filteredStudents.length > 0 && filteredStudents.every((student) => selectedIds.includes(Number(student.id)));
+    filteredStudents.length > 0 &&
+    filteredStudents.every((student) => selectedIds.includes(Number(student.id)));
 
   const fetchStudents = async () => {
     try {
@@ -152,7 +158,9 @@ export default function TeacherNotifyStudentsPage() {
   };
 
   const handleToggleStudent = (id: number) => {
-    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((sid) => sid !== id) : [...prev, id]));
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((sid) => sid !== id) : [...prev, id]
+    );
   };
 
   const handleSelectAll = () => {
@@ -271,7 +279,8 @@ export default function TeacherNotifyStudentsPage() {
                 Gửi thông báo cho học viên
               </h1>
               <p className="mt-2 text-sm leading-6 text-gray-600 sm:text-base">
-                Chọn đúng nhóm học viên, gửi ngay hoặc lên lịch để đảm bảo thông báo đến đúng thời điểm.
+                Chọn đúng nhóm học viên, gửi ngay hoặc lên lịch để đảm bảo thông báo đến đúng thời
+                điểm.
               </p>
             </div>
             <div className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-medium text-blue-700">
@@ -297,11 +306,13 @@ export default function TeacherNotifyStudentsPage() {
           </div>
 
           <div className="flex flex-wrap gap-2 border-b border-gray-200 pb-3">
-            {([
-              { id: 'send', label: 'Gửi thông báo', icon: Send },
-              { id: 'scheduled', label: `Lên lịch (${scheduled.length})`, icon: Clock },
-              { id: 'history', label: `Lịch sử (${history.length})`, icon: HistoryIcon },
-            ] as Array<{ id: NotifyTab; label: string; icon: typeof Send }>).map((tab) => {
+            {(
+              [
+                { id: 'send', label: 'Gửi thông báo', icon: Send },
+                { id: 'scheduled', label: `Lên lịch (${scheduled.length})`, icon: Clock },
+                { id: 'history', label: `Lịch sử (${history.length})`, icon: HistoryIcon },
+              ] as Array<{ id: NotifyTab; label: string; icon: typeof Send }>
+            ).map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
               return (
@@ -339,7 +350,10 @@ export default function TeacherNotifyStudentsPage() {
                 </div>
 
                 <div className="mb-3 flex items-center gap-3">
-                  <label htmlFor="notify-class-filter" className="text-sm font-medium text-gray-700">
+                  <label
+                    htmlFor="notify-class-filter"
+                    className="text-sm font-medium text-gray-700"
+                  >
                     Lọc theo lớp
                   </label>
                   <select
@@ -370,7 +384,9 @@ export default function TeacherNotifyStudentsPage() {
                         className="h-4 w-4 rounded border-gray-300 accent-blue-600"
                       />
                       <div className="min-w-0 flex-1">
-                        <div className="truncate text-sm font-semibold text-gray-900">{student.name}</div>
+                        <div className="truncate text-sm font-semibold text-gray-900">
+                          {student.name}
+                        </div>
                         <div className="truncate text-xs text-gray-600">{student.email}</div>
                       </div>
                       <div className="rounded-full bg-gray-100 px-2 py-1 text-xs text-gray-700">
@@ -390,7 +406,10 @@ export default function TeacherNotifyStudentsPage() {
                 <h2 className="text-lg font-semibold text-gray-900">Nội dung thông báo</h2>
 
                 <div>
-                  <label htmlFor="notify-title" className="mb-2 block text-sm font-medium text-gray-700">
+                  <label
+                    htmlFor="notify-title"
+                    className="mb-2 block text-sm font-medium text-gray-700"
+                  >
                     Tiêu đề
                   </label>
                   <input
@@ -406,7 +425,10 @@ export default function TeacherNotifyStudentsPage() {
                 </div>
 
                 <div>
-                  <label htmlFor="notify-message" className="mb-2 block text-sm font-medium text-gray-700">
+                  <label
+                    htmlFor="notify-message"
+                    className="mb-2 block text-sm font-medium text-gray-700"
+                  >
                     Nội dung
                   </label>
                   <textarea
@@ -435,7 +457,10 @@ export default function TeacherNotifyStudentsPage() {
                   {useSchedule && (
                     <div className="mt-3 grid grid-cols-2 gap-3">
                       <div>
-                        <label htmlFor="notify-schedule-date" className="mb-1 block text-xs text-gray-600">
+                        <label
+                          htmlFor="notify-schedule-date"
+                          className="mb-1 block text-xs text-gray-600"
+                        >
                           Ngày
                         </label>
                         <input
@@ -448,7 +473,10 @@ export default function TeacherNotifyStudentsPage() {
                         />
                       </div>
                       <div>
-                        <label htmlFor="notify-schedule-time" className="mb-1 block text-xs text-gray-600">
+                        <label
+                          htmlFor="notify-schedule-time"
+                          className="mb-1 block text-xs text-gray-600"
+                        >
                           Giờ
                         </label>
                         <input
@@ -464,9 +492,13 @@ export default function TeacherNotifyStudentsPage() {
                 </div>
 
                 <div className="rounded-xl border border-blue-200 bg-blue-50 p-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-blue-800">Xem trước</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-blue-800">
+                    Xem trước
+                  </p>
                   <div className="mt-2 rounded-lg bg-white p-3">
-                    <div className="text-sm font-semibold text-gray-900">{title || '(Tiêu đề)'}</div>
+                    <div className="text-sm font-semibold text-gray-900">
+                      {title || '(Tiêu đề)'}
+                    </div>
                     <div className="mt-1 whitespace-pre-wrap text-sm text-gray-600">
                       {message || '(Nội dung thông báo)'}
                     </div>
@@ -510,23 +542,37 @@ export default function TeacherNotifyStudentsPage() {
                   <LoadingSpinner />
                 </div>
               ) : history.length === 0 ? (
-                <div className="p-10 text-center text-sm text-gray-500">Chưa có thông báo nào được gửi.</div>
+                <div className="p-10 text-center text-sm text-gray-500">
+                  Chưa có thông báo nào được gửi.
+                </div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-[760px]">
                     <thead className="border-b border-gray-200 bg-gray-50">
                       <tr>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Tiêu đề</th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Nội dung</th>
-                        <th className="px-4 py-3 text-center text-sm font-semibold text-gray-900">Người nhận</th>
-                        <th className="px-4 py-3 text-center text-sm font-semibold text-gray-900">Đã đọc</th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Thời gian</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
+                          Tiêu đề
+                        </th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
+                          Nội dung
+                        </th>
+                        <th className="px-4 py-3 text-center text-sm font-semibold text-gray-900">
+                          Người nhận
+                        </th>
+                        <th className="px-4 py-3 text-center text-sm font-semibold text-gray-900">
+                          Đã đọc
+                        </th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
+                          Thời gian
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
                       {history.map((notification) => (
                         <tr key={notification.id} className="hover:bg-gray-50">
-                          <td className="px-4 py-3 text-sm font-medium text-gray-900">{notification.title}</td>
+                          <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                            {notification.title}
+                          </td>
                           <td className="max-w-[22rem] truncate px-4 py-3 text-sm text-gray-700">
                             {notification.message}
                           </td>
@@ -566,24 +612,40 @@ export default function TeacherNotifyStudentsPage() {
                   <LoadingSpinner />
                 </div>
               ) : scheduled.length === 0 ? (
-                <div className="p-10 text-center text-sm text-gray-500">Chưa có thông báo nào được lên lịch.</div>
+                <div className="p-10 text-center text-sm text-gray-500">
+                  Chưa có thông báo nào được lên lịch.
+                </div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-[860px]">
                     <thead className="border-b border-gray-200 bg-gray-50">
                       <tr>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Tiêu đề</th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Nội dung</th>
-                        <th className="px-4 py-3 text-center text-sm font-semibold text-gray-900">Người nhận</th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Lên lịch lúc</th>
-                        <th className="px-4 py-3 text-center text-sm font-semibold text-gray-900">Trạng thái</th>
-                        <th className="px-4 py-3 text-center text-sm font-semibold text-gray-900">Hành động</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
+                          Tiêu đề
+                        </th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
+                          Nội dung
+                        </th>
+                        <th className="px-4 py-3 text-center text-sm font-semibold text-gray-900">
+                          Người nhận
+                        </th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
+                          Lên lịch lúc
+                        </th>
+                        <th className="px-4 py-3 text-center text-sm font-semibold text-gray-900">
+                          Trạng thái
+                        </th>
+                        <th className="px-4 py-3 text-center text-sm font-semibold text-gray-900">
+                          Hành động
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
                       {scheduled.map((notification) => (
                         <tr key={notification.id} className="hover:bg-gray-50">
-                          <td className="px-4 py-3 text-sm font-medium text-gray-900">{notification.title}</td>
+                          <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                            {notification.title}
+                          </td>
                           <td className="max-w-[22rem] truncate px-4 py-3 text-sm text-gray-700">
                             {notification.message}
                           </td>

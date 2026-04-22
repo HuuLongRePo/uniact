@@ -110,19 +110,30 @@ export default function TeacherQRPage() {
         setActivities(list);
 
         const tabParam = searchParams.get('tab');
-        if (tabParam === 'create' || tabParam === 'history' || tabParam === 'bulk' || tabParam === 'analytics') {
+        if (
+          tabParam === 'create' ||
+          tabParam === 'history' ||
+          tabParam === 'bulk' ||
+          tabParam === 'analytics'
+        ) {
           setActiveTab(tabParam);
         }
 
         const requestedIdRaw = searchParams.get('activity_id');
         const requestedId = requestedIdRaw ? Number(requestedIdRaw) : null;
-        if (requestedId && !Number.isNaN(requestedId) && list.some((activity) => activity.id === requestedId)) {
+        if (
+          requestedId &&
+          !Number.isNaN(requestedId) &&
+          list.some((activity) => activity.id === requestedId)
+        ) {
           setSelectedActivity(requestedId);
         } else if (requestedId && !Number.isNaN(requestedId)) {
           const requestedActivity = await loadActivityOption(requestedId);
           if (requestedActivity) {
             setActivities((prev) =>
-              prev.some((activity) => activity.id === requestedActivity.id) ? prev : [...prev, requestedActivity]
+              prev.some((activity) => activity.id === requestedActivity.id)
+                ? prev
+                : [...prev, requestedActivity]
             );
             setSelectedActivity(requestedActivity.id);
           } else if (list.length > 0) {
@@ -307,7 +318,9 @@ export default function TeacherQRPage() {
         payload: JSON.stringify({ s: nextSessionId, t: nextToken }),
       });
       setOptions(data?.options || null);
-      toast.success(data?.reused ? 'Đã tái sử dụng phiên QR đang hoạt động' : 'Tạo mã QR thành công');
+      toast.success(
+        data?.reused ? 'Đã tái sử dụng phiên QR đang hoạt động' : 'Tạo mã QR thành công'
+      );
     } catch (err: unknown) {
       console.error(err);
       const message = err instanceof Error ? err.message : 'Lỗi khi tạo phiên QR';
@@ -328,7 +341,8 @@ export default function TeacherQRPage() {
   const analyticsClassStats = Array.from(new Set(bulkScans.map((scan) => scan.class_name))).map(
     (className) => {
       const classScans = bulkScans.filter((scan) => scan.class_name === className);
-      const ratio = bulkScans.length > 0 ? Math.round((classScans.length / bulkScans.length) * 100) : 0;
+      const ratio =
+        bulkScans.length > 0 ? Math.round((classScans.length / bulkScans.length) * 100) : 0;
       return { className, total: classScans.length, ratio };
     }
   );
@@ -339,7 +353,9 @@ export default function TeacherQRPage() {
       const hour = new Date(scan.scanned_at).getHours().toString().padStart(2, '0');
       hourMap.set(hour, (hourMap.get(hour) || 0) + 1);
     });
-    const entries = Array.from(hourMap.entries()).sort(([left], [right]) => left.localeCompare(right));
+    const entries = Array.from(hourMap.entries()).sort(([left], [right]) =>
+      left.localeCompare(right)
+    );
     const maxCount = entries.length > 0 ? Math.max(...entries.map(([, count]) => count)) : 0;
     return entries.map(([hour, count]) => ({
       hour,
@@ -359,7 +375,8 @@ export default function TeacherQRPage() {
                 Quản lý mã QR điểm danh
               </h1>
               <p className="mt-2 text-sm leading-6 text-gray-600 sm:text-base">
-                Tạo phiên QR cho hoạt động đang diễn ra, theo dõi lượt quét và xuất báo cáo theo lớp.
+                Tạo phiên QR cho hoạt động đang diễn ra, theo dõi lượt quét và xuất báo cáo theo
+                lớp.
               </p>
             </div>
             <div className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-medium text-blue-700">
@@ -397,7 +414,10 @@ export default function TeacherQRPage() {
                 <h2 className="text-lg font-semibold text-gray-900">Thiết lập phiên QR</h2>
 
                 <div>
-                  <label htmlFor="qr-activity-select" className="mb-2 block text-sm font-medium text-gray-700">
+                  <label
+                    htmlFor="qr-activity-select"
+                    className="mb-2 block text-sm font-medium text-gray-700"
+                  >
                     Chọn hoạt động
                   </label>
                   <select
@@ -406,7 +426,9 @@ export default function TeacherQRPage() {
                     onChange={(event) => setSelectedActivity(Number(event.target.value))}
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-transparent focus:ring-2 focus:ring-blue-500"
                   >
-                    {activities.length === 0 && <option value="">Không có hoạt động đang diễn ra</option>}
+                    {activities.length === 0 && (
+                      <option value="">Không có hoạt động đang diễn ra</option>
+                    )}
                     {activities.map((activity) => (
                       <option key={activity.id} value={activity.id}>
                         {activity.title}
@@ -417,7 +439,10 @@ export default function TeacherQRPage() {
 
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                   <div>
-                    <label htmlFor="qr-expire-minutes" className="mb-2 block text-sm font-medium text-gray-700">
+                    <label
+                      htmlFor="qr-expire-minutes"
+                      className="mb-2 block text-sm font-medium text-gray-700"
+                    >
                       Thời lượng (phút)
                     </label>
                     <input
@@ -431,7 +456,10 @@ export default function TeacherQRPage() {
                   </div>
 
                   <div>
-                    <label htmlFor="qr-max-scans" className="mb-2 block text-sm font-medium text-gray-700">
+                    <label
+                      htmlFor="qr-max-scans"
+                      className="mb-2 block text-sm font-medium text-gray-700"
+                    >
                       Giới hạn lượt quét
                     </label>
                     <input
@@ -439,7 +467,9 @@ export default function TeacherQRPage() {
                       type="number"
                       min={1}
                       value={maxScans}
-                      onChange={(event) => setMaxScans(event.target.value === '' ? '' : Number(event.target.value))}
+                      onChange={(event) =>
+                        setMaxScans(event.target.value === '' ? '' : Number(event.target.value))
+                      }
                       placeholder="Không giới hạn"
                       className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-transparent focus:ring-2 focus:ring-blue-500"
                     />
@@ -459,12 +489,20 @@ export default function TeacherQRPage() {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-3">
-                  <Button type="submit" isLoading={loading} loadingText="Đang tạo..." variant="primary">
+                  <Button
+                    type="submit"
+                    isLoading={loading}
+                    loadingText="Đang tạo..."
+                    variant="primary"
+                  >
                     Tạo mã QR
                   </Button>
                   {createdSession && (
                     <span className="text-sm text-gray-600">
-                      Phiên hiện tại: <span className="font-semibold text-gray-900">{createdSession.sessionId}</span>
+                      Phiên hiện tại:{' '}
+                      <span className="font-semibold text-gray-900">
+                        {createdSession.sessionId}
+                      </span>
                     </span>
                   )}
                 </div>
@@ -480,7 +518,9 @@ export default function TeacherQRPage() {
                 {!createdSession ? (
                   <div className="flex h-full min-h-[18rem] flex-col items-center justify-center text-center">
                     <QrCodeIcon className="mb-3 h-10 w-10 text-gray-300" />
-                    <p className="text-sm text-gray-600">Chưa có mã QR. Hãy tạo phiên để hiển thị mã tại đây.</p>
+                    <p className="text-sm text-gray-600">
+                      Chưa có mã QR. Hãy tạo phiên để hiển thị mã tại đây.
+                    </p>
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -500,9 +540,14 @@ export default function TeacherQRPage() {
                       <QrCodeSvg value={createdSession.payload} />
                     </div>
                     <div className="text-xs leading-5 text-gray-600">
-                      Dữ liệu QR: <code className="rounded bg-gray-100 px-1 py-0.5">{createdSession.payload}</code>
+                      Dữ liệu QR:{' '}
+                      <code className="rounded bg-gray-100 px-1 py-0.5">
+                        {createdSession.payload}
+                      </code>
                     </div>
-                    <div className="text-xs text-gray-500">Tùy chọn phiên: {JSON.stringify(options || {})}</div>
+                    <div className="text-xs text-gray-500">
+                      Tùy chọn phiên: {JSON.stringify(options || {})}
+                    </div>
                   </div>
                 )}
               </aside>
@@ -536,20 +581,27 @@ export default function TeacherQRPage() {
               </div>
 
               {history.length === 0 ? (
-                <div className="content-card p-12 text-center text-gray-500">Chưa có lịch sử QR nào.</div>
+                <div className="content-card p-12 text-center text-gray-500">
+                  Chưa có lịch sử QR nào.
+                </div>
               ) : (
                 <div className="space-y-3">
                   {history.map((session) => {
                     const sessionOptions = parseQrSessionOptions(session.metadata);
                     const isExpired = new Date(session.expires_at) < new Date();
                     return (
-                      <article key={session.id} className="content-card p-4 transition-colors hover:bg-gray-50/70">
+                      <article
+                        key={session.id}
+                        className="content-card p-4 transition-colors hover:bg-gray-50/70"
+                      >
                         <div className="flex flex-wrap items-start justify-between gap-4">
                           <div className="min-w-0 flex-1">
-                            <h3 className="truncate text-base font-semibold text-gray-900">{session.activity_title}</h3>
+                            <h3 className="truncate text-base font-semibold text-gray-900">
+                              {session.activity_title}
+                            </h3>
                             <p className="mt-1 text-xs text-gray-500">
-                              Tạo lúc {new Date(session.created_at).toLocaleString('vi-VN')} • Hết hạn{' '}
-                              {new Date(session.expires_at).toLocaleString('vi-VN')}
+                              Tạo lúc {new Date(session.created_at).toLocaleString('vi-VN')} • Hết
+                              hạn {new Date(session.expires_at).toLocaleString('vi-VN')}
                             </p>
                             <p className="mt-2 text-sm text-gray-700">
                               Mã phiên:{' '}
@@ -561,16 +613,23 @@ export default function TeacherQRPage() {
                               <p className="mt-2 text-xs text-blue-700">
                                 {sessionOptions.single_use && 'Dùng một lần'}
                                 {sessionOptions.single_use && sessionOptions.max_scans ? ' • ' : ''}
-                                {sessionOptions.max_scans && `Tối đa ${sessionOptions.max_scans} lượt quét`}
+                                {sessionOptions.max_scans &&
+                                  `Tối đa ${sessionOptions.max_scans} lượt quét`}
                               </p>
                             )}
                           </div>
                           <div className="rounded-xl bg-gray-100 px-4 py-3 text-right">
-                            <div className="text-xs uppercase tracking-wide text-gray-500">Lượt quét</div>
-                            <div className="text-2xl font-bold text-blue-600">{session.attendance_count}</div>
+                            <div className="text-xs uppercase tracking-wide text-gray-500">
+                              Lượt quét
+                            </div>
+                            <div className="text-2xl font-bold text-blue-600">
+                              {session.attendance_count}
+                            </div>
                             <span
                               className={`mt-2 inline-block rounded-full px-2 py-1 text-xs font-medium ${
-                                isExpired ? 'bg-gray-200 text-gray-700' : 'bg-emerald-100 text-emerald-700'
+                                isExpired
+                                  ? 'bg-gray-200 text-gray-700'
+                                  : 'bg-emerald-100 text-emerald-700'
                               }`}
                             >
                               {isExpired ? 'Đã hết hạn' : 'Còn hiệu lực'}
@@ -589,7 +648,10 @@ export default function TeacherQRPage() {
             <div className="content-card space-y-4 p-5">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_auto_auto] md:items-end">
                 <div>
-                  <label htmlFor="qr-bulk-session" className="mb-2 block text-sm font-medium text-gray-700">
+                  <label
+                    htmlFor="qr-bulk-session"
+                    className="mb-2 block text-sm font-medium text-gray-700"
+                  >
                     Chọn phiên QR
                   </label>
                   <select
@@ -601,7 +663,8 @@ export default function TeacherQRPage() {
                     <option value="">-- Chọn phiên --</option>
                     {history.map((session) => (
                       <option key={session.id} value={session.id}>
-                        {session.activity_title} - {new Date(session.created_at).toLocaleString('vi-VN')}
+                        {session.activity_title} -{' '}
+                        {new Date(session.created_at).toLocaleString('vi-VN')}
                       </option>
                     ))}
                   </select>
@@ -638,15 +701,26 @@ export default function TeacherQRPage() {
                     <table className="w-full min-w-[680px]">
                       <thead className="border-b border-gray-200 bg-gray-50">
                         <tr>
-                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Học viên</th>
-                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Lớp</th>
-                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Thời gian quét</th>
+                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
+                            Học viên
+                          </th>
+                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
+                            Lớp
+                          </th>
+                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
+                            Thời gian quét
+                          </th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-200">
                         {bulkScans.map((scan, index) => (
-                          <tr key={`${scan.student_id}-${scan.scanned_at}-${index}`} className="hover:bg-gray-50">
-                            <td className="px-4 py-3 text-sm font-medium text-gray-900">{scan.student_name}</td>
+                          <tr
+                            key={`${scan.student_id}-${scan.scanned_at}-${index}`}
+                            className="hover:bg-gray-50"
+                          >
+                            <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                              {scan.student_name}
+                            </td>
                             <td className="px-4 py-3 text-sm text-gray-700">{scan.class_name}</td>
                             <td className="px-4 py-3 text-sm text-gray-600">
                               {new Date(scan.scanned_at).toLocaleString('vi-VN')}
@@ -666,7 +740,9 @@ export default function TeacherQRPage() {
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                     <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
                       <div className="text-sm text-blue-900">Tổng lượt quét</div>
-                      <div className="mt-2 text-3xl font-bold text-blue-700">{bulkScans.length}</div>
+                      <div className="mt-2 text-3xl font-bold text-blue-700">
+                        {bulkScans.length}
+                      </div>
                     </div>
                     <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
                       <div className="text-sm text-emerald-900">Học viên đã quét</div>

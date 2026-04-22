@@ -253,7 +253,9 @@ export default function NotificationSettingsPage() {
                             ? 'SMS'
                             : 'Thông báo trong ứng dụng'}
                       </div>
-                      <div className="text-xs text-gray-500">{channel.is_default ? 'Kênh mặc định' : ''}</div>
+                      <div className="text-xs text-gray-500">
+                        {channel.is_default ? 'Kênh mặc định' : ''}
+                      </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
@@ -263,13 +265,17 @@ export default function NotificationSettingsPage() {
                         checked={channel.is_enabled}
                         onChange={(event) => {
                           const next = settings.channels.map((item) =>
-                            item.id === channel.id ? { ...item, is_enabled: event.target.checked } : item
+                            item.id === channel.id
+                              ? { ...item, is_enabled: event.target.checked }
+                              : item
                           );
                           setSettings({ ...settings, channels: next });
                         }}
                         className="h-4 w-4 rounded border-gray-300"
                       />
-                      <span className="text-sm text-gray-700">{channel.is_enabled ? 'Bật' : 'Tắt'}</span>
+                      <span className="text-sm text-gray-700">
+                        {channel.is_enabled ? 'Bật' : 'Tắt'}
+                      </span>
                     </label>
                     <label className="flex cursor-pointer items-center gap-2">
                       <input
@@ -277,7 +283,9 @@ export default function NotificationSettingsPage() {
                         checked={channel.is_default}
                         onChange={() => {
                           const next = settings.channels.map((item) =>
-                            item.id === channel.id ? { ...item, is_default: true } : { ...item, is_default: false }
+                            item.id === channel.id
+                              ? { ...item, is_default: true }
+                              : { ...item, is_default: false }
                           );
                           setSettings({ ...settings, channels: next });
                         }}
@@ -295,21 +303,29 @@ export default function NotificationSettingsPage() {
             <h2 className="mb-4 text-lg font-bold text-gray-900">Chính sách gửi</h2>
             <div className="space-y-4">
               <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700">Thời gian gửi mặc định</label>
+                <label className="mb-2 block text-sm font-medium text-gray-700">
+                  Thời gian gửi mặc định
+                </label>
                 <input
                   type="time"
                   value={settings.default_time}
-                  onChange={(event) => setSettings({ ...settings, default_time: event.target.value })}
+                  onChange={(event) =>
+                    setSettings({ ...settings, default_time: event.target.value })
+                  }
                   className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
                 />
-                <p className="mt-1 text-xs text-gray-500">Dùng khi lên lịch nhưng chưa chọn giờ cụ thể.</p>
+                <p className="mt-1 text-xs text-gray-500">
+                  Dùng khi lên lịch nhưng chưa chọn giờ cụ thể.
+                </p>
               </div>
 
               <label className="flex cursor-pointer items-center gap-2">
                 <input
                   type="checkbox"
                   checked={settings.batch_notifications}
-                  onChange={(event) => setSettings({ ...settings, batch_notifications: event.target.checked })}
+                  onChange={(event) =>
+                    setSettings({ ...settings, batch_notifications: event.target.checked })
+                  }
                   className="h-4 w-4 rounded border-gray-300"
                 />
                 <span className="text-sm text-gray-700">Gộp thông báo theo lô</span>
@@ -319,7 +335,9 @@ export default function NotificationSettingsPage() {
                 <input
                   type="checkbox"
                   checked={settings.allow_scheduling}
-                  onChange={(event) => setSettings({ ...settings, allow_scheduling: event.target.checked })}
+                  onChange={(event) =>
+                    setSettings({ ...settings, allow_scheduling: event.target.checked })
+                  }
                   className="h-4 w-4 rounded border-gray-300"
                 />
                 <span className="text-sm text-gray-700">Cho phép lên lịch gửi</span>
@@ -348,7 +366,9 @@ export default function NotificationSettingsPage() {
                     <input
                       type="text"
                       value={newTemplate.name}
-                      onChange={(event) => setNewTemplate((prev) => ({ ...prev, name: event.target.value }))}
+                      onChange={(event) =>
+                        setNewTemplate((prev) => ({ ...prev, name: event.target.value }))
+                      }
                       placeholder="Ví dụ: Nhắc điểm danh đầu tuần"
                       className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
                     />
@@ -358,7 +378,9 @@ export default function NotificationSettingsPage() {
                     <label className="mb-2 block text-sm font-medium text-gray-700">Danh mục</label>
                     <select
                       value={newTemplate.category}
-                      onChange={(event) => setNewTemplate((prev) => ({ ...prev, category: event.target.value }))}
+                      onChange={(event) =>
+                        setNewTemplate((prev) => ({ ...prev, category: event.target.value }))
+                      }
                       className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
                     >
                       <option value="">-- Chọn danh mục --</option>
@@ -370,11 +392,15 @@ export default function NotificationSettingsPage() {
                   </div>
 
                   <div>
-                    <label className="mb-2 block text-sm font-medium text-gray-700">Tiêu đề (tùy chọn)</label>
+                    <label className="mb-2 block text-sm font-medium text-gray-700">
+                      Tiêu đề (tùy chọn)
+                    </label>
                     <input
                       type="text"
                       value={newTemplate.subject}
-                      onChange={(event) => setNewTemplate((prev) => ({ ...prev, subject: event.target.value }))}
+                      onChange={(event) =>
+                        setNewTemplate((prev) => ({ ...prev, subject: event.target.value }))
+                      }
                       placeholder="Tiêu đề dùng cho email"
                       className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
                     />
@@ -384,7 +410,9 @@ export default function NotificationSettingsPage() {
                     <label className="mb-2 block text-sm font-medium text-gray-700">Nội dung</label>
                     <textarea
                       value={newTemplate.body}
-                      onChange={(event) => setNewTemplate((prev) => ({ ...prev, body: event.target.value }))}
+                      onChange={(event) =>
+                        setNewTemplate((prev) => ({ ...prev, body: event.target.value }))
+                      }
                       placeholder="Nội dung thông báo..."
                       rows={4}
                       className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
@@ -421,7 +449,8 @@ export default function NotificationSettingsPage() {
                       <div>
                         <div className="font-medium text-gray-900">{template.name}</div>
                         <div className="text-xs text-gray-500">
-                          {template.category} • {new Date(template.created_at).toLocaleDateString('vi-VN')}
+                          {template.category} •{' '}
+                          {new Date(template.created_at).toLocaleDateString('vi-VN')}
                         </div>
                       </div>
                       <div className="flex gap-2">
@@ -444,9 +473,13 @@ export default function NotificationSettingsPage() {
                       </div>
                     </div>
                     {template.subject && (
-                      <div className="mb-1 text-sm font-medium text-gray-700">Tiêu đề: {template.subject}</div>
+                      <div className="mb-1 text-sm font-medium text-gray-700">
+                        Tiêu đề: {template.subject}
+                      </div>
                     )}
-                    <div className="line-clamp-3 rounded bg-gray-50 p-2 text-sm text-gray-600">{template.body}</div>
+                    <div className="line-clamp-3 rounded bg-gray-50 p-2 text-sm text-gray-600">
+                      {template.body}
+                    </div>
                   </div>
                 ))
               )}
@@ -457,7 +490,9 @@ export default function NotificationSettingsPage() {
         <ConfirmDialog
           isOpen={templateToDelete !== null}
           title="Xóa mẫu thông báo"
-          message={templateToDelete ? `Bạn có chắc chắn muốn xóa mẫu "${templateToDelete.name}"?` : ''}
+          message={
+            templateToDelete ? `Bạn có chắc chắn muốn xóa mẫu "${templateToDelete.name}"?` : ''
+          }
           confirmText="Xóa mẫu"
           cancelText="Hủy"
           variant="danger"

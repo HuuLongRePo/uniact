@@ -328,8 +328,8 @@ export default function AttendanceReportsPage() {
               </div>
               <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">Báo cáo điểm danh</h1>
               <p className="mt-2 text-sm leading-6 text-gray-600 sm:text-base">
-                Theo dõi tỷ lệ có mặt, đi trễ, vắng, chưa tham gia và phương thức điểm danh thực
-                tế theo lớp, theo học viên hoặc theo từng lượt ghi nhận.
+                Theo dõi tỷ lệ có mặt, đi trễ, vắng, chưa tham gia và phương thức điểm danh thực tế
+                theo lớp, theo học viên hoặc theo từng lượt ghi nhận.
               </p>
             </div>
 
@@ -347,7 +347,9 @@ export default function AttendanceReportsPage() {
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-6">
             <div className="content-card p-4">
               <div className="text-sm text-gray-600">Tổng lượt điểm danh</div>
-              <div className="mt-2 text-3xl font-bold text-blue-600">{overallStats.totalRecords}</div>
+              <div className="mt-2 text-3xl font-bold text-blue-600">
+                {overallStats.totalRecords}
+              </div>
             </div>
             <div className="content-card p-4">
               <div className="text-sm text-gray-600">Có mặt</div>
@@ -524,7 +526,9 @@ export default function AttendanceReportsPage() {
                 <table className="min-w-[860px]">
                   <thead className="border-b border-gray-200 bg-gray-50">
                     <tr>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Lớp</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
+                        Lớp
+                      </th>
                       <th className="px-4 py-3 text-center text-sm font-semibold text-gray-900">
                         Tổng học viên
                       </th>
@@ -603,7 +607,9 @@ export default function AttendanceReportsPage() {
                       <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
                         Mã sinh viên
                       </th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Lớp</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
+                        Lớp
+                      </th>
                       <th className="px-4 py-3 text-center text-sm font-semibold text-gray-900">
                         Tổng hoạt động
                       </th>

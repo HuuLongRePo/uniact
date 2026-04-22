@@ -39,7 +39,9 @@ export function getBiometricProductionPolicy(): BiometricProductionPolicy {
       process.env.BIOMETRIC_FACE_DISTANCE_THRESHOLD
     ),
     embedding_encryption_scheme: 'aes-256-gcm-pbkdf2',
-    embedding_retention_days: normalizeRetentionDays(process.env.BIOMETRIC_EMBEDDING_RETENTION_DAYS),
+    embedding_retention_days: normalizeRetentionDays(
+      process.env.BIOMETRIC_EMBEDDING_RETENTION_DAYS
+    ),
     retention_cleanup_enabled: true,
   };
 }
@@ -65,7 +67,7 @@ export async function purgeExpiredBiometricEmbeddings() {
          updated_at = CURRENT_TIMESTAMP
      WHERE face_embedding_encrypted IS NOT NULL
        AND datetime(COALESCE(last_trained_at, updated_at, created_at))
-         < datetime('now', ?)` ,
+         < datetime('now', ?)`,
     [retentionWindow]
   );
 
