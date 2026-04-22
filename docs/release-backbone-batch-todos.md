@@ -981,6 +981,7 @@ Ban dong vai Senior Frontend Refactor Engineer. Uu tien trùng tu UI trang teach
 - [x] `npm.cmd test -- test/teacher-activities-page.test.tsx` -> PASS (1 file / 4 tests)
 - [x] `npm.cmd run build` -> PASS
 - [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests)
+- [x] `npm.cmd run release:check:full` -> PASS (4/4 checks)
 
 ## 10) Ke hoach commit de xuat
 
