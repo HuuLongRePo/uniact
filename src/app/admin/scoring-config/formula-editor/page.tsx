@@ -24,6 +24,13 @@ interface TestScenario {
   penalty: number;
 }
 
+interface FormulaVariableConfig {
+  min: number;
+  max: number;
+  step: number;
+  default: number;
+}
+
 export default function FormulaEditorPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
@@ -91,6 +98,9 @@ export default function FormulaEditorPage() {
   );
   const [customFormula, setCustomFormula] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  const getErrorMessage = (error: unknown, fallback: string) =>
+    error instanceof Error && error.message ? error.message : fallback;
 
   // Test scenarios
   const [testScenarios] = useState<TestScenario[]>([
@@ -203,7 +213,7 @@ export default function FormulaEditorPage() {
               acc[v.id] = { min: v.min, max: v.max, step: v.step, default: v.value };
               return acc;
             },
-            {} as Record<string, any>
+            {} as Record<string, FormulaVariableConfig>
           ),
         }),
       });
@@ -211,8 +221,8 @@ export default function FormulaEditorPage() {
       if (!response.ok) throw new Error('Không thể lưu công thức');
 
       toast.success('Công thức đã được lưu!');
-    } catch (error: any) {
-      toast.error('Lỗi: ' + error.message);
+    } catch (error: unknown) {
+      toast.error('Lỗi: ' + getErrorMessage(error, 'Không xác định'));
     } finally {
       setSaving(false);
     }

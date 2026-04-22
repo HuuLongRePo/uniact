@@ -797,6 +797,39 @@ Yeu cau thi hanh:
 - [x] `npm.cmd run release:check:full` -> PASS (4/4 checks, build passed trong pipeline)
 - [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests)
 
+## 9.14) Batch hardening - Admin scoring/scoring-config lint/type cleanup
+
+### Muc tieu
+
+- Don warning lint o cum admin scoring + scoring-config de on dinh Gate E.
+- Khong doi nghiep vu/contract; chi harden typing, callback dependencies va error handling.
+
+### Viec can lam
+
+- [x] Tao type module dung chung:
+  - [x] `admin/scoring-config/types.ts` cho config entities + update payload.
+- [x] `admin/scoring-config/*Tab.tsx`:
+  - [x] bo `any` cho props/state/edit handlers (`AchievementsTab`, `ActivityTypeManager`, `AwardsTab`, `LevelMultiplierManager`, `ScoringRulesTab`).
+  - [x] dong bo payload update typed theo route contract.
+- [x] `admin/scoring-config/formula-editor/page.tsx`:
+  - [x] bo `Record<string, any>` trong formula variables payload.
+  - [x] bo `catch (error: any)` bang `unknown` + helper message.
+- [x] `admin/scoring-config/page.tsx`:
+  - [x] bo `any` trong `ScoringConfig` state va `handleUpdate`.
+  - [x] dong bo `fetchConfig` bang `useCallback`, goi `void fetchConfig()` trong effect.
+  - [x] bo `catch (error: any)` bang `unknown` + helper message.
+- [x] `admin/scoring/page.tsx`:
+  - [x] thay `editingItem: any` bang typed config item.
+  - [x] chuyen nhom fetch API sang `useCallback` + dong bo `useEffect` dependency.
+  - [x] bo `openEditModal(item: any)`.
+
+### Verification
+
+- [x] `npm.cmd run lint -- --file src/app/admin/scoring-config/AchievementsTab.tsx --file src/app/admin/scoring-config/ActivityTypeManager.tsx --file src/app/admin/scoring-config/AwardsTab.tsx --file src/app/admin/scoring-config/LevelMultiplierManager.tsx --file src/app/admin/scoring-config/ScoringRulesTab.tsx --file src/app/admin/scoring-config/formula-editor/page.tsx --file src/app/admin/scoring-config/page.tsx --file src/app/admin/scoring/page.tsx` -> PASS (0 warnings)
+- [x] `npm.cmd test -- test/scoring.test.ts test/admin-scores-route.test.ts test/admin-reports-scores-route.test.ts test/admin-leaderboard-route.test.ts` -> PASS (4 files / 11 tests)
+- [x] `npm.cmd run release:check:full` -> PASS (4/4 checks)
+- [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix
@@ -815,6 +848,7 @@ Yeu cau thi hanh:
 - [x] Commit 13: format admin user pages for release check (`cb33491`)
 - [x] Commit 14: admin classes lint/type cleanup (batch 9.12) (`4c37921`)
 - [x] Commit 15: admin awards/bonus/reports/scores lint cleanup (batch 9.13) (`b48ef66`)
+- [ ] Commit 16: admin scoring/scoring-config lint/type cleanup (batch 9.14)
 
 ---
 

@@ -1,22 +1,37 @@
 'use client';
 
 import { useState } from 'react';
+import { type AwardBonusConfig } from './types';
 
 export default function AwardsTab({
   awards,
   onUpdate,
   saving,
 }: {
-  awards: any[];
-  onUpdate: (data: any) => void;
+  awards: AwardBonusConfig[];
+  onUpdate: (
+    data: Pick<AwardBonusConfig, 'id' | 'award_type' | 'bonus_points' | 'description'>
+  ) => void;
   saving: boolean;
 }) {
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [editData, setEditData] = useState<any>({});
+  const [editData, setEditData] = useState<
+    Pick<AwardBonusConfig, 'id' | 'award_type' | 'bonus_points' | 'description'>
+  >({
+    id: 0,
+    award_type: '',
+    bonus_points: 0,
+    description: '',
+  });
 
-  const handleEdit = (award: any) => {
+  const handleEdit = (award: AwardBonusConfig) => {
     setEditingId(award.id);
-    setEditData({ id: award.id, bonus_points: award.bonus_points, description: award.description });
+    setEditData({
+      id: award.id,
+      award_type: award.award_type,
+      bonus_points: award.bonus_points,
+      description: award.description,
+    });
   };
 
   const handleSave = () => {

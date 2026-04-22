@@ -1,20 +1,29 @@
 'use client';
 
 import { useState } from 'react';
+import { type AchievementMultiplierConfig } from './types';
 
 export default function AchievementsTab({
   achievements,
   onUpdate,
   saving,
 }: {
-  achievements: any[];
-  onUpdate: (data: any) => void;
+  achievements: AchievementMultiplierConfig[];
+  onUpdate: (
+    data: Pick<AchievementMultiplierConfig, 'achievement_level' | 'multiplier' | 'description'>
+  ) => void;
   saving: boolean;
 }) {
   const [editingLevel, setEditingLevel] = useState<string | null>(null);
-  const [editData, setEditData] = useState<any>({});
+  const [editData, setEditData] = useState<
+    Pick<AchievementMultiplierConfig, 'achievement_level' | 'multiplier' | 'description'>
+  >({
+    achievement_level: '',
+    multiplier: 0,
+    description: '',
+  });
 
-  const handleEdit = (ach: any) => {
+  const handleEdit = (ach: AchievementMultiplierConfig) => {
     setEditingLevel(ach.achievement_level);
     setEditData({
       achievement_level: ach.achievement_level,

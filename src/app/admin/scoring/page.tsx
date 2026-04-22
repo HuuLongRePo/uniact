@@ -1,28 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import toast from 'react-hot-toast';
 
-interface ActivityType {
-  id: number;
-  name: string;
-  point_multiplier: number;
-  description: string | null;
-  created_at: string;
-}
-
-interface OrganizationLevel {
-  id: number;
-  name: string;
-  point_multiplier: number;
-  description: string | null;
-  created_at: string;
-}
-
-interface AchievementLevel {
+interface ScoringConfigItem {
   id: number;
   name: string;
   point_multiplier: number;
@@ -36,12 +20,12 @@ export default function AdminScoringPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<ConfigType>('activity_types');
-  const [activityTypes, setActivityTypes] = useState<ActivityType[]>([]);
-  const [organizationLevels, setOrganizationLevels] = useState<OrganizationLevel[]>([]);
-  const [achievementLevels, setAchievementLevels] = useState<AchievementLevel[]>([]);
+  const [activityTypes, setActivityTypes] = useState<ScoringConfigItem[]>([]);
+  const [organizationLevels, setOrganizationLevels] = useState<ScoringConfigItem[]>([]);
+  const [achievementLevels, setAchievementLevels] = useState<ScoringConfigItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const [editingItem, setEditingItem] = useState<any>(null);
+  const [editingItem, setEditingItem] = useState<ScoringConfigItem | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ type: ConfigType; id: number } | null>(null);
 
   const [formData, setFormData] = useState({
@@ -50,23 +34,7 @@ export default function AdminScoringPage() {
     description: '',
   });
 
-  useEffect(() => {
-    if (!authLoading && (!user || user.role !== 'admin')) {
-      router.push('/login');
-      return;
-    }
-    if (user) {
-      fetchAllData();
-    }
-  }, [user, authLoading, router]);
-
-  const fetchAllData = async () => {
-    setLoading(true);
-    await Promise.all([fetchActivityTypes(), fetchOrganizationLevels(), fetchAchievementLevels()]);
-    setLoading(false);
-  };
-
-  const fetchActivityTypes = async () => {
+  const fetchActivityTypes = useCallback(async () => {
     try {
       const res = await fetch('/api/admin/activity-types');
       const json = await res.json();
@@ -74,9 +42,9 @@ export default function AdminScoringPage() {
     } catch (error) {
       console.error('Error fetching activity types:', error);
     }
-  };
+  }, []);
 
-  const fetchOrganizationLevels = async () => {
+  const fetchOrganizationLevels = useCallback(async () => {
     try {
       const res = await fetch('/api/admin/organization-levels');
       const json = await res.json();
@@ -84,9 +52,9 @@ export default function AdminScoringPage() {
     } catch (error) {
       console.error('Error fetching organization levels:', error);
     }
-  };
+  }, []);
 
-  const fetchAchievementLevels = async () => {
+  const fetchAchievementLevels = useCallback(async () => {
     try {
       const res = await fetch('/api/admin/achievement-levels');
       const json = await res.json();
@@ -94,7 +62,23 @@ export default function AdminScoringPage() {
     } catch (error) {
       console.error('Error fetching achievement levels:', error);
     }
-  };
+  }, []);
+
+  const fetchAllData = useCallback(async () => {
+    setLoading(true);
+    await Promise.all([fetchActivityTypes(), fetchOrganizationLevels(), fetchAchievementLevels()]);
+    setLoading(false);
+  }, [fetchAchievementLevels, fetchActivityTypes, fetchOrganizationLevels]);
+
+  useEffect(() => {
+    if (!authLoading && (!user || user.role !== 'admin')) {
+      router.push('/login');
+      return;
+    }
+    if (user) {
+      void fetchAllData();
+    }
+  }, [authLoading, fetchAllData, router, user]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -127,7 +111,7 @@ export default function AdminScoringPage() {
         setShowModal(false);
         setEditingItem(null);
         resetForm();
-        fetchAllData();
+        void fetchAllData();
       } else {
         toast.error('Lỗi: ' + json.error);
       }
@@ -157,7 +141,7 @@ export default function AdminScoringPage() {
       if (json.success) {
         toast.success('Xóa thành công');
         setDeleteConfirm(null);
-        fetchAllData();
+        void fetchAllData();
       } else {
         toast.error('Lỗi: ' + json.error);
       }
@@ -167,7 +151,7 @@ export default function AdminScoringPage() {
     }
   };
 
-  const openEditModal = (item: any) => {
+  const openEditModal = (item: ScoringConfigItem) => {
     setEditingItem(item);
     setFormData({
       name: item.name,

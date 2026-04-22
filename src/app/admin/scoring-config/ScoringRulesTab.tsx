@@ -1,26 +1,38 @@
 'use client';
 
 import { useState } from 'react';
+import { type ScoringRuleConfig } from './types';
 
 export default function ScoringRulesTab({
   rules,
   onUpdate,
   saving,
 }: {
-  rules: any[];
-  onUpdate: (data: any) => void;
+  rules: ScoringRuleConfig[];
+  onUpdate: (
+    data: Pick<ScoringRuleConfig, 'id' | 'name' | 'formula' | 'description' | 'is_active'>
+  ) => void;
   saving: boolean;
 }) {
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [editData, setEditData] = useState<any>({});
+  const [editData, setEditData] = useState<
+    Pick<ScoringRuleConfig, 'id' | 'name' | 'formula' | 'description' | 'is_active'>
+  >({
+    id: 0,
+    name: '',
+    formula: '',
+    description: '',
+    is_active: 0,
+  });
 
-  const handleEdit = (rule: any) => {
+  const handleEdit = (rule: ScoringRuleConfig) => {
     setEditingId(rule.id);
     setEditData({
       id: rule.id,
       name: rule.name,
       formula: rule.formula,
       description: rule.description,
+      is_active: rule.is_active,
     });
   };
 

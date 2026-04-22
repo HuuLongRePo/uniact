@@ -1,20 +1,27 @@
 'use client';
 
 import { useState } from 'react';
+import { type ActivityTypeConfig } from './types';
 
 export default function ActivityTypeManager({
   types,
   onUpdate,
   saving,
 }: {
-  types: any[];
-  onUpdate: (data: any) => void;
+  types: ActivityTypeConfig[];
+  onUpdate: (data: Pick<ActivityTypeConfig, 'id' | 'base_points' | 'color'>) => void;
   saving: boolean;
 }) {
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [editData, setEditData] = useState<any>({});
+  const [editData, setEditData] = useState<
+    Pick<ActivityTypeConfig, 'id' | 'base_points' | 'color'>
+  >({
+    id: 0,
+    base_points: 0,
+    color: '#3B82F6',
+  });
 
-  const handleEdit = (type: any) => {
+  const handleEdit = (type: ActivityTypeConfig) => {
     setEditingId(type.id);
     setEditData({ id: type.id, base_points: type.base_points, color: type.color });
   };

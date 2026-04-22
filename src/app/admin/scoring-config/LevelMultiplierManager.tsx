@@ -1,20 +1,24 @@
 'use client';
 
 import { useState } from 'react';
+import { type OrganizationLevelConfig } from './types';
 
 export default function LevelMultiplierManager({
   levels,
   onUpdate,
   saving,
 }: {
-  levels: any[];
-  onUpdate: (data: any) => void;
+  levels: OrganizationLevelConfig[];
+  onUpdate: (data: Pick<OrganizationLevelConfig, 'id' | 'multiplier'>) => void;
   saving: boolean;
 }) {
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [editData, setEditData] = useState<any>({});
+  const [editData, setEditData] = useState<Pick<OrganizationLevelConfig, 'id' | 'multiplier'>>({
+    id: 0,
+    multiplier: 1,
+  });
 
-  const handleEdit = (level: any) => {
+  const handleEdit = (level: OrganizationLevelConfig) => {
     setEditingId(level.id);
     setEditData({ id: level.id, multiplier: level.multiplier });
   };

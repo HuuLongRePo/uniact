@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import LoadingSpinner from '@/components/LoadingSpinner';
@@ -11,14 +11,10 @@ import LevelMultiplierManager from './LevelMultiplierManager';
 import AchievementsTab from './AchievementsTab';
 import AwardsTab from './AwardsTab';
 import ScoringRulesTab from './ScoringRulesTab';
+import { type ScoringConfig, type ScoringConfigUpdatePayload } from './types';
 
-interface ScoringConfig {
-  scoringRules: any[];
-  activityTypes: any[];
-  organizationLevels: any[];
-  achievementMultipliers: any[];
-  awardBonuses: any[];
-  systemConfig: any[];
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error && error.message ? error.message : fallback;
 }
 
 /**
@@ -54,28 +50,36 @@ export default function ScoringConfigPage() {
     }
   }, [user, authLoading, router]);
 
-  useEffect(() => {
-    if (user?.role === 'admin') {
-      fetchConfig();
-    }
-  }, [user]);
-
-  const fetchConfig = async () => {
+  const fetchConfig = useCallback(async () => {
     try {
       setLoading(true);
       const res = await fetch('/api/admin/scoring-config');
       if (!res.ok) throw new Error('Không thể tải cấu hình');
       const data = await res.json();
       setConfig(data);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Fetch config error:', error);
-      toast.error('Không thể tải cấu hình: ' + error.message);
+      toast.error('Không thể tải cấu hình: ' + getErrorMessage(error, 'Lỗi không xác định'));
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const handleUpdate = async (type: string, data: any) => {
+  useEffect(() => {
+    if (user?.role === 'admin') {
+      void fetchConfig();
+    }
+  }, [fetchConfig, user]);
+
+  const handleUpdate = async (
+    type:
+      | 'activity_type'
+      | 'organization_level'
+      | 'achievement_multiplier'
+      | 'award_bonus'
+      | 'scoring_rule',
+    data: ScoringConfigUpdatePayload
+  ) => {
     try {
       setSaving(true);
       const res = await fetch('/api/admin/scoring-config', {
@@ -91,9 +95,9 @@ export default function ScoringConfigPage() {
 
       toast.success('Cập nhật thành công');
       await fetchConfig();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Update error:', error);
-      toast.error('Cập nhật thất bại: ' + error.message);
+      toast.error('Cập nhật thất bại: ' + getErrorMessage(error, 'Lỗi không xác định'));
     } finally {
       setSaving(false);
     }
