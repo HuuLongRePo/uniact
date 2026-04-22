@@ -200,7 +200,8 @@ Yeu cau:
 
 ### Decision Gates (neu can)
 
-- [ ] Quyen gui lien lop cua giang vien: tam mo hay gioi han theo config.
+- [x] Quyen gui lien lop cua giang vien: tam mo hay gioi han theo config.
+  - [x] Chot theo role-boundary hien tai: teacher duoc gui theo `managed_activities` (activity-scoped) hoac `homeroom_classes`, khong mo quyen global cross-class.
 - [x] Uu tien mandatory khi trung rule voi voluntary.
   - [x] Chot theo D11: `mandatory > voluntary` (class scope + direct student scope).
 
@@ -573,6 +574,7 @@ Yeu cau thi hanh:
 ### Verification
 
 - [x] `npm.cmd test -- test/notification-realtime-routes.test.ts test/realtime-notification-bridge.test.tsx test/qr-session-reuse-route.test.ts test/teacher-qr-page.test.tsx` -> PASS (4 files / 19 tests)
+- [x] `npm.cmd test -- test/teacher-notification-routes.test.ts` -> PASS (1 file / 7 tests)
 - [x] `npm.cmd run build` -> PASS
 - [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests)
 
