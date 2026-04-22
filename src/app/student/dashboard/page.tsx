@@ -260,7 +260,7 @@ export default function StudentDashboardPage() {
               <div className="text-5xl opacity-30">🔔</div>
             </div>
             <Link
-              href="/notifications"
+              href="/student/notifications"
               className="mt-4 block text-purple-600 hover:text-purple-700 text-sm font-medium"
             >
               Xem tất cả →
@@ -542,7 +542,7 @@ export default function StudentDashboardPage() {
               Thông báo gần đây
             </h2>
             <Link
-              href="/notifications"
+              href="/student/notifications"
               className="text-blue-600 hover:text-blue-700 text-sm font-medium"
             >
               Xem tất cả

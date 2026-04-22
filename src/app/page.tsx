@@ -75,7 +75,9 @@ export default function Home() {
         <nav className="mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-2">
             <Activity className="h-8 w-8 text-blue-600" />
-            <span className="text-lg font-bold text-gray-900 sm:text-xl">ANND Activity Hub</span>
+            <span className="landing-text-strong text-lg font-bold sm:text-xl">
+              ANND Activity Hub
+            </span>
           </div>
           <Link
             href="/login"
@@ -87,7 +89,7 @@ export default function Home() {
       </header>
 
       <main>
-        <section className="mx-auto grid w-full max-w-7xl gap-8 px-4 py-12 sm:px-6 lg:grid-cols-[1.1fr_0.9fr] lg:gap-12 lg:px-8 lg:py-16">
+        <section className="landing-hero mx-auto grid w-full max-w-7xl gap-8 rounded-3xl px-4 py-8 sm:px-6 lg:grid-cols-[1.1fr_0.9fr] lg:gap-12 lg:px-8 lg:py-10">
           <div className="space-y-6">
             <div
               className="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold tracking-wide"
@@ -99,14 +101,14 @@ export default function Home() {
             >
               Nền tảng nội bộ ANND
             </div>
-            <h1 className="text-4xl font-bold leading-tight text-gray-900 sm:text-5xl">
+            <h1 className="landing-text-strong text-4xl font-bold leading-tight sm:text-5xl">
               Trung tâm hoạt động
-              <span className="text-blue-700" style={{ color: 'var(--app-link)' }}>
+              <span className="landing-link" style={{ color: 'var(--app-link)' }}>
                 {' '}
                 Trường Đại học An ninh nhân dân
               </span>
             </h1>
-            <p className="max-w-2xl text-base leading-7 text-gray-700 sm:text-lg">
+            <p className="landing-text-default max-w-2xl text-base leading-7 sm:text-lg">
               Hệ thống quản lý hoạt động ngoại khóa, đăng ký, điểm danh, chấm điểm và thông báo dành
               cho học viên, giảng viên và quản trị viên.
             </p>
@@ -126,30 +128,36 @@ export default function Home() {
                 { value: 'Score', label: 'Tổng hợp điểm tự động' },
               ].map((item) => (
                 <div key={item.value} className="landing-metric rounded-2xl p-3">
-                  <div className="text-xs uppercase tracking-wide text-gray-500">{item.value}</div>
-                  <div className="mt-1 text-sm font-medium text-gray-700">{item.label}</div>
+                  <div className="landing-text-muted text-xs uppercase tracking-wide">
+                    {item.value}
+                  </div>
+                  <div className="landing-text-default mt-1 text-sm font-medium">{item.label}</div>
                 </div>
               ))}
             </div>
           </div>
 
           <aside className="landing-panel rounded-3xl p-5 sm:p-6">
-            <div className="space-y-4 rounded-2xl border border-blue-200 p-4">
-              <div className="h-11 rounded-xl bg-gradient-to-r from-blue-200 to-indigo-200" />
+            <div className="landing-panel-outline space-y-4 rounded-2xl p-4">
+              <div className="landing-skeleton h-11 rounded-xl" />
               <div className="space-y-2">
-                <div className="h-3 rounded bg-blue-200/70" />
-                <div className="h-3 w-10/12 rounded bg-blue-200/60" />
-                <div className="h-3 w-8/12 rounded bg-blue-200/50" />
+                <div className="landing-skeleton h-3 rounded" />
+                <div className="landing-skeleton h-3 w-10/12 rounded" />
+                <div className="landing-skeleton h-3 w-8/12 rounded" />
               </div>
             </div>
             <div className="mt-5 grid grid-cols-2 gap-3">
               <div className="landing-metric rounded-2xl p-3">
-                <p className="text-xs text-gray-500">Luồng chính</p>
-                <p className="mt-1 text-sm font-semibold text-gray-900">Đăng ký → Điểm danh</p>
+                <p className="landing-text-muted text-xs">Luồng chính</p>
+                <p className="landing-text-strong mt-1 text-sm font-semibold">
+                  Đăng ký → Điểm danh
+                </p>
               </div>
               <div className="landing-metric rounded-2xl p-3">
-                <p className="text-xs text-gray-500">Thông báo</p>
-                <p className="mt-1 text-sm font-semibold text-gray-900">Realtime theo actor</p>
+                <p className="landing-text-muted text-xs">Thông báo</p>
+                <p className="landing-text-strong mt-1 text-sm font-semibold">
+                  Realtime theo actor
+                </p>
               </div>
             </div>
           </aside>
@@ -157,16 +165,17 @@ export default function Home() {
 
         <section className="mx-auto w-full max-w-7xl px-4 pb-14 sm:px-6 lg:px-8">
           <div className="landing-feature-shell rounded-3xl p-5 shadow-sm backdrop-blur-xl sm:p-7">
-            <h2 className="text-3xl font-bold text-gray-900 sm:text-4xl">Tính năng chính</h2>
+            <h2 className="landing-text-strong text-3xl font-bold sm:text-4xl">Tính năng chính</h2>
             <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {features.map((feature) => (
-                <article
-                  key={feature.title}
-                  className="landing-feature-card rounded-2xl p-5 transition-colors hover:bg-gray-50"
-                >
-                  <feature.icon className="h-10 w-10 text-blue-600" />
-                  <h3 className="mt-4 text-xl font-semibold text-gray-900">{feature.title}</h3>
-                  <p className="mt-2 text-sm leading-6 text-gray-700">{feature.description}</p>
+                <article key={feature.title} className="landing-feature-card rounded-2xl p-5">
+                  <feature.icon className="landing-link h-10 w-10 text-blue-600" />
+                  <h3 className="landing-text-strong mt-4 text-xl font-semibold">
+                    {feature.title}
+                  </h3>
+                  <p className="landing-text-default mt-2 text-sm leading-6">
+                    {feature.description}
+                  </p>
                 </article>
               ))}
             </div>
@@ -174,10 +183,10 @@ export default function Home() {
         </section>
       </main>
 
-      <footer className="border-t border-gray-300 py-8">
-        <div className="mx-auto max-w-7xl px-4 text-center text-sm text-gray-700 sm:px-6 lg:px-8">
+      <footer className="landing-footer py-8">
+        <div className="landing-text-default mx-auto max-w-7xl px-4 text-center text-sm sm:px-6 lg:px-8">
           <p>© 2026 Trường Đại học An ninh nhân dân - Bộ Công an. Tất cả quyền được bảo lưu.</p>
-          <p className="mt-2 text-xs text-gray-500">
+          <p className="landing-text-muted mt-2 text-xs">
             Hệ thống nội bộ dành cho cán bộ và học viên ANND
           </p>
         </div>

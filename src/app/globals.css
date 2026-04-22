@@ -889,6 +889,14 @@ button:disabled,
     linear-gradient(160deg, #f3f6fd 0%, #e6edf8 48%, #dfe8f5 100%);
 }
 
+.landing-hero {
+  border: 1px solid color-mix(in srgb, var(--app-border-default) 84%, transparent);
+  background:
+    linear-gradient(175deg, rgba(255, 255, 255, 0.92), rgba(248, 250, 252, 0.84)),
+    var(--app-surface-base);
+  box-shadow: 0 22px 52px rgba(15, 23, 42, 0.12);
+}
+
 .landing-nav {
   border-bottom: 1px solid color-mix(in srgb, var(--app-border-default) 88%, transparent);
   background: rgba(255, 255, 255, 0.9);
@@ -920,10 +928,51 @@ button:disabled,
   background: rgba(255, 255, 255, 0.92);
 }
 
+.landing-feature-card:hover {
+  background: rgba(255, 255, 255, 0.98);
+}
+
+.landing-panel-outline {
+  border: 1px solid color-mix(in srgb, var(--app-link) 30%, var(--app-border-default));
+  background: color-mix(in srgb, var(--app-link) 9%, transparent);
+}
+
+.landing-skeleton {
+  background: color-mix(in srgb, var(--app-link) 30%, transparent);
+}
+
+.landing-text-strong {
+  color: var(--app-text-strong);
+}
+
+.landing-text-default {
+  color: var(--app-text-default);
+}
+
+.landing-text-muted {
+  color: var(--app-text-muted);
+}
+
+.landing-link {
+  color: var(--app-link);
+}
+
+.landing-footer {
+  border-top: 1px solid color-mix(in srgb, var(--app-border-default) 82%, transparent);
+}
+
 :root[data-theme='dark'] .landing-shell {
   background:
     radial-gradient(circle at 15% 12%, rgba(56, 189, 248, 0.22), transparent 38%),
     linear-gradient(160deg, #020817 0%, #081327 46%, #0b1a33 100%);
+}
+
+:root[data-theme='dark'] .landing-hero {
+  border-color: color-mix(in srgb, var(--app-border-default) 88%, transparent);
+  background:
+    linear-gradient(175deg, rgba(15, 23, 42, 0.95), rgba(17, 24, 39, 0.88)),
+    var(--app-surface-base);
+  box-shadow: 0 24px 58px rgba(2, 6, 23, 0.52);
 }
 
 :root[data-theme='dark'] .landing-nav {
@@ -956,7 +1005,80 @@ button:disabled,
   background: rgba(15, 23, 42, 0.88);
 }
 
+:root[data-theme='dark'] .landing-feature-card:hover {
+  background: rgba(15, 23, 42, 0.96);
+}
+
+:root[data-theme='dark'] .landing-panel-outline {
+  border-color: color-mix(in srgb, var(--app-link) 45%, var(--app-border-default));
+  background: color-mix(in srgb, var(--app-link) 15%, transparent);
+}
+
+:root[data-theme='dark'] .landing-skeleton {
+  background: color-mix(in srgb, var(--app-link) 42%, transparent);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .landing-shell {
+    background:
+      radial-gradient(circle at 15% 12%, rgba(56, 189, 248, 0.22), transparent 38%),
+      linear-gradient(160deg, #020817 0%, #081327 46%, #0b1a33 100%);
+  }
+
+  :root:not([data-theme='light']) .landing-hero {
+    border-color: color-mix(in srgb, var(--app-border-default) 88%, transparent);
+    background:
+      linear-gradient(175deg, rgba(15, 23, 42, 0.95), rgba(17, 24, 39, 0.88)),
+      var(--app-surface-base);
+    box-shadow: 0 24px 58px rgba(2, 6, 23, 0.52);
+  }
+
+  :root:not([data-theme='light']) .landing-nav {
+    border-bottom-color: color-mix(in srgb, var(--app-border-default) 90%, transparent);
+    background: rgba(2, 6, 23, 0.82);
+  }
+
+  :root:not([data-theme='light']) .landing-panel {
+    border-color: color-mix(in srgb, var(--app-border-default) 88%, transparent);
+    background:
+      linear-gradient(165deg, rgba(15, 23, 42, 0.95), rgba(17, 24, 39, 0.88)),
+      var(--app-surface-base);
+    box-shadow: 0 24px 58px rgba(2, 6, 23, 0.52);
+  }
+
+  :root:not([data-theme='light']) .landing-metric {
+    border-color: color-mix(in srgb, var(--app-border-default) 86%, transparent);
+    background: rgba(15, 23, 42, 0.82);
+  }
+
+  :root:not([data-theme='light']) .landing-feature-shell {
+    border-color: color-mix(in srgb, var(--app-border-default) 88%, transparent);
+    background:
+      linear-gradient(180deg, rgba(15, 23, 42, 0.9), rgba(17, 24, 39, 0.84)),
+      var(--app-surface-base);
+  }
+
+  :root:not([data-theme='light']) .landing-feature-card {
+    border-color: color-mix(in srgb, var(--app-border-default) 84%, transparent);
+    background: rgba(15, 23, 42, 0.88);
+  }
+
+  :root:not([data-theme='light']) .landing-feature-card:hover {
+    background: rgba(15, 23, 42, 0.96);
+  }
+
+  :root:not([data-theme='light']) .landing-panel-outline {
+    border-color: color-mix(in srgb, var(--app-link) 45%, var(--app-border-default));
+    background: color-mix(in srgb, var(--app-link) 15%, transparent);
+  }
+
+  :root:not([data-theme='light']) .landing-skeleton {
+    background: color-mix(in srgb, var(--app-link) 42%, transparent);
+  }
+}
+
 @supports not (color: color-mix(in srgb, #000 50%, #fff 50%)) {
+  .landing-hero,
   .landing-nav,
   .landing-panel,
   .landing-metric,
@@ -964,6 +1086,15 @@ button:disabled,
   .landing-feature-card {
     border-color: var(--app-border-default);
     background: var(--app-surface-base);
+  }
+
+  .landing-panel-outline {
+    border-color: var(--app-border-default);
+    background: var(--app-surface-muted);
+  }
+
+  .landing-skeleton {
+    background: var(--app-surface-soft);
   }
 }
 
@@ -1008,7 +1139,12 @@ button:disabled,
   }
 
   .page-surface,
-  .content-card {
+  .content-card,
+  .landing-hero,
+  .landing-panel,
+  .landing-metric,
+  .landing-feature-shell,
+  .landing-feature-card {
     background: Canvas !important;
     color: CanvasText !important;
     border-color: CanvasText !important;

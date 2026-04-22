@@ -1082,6 +1082,61 @@ Yeu cau:
 - [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests)
 - [x] `npm.cmd run release:check:full` -> PASS (4/4 checks, sau khi format lai biometric pages)
 
+## 9.21) Batch lon uu tien - navbar actor integrity + notification dedupe hardening + landing dark contrast rescue v3
+
+### Muc tieu
+
+- Dong bo duong dan actor tren cac diem vao nhanh, tranh lech namespace (`/notifications` vs `/student/notifications`).
+- Giam triet de toast thong bao day lap noi dung khi stream/polling den sat nhau.
+- Cuu contrast landing page trong dark/system mode de khong con tinh trang chu chim nen.
+- Bo sung regression test de khoa chan drift trong cac lan refactor tiep theo.
+
+### Prompt batch lon (copy de tiep tuc)
+
+```text
+Ban dong vai Principal Frontend Reliability Engineer. Uu tien 4 viec:
+1) Actor navigation integrity:
+- Quet cac link nhanh cua student/teacher/admin, fix ngay cac route khong namespace dung actor.
+2) Notification dedupe:
+- Harden toast dedupe de khong lap thong bao cung noi dung khi event den tu SSE va polling gan nhau.
+- Khong pha logic action buttons theo role.
+3) Landing dark/system rescue:
+- Ra soat contrast landing trong dark + system mode (Windows dark), dam bao heading/body/card doc ro.
+- Khong doi nghiep vu login/redirect.
+4) Regression:
+- Them test bao ve route notification dung namespace actor va test dedupe cross event type.
+Yeu cau:
+- Patch nho, test lien quan + build + backbone + release check, cap nhat docs va commit theo batch.
+```
+
+### Viec can lam
+
+- [x] `src/app/student/dashboard/page.tsx`:
+  - [x] sua 2 link thong bao tu `/notifications` sang `/student/notifications`.
+- [x] `src/components/realtime/RealtimeNotificationBridge.tsx`:
+  - [x] tang dedupe window noi dung de giam lap toast.
+  - [x] chuan hoa content dedupe key (bo phu thuoc `event_type`) de gom SSE/polling cung thong diep.
+- [x] `src/app/page.tsx`:
+  - [x] doi text color classes landing ve token classes (`landing-text-*`, `landing-link`).
+  - [x] bo sung `landing-hero` surface de tang contrast khu hero.
+- [x] `src/app/globals.css`:
+  - [x] them token classes/hero/panel-outline/skeleton cho landing.
+  - [x] bo sung dark style cho `landing-hero` + `prefers-color-scheme: dark` fallback khi chay che do system.
+  - [x] bo sung forced-colors coverage cho landing surfaces.
+- [x] `test/realtime-notification-bridge.test.tsx`:
+  - [x] them regression test dedupe cross `attendance_qr_started` va `notification.polling`.
+  - [x] bo `any` cast khi mock EventSource.
+- [x] `test/student-dashboard-links.test.ts`:
+  - [x] them regression test xac nhan dashboard student khong con link `/notifications` bare.
+
+### Verification
+
+- [x] `npm.cmd run lint -- --file "src/app/page.tsx" --file "src/app/student/dashboard/page.tsx" --file "src/components/realtime/RealtimeNotificationBridge.tsx" --file "test/realtime-notification-bridge.test.tsx" --file "test/student-dashboard-links.test.ts"` -> PASS (0 warning)
+- [x] `npm.cmd test -- test/realtime-notification-bridge.test.tsx test/student-dashboard-links.test.ts test/sidebar-teacher-links.test.tsx` -> PASS (3 files / 13 tests)
+- [x] `npm.cmd run build` -> PASS
+- [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests)
+- [x] `npm.cmd run release:check:full` -> PASS (4/4 checks, sau khi format lai `src/app/page.tsx`)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix
@@ -1107,6 +1162,7 @@ Yeu cau:
   - [x] Split commits: `07e5ac8`, `59efe67`, `a8d0b8e`
 - [x] Commit 19: landing contrast rescue v2 + scanner/inbox polish (batch 9.19) (`c304ca7`)
 - [x] Commit 20: biometric pages camera helper alignment + tests (batch 9.20) (`b9c18a3`)
+- [ ] Commit 21: navbar actor integrity + dedupe hardening + landing dark/system rescue (batch 9.21)
 
 ---
 

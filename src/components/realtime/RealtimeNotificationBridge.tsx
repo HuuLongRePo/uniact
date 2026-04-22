@@ -28,11 +28,28 @@ type ApiNotificationItem = {
 };
 
 const POLLING_INTERVAL_MS = 15000;
-const CONTENT_DEDUPE_WINDOW_MS = 12000;
+const CONTENT_DEDUPE_WINDOW_MS = 45000;
 
 function toSafeInteger(value: unknown, fallback = 0) {
   const parsed = Number(value);
   return Number.isInteger(parsed) ? parsed : fallback;
+}
+
+function normalizeDedupeToken(value: unknown) {
+  return String(value || '')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .toLowerCase();
+}
+
+function buildContentDedupeKey(event: RealtimeNotificationEvent) {
+  return [
+    normalizeDedupeToken(event.notification?.type || 'system'),
+    normalizeDedupeToken(event.notification?.title),
+    normalizeDedupeToken(event.notification?.message),
+    normalizeDedupeToken(event.notification?.related_table),
+    toSafeInteger(event.notification?.related_id, 0),
+  ].join('|');
 }
 
 function adaptApiNotificationToRealtime(
@@ -113,7 +130,7 @@ export function RealtimeNotificationBridge() {
     const notificationId = toSafeInteger(event.notification?.id, 0);
     const dedupeKey =
       notificationId > 0 ? `notification:${notificationId}` : `event:${event.event_id}`;
-    const contentDedupeKey = `${event.notification?.type || 'system'}|${event.notification?.title || ''}|${event.notification?.message || ''}|${event.notification?.related_table || ''}|${event.notification?.related_id || ''}|${event.event_type || ''}`;
+    const contentDedupeKey = buildContentDedupeKey(event);
     const now = Date.now();
 
     for (const [key, timestamp] of recentContentDedupeRef.current.entries()) {

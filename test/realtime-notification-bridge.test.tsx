@@ -54,7 +54,7 @@ describe('RealtimeNotificationBridge', () => {
     MockEventSource.instances = [];
     authState.user = { id: 7, role: 'student' };
 
-    vi.stubGlobal('EventSource', MockEventSource as any);
+    vi.stubGlobal('EventSource', MockEventSource as unknown as typeof EventSource);
 
     const fetchMock = vi.fn(async () => ({
       ok: true,
@@ -170,6 +170,58 @@ describe('RealtimeNotificationBridge', () => {
 
     source.emit('notification', duplicatedPayload);
     source.emit('notification', { ...duplicatedPayload, event_id: 302 });
+
+    await waitFor(() => {
+      expect(toastCustomMock).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('suppresses duplicate content across realtime and polling event types', async () => {
+    const Bridge = (await import('../src/components/realtime/RealtimeNotificationBridge'))
+      .RealtimeNotificationBridge;
+
+    render(<Bridge />);
+    const source = MockEventSource.instances[0];
+
+    source.emit('notification', {
+      event_id: 401,
+      event_type: 'attendance_qr_started',
+      actor_id: 12,
+      target_user_ids: [7],
+      priority: 'normal',
+      ttl_seconds: 7,
+      action_buttons: [],
+      notification: {
+        id: null,
+        type: 'attendance',
+        title: 'Bat dau diem danh',
+        message: 'Lop A1 da mo QR',
+        related_table: 'activities',
+        related_id: 88,
+        created_at: '2026-04-22T10:00:00.000Z',
+      },
+      created_at: '2026-04-22T10:00:00.000Z',
+    });
+
+    source.emit('notification', {
+      event_id: 402,
+      event_type: 'notification.polling',
+      actor_id: null,
+      target_user_ids: [7],
+      priority: 'normal',
+      ttl_seconds: 7,
+      action_buttons: [],
+      notification: {
+        id: null,
+        type: 'attendance',
+        title: 'Bat dau diem danh',
+        message: 'Lop A1 da mo QR',
+        related_table: 'activities',
+        related_id: 88,
+        created_at: '2026-04-22T10:00:03.000Z',
+      },
+      created_at: '2026-04-22T10:00:03.000Z',
+    });
 
     await waitFor(() => {
       expect(toastCustomMock).toHaveBeenCalledTimes(1);
