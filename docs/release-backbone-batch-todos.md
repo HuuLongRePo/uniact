@@ -1492,6 +1492,7 @@ Yeu cau:
 - [x] Commit 25: dark mode button-link contrast guard + theme regression test (batch 9.26) (`e32de41`)
 - [x] Commit 26: dark mode action button readability guard v2 (batch 9.27) (`50e386d`)
 - [x] Commit 27: teacher attendance history/bulk hardening (batch 9.28) (`d431b0b`)
+- [x] Commit 28: browser camera fallback for student QR scan (batch 9.29) (`f0c5e21`)
 
 ---
 
