@@ -6,14 +6,29 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Users, Edit, Award, Download } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
+import { Class as AdminClass } from '../types';
+
+type ClassStudent = {
+  id: number;
+  full_name: string;
+  student_code?: string | null;
+  email: string;
+  activity_count?: number | null;
+  total_points?: number | null;
+  created_at?: string | null;
+};
+
+type ClassDetail = AdminClass & {
+  description?: string | null;
+};
 
 export default function ClassDetailPage() {
   const { user: currentUser, loading } = useAuth();
   const router = useRouter();
-  const params = useParams();
-  const classId = params.id as string;
-  const [classData, setClassData] = useState<any>(null);
-  const [students, setStudents] = useState<any[]>([]);
+  const params = useParams<{ id: string }>();
+  const classId = params.id;
+  const [classData, setClassData] = useState<ClassDetail | null>(null);
+  const [students, setStudents] = useState<ClassStudent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [stats, setStats] = useState({
     totalStudents: 0,
@@ -28,8 +43,9 @@ export default function ClassDetailPage() {
     }
 
     if (currentUser) {
-      fetchClassData();
+      void fetchClassData();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser, loading, router]);
 
   const fetchClassData = async () => {
@@ -41,7 +57,7 @@ export default function ClassDetailPage() {
 
       if (classRes.ok) {
         const classData = await classRes.json();
-        setClassData(classData.data);
+        setClassData(classData.data as ClassDetail);
         setStats({
           totalStudents: classData.data.student_count || 0,
           totalActivities: 0,
@@ -51,7 +67,7 @@ export default function ClassDetailPage() {
 
       if (studentsRes.ok) {
         const studentsData = await studentsRes.json();
-        setStudents(studentsData.students || []);
+        setStudents((studentsData.students || []) as ClassStudent[]);
       }
     } catch (error) {
       console.error('Lỗi tải dữ liệu lớp:', error);
@@ -65,7 +81,7 @@ export default function ClassDetailPage() {
     const headers = ['ID', 'Name', 'Email', 'Total Points', 'Activities Count', 'Class'];
     const rows = students.map((s) => [
       s.id,
-      s.name,
+      s.full_name,
       s.email,
       s.total_points || 0,
       s.activity_count || 0,

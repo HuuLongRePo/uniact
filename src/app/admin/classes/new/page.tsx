@@ -12,6 +12,13 @@ interface Teacher {
   email: string;
 }
 
+type TeacherApiUser = {
+  id: number;
+  full_name?: string | null;
+  name?: string | null;
+  email?: string | null;
+};
+
 export default function NewClassPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
@@ -42,7 +49,7 @@ export default function NewClassPage() {
       const data = await response.json();
 
       if (response.ok) {
-        const list = (data.data || []) as any[];
+        const list = (data.data || []) as TeacherApiUser[];
         setTeachers(
           list.map((t) => ({
             id: t.id,

@@ -33,7 +33,6 @@ export default function ClassStudentsPage({ params }: PageProps) {
   const [isListLoading, setIsListLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [summary, setSummary] = useState<StudentSummary | null>(null);
   const [classSummary, setClassSummary] = useState<StudentSummary | null>(null);
 
   const debouncedSearch = useDebounce(search, 400);
@@ -63,7 +62,8 @@ export default function ClassStudentsPage({ params }: PageProps) {
     // Avoid loading for 1-character queries; wait for at least 2 chars.
     if (effectiveSearch.length === 1) return;
 
-    fetchStudents();
+    void fetchStudents();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, authLoading, router, classId, effectiveSearch, page]);
 
   useEffect(() => {
@@ -108,7 +108,6 @@ export default function ClassStudentsPage({ params }: PageProps) {
       if (response.ok) {
         setStudents(data.data || []);
         setTotalPages(data.pagination?.totalPages || 1);
-        setSummary(data.summary || null);
         setClassSummary(data.classSummary || null);
         setSelectedStudents(new Set());
       } else {

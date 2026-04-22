@@ -729,6 +729,37 @@ Yeu cau thi hanh:
 - [x] `npm.cmd test -- test/admin-users-route.test.ts` -> PASS (1 file / 2 tests)
 - [x] `npm.cmd run build` -> PASS
 - [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests)
+- [x] `npm.cmd run release:check:full` -> PASS (4/4 checks)
+
+## 9.12) Batch hardening - Admin classes lint/type cleanup
+
+### Muc tieu
+
+- Don warning lint o cum quan tri lop hoc (list/detail/edit/students/new class).
+- Khong doi nghiep vu/contract; chi harden typing + effect dependencies.
+
+### Viec can lam
+
+- [x] `admin/classes/page.tsx`:
+  - [x] bo `any` khi parse danh sach teacher.
+  - [x] giu flow fetch classes va bo warning effect dependency.
+- [x] `admin/classes/new/page.tsx`:
+  - [x] bo `any` khi parse danh sach teacher.
+- [x] `admin/classes/[id]/page.tsx`:
+  - [x] bo `any` cho class/student state.
+  - [x] chuan hoa params typing va export roster row field.
+- [x] `admin/classes/[id]/edit/page.tsx`:
+  - [x] bo `any` khi parse teacher list.
+  - [x] harden params typing + class payload fallback.
+- [x] `admin/classes/[id]/students/page.tsx`:
+  - [x] bo state `summary` khong su dung.
+  - [x] bo warning effect dependency.
+
+### Verification
+
+- [x] `npm.cmd run lint -- --file "src/app/admin/classes/page.tsx" --file "src/app/admin/classes/new/page.tsx" --file "src/app/admin/classes/[id]/page.tsx" --file "src/app/admin/classes/[id]/edit/page.tsx" --file "src/app/admin/classes/[id]/students/page.tsx"` -> PASS (0 warnings)
+- [x] `npm.cmd test -- test/admin-classes-route.test.ts test/admin-class-detail-route.test.ts` -> PASS (2 files / 5 tests)
+- [x] `npm.cmd run build` -> PASS
 
 ## 10) Ke hoach commit de xuat
 
@@ -745,6 +776,8 @@ Yeu cau thi hanh:
 - [x] Commit 10: admin approvals lint/type hardening (batch 9.9) (`36564a2`)
 - [x] Commit 11: admin alerts/audit lint cleanup (batch 9.10) (`76771f1`)
 - [x] Commit 12: admin users lint/type cleanup (batch 9.11) (`1f8265c`)
+- [x] Commit 13: format admin user pages for release check (`cb33491`)
+- [ ] Commit 14: admin classes lint/type cleanup (batch 9.12)
 
 ---
 

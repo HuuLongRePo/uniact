@@ -14,6 +14,13 @@ import ClassViewDialog from './ClassViewDialog';
 import { Class, Teacher } from './types';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
+type TeacherApiUser = {
+  id: number;
+  full_name?: string | null;
+  name?: string | null;
+  email?: string | null;
+};
+
 /**
  * REFACTORED (Phase 6 - Classes Module):
  * Original 403-line classes page split into focused components:
@@ -69,7 +76,8 @@ export default function AdminClassesPage() {
     if (!user) return;
     // Avoid loading for 1-character queries
     if (effectiveSearch.length === 1 || effectiveGrade.length === 1) return;
-    fetchClasses();
+    void fetchClasses();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, page, effectiveSearch, effectiveGrade, teacherFilter]);
 
   const fetchClasses = async () => {
@@ -106,7 +114,7 @@ export default function AdminClassesPage() {
       const data = await response.json();
 
       if (response.ok) {
-        const list = (data.users || data.data?.users || data.data || []) as any[];
+        const list = (data.users || data.data?.users || data.data || []) as TeacherApiUser[];
         setTeachers(
           list.map((t) => ({
             id: t.id,

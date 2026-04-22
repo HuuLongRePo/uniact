@@ -13,6 +13,13 @@ interface Teacher {
   email: string;
 }
 
+type TeacherApiUser = {
+  id: number;
+  full_name?: string | null;
+  name?: string | null;
+  email?: string | null;
+};
+
 interface Class {
   id: number;
   name: string;
@@ -24,8 +31,8 @@ interface Class {
 export default function EditClassPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-  const params = useParams();
-  const classId = params.id as string;
+  const params = useParams<{ id: string }>();
+  const classId = params.id;
 
   const [classData, setClassData] = useState<Class | null>(null);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
@@ -45,8 +52,9 @@ export default function EditClassPage() {
     }
 
     if (user && classId) {
-      fetchData();
+      void fetchData();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, authLoading, router, classId]);
 
   const fetchData = async () => {
@@ -61,8 +69,7 @@ export default function EditClassPage() {
         return;
       }
 
-      setClassData(classData.class);
-      const cls = classData.data;
+      const cls = (classData.data ?? classData.class) as Class;
       setClassData(cls);
       setFormData({
         name: cls.name,
@@ -76,7 +83,7 @@ export default function EditClassPage() {
       const teachersData = await teachersRes.json();
 
       if (teachersRes.ok) {
-        const list = (teachersData.data || []) as any[];
+        const list = (teachersData.data || []) as TeacherApiUser[];
         setTeachers(
           list.map((t) => ({
             id: t.id,
