@@ -760,6 +760,7 @@ Yeu cau thi hanh:
 - [x] `npm.cmd run lint -- --file "src/app/admin/classes/page.tsx" --file "src/app/admin/classes/new/page.tsx" --file "src/app/admin/classes/[id]/page.tsx" --file "src/app/admin/classes/[id]/edit/page.tsx" --file "src/app/admin/classes/[id]/students/page.tsx"` -> PASS (0 warnings)
 - [x] `npm.cmd test -- test/admin-classes-route.test.ts test/admin-class-detail-route.test.ts` -> PASS (2 files / 5 tests)
 - [x] `npm.cmd run build` -> PASS
+- [x] `npm.cmd run release:check:full` -> PASS (4/4 checks)
 
 ## 10) Ke hoach commit de xuat
 
