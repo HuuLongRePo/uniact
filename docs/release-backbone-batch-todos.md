@@ -668,6 +668,34 @@ Yeu cau thi hanh:
 - [x] `npm.cmd run build` -> PASS
 - [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests)
 
+## 9.10) Batch hardening - Admin alerts/audit lint cleanup
+
+### Muc tieu
+
+- Giam tiep warning lint o cum quan tri alerts + audit logs de bao toan do on dinh gate A-E.
+- Khong doi contract nghiep vu; chi harden hooks deps va bo prop/param du thua.
+
+### Viec can lam
+
+- [x] `admin/alerts/page.tsx`:
+  - [x] dong bo `fetchAlerts` bang `useCallback` + deps dung.
+  - [x] refresh sau `markRead` bang `await fetchAlerts(...)`.
+- [x] `admin/audit/page.tsx`:
+  - [x] dong bo `fetchLogs` bang `useCallback` + deps dung.
+  - [x] bo goi async khong await trong nut `Ap dung`.
+- [x] `admin/audit-logs/page.tsx`:
+  - [x] dong bo `fetchLogs` bang `useCallback`, effect phu thuoc callback.
+  - [x] bo truyen prop `loading` khong can thiet cho table.
+- [x] `admin/audit-logs/AuditTable.tsx`:
+  - [x] bo prop `loading` khong su dung.
+
+### Verification
+
+- [x] `npm.cmd run lint -- --file "src/app/admin/alerts/page.tsx" --file "src/app/admin/audit/page.tsx" --file "src/app/admin/audit-logs/page.tsx" --file "src/app/admin/audit-logs/AuditTable.tsx"` -> PASS (0 warnings)
+- [x] `npm.cmd test -- test/alerts.test.ts test/audit.test.ts test/approval-audit.unit.test.ts` -> PASS (3 files / 12 tests)
+- [x] `npm.cmd run build` -> PASS
+- [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix
@@ -681,6 +709,7 @@ Yeu cau thi hanh:
 - [x] Commit 8: docs sync baseline + clone handoff (`804d71a`)
 - [x] Commit 9: activity workflow lint/type hardening (batch 9.8) (`7769e0b`)
 - [x] Commit 10: admin approvals lint/type hardening (batch 9.9) (`36564a2`)
+- [ ] Commit 11: admin alerts/audit lint cleanup (batch 9.10)
 
 ---
 

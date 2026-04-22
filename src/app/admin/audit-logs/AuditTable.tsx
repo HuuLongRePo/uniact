@@ -4,7 +4,6 @@ import { AuditLog } from './types';
 
 interface AuditTableProps {
   logs: AuditLog[];
-  loading: boolean;
   onViewDetails: (log: AuditLog) => void;
 }
 
@@ -22,7 +21,7 @@ function getRoleBadgeClass(role: string) {
   return 'bg-green-100 text-green-800';
 }
 
-export default function AuditTable({ logs, loading, onViewDetails }: AuditTableProps) {
+export default function AuditTable({ logs, onViewDetails }: AuditTableProps) {
   if (logs.length === 0) {
     return (
       <div className="text-center py-12 bg-gray-50 rounded-lg">

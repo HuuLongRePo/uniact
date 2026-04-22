@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 type Audit = {
   id: number;
@@ -23,30 +23,33 @@ export default function AdminAuditPage() {
   const [dateFrom, setDateFrom] = useState<string>('');
   const [dateTo, setDateTo] = useState<string>('');
 
-  const fetchLogs = async (opts: { page?: number } = {}) => {
-    setLoading(true);
-    try {
-      const qs = new URLSearchParams();
-      qs.set('page', String(opts.page || page));
-      qs.set('per_page', String(perPage));
-      if (actorFilter) qs.set('actor_id', actorFilter);
-      if (actionFilter) qs.set('action', actionFilter);
-      if (dateFrom) qs.set('date_from', dateFrom);
-      if (dateTo) qs.set('date_to', dateTo);
-      const res = await fetch('/api/audit-logs?' + qs.toString());
-      const j = await res.json();
-      setLogs(j.logs || []);
-      setTotal(j.meta?.total || 0);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const fetchLogs = useCallback(
+    async (opts: { page?: number } = {}) => {
+      setLoading(true);
+      try {
+        const qs = new URLSearchParams();
+        qs.set('page', String(opts.page || page));
+        qs.set('per_page', String(perPage));
+        if (actorFilter) qs.set('actor_id', actorFilter);
+        if (actionFilter) qs.set('action', actionFilter);
+        if (dateFrom) qs.set('date_from', dateFrom);
+        if (dateTo) qs.set('date_to', dateTo);
+        const res = await fetch('/api/audit-logs?' + qs.toString());
+        const j = await res.json();
+        setLogs(j.logs || []);
+        setTotal(j.meta?.total || 0);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [page, perPage, actorFilter, actionFilter, dateFrom, dateTo]
+  );
 
   useEffect(() => {
-    fetchLogs({ page });
-  }, [page]);
+    void fetchLogs({ page });
+  }, [fetchLogs, page]);
 
   return (
     <div>
@@ -83,7 +86,7 @@ export default function AdminAuditPage() {
           <button
             onClick={() => {
               setPage(1);
-              fetchLogs({ page: 1 });
+              void fetchLogs({ page: 1 });
             }}
             className="bg-blue-600 text-white px-3 py-1 rounded"
           >

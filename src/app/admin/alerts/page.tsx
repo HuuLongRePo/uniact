@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 type Alert = {
   id: number;
@@ -34,28 +34,31 @@ export default function AdminAlertsPage() {
     }
   };
 
-  const fetchAlerts = async (opts: { unreadOnly?: boolean; page?: number } = {}) => {
-    setLoading(true);
-    try {
-      const qs = new URLSearchParams();
-      qs.set('page', String(opts.page || page));
-      qs.set('per_page', String(perPage));
-      if (opts.unreadOnly) qs.set('unread', '1');
-      const res = await fetch('/api/alerts?' + qs.toString());
-      const j = await res.json();
-      setAlerts(j.alerts || []);
-      setTotal(j.meta?.total || 0);
-      setTotalUnread(j.meta?.total_unread || 0);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const fetchAlerts = useCallback(
+    async (opts: { unreadOnly?: boolean; page?: number } = {}) => {
+      setLoading(true);
+      try {
+        const qs = new URLSearchParams();
+        qs.set('page', String(opts.page || page));
+        qs.set('per_page', String(perPage));
+        if (opts.unreadOnly) qs.set('unread', '1');
+        const res = await fetch('/api/alerts?' + qs.toString());
+        const j = await res.json();
+        setAlerts(j.alerts || []);
+        setTotal(j.meta?.total || 0);
+        setTotalUnread(j.meta?.total_unread || 0);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [page, perPage]
+  );
 
   useEffect(() => {
-    fetchAlerts({ page });
-  }, [page]);
+    void fetchAlerts({ page });
+  }, [fetchAlerts, page]);
 
   const markRead = async (ids: number[]) => {
     if (ids.length === 0) return;
@@ -65,7 +68,7 @@ export default function AdminAlertsPage() {
       body: JSON.stringify({ ids }),
     });
     setSelected([]);
-    fetchAlerts({ page });
+    await fetchAlerts({ page });
   };
 
   const toggle = (id: number) => {

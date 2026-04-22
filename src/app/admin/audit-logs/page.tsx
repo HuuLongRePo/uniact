@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import LoadingSpinner from '@/components/LoadingSpinner';
@@ -26,18 +26,7 @@ export default function AuditLogsPage() {
   const [dateTo, setDateTo] = useState('');
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
 
-  useEffect(() => {
-    if (!authLoading && (!user || user.role !== 'admin')) {
-      router.push('/login');
-      return;
-    }
-
-    if (user) {
-      fetchLogs();
-    }
-  }, [user, authLoading, router, page, action, targetTable, actorId, dateFrom, dateTo]);
-
-  const fetchLogs = async () => {
+  const fetchLogs = useCallback(async () => {
     try {
       setLoading(true);
       const params = new URLSearchParams({
@@ -66,7 +55,18 @@ export default function AuditLogsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, action, targetTable, actorId, dateFrom, dateTo]);
+
+  useEffect(() => {
+    if (!authLoading && (!user || user.role !== 'admin')) {
+      router.push('/login');
+      return;
+    }
+
+    if (user) {
+      void fetchLogs();
+    }
+  }, [user, authLoading, router, fetchLogs]);
 
   const handleReset = () => {
     setAction('');
@@ -114,7 +114,7 @@ export default function AuditLogsPage() {
           setDateTo(e);
           setPage(1);
         }}
-        onApply={() => fetchLogs()}
+        onApply={() => void fetchLogs()}
         onReset={handleReset}
       />
 
@@ -130,7 +130,7 @@ export default function AuditLogsPage() {
         </div>
       </div>
 
-      <AuditTable logs={logs} loading={loading} onViewDetails={setSelectedLog} />
+      <AuditTable logs={logs} onViewDetails={setSelectedLog} />
 
       {totalPages > 1 && (
         <div className="flex justify-center items-center gap-2 mt-6">
