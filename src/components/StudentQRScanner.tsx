@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
-import { CheckCircle2, CircleAlert, Pause, RotateCcw } from 'lucide-react';
+import { CheckCircle2, CircleAlert, Info, Pause, RotateCcw } from 'lucide-react';
 import { getCameraAccessErrorMessage, requestPreferredCameraStream } from '@/lib/camera-stream';
 
 type ScanState = 'idle' | 'scanning' | 'success' | 'error';
@@ -214,6 +214,7 @@ export function StudentQRScanner({ onScan }: Props) {
               <div className="mt-1 break-all">{lastResult.slice(0, 52)}...</div>
             </div>
           )}
+
           {scanState === 'error' && error && (
             <div className="rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
               <div className="inline-flex items-center gap-2 font-medium">
@@ -243,10 +244,16 @@ export function StudentQRScanner({ onScan }: Props) {
             </button>
           </div>
 
-          <p className="text-xs text-gray-500">
-            Nếu camera bị từ chối quyền hoặc thiết bị không nhận diện được, bạn có thể nhập dữ liệu
-            QR thủ công ở phần bên dưới.
-          </p>
+          <div className="rounded-2xl border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-900">
+            <div className="inline-flex items-center gap-2 font-semibold">
+              <Info className="h-4 w-4" />
+              Hướng dẫn nhanh khi lỗi camera
+            </div>
+            <p className="mt-1">
+              Nếu mở bằng ứng dụng nhúng (Zalo, Facebook, Messenger...), hãy chuyển sang Chrome,
+              Safari hoặc Edge rồi tải lại trang.
+            </p>
+          </div>
         </div>
       </section>
 

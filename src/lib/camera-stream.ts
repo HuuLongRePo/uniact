@@ -5,8 +5,40 @@ function isLikelyEmbeddedBrowser() {
   return /fban|fbav|instagram|zalo|line\/|micromessenger|wv\)|webview/.test(userAgent);
 }
 
+function isLikelyIOS() {
+  if (typeof navigator === 'undefined') return false;
+  const userAgent = navigator.userAgent.toLowerCase();
+  return /iphone|ipad|ipod/.test(userAgent);
+}
+
+function isTrustedLocalHost(hostname: string) {
+  return (
+    hostname === 'localhost' ||
+    hostname === '127.0.0.1' ||
+    hostname === '::1' ||
+    hostname.endsWith('.localhost')
+  );
+}
+
 function getEmbeddedBrowserCameraHint() {
-  return 'Thiết bị đang mở trong trình duyệt nhúng của ứng dụng. Hãy mở liên kết bằng Chrome/Safari/Edge để dùng camera ổn định.';
+  return 'Thiết bị đang mở trong trình duyệt nhúng của ứng dụng. Hãy mở liên kết bằng Chrome, Safari hoặc Edge để dùng camera ổn định.';
+}
+
+function getInsecureContextHint() {
+  if (typeof window === 'undefined') {
+    return 'Không thể truy cập camera trong môi trường hiện tại.';
+  }
+
+  const { protocol, hostname } = window.location;
+  if (protocol === 'https:' || isTrustedLocalHost(hostname)) {
+    return 'Không thể truy cập camera trong ngữ cảnh hiện tại.';
+  }
+
+  if (isLikelyEmbeddedBrowser()) {
+    return getEmbeddedBrowserCameraHint();
+  }
+
+  return `Camera chỉ hoạt động trên kết nối bảo mật HTTPS hoặc localhost. Địa chỉ hiện tại (${protocol}//${hostname}) chưa bảo mật.`;
 }
 
 export async function requestPreferredCameraStream(options?: {
@@ -19,18 +51,14 @@ export async function requestPreferredCameraStream(options?: {
   }
 
   if (!window.isSecureContext) {
-    throw new Error(
-      isLikelyEmbeddedBrowser()
-        ? getEmbeddedBrowserCameraHint()
-        : 'Camera chỉ hoạt động trên kết nối bảo mật (HTTPS hoặc localhost). Hãy mở lại bằng trình duyệt ngoài ứng dụng nhúng.'
-    );
+    throw new Error(getInsecureContextHint());
   }
 
   if (!navigator?.mediaDevices?.getUserMedia) {
     throw new Error(
       isLikelyEmbeddedBrowser()
         ? getEmbeddedBrowserCameraHint()
-        : 'Trình duyệt hiện tại chưa hỗ trợ camera đầy đủ. Hãy cập nhật Chrome/Safari/Edge hoặc mở bằng trình duyệt ngoài ứng dụng.'
+        : 'Trình duyệt hiện tại chưa hỗ trợ camera đầy đủ. Hãy cập nhật Chrome, Safari hoặc Edge.'
     );
   }
 
@@ -87,7 +115,7 @@ export function getCameraAccessErrorMessage(error: unknown) {
 
   if (errorName === 'NotAllowedError' || errorName === 'SecurityError') {
     if (isLikelyEmbeddedBrowser()) {
-      return `${getEmbeddedBrowserCameraHint()} Nếu đã cấp quyền nhưng vẫn lỗi, hãy đóng ứng dụng nhúng rồi mở lại bằng trình duyệt hệ thống.`;
+      return `${getEmbeddedBrowserCameraHint()} Nếu đã cấp quyền nhưng vẫn lỗi, hãy mở bằng trình duyệt hệ thống rồi thử lại.`;
     }
     return 'Bạn đã từ chối quyền camera. Hãy bật lại quyền camera trong trình duyệt rồi thử lại.';
   }
@@ -108,12 +136,20 @@ export function getCameraAccessErrorMessage(error: unknown) {
     if (isLikelyEmbeddedBrowser()) {
       return getEmbeddedBrowserCameraHint();
     }
-    return 'Thiết bị hoặc trình duyệt chưa hỗ trợ camera cho tác vụ này. Hãy dùng Chrome/Safari/Edge bản mới.';
+    if (isLikelyIOS()) {
+      return 'Trình duyệt iOS hiện tại chưa hỗ trợ đầy đủ camera cho luồng này. Hãy mở bằng Safari mới nhất.';
+    }
+    return 'Thiết bị hoặc trình duyệt chưa hỗ trợ camera cho tác vụ này. Hãy dùng Chrome, Safari hoặc Edge bản mới.';
   }
 
   if (error instanceof Error && error.message) {
-    if (error.message.toLowerCase().includes('secure') || error.message.includes('HTTPS')) {
-      return 'Camera yêu cầu kết nối bảo mật HTTPS hoặc localhost. Vui lòng mở lại đúng đường dẫn bảo mật.';
+    const normalizedMessage = error.message.toLowerCase();
+    if (
+      normalizedMessage.includes('secure') ||
+      normalizedMessage.includes('https') ||
+      normalizedMessage.includes('insecure')
+    ) {
+      return getInsecureContextHint();
     }
     return error.message;
   }

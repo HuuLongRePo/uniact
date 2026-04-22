@@ -983,6 +983,58 @@ Ban dong vai Senior Frontend Refactor Engineer. Uu tien trùng tu UI trang teach
 - [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests)
 - [x] `npm.cmd run release:check:full` -> PASS (4/4 checks)
 
+## 9.19) Batch uu tien nong tiep theo - landing contrast rescue v2 + scanner/inbox polish
+
+### Muc tieu
+
+- Dam bao landing page doc ro trong Windows dark mode/system dark ngay ca khi trinh duyet ho tro CSS `color-mix` khong day du.
+- Lam ro thong diep loi camera tren mobile/in-app browser de giam false-negative "trinh duyet khong ho tro camera".
+- Nang cap giao dien inbox thong bao va giu CTA hanh dong (diem danh/mo chi tiet) de hoc vien/giang vien thao tac nhanh.
+
+### Prompt batch lon (copy de tiep tuc)
+
+```text
+Ban dong vai Principal Frontend + Release Engineer. Uu tien lam 3 viec:
+1) Landing contrast rescue:
+- Bo phu thuoc mong manh vao color-mix o cac surface quan trong.
+- Them fallback CSS khi color-mix khong duoc ho tro.
+- Dam bao text/background tren landing dat tuong phan doc duoc o light/dark/system.
+2) Camera mobile hardening:
+- Cung co helper camera de thong diep HTTPS, webview/in-app browser, iOS Safari ro nguyen nhan va huong xu ly.
+- Giu logic quet QR cua hoc vien khong doi nghiep vu.
+3) Notification inbox polish:
+- Chuan hoa icon/CTA thong bao, bo nhan trang tri gay nhieu.
+- Giu fallback action button theo role, khong doi contract API.
+Yeu cau:
+- Liet ke file truoc khi sua, patch nho, chay lint/test/build/release-check lien quan.
+- Cap nhat docs batch va commit ro rang.
+```
+
+### Viec can lam
+
+- [x] `src/app/globals.css`:
+  - [x] them fallback `@supports not (color: color-mix(...))` cho `page-surface`/`content-card`.
+  - [x] them bo class `landing-*` co contrast on dinh cho light/dark.
+- [x] `src/app/page.tsx`:
+  - [x] lam moi landing shell theo class `landing-*`, bo phu thuoc style inline `color-mix`.
+  - [x] dong bo copy role QR dung nghiep vu: giang vien mo QR, hoc vien quet.
+- [x] `src/lib/camera-stream.ts`:
+  - [x] bo sung thong diep secure-context ro host/protocol.
+  - [x] bo sung nhan dien iOS + in-app browser cho thong diep hoi phuc camera.
+- [x] `src/components/StudentQRScanner.tsx`:
+  - [x] giu luong scan cu, bo sung khung huong dan xu ly nhanh khi loi camera.
+- [x] `src/components/notifications/NotificationInbox.tsx`:
+  - [x] thay icon emoji bang icon Lucide de giao dien hien dai va nhat quan.
+  - [x] giu nguyen logic mark read/delete/filter/pagination/action buttons theo role.
+
+### Verification
+
+- [x] `npm.cmd run lint -- --file "src/app/page.tsx" --file "src/lib/camera-stream.ts" --file "src/components/StudentQRScanner.tsx" --file "src/components/notifications/NotificationInbox.tsx"` -> PASS (0 warning)
+- [x] `npm.cmd test -- test/notification-inbox.test.tsx test/realtime-notification-bridge.test.tsx test/notification-actions.test.ts test/teacher-face-attendance-page.test.tsx` -> PASS (4 files / 21 tests)
+- [x] `npm.cmd run build` -> PASS
+- [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests)
+- [x] `npm.cmd run release:check:full` -> PASS (4/4 checks)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix
@@ -1002,8 +1054,11 @@ Ban dong vai Senior Frontend Refactor Engineer. Uu tien trùng tu UI trang teach
 - [x] Commit 14: admin classes lint/type cleanup (batch 9.12) (`4c37921`)
 - [x] Commit 15: admin awards/bonus/reports/scores lint cleanup (batch 9.13) (`b48ef66`)
 - [x] Commit 16: admin scoring/scoring-config lint/type cleanup (batch 9.14) (`5f06b16`)
-- [ ] Commit 17: dark contrast + notification projector CTA + navbar integrity (batch 9.17)
-- [ ] Commit 18: teacher activities UI modernization (batch 9.18)
+- [x] Commit 17: dark contrast + notification projector CTA + navbar integrity (batch 9.17)
+  - [x] Split commits: `435ec7c`, `e50f9c7`
+- [x] Commit 18: teacher activities UI modernization (batch 9.18)
+  - [x] Split commits: `07e5ac8`, `59efe67`, `a8d0b8e`
+- [ ] Commit 19: landing contrast rescue v2 + scanner/inbox polish (batch 9.19)
 
 ---
 

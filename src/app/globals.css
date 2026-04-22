@@ -870,6 +870,103 @@ button:disabled,
   background: var(--app-surface-base);
 }
 
+@supports not (color: color-mix(in srgb, #000 50%, #fff 50%)) {
+  .page-surface {
+    border-color: var(--app-border-default);
+    background: var(--app-surface-base);
+  }
+
+  .content-card {
+    border-color: var(--app-border-default);
+    background: var(--app-surface-base);
+  }
+}
+
+.landing-shell {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 12% 10%, rgba(147, 197, 253, 0.45), transparent 35%),
+    linear-gradient(160deg, #f3f6fd 0%, #e6edf8 48%, #dfe8f5 100%);
+}
+
+.landing-nav {
+  border-bottom: 1px solid color-mix(in srgb, var(--app-border-default) 88%, transparent);
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(14px);
+}
+
+.landing-panel {
+  border: 1px solid color-mix(in srgb, var(--app-border-default) 84%, transparent);
+  background:
+    linear-gradient(165deg, rgba(255, 255, 255, 0.92), rgba(248, 250, 252, 0.86)),
+    var(--app-surface-base);
+  box-shadow: 0 22px 50px rgba(15, 23, 42, 0.14);
+}
+
+.landing-metric {
+  border: 1px solid color-mix(in srgb, var(--app-border-default) 72%, transparent);
+  background: rgba(255, 255, 255, 0.86);
+}
+
+.landing-feature-shell {
+  border: 1px solid color-mix(in srgb, var(--app-border-default) 84%, transparent);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(248, 250, 252, 0.85)),
+    var(--app-surface-base);
+}
+
+.landing-feature-card {
+  border: 1px solid color-mix(in srgb, var(--app-border-default) 75%, transparent);
+  background: rgba(255, 255, 255, 0.92);
+}
+
+:root[data-theme='dark'] .landing-shell {
+  background:
+    radial-gradient(circle at 15% 12%, rgba(56, 189, 248, 0.22), transparent 38%),
+    linear-gradient(160deg, #020817 0%, #081327 46%, #0b1a33 100%);
+}
+
+:root[data-theme='dark'] .landing-nav {
+  border-bottom-color: color-mix(in srgb, var(--app-border-default) 90%, transparent);
+  background: rgba(2, 6, 23, 0.82);
+}
+
+:root[data-theme='dark'] .landing-panel {
+  border-color: color-mix(in srgb, var(--app-border-default) 88%, transparent);
+  background:
+    linear-gradient(165deg, rgba(15, 23, 42, 0.95), rgba(17, 24, 39, 0.88)),
+    var(--app-surface-base);
+  box-shadow: 0 24px 58px rgba(2, 6, 23, 0.52);
+}
+
+:root[data-theme='dark'] .landing-metric {
+  border-color: color-mix(in srgb, var(--app-border-default) 86%, transparent);
+  background: rgba(15, 23, 42, 0.82);
+}
+
+:root[data-theme='dark'] .landing-feature-shell {
+  border-color: color-mix(in srgb, var(--app-border-default) 88%, transparent);
+  background:
+    linear-gradient(180deg, rgba(15, 23, 42, 0.9), rgba(17, 24, 39, 0.84)),
+    var(--app-surface-base);
+}
+
+:root[data-theme='dark'] .landing-feature-card {
+  border-color: color-mix(in srgb, var(--app-border-default) 84%, transparent);
+  background: rgba(15, 23, 42, 0.88);
+}
+
+@supports not (color: color-mix(in srgb, #000 50%, #fff 50%)) {
+  .landing-nav,
+  .landing-panel,
+  .landing-metric,
+  .landing-feature-shell,
+  .landing-feature-card {
+    border-color: var(--app-border-default);
+    background: var(--app-surface-base);
+  }
+}
+
 /* Mobile optimization */
 @media (max-width: 1024px) {
   /* Prevent horizontal scroll */

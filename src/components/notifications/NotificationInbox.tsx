@@ -2,6 +2,15 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
+import {
+  Bell,
+  BellRing,
+  CalendarCheck2,
+  CheckCircle2,
+  ClipboardCheck,
+  Megaphone,
+  Trash2,
+} from 'lucide-react';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useEffectEventCompat } from '@/lib/useEffectEventCompat';
@@ -45,6 +54,16 @@ function resolveRecipientRoleFromPathname(pathname: string): NotificationRecipie
   if (pathname.startsWith('/admin')) return 'admin';
   if (pathname.startsWith('/teacher')) return 'teacher';
   return 'student';
+}
+
+function NotificationTypeIcon({ type }: { type: string }) {
+  if (type === 'registration') return <ClipboardCheck className="h-5 w-5 text-blue-600" />;
+  if (type === 'activity_update') return <Megaphone className="h-5 w-5 text-indigo-600" />;
+  if (type === 'attendance' || type === 'success')
+    return <CalendarCheck2 className="h-5 w-5 text-emerald-600" />;
+  if (type === 'award') return <CheckCircle2 className="h-5 w-5 text-amber-600" />;
+  if (type === 'system') return <BellRing className="h-5 w-5 text-violet-600" />;
+  return <Bell className="h-5 w-5 text-slate-600" />;
 }
 
 export default function NotificationInbox({
@@ -278,24 +297,6 @@ export default function NotificationInbox({
     }
   };
 
-  const getNotificationIcon = (type: string) => {
-    switch (type) {
-      case 'registration':
-        return '📝';
-      case 'activity_update':
-        return '📢';
-      case 'attendance':
-      case 'success':
-        return '✅';
-      case 'award':
-        return '🏆';
-      case 'system':
-        return '🔔';
-      default:
-        return '💬';
-    }
-  };
-
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -353,7 +354,7 @@ export default function NotificationInbox({
           </div>
         </header>
 
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-gray-300 pb-2">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-gray-300 pb-3">
           <div className="flex gap-2">
             <button
               type="button"
@@ -384,21 +385,23 @@ export default function NotificationInbox({
               Chưa đọc {unreadCount > 0 ? `(${unreadCount})` : ''}
             </button>
           </div>
+
           {selectedIds.size > 0 && (
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="text-sm text-gray-600">{selectedIds.size} mục đã chọn</span>
               <button
                 type="button"
                 onClick={markSelectedAsRead}
-                className="rounded-md bg-blue-100 px-3 py-1 text-sm text-blue-700 hover:bg-blue-200"
+                className="rounded-lg bg-blue-100 px-3 py-1.5 text-sm text-blue-700 transition-colors hover:bg-blue-200"
               >
                 Đánh dấu đã đọc
               </button>
               <button
                 type="button"
                 onClick={() => setIsDeleteConfirmOpen(true)}
-                className="rounded-md bg-red-100 px-3 py-1 text-sm text-red-700 hover:bg-red-200"
+                className="inline-flex items-center gap-1 rounded-lg bg-red-100 px-3 py-1.5 text-sm text-red-700 transition-colors hover:bg-red-200"
               >
+                <Trash2 className="h-4 w-4" />
                 Xóa
               </button>
             </div>
@@ -450,68 +453,73 @@ export default function NotificationInbox({
                 <article
                   key={notification.id}
                   data-notification-id={notification.id}
-                  className={`flex items-start gap-3 rounded-2xl border p-4 ${
+                  className={`rounded-2xl border p-4 shadow-sm ${
                     notification.is_read
-                      ? 'border-gray-200 bg-white text-gray-900 shadow-sm'
-                      : 'border-blue-300 bg-blue-50 text-gray-900 shadow-sm'
+                      ? 'border-gray-200 bg-white text-gray-900'
+                      : 'border-blue-300 bg-blue-50 text-gray-900'
                   }`}
                 >
-                  <input
-                    type="checkbox"
-                    className="mt-1 h-4 w-4"
-                    checked={selectedIds.has(notification.id)}
-                    onChange={() => {
-                      setSelectedIds((prev) => {
-                        const next = new Set(prev);
-                        if (next.has(notification.id)) {
-                          next.delete(notification.id);
-                        } else {
-                          next.add(notification.id);
-                        }
-                        return next;
-                      });
-                    }}
-                  />
-                  <div className="flex flex-1 items-start justify-between gap-3">
-                    <div className="flex flex-1 gap-3">
-                      <span className="text-2xl">{getNotificationIcon(notification.type)}</span>
-                      <div className="flex-1">
+                  <div className="flex items-start gap-3">
+                    <input
+                      type="checkbox"
+                      className="mt-1 h-4 w-4"
+                      checked={selectedIds.has(notification.id)}
+                      onChange={() => {
+                        setSelectedIds((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(notification.id)) {
+                            next.delete(notification.id);
+                          } else {
+                            next.add(notification.id);
+                          }
+                          return next;
+                        });
+                      }}
+                    />
+
+                    <div className="mt-0.5 rounded-full border border-gray-200 bg-white p-2">
+                      <NotificationTypeIcon type={notification.type} />
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-start justify-between gap-2">
                         <h3 className="font-semibold text-gray-900">{notification.title}</h3>
-                        <p className="mt-1 text-gray-700">{notification.message}</p>
-                        <p className="mt-2 text-sm text-gray-500">
-                          {formatDate(notification.created_at)}
-                        </p>
-                        {actionButtons.length > 0 && (
-                          <div className="mt-3 flex flex-wrap gap-2">
-                            {actionButtons.map((button) => (
-                              <button
-                                key={`${notification.id}-${button.id}`}
-                                type="button"
-                                onClick={() => void handleNotificationAction(notification, button)}
-                                className={`rounded px-3 py-1.5 text-xs font-medium ${
-                                  button.variant === 'primary'
-                                    ? 'bg-blue-600 text-white hover:bg-blue-700'
-                                    : button.variant === 'danger'
-                                      ? 'bg-red-600 text-white hover:bg-red-700'
-                                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                }`}
-                              >
-                                {button.label}
-                              </button>
-                            ))}
-                          </div>
+                        {!notification.is_read && (
+                          <button
+                            type="button"
+                            onClick={() => void markAsRead(notification.id)}
+                            className="text-sm font-medium text-blue-600 hover:text-blue-700"
+                          >
+                            Đánh dấu đã đọc
+                          </button>
                         )}
                       </div>
+                      <p className="mt-1 text-sm text-gray-700">{notification.message}</p>
+                      <p className="mt-2 text-xs text-gray-500">
+                        {formatDate(notification.created_at)}
+                      </p>
+
+                      {actionButtons.length > 0 && (
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          {actionButtons.map((button) => (
+                            <button
+                              key={`${notification.id}-${button.id}`}
+                              type="button"
+                              onClick={() => void handleNotificationAction(notification, button)}
+                              className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${
+                                button.variant === 'primary'
+                                  ? 'bg-blue-600 text-white hover:bg-blue-700'
+                                  : button.variant === 'danger'
+                                    ? 'bg-red-600 text-white hover:bg-red-700'
+                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                              }`}
+                            >
+                              {button.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                    {!notification.is_read && (
-                      <button
-                        type="button"
-                        onClick={() => void markAsRead(notification.id)}
-                        className="text-sm font-medium text-blue-600 hover:text-blue-700"
-                      >
-                        Đánh dấu đã đọc
-                      </button>
-                    )}
                   </div>
                 </article>
               );
@@ -524,7 +532,7 @@ export default function NotificationInbox({
             type="button"
             onClick={() => setPage((current) => Math.max(1, current - 1))}
             disabled={page <= 1 || loading}
-            className="rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-700 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
           >
             Trang trước
           </button>
@@ -535,7 +543,7 @@ export default function NotificationInbox({
             type="button"
             onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
             disabled={page >= totalPages || loading}
-            className="rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-700 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
           >
             Trang sau
           </button>
