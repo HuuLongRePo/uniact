@@ -166,6 +166,9 @@ export default function Sidebar() {
       title: 'Báo cáo và hệ thống',
       items: [
         { label: 'Báo cáo', href: '/admin/reports', icon: FileText },
+        { label: 'Báo cáo hoạt động', href: '/admin/reports/activity-statistics', icon: PieChart },
+        { label: 'Báo cáo điểm số', href: '/admin/reports/scores', icon: BarChart3 },
+        { label: 'Báo cáo giảng viên', href: '/admin/reports/teachers', icon: Users },
         { label: 'Tìm kiếm nâng cao', href: '/admin/search', icon: Search },
         { label: 'Nhật ký hệ thống', href: '/admin/audit', icon: FileText },
         { label: 'Nhật ký chi tiết', href: '/admin/audit-logs', icon: FileText },
@@ -201,6 +204,7 @@ export default function Sidebar() {
       items: [
         { label: 'Thông báo', href: '/teacher/notifications', icon: Bell, badge: unreadCount },
         { label: 'Gửi thông báo', href: '/teacher/notify-students', icon: Bell },
+        { label: 'Broadcast thông báo', href: '/teacher/notifications/broadcast', icon: Bell },
         { label: 'Lịch sử gửi', href: '/teacher/notifications/history', icon: Clock },
         { label: 'Cài đặt thông báo', href: '/teacher/notifications/settings', icon: Settings },
         { label: 'Khảo sát', href: '/teacher/polls', icon: ClipboardCheck },
@@ -214,6 +218,7 @@ export default function Sidebar() {
         { label: 'Phê duyệt', href: '/teacher/approvals', icon: CheckSquare },
         { label: 'Lớp học', href: '/teacher/classes', icon: School },
         { label: 'Học viên', href: '/teacher/students', icon: Users },
+        { label: 'Sổ tay học viên', href: '/teacher/students/notes', icon: FileText },
       ],
     },
     {
@@ -231,6 +236,7 @@ export default function Sidebar() {
       items: [
         { label: 'Báo cáo tham gia', href: '/teacher/reports/participation', icon: FileText },
         { label: 'Báo cáo điểm danh', href: '/teacher/reports/attendance', icon: PieChart },
+        { label: 'Báo cáo theo lớp', href: '/teacher/reports/class-stats', icon: BarChart3 },
         { label: 'Đề xuất khen thưởng', href: '/teacher/awards/suggestions', icon: Award },
         { label: 'Đề xuất cộng điểm', href: '/teacher/bonus-proposal', icon: BarChart3 },
       ],
@@ -270,6 +276,8 @@ export default function Sidebar() {
         { label: 'Bảng điểm', href: '/student/scores', icon: PieChart },
         { label: 'Bảng xếp hạng', href: '/student/ranking', icon: Trophy },
         { label: 'Giải thưởng', href: '/student/awards', icon: Award },
+        { label: 'Lịch sử giải thưởng', href: '/student/awards/history', icon: Clock },
+        { label: 'Giải thưởng sắp diễn ra', href: '/student/awards/upcoming', icon: Sparkles },
       ],
     },
   ]);

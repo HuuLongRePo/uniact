@@ -519,6 +519,29 @@ Yeu cau thi hanh:
   - [x] `npm.cmd run build`
   - [x] `npm.cmd run test:backbone` -> `11 files / 47 tests` pass (2026-04-22)
 
+## 9.5) Batch lon uu tien nong - Navbar actor audit + bo sung quick links
+
+### Muc tieu
+
+- Audit dieu huong theo actor (admin/giang vien/hoc vien), dam bao route menu hop le 100%.
+- Bo sung nhanh cac quick-link con thieu cho cac man hinh da co route va thuong xuyen thao tac.
+- Giu nguyen nghiep vu/contract, chi cai tien navigation va kha nang truy cap nhanh.
+
+### Viec can lam
+
+- [x] Audit route:
+  - [x] doi chieu toan bo `href` trong `Sidebar` voi `src/app/**/page.tsx`: khong co route sai.
+  - [x] quet route ton tai nhung chua co link de chon danh sach bo sung.
+- [x] Bo sung quick-link:
+  - [x] Admin: `reports/activity-statistics`, `reports/scores`, `reports/teachers`.
+  - [x] Teacher: `notifications/broadcast`, `reports/class-stats`, `students/notes`.
+  - [x] Student: `awards/history`, `awards/upcoming`.
+- [x] Cap nhat regression test sidebar:
+  - [x] mo rong assertions route moi trong `test/sidebar-teacher-links.test.tsx`.
+- [x] Verification:
+  - [x] `npm.cmd test -- test/sidebar-teacher-links.test.tsx test/teacher-attendance-page.test.tsx test/teacher-participation-page.test.tsx`
+  - [x] `npm.cmd run build`
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix

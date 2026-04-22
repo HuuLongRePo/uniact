@@ -76,6 +76,9 @@ describe('Sidebar navigation coverage', () => {
     expect(container.querySelector('a[href="/teacher/bonus-proposal"]')).toBeTruthy();
     expect(container.querySelector('a[href="/teacher/notifications/history"]')).toBeTruthy();
     expect(container.querySelector('a[href="/teacher/notifications/settings"]')).toBeTruthy();
+    expect(container.querySelector('a[href="/teacher/notifications/broadcast"]')).toBeTruthy();
+    expect(container.querySelector('a[href="/teacher/reports/class-stats"]')).toBeTruthy();
+    expect(container.querySelector('a[href="/teacher/students/notes"]')).toBeTruthy();
   });
 
   it('shows student check-in, recommendations and achievement tips routes', async () => {
@@ -88,6 +91,8 @@ describe('Sidebar navigation coverage', () => {
     expect(container.querySelector('a[href="/student/alerts"]')).toBeTruthy();
     expect(container.querySelector('a[href="/student/recommendations"]')).toBeTruthy();
     expect(container.querySelector('a[href="/student/achievements/tips"]')).toBeTruthy();
+    expect(container.querySelector('a[href="/student/awards/history"]')).toBeTruthy();
+    expect(container.querySelector('a[href="/student/awards/upcoming"]')).toBeTruthy();
     expect(screen.getByText('Quét QR điểm danh')).toBeInTheDocument();
   });
 
@@ -102,5 +107,8 @@ describe('Sidebar navigation coverage', () => {
     expect(container.querySelector('a[href="/admin/students"]')).toBeTruthy();
     expect(container.querySelector('a[href="/admin/biometrics"]')).toBeTruthy();
     expect(container.querySelector('a[href="/admin/audit-logs"]')).toBeTruthy();
+    expect(container.querySelector('a[href="/admin/reports/activity-statistics"]')).toBeTruthy();
+    expect(container.querySelector('a[href="/admin/reports/scores"]')).toBeTruthy();
+    expect(container.querySelector('a[href="/admin/reports/teachers"]')).toBeTruthy();
   });
 });
