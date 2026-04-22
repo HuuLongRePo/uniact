@@ -1,16 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { toast } from 'react-hot-toast';
 import {
   ArrowLeft,
   Users,
-  CheckSquare,
-  Square,
   UserCheck,
   Filter,
   Search,
@@ -40,9 +37,28 @@ interface Activity {
   status: string;
 }
 
-interface ClassOption {
-  id: number;
-  name: string;
+interface ParticipantPayload {
+  id?: number | string | null;
+  student_id?: number | string | null;
+  full_name?: string | null;
+  student_name?: string | null;
+  name?: string | null;
+  email?: string | null;
+  student_email?: string | null;
+  student_code?: string | null;
+  class_name?: string | null;
+  attendance_status?: string | null;
+  attendance_notes?: string | null;
+  notes?: string | null;
+  note?: string | null;
+}
+
+function normalizeAttendanceStatus(rawStatus: string | null | undefined): AttendanceStatus | null {
+  if (rawStatus === 'attended' || rawStatus === 'present') return 'present';
+  if (rawStatus === 'absent') return 'absent';
+  if (rawStatus === 'late') return 'late';
+  if (rawStatus === 'excused') return 'excused';
+  return null;
 }
 
 export default function BulkAttendancePage() {
@@ -61,7 +77,6 @@ export default function BulkAttendancePage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterClass, setFilterClass] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'marked' | 'unmarked'>('all');
-  const [classes, setClasses] = useState<ClassOption[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
   useEffect(() => {
@@ -79,9 +94,10 @@ export default function BulkAttendancePage() {
     if (user) {
       fetchData();
     }
-  }, [user, authLoading, activityId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, authLoading, activityId, router]);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -95,15 +111,11 @@ export default function BulkAttendancePage() {
       const participantsRes = await fetch(`/api/activities/${activityId}/participants`);
       if (participantsRes.ok) {
         const data = await participantsRes.json();
-        const participants = data?.participations ?? data?.data?.participations ?? [];
-        const mapped = (participants as any[]).map((p: any) => {
+        const participants: ParticipantPayload[] =
+          data?.participations ?? data?.data?.participations ?? [];
+        const mapped = participants.map((p) => {
           const studentId = Number(p.student_id);
-          const normalizedStatus: AttendanceStatus | null =
-            p.attendance_status === 'attended' || p.attendance_status === 'present'
-              ? 'present'
-              : p.attendance_status === 'absent'
-                ? 'absent'
-                : null;
+          const normalizedStatus = normalizeAttendanceStatus(p.attendance_status);
 
           return {
             id: Number.isFinite(studentId) ? studentId : Number(p.id),
@@ -122,16 +134,11 @@ export default function BulkAttendancePage() {
         const existing: Record<number, AttendanceStatus> = {};
         const existingNotes: Record<number, string> = {};
 
-        for (const raw of participants as any[]) {
+        for (const raw of participants) {
           const sid = Number(raw?.student_id);
           if (!Number.isFinite(sid)) continue;
 
-          const normalizedStatus: AttendanceStatus | null =
-            raw.attendance_status === 'attended' || raw.attendance_status === 'present'
-              ? 'present'
-              : raw.attendance_status === 'absent'
-                ? 'absent'
-                : null;
+          const normalizedStatus = normalizeAttendanceStatus(raw.attendance_status);
 
           if (normalizedStatus) existing[sid] = normalizedStatus;
 
@@ -142,20 +149,14 @@ export default function BulkAttendancePage() {
         setAttendanceData(existing);
         setNotes(existingNotes);
       }
-
-      // Fetch classes
-      const classesRes = await fetch('/api/classes');
-      if (classesRes.ok) {
-        const classesData = await classesRes.json();
-        setClasses(classesData?.classes ?? classesData?.data?.classes ?? classesData);
-      }
-    } catch (error: any) {
-      console.error('Error fetching data:', error);
+    } catch (caught: unknown) {
+      const error = caught as { message?: string };
+      console.error('Error fetching data:', caught);
       toast.error(error.message || 'Không thể tải dữ liệu');
     } finally {
       setLoading(false);
     }
-  };
+  }, [activityId]);
 
   const handleMarkAttendance = (studentId: number, status: AttendanceStatus) => {
     setAttendanceData({
@@ -450,7 +451,12 @@ export default function BulkAttendancePage() {
             </div>
             <select
               value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value as any)}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (value === 'all' || value === 'marked' || value === 'unmarked') {
+                  setFilterStatus(value);
+                }
+              }}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="all">Tất cả ({students.length})</option>

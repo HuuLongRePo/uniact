@@ -1399,6 +1399,36 @@ Yeu cau:
 - [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests)
 - [x] `npm.cmd run release:check:full` -> PASS (4/4 checks, lint warnings legacy scope khong block)
 
+## 9.28) Batch tiep noi - teacher attendance history/bulk hardening
+
+### Muc tieu
+
+- Chot o dinh cho 2 trang diem danh giang vien dang sua do:
+  - `teacher/activities/[id]/attendance/history`
+  - `teacher/activities/[id]/attendance/bulk`
+- Dong bo type-safety, bo dead code, va dung hoa normalize trang thai diem danh tu payload.
+- Dam bao khong rot trang thai `late/excused` khi load danh sach diem danh bulk.
+
+### Viec can lam
+
+- [x] `src/app/teacher/activities/[id]/attendance/bulk/page.tsx`:
+  - [x] bo import/state/flow du thua (`Link`, `CheckSquare`, `Square`, `classes` + fetch classes khong dung).
+  - [x] bo `any`, them `ParticipantPayload` va type-safe parse payload participants.
+  - [x] them `normalizeAttendanceStatus(...)` cover du `present/attended/absent/late/excused`.
+  - [x] dung helper normalize cho map danh sach va prefill attendance data.
+  - [x] bo cast `as any` trong `filterStatus` handler.
+- [x] `src/app/teacher/activities/[id]/attendance/history/page.tsx`:
+  - [x] bo import du thua (`Link`), dung `useCallback` cho fetch.
+  - [x] bo `any` trong sort/filter controls, dung guard union cho `filterStatus/sortBy/sortOrder`.
+  - [x] gom go nhanh logic sort cho type `string | number`.
+
+### Verification
+
+- [x] `npm.cmd run lint -- --file "src/app/teacher/activities/[id]/attendance/history/page.tsx" --file "src/app/teacher/activities/[id]/attendance/bulk/page.tsx"` -> PASS (0 warning)
+- [x] `npm.cmd test -- test/teacher-attendance-page.test.tsx test/teacher-attendance-bulk-route.test.ts test/teacher-route-integrity.test.ts` -> PASS (3 files / 10 tests)
+- [x] `npm.cmd run build` -> PASS
+- [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix

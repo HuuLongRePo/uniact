@@ -1,8 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { toast } from 'react-hot-toast';
@@ -70,13 +69,15 @@ export default function AttendanceHistoryPage() {
     if (user) {
       fetchData();
     }
-  }, [user, authLoading, activityId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, authLoading, activityId, router]);
 
   useEffect(() => {
     applyFilters();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [records, filterStatus, filterClass, searchTerm, sortBy, sortOrder]);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -92,13 +93,14 @@ export default function AttendanceHistoryPage() {
         const data = await attendanceRes.json();
         setRecords(data.records || []);
       }
-    } catch (error: any) {
-      console.error('Error fetching data:', error);
+    } catch (caught: unknown) {
+      const error = caught as { message?: string };
+      console.error('Error fetching data:', caught);
       toast.error(error.message || 'Không thể tải dữ liệu');
     } finally {
       setLoading(false);
     }
-  };
+  }, [activityId]);
 
   const applyFilters = () => {
     let filtered = [...records];
@@ -125,7 +127,8 @@ export default function AttendanceHistoryPage() {
 
     // Sort
     filtered.sort((a, b) => {
-      let aVal: any, bVal: any;
+      let aVal: string | number = '';
+      let bVal: string | number = '';
 
       if (sortBy === 'name') {
         aVal = a.student_name.toLowerCase();
@@ -133,16 +136,15 @@ export default function AttendanceHistoryPage() {
       } else if (sortBy === 'time') {
         aVal = new Date(a.check_in_time).getTime();
         bVal = new Date(b.check_in_time).getTime();
-      } else if (sortBy === 'status') {
+      } else {
         aVal = a.status;
         bVal = b.status;
       }
 
       if (sortOrder === 'asc') {
         return aVal > bVal ? 1 : -1;
-      } else {
-        return aVal < bVal ? 1 : -1;
       }
+      return aVal < bVal ? 1 : -1;
     });
 
     setFilteredRecords(filtered);
@@ -296,7 +298,18 @@ export default function AttendanceHistoryPage() {
               </label>
               <select
                 value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value as any)}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (
+                    value === 'all' ||
+                    value === 'present' ||
+                    value === 'absent' ||
+                    value === 'late' ||
+                    value === 'excused'
+                  ) {
+                    setFilterStatus(value);
+                  }
+                }}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value="all">Tất cả ({records.length})</option>
@@ -329,8 +342,12 @@ export default function AttendanceHistoryPage() {
                 value={`${sortBy}-${sortOrder}`}
                 onChange={(e) => {
                   const [col, order] = e.target.value.split('-');
-                  setSortBy(col as any);
-                  setSortOrder(order as any);
+                  if (col === 'name' || col === 'time' || col === 'status') {
+                    setSortBy(col);
+                  }
+                  if (order === 'asc' || order === 'desc') {
+                    setSortOrder(order);
+                  }
                 }}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
