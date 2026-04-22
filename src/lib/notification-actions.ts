@@ -54,7 +54,7 @@ function buildAttendanceActionButtons(role: NotificationRecipientRole, activityI
       },
       {
         id: 'open_teacher_qr_projector',
-        label: 'Chiếu QR',
+        label: 'Chiếu QR toàn màn hình',
         action: 'open_link',
         href: `/teacher/qr?activity_id=${activityId}&projector=1`,
         variant: 'secondary' as const,

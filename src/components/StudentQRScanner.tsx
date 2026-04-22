@@ -3,7 +3,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { CheckCircle2, CircleAlert, Info, Pause, RotateCcw } from 'lucide-react';
-import { getCameraAccessErrorMessage, requestPreferredCameraStream } from '@/lib/camera-stream';
+import {
+  getCameraAccessErrorMessage,
+  getCameraTroubleshootingSteps,
+  requestPreferredCameraStream,
+} from '@/lib/camera-stream';
 
 type ScanState = 'idle' | 'scanning' | 'success' | 'error';
 
@@ -54,6 +58,7 @@ export function StudentQRScanner({ onScan }: Props) {
   const [manualToken, setManualToken] = useState('');
   const [lastResult, setLastResult] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [cameraTips, setCameraTips] = useState<string[]>(() => getCameraTroubleshootingSteps());
   const [autoScanSupported, setAutoScanSupported] = useState(false);
 
   function stopScan(nextState: ScanState = 'idle') {
@@ -93,6 +98,7 @@ export function StudentQRScanner({ onScan }: Props) {
       const mediaStream = await requestPreferredCameraStream({
         facingMode: 'environment',
       });
+      setCameraTips(getCameraTroubleshootingSteps());
 
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream;
@@ -104,6 +110,7 @@ export function StudentQRScanner({ onScan }: Props) {
       }
     } catch (err: unknown) {
       setError(getCameraAccessErrorMessage(err));
+      setCameraTips(getCameraTroubleshootingSteps(err));
       setScanState('error');
     }
   }
@@ -249,10 +256,13 @@ export function StudentQRScanner({ onScan }: Props) {
               <Info className="h-4 w-4" />
               Hướng dẫn nhanh khi lỗi camera
             </div>
-            <p className="mt-1">
-              Nếu mở bằng ứng dụng nhúng (Zalo, Facebook, Messenger...), hãy chuyển sang Chrome,
-              Safari hoặc Edge rồi tải lại trang.
-            </p>
+            <ul className="mt-2 space-y-1">
+              {cameraTips.map((tip) => (
+                <li key={tip} className="leading-5">
+                  • {tip}
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
       </section>

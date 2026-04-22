@@ -64,4 +64,25 @@ describe('camera-stream helper', () => {
     const { requestPreferredCameraStream } = await import('../src/lib/camera-stream');
     await expect(requestPreferredCameraStream()).rejects.toThrow(/camera/i);
   });
+
+  it('returns targeted troubleshooting tips for insecure embedded browser contexts', async () => {
+    setSecureContext(false);
+    setUserAgent(
+      'Mozilla/5.0 (Linux; Android 14; Pixel) AppleWebKit/537.36 Chrome/123.0.0.0 Mobile Safari/537.36 FBAN/FBIOS'
+    );
+
+    const { getCameraTroubleshootingSteps } = await import('../src/lib/camera-stream');
+    const tips = getCameraTroubleshootingSteps({ name: 'NotSupportedError' });
+
+    expect(tips.join(' ')).toMatch(/HTTPS|localhost/i);
+    expect(tips.join(' ')).toMatch(/Chrome|Safari|Edge/i);
+  });
+
+  it('returns permission and recovery tips when user denies camera', async () => {
+    const { getCameraTroubleshootingSteps } = await import('../src/lib/camera-stream');
+    const tips = getCameraTroubleshootingSteps({ name: 'NotAllowedError' });
+
+    expect(tips.join(' ')).toMatch(/quyền Camera|quyền camera/i);
+    expect(tips.join(' ')).toMatch(/tải lại trang/i);
+  });
 });

@@ -1250,6 +1250,68 @@ Yeu cau:
 - [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests)
 - [x] `npm.cmd run release:check:full` -> PASS (4/4 checks)
 
+## 9.24) Batch lon uu tien tiep theo - notification CTA role integrity + landing dark contrast rescue v5 + camera troubleshooting hints
+
+### Muc tieu
+
+- Dam bao thong bao push/toast/inbox khong bo sot CTA diem danh canonical theo role, ke ca khi payload co custom action_buttons.
+- Dong bo copy "Chieu QR toan man hinh" de giang vien co thao tac trinh chieu ro rang tu notification va quick actions.
+- Cuu contrast landing dark/system bang token-level variables de tranh tinh trang chu sang tren nen sang khi doi theme.
+- Tang huong dan xu ly loi camera mobile/in-app browser ngay tren man quet QR hoc vien.
+
+### Prompt batch lon (copy de tiep tuc)
+
+```text
+Ban dong vai Principal Fullstack Reliability Engineer.
+Uu tien:
+1) Notification CTA role integrity:
+- Inbox/toast khong duoc dung action_buttons tho truc tiep neu la attendance.
+- Bat buoc di qua resolver de bo sung CTA canonical theo role (student check-in, teacher mo diem danh + chieu QR toan man hinh).
+2) Landing dark/system rescue:
+- Token hoa landing surfaces theo bien mau, giam hardcode light/dark theo selector rieng.
+- Dam bao Windows dark/system mode van doc ro heading/body/card.
+3) Camera troubleshooting:
+- Bo sung helper tra ve checklist xu ly camera theo nguyen nhan (insecure context, embedded browser, permission, iOS).
+- Render checklist nay trong Student QR scanner.
+Yeu cau:
+- Patch nho, co test hoi quy cho CTA va camera helper.
+- Chay lint + test cum lien quan + build + test:backbone + release:check:full.
+```
+
+### Viec can lam
+
+- [x] `src/components/notifications/NotificationInbox.tsx`:
+  - [x] bo luong uu tien `action_buttons` tho.
+  - [x] bat buoc resolve CTA qua `resolveNotificationActionButtons` de giu dung role attendance.
+- [x] `src/components/realtime/RealtimeNotificationBridge.tsx`:
+  - [x] dong bo toast action resolver cho ca direct payload.
+  - [x] giu nut `Bo qua` va them CTA canonical attendance khi can.
+- [x] `src/lib/notification-actions.ts`:
+  - [x] cap nhat label projector CTA thanh `Chieu QR toan man hinh`.
+- [x] `src/app/teacher/activities/page.tsx`:
+  - [x] cap nhat nhan nut projector tren card hoat dong dang diem danh thanh `Chieu QR toan man hinh`.
+- [x] `src/lib/camera-stream.ts`:
+  - [x] them `getCameraTroubleshootingSteps(error?)` de tra checklist xu ly camera theo context.
+  - [x] harden thong diep secure-context cho truong hop localhost/https van bi browser chan.
+- [x] `src/components/StudentQRScanner.tsx`:
+  - [x] render checklist troubleshooting dong theo helper camera.
+- [x] `src/app/globals.css` + `src/app/page.tsx`:
+  - [x] token hoa landing dark/light qua bien `--landing-*`, giam selector drift.
+  - [x] dong bo icon/link style theo landing token de tang contrast.
+- [x] Tests:
+  - [x] `test/notification-inbox.test.tsx`: assert attendance custom actions van co nut `Diem danh`.
+  - [x] `test/realtime-notification-bridge.test.tsx`: assert toast attendance custom actions van co CTA canonical + `Bo qua`.
+  - [x] `test/notification-actions.test.ts`: assert label teacher projector CTA moi.
+  - [x] `test/camera-stream.test.ts`: assert troubleshooting tips cho insecure embedded browser + denied permission.
+
+### Verification
+
+- [x] `npm.cmd run lint -- --file "src/components/notifications/NotificationInbox.tsx" --file "src/components/realtime/RealtimeNotificationBridge.tsx" --file "src/lib/notification-actions.ts" --file "src/lib/camera-stream.ts" --file "src/components/StudentQRScanner.tsx" --file "src/app/page.tsx" --file "src/app/teacher/activities/page.tsx" --file "test/notification-actions.test.ts" --file "test/notification-inbox.test.tsx" --file "test/realtime-notification-bridge.test.tsx" --file "test/camera-stream.test.ts"` -> PASS (0 warning)
+- [x] `npm.cmd test -- test/notification-actions.test.ts test/notification-inbox.test.tsx test/realtime-notification-bridge.test.tsx test/camera-stream.test.ts test/teacher-activities-page.test.tsx` -> PASS (5 files / 25 tests)
+- [x] `npm.cmd run build` -> PASS
+- [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests)
+- [x] `npm.cmd run release:check:full` -> PASS (4/4 checks, lint warnings legacy scope khong block)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix

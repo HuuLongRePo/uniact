@@ -141,6 +141,52 @@ describe('RealtimeNotificationBridge', () => {
     expect(screen.getByText('Bỏ qua')).toBeInTheDocument();
   });
 
+  it('prepends canonical student check-in CTA when attendance payload ships custom actions', async () => {
+    const Bridge = (await import('../src/components/realtime/RealtimeNotificationBridge'))
+      .RealtimeNotificationBridge;
+
+    render(<Bridge />);
+    const source = MockEventSource.instances[0];
+
+    source.emit('notification', {
+      event_id: 125,
+      event_type: 'attendance_qr_started',
+      actor_id: 11,
+      target_user_ids: [7],
+      priority: 'high',
+      ttl_seconds: 8,
+      action_buttons: [
+        {
+          id: 'view_activity',
+          label: 'Xem chi tiết',
+          action: 'open_link',
+          href: '/student/activities/92',
+        },
+      ],
+      notification: {
+        id: 557,
+        type: 'attendance',
+        title: 'Đang mở điểm danh',
+        message: 'Giảng viên đã mở mã QR',
+        related_table: 'activities',
+        related_id: 92,
+        created_at: '2026-04-21T08:08:00.000Z',
+      },
+      created_at: '2026-04-21T08:08:00.000Z',
+    });
+
+    await waitFor(() => {
+      expect(toastCustomMock).toHaveBeenCalled();
+    });
+
+    const renderFn = toastCustomMock.mock.calls[0][0] as (toastItem: { id: string }) => React.ReactNode;
+    render(<>{renderFn({ id: 'toast-attendance' })}</>);
+
+    expect(screen.getByText('Điểm danh')).toBeInTheDocument();
+    expect(screen.getByText('Xem chi tiết')).toBeInTheDocument();
+    expect(screen.getByText('Bỏ qua')).toBeInTheDocument();
+  });
+
   it('suppresses duplicate toast payloads with the same content in a short window', async () => {
     const Bridge = (await import('../src/components/realtime/RealtimeNotificationBridge'))
       .RealtimeNotificationBridge;

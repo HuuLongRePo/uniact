@@ -569,7 +569,7 @@ export default function TeacherActivitiesPage() {
                                 className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100"
                               >
                                 <Maximize2 className="h-4 w-4" />
-                                Chiếu QR
+                                Chiếu QR toàn màn hình
                               </Link>
                             </>
                           )}
@@ -736,7 +736,7 @@ export default function TeacherActivitiesPage() {
                             className="inline-flex items-center gap-1 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100"
                           >
                             <Maximize2 className="h-4 w-4" />
-                            Chiếu QR
+                            Chiếu QR toàn màn hình
                           </Link>
                         </>
                       )}

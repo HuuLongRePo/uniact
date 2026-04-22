@@ -74,7 +74,7 @@ export default function Home() {
       <header className="landing-nav sticky top-0 z-50">
         <nav className="mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-2">
-            <Activity className="h-8 w-8 text-blue-600" />
+            <Activity className="landing-link h-8 w-8" />
             <span className="landing-text-strong text-lg font-bold sm:text-xl">
               ANND Activity Hub
             </span>
@@ -162,7 +162,7 @@ export default function Home() {
             <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {features.map((feature) => (
                 <article key={feature.title} className="landing-feature-card rounded-2xl p-5">
-                  <feature.icon className="landing-link h-10 w-10 text-blue-600" />
+                  <feature.icon className="landing-link h-10 w-10" />
                   <h3 className="landing-text-strong mt-4 text-xl font-semibold">
                     {feature.title}
                   </h3>

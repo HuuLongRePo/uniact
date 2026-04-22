@@ -19,10 +19,7 @@ import {
   NotificationRecipientRole,
   resolveNotificationActionButtons,
 } from '@/lib/notification-actions';
-import {
-  normalizeActionButtons,
-  RealtimeNotificationActionButton,
-} from '@/lib/realtime-notification-model';
+import { RealtimeNotificationActionButton } from '@/lib/realtime-notification-model';
 
 interface NotificationItem {
   id: number;
@@ -440,14 +437,10 @@ export default function NotificationInbox({
         ) : (
           <div className="space-y-3">
             {notifications.map((notification) => {
-              const normalizedActionButtons = normalizeActionButtons(notification.action_buttons);
-              const actionButtons =
-                normalizedActionButtons.length > 0
-                  ? normalizedActionButtons
-                  : resolveNotificationActionButtons({
-                      ...notification,
-                      recipient_role: recipientRole,
-                    });
+              const actionButtons = resolveNotificationActionButtons({
+                ...notification,
+                recipient_role: recipientRole,
+              });
 
               return (
                 <article

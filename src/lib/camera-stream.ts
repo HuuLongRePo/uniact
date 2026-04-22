@@ -56,8 +56,12 @@ function getInsecureContextHint() {
 
   const { protocol, hostname } = window.location;
 
-  if (protocol === 'https:' || isTrustedLocalHost(hostname)) {
-    return 'Không thể truy cập camera trong ngữ cảnh hiện tại.';
+  if (protocol === 'https:') {
+    return 'Trình duyệt đang bật HTTPS nhưng camera vẫn bị chặn do ngữ cảnh không an toàn. Hãy tải lại trang hoặc mở bằng trình duyệt hệ thống.';
+  }
+
+  if (isTrustedLocalHost(hostname)) {
+    return `Camera cần ngữ cảnh bảo mật. Trang local (${protocol}//${hostname}) đang chạy ở trạng thái không an toàn, hãy thử lại trên localhost chuẩn hoặc HTTPS.`;
   }
 
   if (isLikelyEmbeddedBrowser()) {
@@ -69,6 +73,51 @@ function getInsecureContextHint() {
   }
 
   return `Camera chỉ hoạt động trên kết nối bảo mật HTTPS hoặc localhost. Địa chỉ hiện tại (${protocol}//${hostname}) chưa bảo mật.`;
+}
+
+function normalizeCameraErrorName(error: unknown) {
+  return error instanceof Error ? error.name : String((error as { name?: string })?.name || '');
+}
+
+export function getCameraTroubleshootingSteps(error?: unknown) {
+  const tips: string[] = [];
+  const errorName = normalizeCameraErrorName(error);
+
+  if (typeof window !== 'undefined' && !window.isSecureContext) {
+    tips.push(getInsecureContextHint());
+  }
+
+  if (isLikelyEmbeddedBrowser()) {
+    tips.push(
+      'Mở liên kết bằng Chrome, Safari hoặc Edge thay vì trình duyệt nhúng trong ứng dụng.'
+    );
+  }
+
+  if (typeof navigator !== 'undefined') {
+    if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function') {
+      tips.push(getUnsupportedCameraApiHint());
+    }
+  }
+
+  if (errorName === 'NotAllowedError' || errorName === 'SecurityError') {
+    tips.push('Vào cài đặt trình duyệt thiết bị và cấp quyền Camera cho trang này rồi thử lại.');
+  }
+
+  if (
+    errorName === 'NotReadableError' ||
+    errorName === 'TrackStartError' ||
+    errorName === 'AbortError'
+  ) {
+    tips.push('Đóng các ứng dụng khác đang dùng camera (Zalo, Meet, Camera app...) rồi quét lại.');
+  }
+
+  if (isLikelyIOS()) {
+    tips.push('Với iPhone/iPad, hãy dùng Safari phiên bản mới nhất để camera hoạt động ổn định.');
+  }
+
+  tips.push('Nếu vẫn lỗi, thử tải lại trang hoặc chuyển sang thiết bị khác cùng tài khoản.');
+
+  return Array.from(new Set(tips));
 }
 
 export async function requestPreferredCameraStream(options?: {

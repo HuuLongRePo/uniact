@@ -93,6 +93,30 @@
   --quick-login-search-empty-bg: var(--app-surface-elevated);
   --quick-login-search-empty-border: var(--app-border-default);
   --quick-login-search-empty-text: var(--app-text-default);
+  --landing-bg:
+    radial-gradient(circle at 9% 7%, rgba(147, 197, 253, 0.52), transparent 36%),
+    radial-gradient(circle at 92% 10%, rgba(59, 130, 246, 0.18), transparent 31%),
+    linear-gradient(160deg, #f7faff 0%, #ebf1fa 48%, #dde7f5 100%);
+  --landing-nav-bg: rgba(255, 255, 255, 0.92);
+  --landing-surface-border: color-mix(in srgb, var(--app-border-default) 84%, transparent);
+  --landing-surface-glass:
+    linear-gradient(175deg, rgba(255, 255, 255, 0.97), rgba(248, 250, 252, 0.9)),
+    var(--app-surface-base);
+  --landing-panel-glass:
+    linear-gradient(165deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.9)),
+    var(--app-surface-base);
+  --landing-feature-glass:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(248, 250, 252, 0.85)),
+    var(--app-surface-base);
+  --landing-card-bg: rgba(255, 255, 255, 0.92);
+  --landing-card-hover-bg: rgba(255, 255, 255, 0.98);
+  --landing-metric-bg: rgba(255, 255, 255, 0.86);
+  --landing-surface-shadow: 0 24px 56px rgba(15, 23, 42, 0.12);
+  --landing-panel-shadow: 0 24px 52px rgba(15, 23, 42, 0.14);
+  --landing-panel-outline-border: color-mix(in srgb, var(--app-link) 30%, var(--app-border-default));
+  --landing-panel-outline-bg: color-mix(in srgb, var(--app-link) 9%, transparent);
+  --landing-skeleton-bg: color-mix(in srgb, var(--app-link) 30%, transparent);
+  --landing-action-shadow: 0 12px 28px color-mix(in srgb, var(--app-action-primary-bg) 26%, transparent);
 }
 
 @theme inline {
@@ -198,6 +222,30 @@
     --quick-login-search-empty-bg: var(--app-surface-elevated);
     --quick-login-search-empty-border: var(--app-border-default);
     --quick-login-search-empty-text: var(--app-text-default);
+    --landing-bg:
+      radial-gradient(circle at 11% 8%, rgba(56, 189, 248, 0.25), transparent 38%),
+      radial-gradient(circle at 86% 14%, rgba(37, 99, 235, 0.24), transparent 34%),
+      linear-gradient(160deg, #030b1d 0%, #08162b 46%, #0c1f38 100%);
+    --landing-nav-bg: rgba(2, 6, 23, 0.86);
+    --landing-surface-border: color-mix(in srgb, var(--app-border-default) 88%, transparent);
+    --landing-surface-glass:
+      linear-gradient(175deg, rgba(15, 23, 42, 0.97), rgba(17, 24, 39, 0.92)),
+      var(--app-surface-base);
+    --landing-panel-glass:
+      linear-gradient(165deg, rgba(15, 23, 42, 0.97), rgba(17, 24, 39, 0.92)),
+      var(--app-surface-base);
+    --landing-feature-glass:
+      linear-gradient(180deg, rgba(15, 23, 42, 0.9), rgba(17, 24, 39, 0.84)),
+      var(--app-surface-base);
+    --landing-card-bg: rgba(15, 23, 42, 0.88);
+    --landing-card-hover-bg: rgba(15, 23, 42, 0.96);
+    --landing-metric-bg: rgba(15, 23, 42, 0.82);
+    --landing-surface-shadow: 0 24px 60px rgba(2, 6, 23, 0.54);
+    --landing-panel-shadow: 0 24px 60px rgba(2, 6, 23, 0.54);
+    --landing-panel-outline-border: color-mix(in srgb, var(--app-link) 45%, var(--app-border-default));
+    --landing-panel-outline-bg: color-mix(in srgb, var(--app-link) 15%, transparent);
+    --landing-skeleton-bg: color-mix(in srgb, var(--app-link) 42%, transparent);
+    --landing-action-shadow: 0 12px 28px color-mix(in srgb, #2563eb 40%, transparent);
   }
 }
 
@@ -298,6 +346,30 @@
   --quick-login-search-empty-bg: var(--app-surface-elevated);
   --quick-login-search-empty-border: var(--app-border-default);
   --quick-login-search-empty-text: var(--app-text-default);
+  --landing-bg:
+    radial-gradient(circle at 11% 8%, rgba(56, 189, 248, 0.25), transparent 38%),
+    radial-gradient(circle at 86% 14%, rgba(37, 99, 235, 0.24), transparent 34%),
+    linear-gradient(160deg, #030b1d 0%, #08162b 46%, #0c1f38 100%);
+  --landing-nav-bg: rgba(2, 6, 23, 0.86);
+  --landing-surface-border: color-mix(in srgb, var(--app-border-default) 88%, transparent);
+  --landing-surface-glass:
+    linear-gradient(175deg, rgba(15, 23, 42, 0.97), rgba(17, 24, 39, 0.92)),
+    var(--app-surface-base);
+  --landing-panel-glass:
+    linear-gradient(165deg, rgba(15, 23, 42, 0.97), rgba(17, 24, 39, 0.92)),
+    var(--app-surface-base);
+  --landing-feature-glass:
+    linear-gradient(180deg, rgba(15, 23, 42, 0.9), rgba(17, 24, 39, 0.84)),
+    var(--app-surface-base);
+  --landing-card-bg: rgba(15, 23, 42, 0.88);
+  --landing-card-hover-bg: rgba(15, 23, 42, 0.96);
+  --landing-metric-bg: rgba(15, 23, 42, 0.82);
+  --landing-surface-shadow: 0 24px 60px rgba(2, 6, 23, 0.54);
+  --landing-panel-shadow: 0 24px 60px rgba(2, 6, 23, 0.54);
+  --landing-panel-outline-border: color-mix(in srgb, var(--app-link) 45%, var(--app-border-default));
+  --landing-panel-outline-bg: color-mix(in srgb, var(--app-link) 15%, transparent);
+  --landing-skeleton-bg: color-mix(in srgb, var(--app-link) 42%, transparent);
+  --landing-action-shadow: 0 12px 28px color-mix(in srgb, #2563eb 40%, transparent);
   color-scheme: dark;
 }
 
@@ -884,63 +956,54 @@ button:disabled,
 
 .landing-shell {
   min-height: 100vh;
-  background:
-    radial-gradient(circle at 9% 7%, rgba(147, 197, 253, 0.52), transparent 36%),
-    radial-gradient(circle at 92% 10%, rgba(59, 130, 246, 0.18), transparent 31%),
-    linear-gradient(160deg, #f7faff 0%, #ebf1fa 48%, #dde7f5 100%);
+  background: var(--landing-bg);
   color: var(--app-text-default);
 }
 
 .landing-hero {
-  border: 1px solid color-mix(in srgb, var(--app-border-default) 84%, transparent);
-  background:
-    linear-gradient(175deg, rgba(255, 255, 255, 0.97), rgba(248, 250, 252, 0.9)),
-    var(--app-surface-base);
-  box-shadow: 0 24px 56px rgba(15, 23, 42, 0.12);
+  border: 1px solid var(--landing-surface-border);
+  background: var(--landing-surface-glass);
+  box-shadow: var(--landing-surface-shadow);
 }
 
 .landing-nav {
-  border-bottom: 1px solid color-mix(in srgb, var(--app-border-default) 88%, transparent);
-  background: rgba(255, 255, 255, 0.92);
+  border-bottom: 1px solid var(--landing-surface-border);
+  background: var(--landing-nav-bg);
   backdrop-filter: blur(14px);
 }
 
 .landing-panel {
-  border: 1px solid color-mix(in srgb, var(--app-border-default) 84%, transparent);
-  background:
-    linear-gradient(165deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.9)),
-    var(--app-surface-base);
-  box-shadow: 0 24px 52px rgba(15, 23, 42, 0.14);
+  border: 1px solid var(--landing-surface-border);
+  background: var(--landing-panel-glass);
+  box-shadow: var(--landing-panel-shadow);
 }
 
 .landing-metric {
   border: 1px solid color-mix(in srgb, var(--app-border-default) 72%, transparent);
-  background: rgba(255, 255, 255, 0.86);
+  background: var(--landing-metric-bg);
 }
 
 .landing-feature-shell {
-  border: 1px solid color-mix(in srgb, var(--app-border-default) 84%, transparent);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(248, 250, 252, 0.85)),
-    var(--app-surface-base);
+  border: 1px solid var(--landing-surface-border);
+  background: var(--landing-feature-glass);
 }
 
 .landing-feature-card {
   border: 1px solid color-mix(in srgb, var(--app-border-default) 75%, transparent);
-  background: rgba(255, 255, 255, 0.92);
+  background: var(--landing-card-bg);
 }
 
 .landing-feature-card:hover {
-  background: rgba(255, 255, 255, 0.98);
+  background: var(--landing-card-hover-bg);
 }
 
 .landing-panel-outline {
-  border: 1px solid color-mix(in srgb, var(--app-link) 30%, var(--app-border-default));
-  background: color-mix(in srgb, var(--app-link) 9%, transparent);
+  border: 1px solid var(--landing-panel-outline-border);
+  background: var(--landing-panel-outline-bg);
 }
 
 .landing-skeleton {
-  background: color-mix(in srgb, var(--app-link) 30%, transparent);
+  background: var(--landing-skeleton-bg);
 }
 
 .landing-badge {
@@ -960,7 +1023,7 @@ button:disabled,
     var(--app-action-primary-bg) 0%,
     color-mix(in srgb, var(--app-action-primary-bg) 82%, #2563eb) 100%
   );
-  box-shadow: 0 12px 28px color-mix(in srgb, var(--app-action-primary-bg) 26%, transparent);
+  box-shadow: var(--landing-action-shadow);
 }
 
 .landing-action-primary:hover {
@@ -989,144 +1052,6 @@ button:disabled,
 
 .landing-footer {
   border-top: 1px solid color-mix(in srgb, var(--app-border-default) 82%, transparent);
-}
-
-:root[data-theme='dark'] .landing-shell {
-  background:
-    radial-gradient(circle at 11% 8%, rgba(56, 189, 248, 0.25), transparent 38%),
-    radial-gradient(circle at 86% 14%, rgba(37, 99, 235, 0.24), transparent 34%),
-    linear-gradient(160deg, #030b1d 0%, #08162b 46%, #0c1f38 100%);
-}
-
-:root[data-theme='dark'] .landing-hero {
-  border-color: color-mix(in srgb, var(--app-border-default) 88%, transparent);
-  background:
-    linear-gradient(175deg, rgba(15, 23, 42, 0.97), rgba(17, 24, 39, 0.92)),
-    var(--app-surface-base);
-  box-shadow: 0 24px 60px rgba(2, 6, 23, 0.54);
-}
-
-:root[data-theme='dark'] .landing-nav {
-  border-bottom-color: color-mix(in srgb, var(--app-border-default) 90%, transparent);
-  background: rgba(2, 6, 23, 0.82);
-}
-
-:root[data-theme='dark'] .landing-panel {
-  border-color: color-mix(in srgb, var(--app-border-default) 88%, transparent);
-  background:
-    linear-gradient(165deg, rgba(15, 23, 42, 0.97), rgba(17, 24, 39, 0.92)),
-    var(--app-surface-base);
-  box-shadow: 0 24px 60px rgba(2, 6, 23, 0.54);
-}
-
-:root[data-theme='dark'] .landing-metric {
-  border-color: color-mix(in srgb, var(--app-border-default) 86%, transparent);
-  background: rgba(15, 23, 42, 0.82);
-}
-
-:root[data-theme='dark'] .landing-feature-shell {
-  border-color: color-mix(in srgb, var(--app-border-default) 88%, transparent);
-  background:
-    linear-gradient(180deg, rgba(15, 23, 42, 0.9), rgba(17, 24, 39, 0.84)),
-    var(--app-surface-base);
-}
-
-:root[data-theme='dark'] .landing-feature-card {
-  border-color: color-mix(in srgb, var(--app-border-default) 84%, transparent);
-  background: rgba(15, 23, 42, 0.88);
-}
-
-:root[data-theme='dark'] .landing-feature-card:hover {
-  background: rgba(15, 23, 42, 0.96);
-}
-
-:root[data-theme='dark'] .landing-panel-outline {
-  border-color: color-mix(in srgb, var(--app-link) 45%, var(--app-border-default));
-  background: color-mix(in srgb, var(--app-link) 15%, transparent);
-}
-
-:root[data-theme='dark'] .landing-skeleton {
-  background: color-mix(in srgb, var(--app-link) 42%, transparent);
-}
-
-:root[data-theme='dark'] .landing-badge {
-  border-color: color-mix(in srgb, var(--app-link) 44%, transparent);
-  background: color-mix(in srgb, var(--app-link) 24%, transparent);
-  color: #dbeafe;
-}
-
-:root[data-theme='dark'] .landing-action-primary {
-  box-shadow: 0 12px 28px color-mix(in srgb, #2563eb 40%, transparent);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) .landing-shell {
-    background:
-      radial-gradient(circle at 11% 8%, rgba(56, 189, 248, 0.25), transparent 38%),
-      radial-gradient(circle at 86% 14%, rgba(37, 99, 235, 0.24), transparent 34%),
-      linear-gradient(160deg, #030b1d 0%, #08162b 46%, #0c1f38 100%);
-  }
-
-  :root:not([data-theme='light']) .landing-hero {
-    border-color: color-mix(in srgb, var(--app-border-default) 88%, transparent);
-    background:
-      linear-gradient(175deg, rgba(15, 23, 42, 0.97), rgba(17, 24, 39, 0.92)),
-      var(--app-surface-base);
-    box-shadow: 0 24px 60px rgba(2, 6, 23, 0.54);
-  }
-
-  :root:not([data-theme='light']) .landing-nav {
-    border-bottom-color: color-mix(in srgb, var(--app-border-default) 90%, transparent);
-    background: rgba(2, 6, 23, 0.82);
-  }
-
-  :root:not([data-theme='light']) .landing-panel {
-    border-color: color-mix(in srgb, var(--app-border-default) 88%, transparent);
-    background:
-      linear-gradient(165deg, rgba(15, 23, 42, 0.97), rgba(17, 24, 39, 0.92)),
-      var(--app-surface-base);
-    box-shadow: 0 24px 60px rgba(2, 6, 23, 0.54);
-  }
-
-  :root:not([data-theme='light']) .landing-metric {
-    border-color: color-mix(in srgb, var(--app-border-default) 86%, transparent);
-    background: rgba(15, 23, 42, 0.82);
-  }
-
-  :root:not([data-theme='light']) .landing-feature-shell {
-    border-color: color-mix(in srgb, var(--app-border-default) 88%, transparent);
-    background:
-      linear-gradient(180deg, rgba(15, 23, 42, 0.9), rgba(17, 24, 39, 0.84)),
-      var(--app-surface-base);
-  }
-
-  :root:not([data-theme='light']) .landing-feature-card {
-    border-color: color-mix(in srgb, var(--app-border-default) 84%, transparent);
-    background: rgba(15, 23, 42, 0.88);
-  }
-
-  :root:not([data-theme='light']) .landing-feature-card:hover {
-    background: rgba(15, 23, 42, 0.96);
-  }
-
-  :root:not([data-theme='light']) .landing-panel-outline {
-    border-color: color-mix(in srgb, var(--app-link) 45%, var(--app-border-default));
-    background: color-mix(in srgb, var(--app-link) 15%, transparent);
-  }
-
-  :root:not([data-theme='light']) .landing-skeleton {
-    background: color-mix(in srgb, var(--app-link) 42%, transparent);
-  }
-
-  :root:not([data-theme='light']) .landing-badge {
-    border-color: color-mix(in srgb, var(--app-link) 44%, transparent);
-    background: color-mix(in srgb, var(--app-link) 24%, transparent);
-    color: #dbeafe;
-  }
-
-  :root:not([data-theme='light']) .landing-action-primary {
-    box-shadow: 0 12px 28px color-mix(in srgb, #2563eb 40%, transparent);
-  }
 }
 
 @media (prefers-contrast: more) {

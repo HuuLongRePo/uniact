@@ -76,11 +76,11 @@ function adaptApiNotificationToRealtime(
   };
 }
 
-function resolveFallbackActionButtons(
+function resolveToastActionButtons(
   event: RealtimeNotificationEvent,
   recipientRole: NotificationRecipientRole
 ): RealtimeNotificationActionButton[] {
-  const fallbackButtons = resolveNotificationActionButtons({
+  const resolvedButtons = resolveNotificationActionButtons({
     type: event.notification.type,
     related_table: event.notification.related_table,
     related_id: event.notification.related_id,
@@ -94,7 +94,7 @@ function resolveFallbackActionButtons(
     variant: 'secondary',
   };
 
-  return [...fallbackButtons, dismissButton].slice(0, 3);
+  return [...resolvedButtons, dismissButton].slice(0, 3);
 }
 
 export function RealtimeNotificationBridge() {
@@ -155,11 +155,7 @@ export function RealtimeNotificationBridge() {
     shownToastKeysRef.current.add(dedupeKey);
     recentContentDedupeRef.current.set(contentDedupeKey, now);
 
-    const normalizedButtons = normalizeActionButtons(event.action_buttons);
-    const buttons =
-      normalizedButtons.length > 0
-        ? normalizedButtons
-        : resolveFallbackActionButtons(event, recipientRole);
+    const buttons = resolveToastActionButtons(event, recipientRole);
     const duration = getToastDurationMs(event.priority, event.ttl_seconds);
 
     toast.custom(

@@ -27,7 +27,7 @@ describe('resolveNotificationActionButtons', () => {
     expect(buttons[0].href).toBe('/teacher/qr?activity_id=91');
     expect(buttons[0].label).toBe('Mở điểm danh');
     expect(buttons[1].href).toBe('/teacher/qr?activity_id=91&projector=1');
-    expect(buttons[1].label).toBe('Chiếu QR');
+    expect(buttons[1].label).toBe('Chiếu QR toàn màn hình');
   });
 
   it('returns admin activity action for attendance notifications', () => {
