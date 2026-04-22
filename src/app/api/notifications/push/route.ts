@@ -8,6 +8,7 @@ import { rateLimit } from '@/lib/rateLimit';
 
 const PUSH_RATE_LIMIT_MAX = 20;
 const PUSH_RATE_LIMIT_WINDOW_MS = 60 * 1000;
+const PUSH_DEDUPE_WINDOW_SECONDS = 45;
 
 const actionButtonSchema = z
   .object({
@@ -94,6 +95,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
           source: 'api.notifications.push',
         }
       : { source: 'api.notifications.push' },
+    dedupeWithinSeconds: PUSH_DEDUPE_WINDOW_SECONDS,
   };
 
   const firstAttempt = await sendBulkDatabaseNotifications(basePayload);
@@ -115,6 +117,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
   const sendResult = {
     created: firstAttempt.created + (retryAttempt?.created || 0),
     targetCount: firstAttempt.targetCount,
+    skipped: (firstAttempt.skipped || 0) + (retryAttempt?.skipped || 0),
     failed: retryAttempt ? retryAttempt.failed : firstAttempt.failed,
     retry_once: retryTargets.length,
     retry_recovered: retryAttempt?.created || 0,

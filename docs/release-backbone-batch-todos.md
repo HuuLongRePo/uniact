@@ -1137,6 +1137,58 @@ Yeu cau:
 - [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests)
 - [x] `npm.cmd run release:check:full` -> PASS (4/4 checks, sau khi format lai `src/app/page.tsx`)
 
+## 9.22) Batch tiep theo - server-side notification dedupe guard cho push route
+
+### Muc tieu
+
+- Chan duplicate notification ngay tai server cho luong `/api/notifications/push`, giam tinh trang cung mot thong diep bi tao nhieu lan lien tiep.
+- Giu nguyen luong notification nghiep vu khac (attendance/approval/awards...) bang cach scope dedupe cho push route.
+- Bo sung regression tests cho helper va route de khoa chan loi lap lai.
+
+### Prompt batch lon (copy de tiep tuc)
+
+```text
+Ban dong vai Senior Backend Reliability Engineer.
+Muc tieu: giam thong bao push bi lap.
+1) Server dedupe:
+- Them dedupe window cho sendDatabaseNotification/sendBulkDatabaseNotifications.
+- Scope dedupe chi ap dung khi route push bat option dedupeWithinSeconds.
+2) API push:
+- /api/notifications/push phai bat dedupe window mac dinh, tra them so lieu skipped.
+3) Regression:
+- Them unit test helper dedupe (skip duplicate trong window).
+- Cap nhat test route push de assert dedupe option duoc truyen.
+Yeu cau:
+- Khong doi contract nghiep vu core flows.
+- Chay lint + test route/helper + build + backbone.
+```
+
+### Viec can lam
+
+- [x] `src/lib/notifications.ts`:
+  - [x] them `dedupeWithinSeconds` cho `sendDatabaseNotification`.
+  - [x] dedupe query theo `user_id + type + title + message + related_table + related_id` trong window.
+  - [x] `sendBulkDatabaseNotifications` ghi nhan `skipped` khi gap duplicate.
+- [x] `src/app/api/notifications/push/route.ts`:
+  - [x] bat `PUSH_DEDUPE_WINDOW_SECONDS = 45`.
+  - [x] truyen `dedupeWithinSeconds` vao `sendBulkDatabaseNotifications`.
+  - [x] bo sung `delivery.skipped` trong response.
+- [x] `test/notification-realtime-routes.test.ts`:
+  - [x] assert route push truyen `dedupeWithinSeconds`.
+  - [x] assert response co `delivery.skipped`.
+  - [x] bo cac `as any` de lint clean.
+- [x] `test/notification-dedupe.unit.test.ts`:
+  - [x] them test `sendDatabaseNotification` skip duplicate trong dedupe window.
+  - [x] them test `sendBulkDatabaseNotifications` report `created/skipped` dung.
+
+### Verification
+
+- [x] `npm.cmd run lint -- --file "src/app/api/notifications/push/route.ts" --file "test/notification-realtime-routes.test.ts" --file "test/notification-dedupe.unit.test.ts"` -> PASS (0 warning)
+- [x] `npm.cmd test -- test/notification-realtime-routes.test.ts test/notification-dedupe.unit.test.ts` -> PASS (2 files / 10 tests)
+- [x] `npm.cmd test -- test/notification-realtime-routes.test.ts test/notification-dedupe.unit.test.ts test/realtime-notification-bridge.test.tsx` -> PASS (3 files / 17 tests)
+- [x] `npm.cmd run build` -> PASS
+- [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix
@@ -1163,6 +1215,7 @@ Yeu cau:
 - [x] Commit 19: landing contrast rescue v2 + scanner/inbox polish (batch 9.19) (`c304ca7`)
 - [x] Commit 20: biometric pages camera helper alignment + tests (batch 9.20) (`b9c18a3`)
 - [x] Commit 21: navbar actor integrity + dedupe hardening + landing dark/system rescue (batch 9.21) (`176eec4`)
+- [ ] Commit 22: server-side push notification dedupe guard + tests (batch 9.22)
 
 ---
 

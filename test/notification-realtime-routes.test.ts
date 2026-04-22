@@ -55,6 +55,12 @@ async function readSseSnapshot(response: Response, maxChunks = 8) {
   return raw;
 }
 
+function createJsonRequest(body: unknown): NextRequest {
+  return {
+    json: async () => body,
+  } as unknown as NextRequest;
+}
+
 describe('notification realtime routes', () => {
   beforeEach(() => {
     vi.resetModules();
@@ -77,8 +83,8 @@ describe('notification realtime routes', () => {
   it('POST /api/notifications/push sends bulk realtime notifications', async () => {
     const route = await import('../src/app/api/notifications/push/route');
 
-    const response = await route.POST({
-      json: async () => ({
+    const response = await route.POST(
+      createJsonRequest({
         event_type: 'attendance_started',
         target_user_ids: [11, 12],
         type: 'system',
@@ -87,8 +93,8 @@ describe('notification realtime routes', () => {
         priority: 'high',
         ttl_seconds: 10,
         action_buttons: [{ label: 'Tham gia', action: 'join', href: '/student/activities' }],
-      }),
-    } as any);
+      })
+    );
 
     expect(response.status).toBe(200);
     expect(mocks.sendBulkDatabaseNotifications).toHaveBeenCalledWith(
@@ -98,23 +104,25 @@ describe('notification realtime routes', () => {
         actorId: 10,
         priority: 'high',
         ttlSeconds: 10,
+        dedupeWithinSeconds: 45,
       })
     );
 
     const body = await response.json();
     expect(body.data.delivery.created).toBe(2);
+    expect(body.data.delivery.skipped).toBe(0);
     expect(body.data.target_user_ids).toEqual([11, 12]);
   });
 
   it('POST /api/notifications/push returns 400 on invalid payload', async () => {
     const route = await import('../src/app/api/notifications/push/route');
 
-    const response = await route.POST({
-      json: async () => ({
+    const response = await route.POST(
+      createJsonRequest({
         event_type: '',
         target_user_ids: [],
-      }),
-    } as any);
+      })
+    );
 
     expect(response.status).toBe(400);
   });
@@ -135,15 +143,15 @@ describe('notification realtime routes', () => {
       });
 
     const route = await import('../src/app/api/notifications/push/route');
-    const response = await route.POST({
-      json: async () => ({
+    const response = await route.POST(
+      createJsonRequest({
         event_type: 'attendance_started',
         target_user_ids: [11, 12],
         type: 'system',
         title: 'Bat dau diem danh',
         message: 'Moi ban vao phien diem danh',
-      }),
-    } as any);
+      })
+    );
 
     expect(response.status).toBe(200);
     expect(mocks.sendBulkDatabaseNotifications).toHaveBeenCalledTimes(2);
@@ -164,15 +172,15 @@ describe('notification realtime routes', () => {
     mocks.rateLimit.mockReturnValueOnce({ allowed: false, resetAt: Date.now() + 5000 });
     const route = await import('../src/app/api/notifications/push/route');
 
-    const response = await route.POST({
-      json: async () => ({
+    const response = await route.POST(
+      createJsonRequest({
         event_type: 'attendance_started',
         target_user_ids: [11],
         type: 'system',
         title: 'Bat dau diem danh',
         message: 'Moi ban vao phien diem danh',
-      }),
-    } as any);
+      })
+    );
 
     expect(response.status).toBe(429);
     expect(mocks.requireApiRole).not.toHaveBeenCalled();

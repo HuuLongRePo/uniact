@@ -110,7 +110,38 @@ export async function sendDatabaseNotification(params: {
   ttlSeconds?: number;
   actionButtons?: RealtimeNotificationActionButton[];
   metadata?: unknown;
+  dedupeWithinSeconds?: number;
 }) {
+  const dedupeWindow = Math.max(0, Math.min(300, Number(params.dedupeWithinSeconds || 0)));
+  if (dedupeWindow > 0) {
+    const duplicated = (await dbGet(
+      `SELECT id
+       FROM notifications
+       WHERE user_id = ?
+         AND type = ?
+         AND title = ?
+         AND message = ?
+         AND COALESCE(related_table, '') = COALESCE(?, '')
+         AND COALESCE(related_id, -1) = COALESCE(?, -1)
+         AND created_at >= datetime('now', ?)
+       ORDER BY id DESC
+       LIMIT 1`,
+      [
+        params.userId,
+        params.type,
+        params.title,
+        params.message,
+        params.relatedTable || null,
+        params.relatedId || null,
+        `-${dedupeWindow} seconds`,
+      ]
+    )) as { id?: number } | null;
+
+    if (duplicated?.id) {
+      return { notificationId: Number(duplicated.id), eventId: null, deduped: true };
+    }
+  }
+
   const result = await dbRun(
     `INSERT INTO notifications (user_id, type, title, message, related_table, related_id, is_read)
      VALUES (?, ?, ?, ?, ?, ?, 0)`,
@@ -166,7 +197,7 @@ export async function sendDatabaseNotification(params: {
     }).catch(() => undefined);
   }
 
-  return { notificationId, eventId };
+  return { notificationId, eventId, deduped: false };
 }
 
 export async function sendBulkDatabaseNotifications(params: {
@@ -183,6 +214,7 @@ export async function sendBulkDatabaseNotifications(params: {
   ttlSeconds?: number;
   actionButtons?: RealtimeNotificationActionButton[];
   metadata?: unknown;
+  dedupeWithinSeconds?: number;
 }) {
   const uniqueUserIds = Array.from(
     new Set(
@@ -193,11 +225,12 @@ export async function sendBulkDatabaseNotifications(params: {
   );
 
   let created = 0;
+  let skipped = 0;
   let failed = 0;
   const failedUserIds: number[] = [];
   for (const userId of uniqueUserIds) {
     try {
-      await sendDatabaseNotification({
+      const sendResult = await sendDatabaseNotification({
         userId,
         type: params.type,
         title: params.title,
@@ -210,8 +243,14 @@ export async function sendBulkDatabaseNotifications(params: {
         ttlSeconds: params.ttlSeconds,
         actionButtons: params.actionButtons,
         metadata: params.metadata,
+        dedupeWithinSeconds: params.dedupeWithinSeconds,
       });
-      created += 1;
+
+      if (sendResult.deduped) {
+        skipped += 1;
+      } else {
+        created += 1;
+      }
     } catch (error) {
       console.error(`Failed to send notification to user ${userId}:`, error);
       failed += 1;
@@ -239,7 +278,7 @@ export async function sendBulkDatabaseNotifications(params: {
     );
   }
 
-  return { created, targetCount: uniqueUserIds.length, failed, failedUserIds };
+  return { created, targetCount: uniqueUserIds.length, skipped, failed, failedUserIds };
 }
 
 export async function getTeacherManagedStudentIds(teacherId: number): Promise<number[]> {
