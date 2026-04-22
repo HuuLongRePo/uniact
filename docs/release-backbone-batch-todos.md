@@ -941,6 +941,46 @@ Yêu cầu:
 - [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests)
 - [x] `npm.cmd run release:check:full` -> PASS (4/4 checks, sau khi format lai `src/app/page.tsx`, `src/app/teacher/qr/page.tsx`, `src/lib/camera-stream.ts`)
 
+## 9.18) Batch lon UI teacher activities - modern surface + clean copy + responsive actions
+
+### Muc tieu
+
+- Trùng tu UI trang `teacher/activities` theo huong hien dai hon nhung giu nguyen nghiep vu va API contract.
+- Don noi dung trung lap/y nghia giong nhau, loai bo emoji trong nhan thao tac de giao dien sach va nhat quan.
+- Tang kha nang doc trong light/dark mode bang `page-surface` + `content-card`, toi uu mobile/desktop responsiveness.
+
+### Prompt batch lon (copy de tiep tuc)
+
+```text
+Ban dong vai Senior Frontend Refactor Engineer. Uu tien trùng tu UI trang teacher activities:
+1) Khong doi nghiep vu:
+- Giu nguyen logic status/phan trang/submit/reject/cancel/clone/delete/QR attendance shortcut.
+2) Nang cap giao dien:
+- Doi shell sang page-surface + content-card.
+- Chuan hoa button/action style (bo emoji, dung icon Lucide + label tieng Viet ro rang).
+- Toi uu responsive: card thong tin 1 cot tren mobile, 2-4 cot tren man hinh rong.
+3) Noi dung:
+- Giu copy tieng Viet co dau, bo cac nhan lap/y nghia trung.
+4) Verification:
+- Chay lint + test page + build, cap nhat docs va commit theo batch.
+```
+
+### Viec can lam
+
+- [x] `src/app/teacher/activities/page.tsx`:
+  - [x] doi layout sang `page-shell` + `page-surface` + `content-card`.
+  - [x] bo emoji trong labels/nut (`Xem chi tiet`, `Diem danh`, `Huy hoat dong`...), thay icon Lucide.
+  - [x] chuan hoa action buttons va khu stats card de responsive hon.
+  - [x] giu nguyen logic activity grouping (upcoming/archived/remaining), QR shortcut, confirm dialogs.
+- [x] `test/teacher-activities-page.test.tsx`:
+  - [x] bo `any` o mock props de pass lint clean, khong doi assertion nghiep vu.
+
+### Verification
+
+- [x] `npm.cmd run lint -- --file "src/app/teacher/activities/page.tsx" --file "test/teacher-activities-page.test.tsx"` -> PASS (0 warning)
+- [x] `npm.cmd test -- test/teacher-activities-page.test.tsx` -> PASS (1 file / 4 tests)
+- [x] `npm.cmd run build` -> PASS
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix
@@ -961,6 +1001,7 @@ Yêu cầu:
 - [x] Commit 15: admin awards/bonus/reports/scores lint cleanup (batch 9.13) (`b48ef66`)
 - [x] Commit 16: admin scoring/scoring-config lint/type cleanup (batch 9.14) (`5f06b16`)
 - [ ] Commit 17: dark contrast + notification projector CTA + navbar integrity (batch 9.17)
+- [ ] Commit 18: teacher activities UI modernization (batch 9.18)
 
 ---
 

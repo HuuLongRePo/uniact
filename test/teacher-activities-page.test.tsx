@@ -3,9 +3,21 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import React from 'react';
 
 const pushMock = vi.fn();
+type LinkMockProps = React.AnchorHTMLAttributes<HTMLAnchorElement> & {
+  children: React.ReactNode;
+  href: string;
+};
+type DialogMockProps = { isOpen: boolean };
+type EmptyStateMockProps = { title: string; message: string };
+type ConfirmDialogMockProps = {
+  isOpen: boolean;
+  title: string;
+  message: string;
+  onConfirm: () => void;
+};
 
 vi.mock('next/link', () => ({
-  default: ({ children, href, ...props }: any) => (
+  default: ({ children, href, ...props }: LinkMockProps) => (
     <a href={href} {...props}>
       {children}
     </a>
@@ -24,7 +36,7 @@ vi.mock('@/lib/toast', () => ({
 }));
 
 vi.mock('@/components/ActivityDialog', () => ({
-  default: ({ isOpen }: any) => (isOpen ? <div>Activity dialog</div> : null),
+  default: ({ isOpen }: DialogMockProps) => (isOpen ? <div>Activity dialog</div> : null),
 }));
 
 vi.mock('@/components/LoadingSpinner', () => ({
@@ -36,7 +48,7 @@ vi.mock('@/components/ActivitySkeleton', () => ({
 }));
 
 vi.mock('@/components/EmptyState', () => ({
-  default: ({ title, message }: any) => (
+  default: ({ title, message }: EmptyStateMockProps) => (
     <div>
       <div>{title}</div>
       <div>{message}</div>
@@ -45,7 +57,7 @@ vi.mock('@/components/EmptyState', () => ({
 }));
 
 vi.mock('@/components/ui/ConfirmDialog', () => ({
-  ConfirmDialog: ({ isOpen, title, message, onConfirm }: any) =>
+  ConfirmDialog: ({ isOpen, title, message, onConfirm }: ConfirmDialogMockProps) =>
     isOpen ? (
       <div>
         <div>{title}</div>
@@ -172,7 +184,9 @@ describe('TeacherActivitiesPage', () => {
     expect(screen.getByText('Đã qua hoặc đã khép lại')).toBeInTheDocument();
     expect(screen.getByText('Hoạt động đã qua hạn')).toBeInTheDocument();
     expect(
-      screen.getByText('Đã quá thời điểm diễn ra, cần xác nhận hoàn thành hoặc cập nhật trạng thái.')
+      screen.getByText(
+        'Đã quá thời điểm diễn ra, cần xác nhận hoàn thành hoặc cập nhật trạng thái.'
+      )
     ).toBeInTheDocument();
     expect(screen.getByText('Hoạt động nháp')).toBeInTheDocument();
   });
@@ -228,10 +242,7 @@ describe('TeacherActivitiesPage', () => {
     render(<TeacherActivitiesPage />);
 
     const attendanceLink = await screen.findByRole('link', { name: /điểm danh/i });
-    expect(attendanceLink).toHaveAttribute(
-      'href',
-      '/teacher/qr?activity_id=31&session_id=9001'
-    );
+    expect(attendanceLink).toHaveAttribute('href', '/teacher/qr?activity_id=31&session_id=9001');
   });
 
   it('uses API message for submit approval success toast', async () => {
