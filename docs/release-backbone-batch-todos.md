@@ -1372,6 +1372,33 @@ Yeu cau:
 - [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests)
 - [x] `npm.cmd run release:check:full` -> PASS (4/4 checks, lint warnings legacy scope khong block)
 
+## 9.27) Batch uu tien nong - dark mode action button readability guard v2
+
+### Muc tieu
+
+- Sua dut diem loi 2 nut dang nhap tren landing dark mode (van bi nhin giong disabled o mot so moi truong).
+- Quet pattern tuong tu tren toan he thong cho link/button co nen mau + `text-white`.
+- Bo sung guard de khong tai phat khi refactor theme hoac bo sung rule global cho `a`.
+
+### Viec can lam
+
+- [x] `src/app/globals.css`:
+  - [x] giu dark-link rule chi ap dung cho anchor khong class.
+  - [x] them guard explicit cho `.landing-action-primary` tren day du state (`visited/hover/active/focus-visible`).
+  - [x] them guard system-wide cho `a/button/[role='button']` co class `bg-*` + `text-white` trong dark mode.
+- [x] Quet nhanh hien thi:
+  - [x] quet `src/app`, `src/components` de xac nhan nhieu button su dung pattern `bg-* text-white` va duoc cover boi guard moi.
+- [x] `test/theme-link-contrast-guard.test.ts`:
+  - [x] them regression assert cho guard moi (landing states + button-like pattern).
+
+### Verification
+
+- [x] `npm.cmd run lint -- --file "test/theme-link-contrast-guard.test.ts" --file "src/app/page.tsx"` -> PASS (0 warning)
+- [x] `npm.cmd test -- test/theme-link-contrast-guard.test.ts` -> PASS (1 file / 3 tests)
+- [x] `npm.cmd run build` -> PASS
+- [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests)
+- [x] `npm.cmd run release:check:full` -> PASS (4/4 checks, lint warnings legacy scope khong block)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix

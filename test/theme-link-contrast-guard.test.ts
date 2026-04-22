@@ -25,4 +25,16 @@ describe('dark theme link contrast guards', () => {
     expect(primaryActionRule).toContain('color: var(--app-action-primary-text) !important;');
     expect(primaryActionHoverRule).toContain('color: var(--app-action-primary-text) !important;');
   });
+
+  it('enforces readable text for dark-mode button-like links and buttons', () => {
+    const css = loadGlobalCss();
+
+    expect(css).toContain(":root[data-theme='dark'] a.landing-action-primary,");
+    expect(css).toContain(":root[data-theme='dark'] a.landing-action-primary:visited,");
+    expect(css).toContain(":root[data-theme='dark'] a[class*='bg-'][class*='text-white'],");
+    expect(css).toContain(":root[data-theme='dark'] button[class*='bg-'][class*='text-white'],");
+    expect(css).toContain(
+      ":root[data-theme='dark'] [role='button'][class*='bg-'][class*='text-white'] {",
+    );
+  });
 });

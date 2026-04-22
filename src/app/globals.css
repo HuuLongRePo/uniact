@@ -462,6 +462,20 @@ button:disabled,
   color: var(--app-link);
 }
 
+:root[data-theme='dark'] a.landing-action-primary,
+:root[data-theme='dark'] a.landing-action-primary:visited,
+:root[data-theme='dark'] a.landing-action-primary:hover,
+:root[data-theme='dark'] a.landing-action-primary:active,
+:root[data-theme='dark'] a.landing-action-primary:focus-visible {
+  color: var(--app-action-primary-text) !important;
+}
+
+:root[data-theme='dark'] a[class*='bg-'][class*='text-white'],
+:root[data-theme='dark'] button[class*='bg-'][class*='text-white'],
+:root[data-theme='dark'] [role='button'][class*='bg-'][class*='text-white'] {
+  color: var(--app-action-primary-text) !important;
+}
+
 :root[data-theme='dark'] .bg-white {
   background-color: var(--app-surface-base) !important;
 }
