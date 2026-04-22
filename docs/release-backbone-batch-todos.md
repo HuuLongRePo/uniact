@@ -666,6 +666,7 @@ Yeu cau thi hanh:
 - [x] `npm.cmd run lint -- --file "src/app/admin/approvals/page.tsx" --file "src/app/admin/approvals/ApprovalDialog.tsx" --file "src/app/admin/approvals/ApprovalList.tsx" --file "src/app/admin/activities/ActivityTable.tsx"` -> PASS (0 warnings)
 - [x] `npm.cmd test -- test/admin-approvals-page.test.tsx test/admin-activities-page.test.tsx test/admin-pending-activities-route.test.ts` -> PASS (3 files / 8 tests)
 - [x] `npm.cmd run build` -> PASS
+- [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests)
 
 ## 10) Ke hoach commit de xuat
 
@@ -679,7 +680,7 @@ Yeu cau thi hanh:
 - [x] Commit 7: Production build hardening + point_calculations schema self-heal
 - [x] Commit 8: docs sync baseline + clone handoff (`804d71a`)
 - [x] Commit 9: activity workflow lint/type hardening (batch 9.8) (`7769e0b`)
-- [ ] Commit 10: admin approvals lint/type hardening (batch 9.9)
+- [x] Commit 10: admin approvals lint/type hardening (batch 9.9) (`36564a2`)
 
 ---
 
