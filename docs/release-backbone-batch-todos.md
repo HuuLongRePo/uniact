@@ -777,7 +777,7 @@ Yeu cau thi hanh:
 - [x] Commit 11: admin alerts/audit lint cleanup (batch 9.10) (`76771f1`)
 - [x] Commit 12: admin users lint/type cleanup (batch 9.11) (`1f8265c`)
 - [x] Commit 13: format admin user pages for release check (`cb33491`)
-- [ ] Commit 14: admin classes lint/type cleanup (batch 9.12)
+- [x] Commit 14: admin classes lint/type cleanup (batch 9.12) (`4c37921`)
 
 ---
 
