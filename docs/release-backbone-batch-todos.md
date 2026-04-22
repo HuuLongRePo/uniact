@@ -744,7 +744,7 @@ Yeu cau thi hanh:
 - [x] Commit 9: activity workflow lint/type hardening (batch 9.8) (`7769e0b`)
 - [x] Commit 10: admin approvals lint/type hardening (batch 9.9) (`36564a2`)
 - [x] Commit 11: admin alerts/audit lint cleanup (batch 9.10) (`76771f1`)
-- [ ] Commit 12: admin users lint/type cleanup (batch 9.11)
+- [x] Commit 12: admin users lint/type cleanup (batch 9.11) (`1f8265c`)
 
 ---
 
