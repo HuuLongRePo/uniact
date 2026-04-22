@@ -517,6 +517,7 @@ Yeu cau thi hanh:
 - [x] Chay regression + build:
   - [x] `npm.cmd test -- test/notification-inbox.test.tsx test/student-notifications-page.test.tsx test/teacher-notification-settings-page.test.tsx test/teacher-notification-history-page.test.tsx test/teacher-notification-broadcast-page.test.tsx test/teacher-notification-routes.test.ts test/teacher-notification-history-route.test.ts test/teacher-notification-history-export-route.test.ts test/notification-realtime-routes.test.ts test/realtime-notification-bridge.test.tsx`
   - [x] `npm.cmd run build`
+  - [x] `npm.cmd run test:backbone` -> `11 files / 47 tests` pass (2026-04-22)
 
 ## 10) Ke hoach commit de xuat
 
