@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { toast } from '@/lib/toast';
 import ActivitySkeleton from '@/components/ActivitySkeleton';
 import EmptyState from '@/components/EmptyState';
 import ApprovalList from './ApprovalList';
 import ApprovalDialog from './ApprovalDialog';
-import { Activity } from './types';
+import { Activity, ApprovalSubmission } from './types';
 
 export default function AdminApprovalsPage() {
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -19,12 +19,12 @@ export default function AdminApprovalsPage() {
     type: 'approve',
     activityId: null,
   });
+  const getErrorMessage = (error: unknown, fallback: string) => {
+    if (error instanceof Error && error.message) return error.message;
+    return fallback;
+  };
 
-  useEffect(() => {
-    fetchPendingActivities();
-  }, [page]);
-
-  const fetchPendingActivities = async () => {
+  const fetchPendingActivities = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch(`/api/admin/activities/pending?page=${page}&limit=20`);
@@ -36,19 +36,23 @@ export default function AdminApprovalsPage() {
       setPagination(
         payload?.pagination || { page, limit: 20, total: nextActivities.length || 0, pages: 1 }
       );
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error:', error);
-      toast.error(error.message || 'Không thể tải hoạt động');
+      toast.error(getErrorMessage(error, 'Không thể tải hoạt động'));
     } finally {
       setLoading(false);
     }
-  };
+  }, [page]);
+
+  useEffect(() => {
+    void fetchPendingActivities();
+  }, [fetchPendingActivities]);
 
   const closeModal = () => {
     setModal({ type: 'approve', activityId: null });
   };
 
-  const handleApprove = async (data: any) => {
+  const handleApprove = async (data: ApprovalSubmission) => {
     if (!modal.activityId) return;
     try {
       setActionLoading(true);
@@ -61,15 +65,15 @@ export default function AdminApprovalsPage() {
       if (!response.ok) throw new Error(body.error || 'Không thể phê duyệt hoạt động');
       toast.success(body.message || 'Đã phê duyệt hoạt động');
       closeModal();
-      fetchPendingActivities();
-    } catch (error: any) {
-      toast.error(error.message || 'Không thể phê duyệt hoạt động');
+      await fetchPendingActivities();
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Không thể phê duyệt hoạt động'));
     } finally {
       setActionLoading(false);
     }
   };
 
-  const handleReject = async (data: any) => {
+  const handleReject = async (data: ApprovalSubmission) => {
     if (!modal.activityId) return;
     try {
       setActionLoading(true);
@@ -82,9 +86,9 @@ export default function AdminApprovalsPage() {
       if (!response.ok) throw new Error(body.error || 'Không thể từ chối hoạt động');
       toast.success(body.message || 'Đã từ chối hoạt động');
       closeModal();
-      fetchPendingActivities();
-    } catch (error: any) {
-      toast.error(error.message || 'Không thể từ chối hoạt động');
+      await fetchPendingActivities();
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Không thể từ chối hoạt động'));
     } finally {
       setActionLoading(false);
     }

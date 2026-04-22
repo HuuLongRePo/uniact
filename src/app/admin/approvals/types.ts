@@ -13,3 +13,7 @@ export interface Activity {
   created_at: string;
   participant_count?: number;
 }
+
+export interface ApprovalSubmission {
+  content: string;
+}

@@ -1,13 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { ApprovalSubmission } from './types';
 
 interface ApprovalDialogProps {
   type: 'approve' | 'reject';
   isOpen: boolean;
   activityId: number | null;
   onClose: () => void;
-  onSubmit: (data: any) => Promise<void>;
+  onSubmit: (data: ApprovalSubmission) => Promise<void>;
   loading: boolean;
 }
 

@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { CheckCircle, Eye, Edit, Trash2, XCircle } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { Activity } from './types';
 
 interface ActivityTableProps {
@@ -30,7 +31,7 @@ export default function ActivityTable({ activities, loading, onDelete }: Activit
   };
 
   const getApprovalBadge = (approval: string) => {
-    const badges: Record<string, { label: string; className: string; icon: any }> = {
+    const badges: Record<string, { label: string; className: string; icon: LucideIcon | null }> = {
       draft: { label: 'Nháp', className: 'bg-gray-100 text-gray-800', icon: null },
       requested: { label: 'Đã gửi duyệt', className: 'bg-yellow-100 text-yellow-800', icon: null },
       approved: { label: 'Đã duyệt', className: 'bg-green-100 text-green-800', icon: CheckCircle },

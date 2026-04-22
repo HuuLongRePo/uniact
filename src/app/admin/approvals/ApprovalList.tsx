@@ -43,7 +43,7 @@ export default function ApprovalList({
             <input
               type="checkbox"
               checked={selectedActivities.includes(activity.id)}
-              onChange={(e) => onSelectActivity(activity.id)}
+              onChange={() => onSelectActivity(activity.id)}
               className="w-4 h-4 mt-1"
             />
             <div className="flex-1">

@@ -641,6 +641,32 @@ Yeu cau thi hanh:
 - [x] `npm.cmd test -- test/admin-approvals-page.test.tsx test/activities.test.ts test/admin-pending-activities-route.test.ts` -> PASS (3 files / 12 tests)
 - [x] `npm.cmd run build` -> PASS
 
+## 9.9) Batch hardening - Admin approvals lint/type cleanup
+
+### Muc tieu
+
+- Giam tiep warning lint o cum duyet hoat dong admin de on dinh nhanh luong `pending -> approve/reject`.
+- Chuan hoa typing du lieu submit dialog, error handling va badge icon type.
+
+### Viec can lam
+
+- [x] `admin/approvals/page.tsx`:
+  - [x] dong bo `fetchPendingActivities` voi `useCallback` + `useEffect` deps dung.
+  - [x] bo `any` trong `catch` va payload submit approve/reject.
+  - [x] refresh danh sach sau action bang `await fetchPendingActivities()`.
+- [x] `admin/approvals/ApprovalDialog.tsx` + `admin/approvals/types.ts`:
+  - [x] them type `ApprovalSubmission`, bo `onSubmit: (data: any)`.
+- [x] `admin/approvals/ApprovalList.tsx`:
+  - [x] bo tham so su kien khong dung (`no-unused-vars`).
+- [x] `admin/activities/ActivityTable.tsx`:
+  - [x] thay `icon: any` bang `LucideIcon | null`.
+
+### Verification
+
+- [x] `npm.cmd run lint -- --file "src/app/admin/approvals/page.tsx" --file "src/app/admin/approvals/ApprovalDialog.tsx" --file "src/app/admin/approvals/ApprovalList.tsx" --file "src/app/admin/activities/ActivityTable.tsx"` -> PASS (0 warnings)
+- [x] `npm.cmd test -- test/admin-approvals-page.test.tsx test/admin-activities-page.test.tsx test/admin-pending-activities-route.test.ts` -> PASS (3 files / 8 tests)
+- [x] `npm.cmd run build` -> PASS
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix
@@ -652,7 +678,8 @@ Yeu cau thi hanh:
 - [x] Commit 6: Final regression fixes + release docs
 - [x] Commit 7: Production build hardening + point_calculations schema self-heal
 - [x] Commit 8: docs sync baseline + clone handoff (`804d71a`)
-- [ ] Commit 9: activity workflow lint/type hardening (batch 9.8)
+- [x] Commit 9: activity workflow lint/type hardening (batch 9.8) (`7769e0b`)
+- [ ] Commit 10: admin approvals lint/type hardening (batch 9.9)
 
 ---
 
