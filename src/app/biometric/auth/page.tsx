@@ -9,13 +9,30 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   detectSingleEmbedding,
-  performLivenessCheck,
   FaceBiometricUnavailableError,
   FACE_BIOMETRIC_RUNTIME_ENABLED,
+  performLivenessCheck,
 } from '@/lib/biometrics/face-runtime';
 import type { FaceDetectionResult, LivenessCheckResult } from '@/lib/biometrics/face-runtime';
+import { getCameraAccessErrorMessage, requestPreferredCameraStream } from '@/lib/camera-stream';
 
 type AuthStep = 'email' | 'camera' | 'capturing' | 'liveness' | 'processing' | 'success' | 'error';
+
+type MatchDetails = {
+  similarityPercent?: number;
+  templateType?: string;
+  maskMode?: boolean;
+};
+
+function resolveErrorMessage(error: unknown) {
+  if (error instanceof FaceBiometricUnavailableError) {
+    return error.message;
+  }
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return 'Đã xảy ra lỗi chưa xác định.';
+}
 
 export default function BiometricAuth() {
   const router = useRouter();
@@ -29,7 +46,7 @@ export default function BiometricAuth() {
   const [capturedData, setCapturedData] = useState<FaceDetectionResult | null>(null);
   const [livenessResult, setLivenessResult] = useState<LivenessCheckResult | null>(null);
   const [error, setError] = useState('');
-  const [matchDetails, setMatchDetails] = useState<any>(null);
+  const [matchDetails, setMatchDetails] = useState<MatchDetails | null>(null);
 
   useEffect(() => {
     return () => stopCamera();
@@ -37,12 +54,10 @@ export default function BiometricAuth() {
 
   const startCamera = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-          facingMode: 'user',
-        },
+      const stream = await requestPreferredCameraStream({
+        facingMode: 'user',
+        width: 1280,
+        height: 720,
       });
 
       if (videoRef.current) {
@@ -52,8 +67,8 @@ export default function BiometricAuth() {
 
       setMessage('Camera sẵn sàng. Nhấn nút để xác thực.');
       setStep('camera');
-    } catch (err: any) {
-      setError(`Không thể truy cập camera: ${err.message}`);
+    } catch (err: unknown) {
+      setError(getCameraAccessErrorMessage(err));
       setStep('error');
     }
   };
@@ -71,7 +86,7 @@ export default function BiometricAuth() {
       setError('Vui lòng nhập email');
       return;
     }
-    startCamera();
+    void startCamera();
   };
 
   const handleAuthenticate = async () => {
@@ -86,7 +101,6 @@ export default function BiometricAuth() {
       setMessage('Đang chụp khuôn mặt...');
       setProgress(20);
 
-      // Capture face
       const result = await detectSingleEmbedding(videoRef.current);
 
       if (!result) {
@@ -106,7 +120,6 @@ export default function BiometricAuth() {
       setCapturedData(result);
       setProgress(40);
 
-      // Liveness check
       setStep('liveness');
       setMessage('Vui lòng nhấp nháy mắt và cử động đầu nhẹ...');
       setProgress(50);
@@ -115,7 +128,6 @@ export default function BiometricAuth() {
       setLivenessResult(liveness);
       setProgress(70);
 
-      // Authenticate (even if liveness fails - let server decide)
       setStep('processing');
       setMessage('Đang xác thực...');
       setProgress(80);
@@ -135,29 +147,28 @@ export default function BiometricAuth() {
         }),
       });
 
-      const authData = await authRes.json();
+      const authData = (await authRes.json()) as {
+        message?: string;
+        error?: string;
+        matchDetails?: MatchDetails;
+      };
 
       if (!authRes.ok) {
-        setError(authData.message || authData.error);
+        setError(authData.message || authData.error || 'Xác thực thất bại');
         setStep('error');
         return;
       }
 
-      setMatchDetails(authData.matchDetails);
+      setMatchDetails(authData.matchDetails || null);
       setProgress(100);
       setStep('success');
-      setMessage('✅ Xác thực thành công!');
+      setMessage('Xác thực thành công.');
 
-      // Redirect after 2s
       setTimeout(() => {
         router.push('/dashboard');
       }, 2000);
-    } catch (err: any) {
-      if (err instanceof FaceBiometricUnavailableError) {
-        setError(err.message);
-      } else {
-        setError(err.message);
-      }
+    } catch (err: unknown) {
+      setError(resolveErrorMessage(err));
       setStep('error');
     }
   };
@@ -182,7 +193,6 @@ export default function BiometricAuth() {
           <p className="text-gray-600">Hỗ trợ nhận diện khi đeo khẩu trang</p>
         </div>
 
-        {/* Email Input */}
         {step === 'email' && (
           <div className="bg-white rounded-lg shadow-lg p-8">
             <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
@@ -219,7 +229,6 @@ export default function BiometricAuth() {
           </div>
         )}
 
-        {/* Camera View */}
         {step !== 'email' && (
           <div className="bg-white rounded-lg shadow-lg p-6 space-y-6">
             <div className="relative bg-black rounded-lg overflow-hidden aspect-video">
@@ -234,7 +243,7 @@ export default function BiometricAuth() {
               {capturedData && (
                 <div className="absolute top-4 right-4 bg-black/70 text-white px-3 py-2 rounded text-sm space-y-1">
                   <div>Chất lượng: {capturedData.qualityScore.toFixed(0)}/100</div>
-                  {capturedData.hasMask && <div>😷 Đeo khẩu trang</div>}
+                  {capturedData.hasMask && <div>Đeo khẩu trang</div>}
                 </div>
               )}
 
@@ -250,7 +259,6 @@ export default function BiometricAuth() {
               )}
             </div>
 
-            {/* Progress */}
             {step !== 'camera' && step !== 'error' && step !== 'success' && (
               <div className="space-y-2">
                 <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
@@ -263,7 +271,6 @@ export default function BiometricAuth() {
               </div>
             )}
 
-            {/* Error */}
             {step === 'error' && (
               <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
                 <p className="text-red-800 font-medium mb-2">Xác thực thất bại</p>
@@ -288,7 +295,6 @@ export default function BiometricAuth() {
               </div>
             )}
 
-            {/* Success */}
             {step === 'success' && (
               <div className="p-4 bg-green-50 border border-green-200 rounded-lg space-y-3">
                 <p className="text-green-800 font-medium text-lg">{message}</p>
@@ -296,14 +302,13 @@ export default function BiometricAuth() {
                   <div className="text-sm text-gray-700 space-y-1">
                     <div>Độ khớp: {matchDetails.similarityPercent}%</div>
                     <div>Template: {matchDetails.templateType}</div>
-                    {matchDetails.maskMode && <div>😷 Chế độ khẩu trang</div>}
+                    {matchDetails.maskMode && <div>Chế độ khẩu trang</div>}
                   </div>
                 )}
                 <p className="text-sm text-gray-600">Đang chuyển hướng...</p>
               </div>
             )}
 
-            {/* Liveness Details */}
             {livenessResult && step !== 'success' && (
               <div
                 className={`border rounded-lg p-4 ${
@@ -313,8 +318,7 @@ export default function BiometricAuth() {
                 }`}
               >
                 <h3 className="font-semibold text-sm mb-2">
-                  Kiểm tra liveness: {livenessResult.score}/100
-                  {livenessResult.passed ? ' ✓' : ' ⚠️'}
+                  Kiểm tra liveness: {livenessResult.score}/100 {livenessResult.passed ? '✓' : '⚠'}
                 </h3>
                 <ul className="text-xs space-y-1">
                   {livenessResult.details.map((detail, idx) => (

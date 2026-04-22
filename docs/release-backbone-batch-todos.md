@@ -1035,6 +1035,53 @@ Yeu cau:
 - [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests)
 - [x] `npm.cmd run release:check:full` -> PASS (4/4 checks)
 
+## 9.20) Batch tiep theo - biometric pages camera helper alignment + regression tests
+
+### Muc tieu
+
+- Dong bo hai trang `biometric/auth` va `biometric/enroll` vao helper camera dung chung de tranh loi thong diep camera khong nhat quan.
+- Giam `any` tren state/error handling o biometric auth page.
+- Bo sung regression tests xac nhan biometric pages su dung helper camera va hien thong diep loi tu helper.
+
+### Prompt batch lon (copy de tiep tuc)
+
+```text
+Ban dong vai Senior Frontend Reliability Engineer. Uu tien:
+1) Dong bo camera stack:
+- Trang biometric/auth va biometric/enroll khong duoc goi navigator.mediaDevices truc tiep.
+- Bat buoc su dung requestPreferredCameraStream + getCameraAccessErrorMessage.
+2) Hardening typing:
+- Bo state any con sot o match details/error path neu co.
+3) Regression test:
+- Them test cho biometric pages de xac nhan helper camera duoc goi dung tham so va thong diep loi helper duoc render.
+Yeu cau:
+- Patch nho, khong doi nghiep vu release policy (face auth/enroll van co the bi tam tat).
+- Chay lint/test/build/test:backbone/release-check va cap nhat docs sau khi pass.
+```
+
+### Viec can lam
+
+- [x] `src/app/biometric/auth/page.tsx`:
+  - [x] thay `navigator.mediaDevices.getUserMedia` bang `requestPreferredCameraStream`.
+  - [x] dung `getCameraAccessErrorMessage` cho camera error path.
+  - [x] bo `matchDetails: any`, thay typed object + helper resolve error message.
+- [x] `src/app/biometric/enroll/page.tsx`:
+  - [x] thay `navigator.mediaDevices.getUserMedia` bang `requestPreferredCameraStream`.
+  - [x] dong bo camera error message qua `getCameraAccessErrorMessage`.
+  - [x] giu nguyen release policy (nut dang ky van disabled, khong mo rong nghiep vu).
+- [x] `test/biometric-auth-page.test.tsx`:
+  - [x] them test helper camera reject -> render thong diep loi helper.
+- [x] `test/biometric-enroll-page.test.tsx`:
+  - [x] them test effect bootstrap camera goi helper dung tham so + show helper error.
+
+### Verification
+
+- [x] `npm.cmd run lint -- --file "src/app/biometric/auth/page.tsx" --file "src/app/biometric/enroll/page.tsx" --file "test/biometric-auth-page.test.tsx" --file "test/biometric-enroll-page.test.tsx"` -> PASS (0 warning)
+- [x] `npm.cmd test -- test/biometric-auth-page.test.tsx test/biometric-enroll-page.test.tsx test/teacher-face-attendance-page.test.tsx test/biometric-runtime-capability.test.ts` -> PASS (4 files / 15 tests)
+- [x] `npm.cmd run build` -> PASS
+- [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests)
+- [x] `npm.cmd run release:check:full` -> PASS (4/4 checks, sau khi format lai biometric pages)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix
@@ -1059,6 +1106,7 @@ Yeu cau:
 - [x] Commit 18: teacher activities UI modernization (batch 9.18)
   - [x] Split commits: `07e5ac8`, `59efe67`, `a8d0b8e`
 - [x] Commit 19: landing contrast rescue v2 + scanner/inbox polish (batch 9.19) (`c304ca7`)
+- [ ] Commit 20: biometric pages camera helper alignment + tests (batch 9.20)
 
 ---
 

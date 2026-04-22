@@ -7,18 +7,25 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   detectSingleEmbedding,
-  performLivenessCheck,
   FaceBiometricUnavailableError,
   FACE_BIOMETRIC_RUNTIME_ENABLED,
+  performLivenessCheck,
 } from '@/lib/biometrics/face-runtime';
 import type { FaceDetectionResult, LivenessCheckResult } from '@/lib/biometrics/face-runtime';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import toast from 'react-hot-toast';
+import { getCameraAccessErrorMessage, requestPreferredCameraStream } from '@/lib/camera-stream';
 
 type EnrollmentStep = 'camera' | 'capturing' | 'liveness' | 'processing' | 'success' | 'error';
 
 interface BiometricTemplateResponse {
   template_type: string;
+}
+
+function resolveErrorMessage(error: unknown) {
+  if (error instanceof FaceBiometricUnavailableError) return error.message;
+  if (error instanceof Error) return error.message;
+  return 'Đã xảy ra lỗi không xác định';
 }
 
 export default function EnrollBiometric() {
@@ -35,19 +42,12 @@ export default function EnrollBiometric() {
   const [templateToDelete, setTemplateToDelete] = useState<string | null>(null);
   const [error, setError] = useState('');
 
-  const getErrorMessage = (error: unknown) => {
-    if (error instanceof Error) return error.message;
-    return 'Đã xảy ra lỗi không xác định';
-  };
-
   const startCamera = useCallback(async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-          facingMode: 'user',
-        },
+      const stream = await requestPreferredCameraStream({
+        facingMode: 'user',
+        width: 1280,
+        height: 720,
       });
 
       if (videoRef.current) {
@@ -58,7 +58,7 @@ export default function EnrollBiometric() {
       setMessage('Camera sẵn sàng. Nhấn nút để bắt đầu đăng ký.');
       setStep('camera');
     } catch (err: unknown) {
-      setError(`Không thể truy cập camera: ${getErrorMessage(err)}`);
+      setError(getCameraAccessErrorMessage(err));
       setStep('error');
     }
   }, []);
@@ -84,10 +84,9 @@ export default function EnrollBiometric() {
     }
   }, []);
 
-  // Start camera
   useEffect(() => {
-    startCamera();
-    loadEnrolledTemplates();
+    void startCamera();
+    void loadEnrolledTemplates();
 
     return () => {
       stopCamera();
@@ -106,7 +105,6 @@ export default function EnrollBiometric() {
       setMessage('Đang chụp khuôn mặt...');
       setProgress(20);
 
-      // Capture face
       const result = await detectSingleEmbedding(videoRef.current);
 
       if (!result) {
@@ -126,7 +124,6 @@ export default function EnrollBiometric() {
       setCapturedData(result);
       setProgress(40);
 
-      // Liveness check
       setStep('liveness');
       setMessage('Vui lòng nhấp nháy mắt và cử động đầu nhẹ...');
       setProgress(50);
@@ -141,7 +138,6 @@ export default function EnrollBiometric() {
         return;
       }
 
-      // Enroll
       setStep('processing');
       setMessage('Đang lưu dữ liệu sinh trắc học...');
       setProgress(80);
@@ -164,23 +160,19 @@ export default function EnrollBiometric() {
       });
 
       if (!enrollRes.ok) {
-        const error = await enrollRes.json();
-        throw new Error(error.message || error.error);
+        const enrollError = (await enrollRes.json()) as { message?: string; error?: string };
+        throw new Error(
+          enrollError.message || enrollError.error || 'Đăng ký sinh trắc học thất bại'
+        );
       }
-
-      await enrollRes.json();
 
       setProgress(100);
       setStep('success');
-      setMessage(`✅ Đăng ký thành công! Template: ${templateType}`);
+      setMessage(`Đăng ký thành công. Template: ${templateType}`);
 
       await loadEnrolledTemplates();
     } catch (err: unknown) {
-      if (err instanceof FaceBiometricUnavailableError) {
-        setError(err.message);
-      } else {
-        setError(getErrorMessage(err));
-      }
+      setError(resolveErrorMessage(err));
       setStep('error');
     }
   };
@@ -204,11 +196,11 @@ export default function EnrollBiometric() {
         toast.success('Đã xóa template');
         await loadEnrolledTemplates();
       } else {
-        const error = await res.json();
-        toast.error(`Lỗi: ${error.error}`);
+        const deleteError = (await res.json()) as { error?: string };
+        toast.error(`Lỗi: ${deleteError.error || 'Không thể xóa template'}`);
       }
     } catch (err: unknown) {
-      toast.error(`Lỗi: ${getErrorMessage(err)}`);
+      toast.error(`Lỗi: ${resolveErrorMessage(err)}`);
     }
   };
 
@@ -237,7 +229,6 @@ export default function EnrollBiometric() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Camera View */}
         <div className="space-y-4">
           <div className="relative bg-black rounded-lg overflow-hidden aspect-video">
             <video
@@ -252,12 +243,11 @@ export default function EnrollBiometric() {
             {capturedData && (
               <div className="absolute top-4 right-4 bg-black/70 text-white px-3 py-2 rounded text-sm">
                 Chất lượng: {capturedData.qualityScore.toFixed(0)}/100
-                {capturedData.hasMask && ' 😷'}
+                {capturedData.hasMask && ' (đeo khẩu trang)'}
               </div>
             )}
           </div>
 
-          {/* Progress */}
           {step !== 'camera' && step !== 'error' && (
             <div className="space-y-2">
               <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
@@ -270,7 +260,6 @@ export default function EnrollBiometric() {
             </div>
           )}
 
-          {/* Error */}
           {step === 'error' && (
             <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
               <p className="text-red-800 text-sm">{error}</p>
@@ -283,7 +272,6 @@ export default function EnrollBiometric() {
             </div>
           )}
 
-          {/* Success */}
           {step === 'success' && (
             <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
               <p className="text-green-800 font-medium">{message}</p>
@@ -300,9 +288,9 @@ export default function EnrollBiometric() {
             </div>
           )}
 
-          {/* Action Button */}
           {step === 'camera' && (
             <button
+              onClick={handleEnroll}
               disabled
               className="w-full px-6 py-3 bg-gray-300 text-gray-600 rounded-lg cursor-not-allowed font-medium"
             >
@@ -311,10 +299,9 @@ export default function EnrollBiometric() {
           )}
         </div>
 
-        {/* Info Panel */}
         <div className="space-y-6">
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h3 className="font-semibold text-blue-900 mb-2">📋 Hướng dẫn</h3>
+            <h3 className="font-semibold text-blue-900 mb-2">Hướng dẫn</h3>
             <ul className="text-sm text-blue-800 space-y-1">
               <li>• Đảm bảo ánh sáng đủ sáng</li>
               <li>• Đặt mặt chính diện camera</li>
@@ -324,7 +311,6 @@ export default function EnrollBiometric() {
             </ul>
           </div>
 
-          {/* Enrolled Templates */}
           <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
             <h3 className="font-semibold text-gray-900 mb-3">Đã đăng ký</h3>
             {enrolledTemplates.length === 0 ? (
@@ -336,12 +322,7 @@ export default function EnrollBiometric() {
                     key={type}
                     className="flex items-center justify-between bg-white p-2 rounded border"
                   >
-                    <span className="text-sm font-medium">
-                      {type === 'face' && '👤 Khuôn mặt thường'}
-                      {type === 'face_masked' && '😷 Khuôn mặt đeo khẩu trang'}
-                      {type === 'iris_left' && '👁️ Mắt trái'}
-                      {type === 'iris_right' && '👁️ Mắt phải'}
-                    </span>
+                    <span className="text-sm font-medium">{getTemplateLabel(type)}</span>
                     <button
                       onClick={() => setTemplateToDelete(type)}
                       className="text-red-600 hover:text-red-800 text-sm"
@@ -354,7 +335,6 @@ export default function EnrollBiometric() {
             )}
           </div>
 
-          {/* Liveness Details */}
           {livenessResult && (
             <div
               className={`border rounded-lg p-4 ${
