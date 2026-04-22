@@ -243,6 +243,11 @@ describe('TeacherActivitiesPage', () => {
 
     const attendanceLink = await screen.findByRole('link', { name: /điểm danh/i });
     expect(attendanceLink).toHaveAttribute('href', '/teacher/qr?activity_id=31&session_id=9001');
+    const projectorLink = await screen.findByRole('link', { name: /qr/i });
+    expect(projectorLink).toHaveAttribute(
+      'href',
+      '/teacher/qr?activity_id=31&session_id=9001&projector=1'
+    );
   });
 
   it('uses API message for submit approval success toast', async () => {

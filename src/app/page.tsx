@@ -81,7 +81,7 @@ export default function Home() {
           </div>
           <Link
             href="/login"
-            className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
+            className="landing-action-primary rounded-xl px-4 py-2 text-sm font-semibold text-white transition"
           >
             Đăng nhập
           </Link>
@@ -91,19 +91,12 @@ export default function Home() {
       <main>
         <section className="landing-hero mx-auto grid w-full max-w-7xl gap-8 rounded-3xl px-4 py-8 sm:px-6 lg:grid-cols-[1.1fr_0.9fr] lg:gap-12 lg:px-8 lg:py-10">
           <div className="space-y-6">
-            <div
-              className="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold tracking-wide"
-              style={{
-                color: 'var(--app-accent-subtle-text)',
-                border: '1px solid color-mix(in srgb, var(--app-link) 28%, transparent)',
-                background: 'var(--app-accent-subtle-bg)',
-              }}
-            >
+            <div className="landing-badge inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold tracking-wide">
               Nền tảng nội bộ ANND
             </div>
             <h1 className="landing-text-strong text-4xl font-bold leading-tight sm:text-5xl">
               Trung tâm hoạt động
-              <span className="landing-link" style={{ color: 'var(--app-link)' }}>
+              <span className="landing-link landing-heading-emphasis">
                 {' '}
                 Trường Đại học An ninh nhân dân
               </span>
@@ -115,7 +108,7 @@ export default function Home() {
             <div className="flex flex-wrap gap-3">
               <Link
                 href="/login"
-                className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
+                className="landing-action-primary inline-flex items-center gap-2 rounded-xl px-6 py-3 text-sm font-semibold text-white transition"
               >
                 Đăng nhập hệ thống
                 <ArrowRight className="h-4 w-4" />

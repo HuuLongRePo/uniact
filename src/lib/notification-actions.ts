@@ -13,6 +13,12 @@ export type NotificationActionSource = {
   recipient_role?: NotificationRecipientRole | null;
 };
 
+function normalizeToken(value: unknown) {
+  return String(value || '')
+    .trim()
+    .toLowerCase();
+}
+
 function normalizeRecipientRole(rawRole: unknown): NotificationRecipientRole {
   if (rawRole === 'admin' || rawRole === 'teacher' || rawRole === 'student') {
     return rawRole;
@@ -26,54 +32,140 @@ function isAttendanceNotification(type: string) {
   );
 }
 
+function getAttendancePrimaryPath(role: NotificationRecipientRole, activityId: number) {
+  if (role === 'teacher') {
+    return `/teacher/qr?activity_id=${activityId}`;
+  }
+  if (role === 'admin') {
+    return `/admin/activities/${activityId}`;
+  }
+  return `/student/check-in?activityId=${activityId}`;
+}
+
+function buildAttendanceActionButtons(role: NotificationRecipientRole, activityId: number) {
+  if (role === 'teacher') {
+    return [
+      {
+        id: 'open_teacher_qr',
+        label: 'Mở điểm danh',
+        action: 'open_link',
+        href: getAttendancePrimaryPath(role, activityId),
+        variant: 'primary' as const,
+      },
+      {
+        id: 'open_teacher_qr_projector',
+        label: 'Chiếu QR',
+        action: 'open_link',
+        href: `/teacher/qr?activity_id=${activityId}&projector=1`,
+        variant: 'secondary' as const,
+      },
+    ];
+  }
+
+  if (role === 'admin') {
+    return [
+      {
+        id: 'open_admin_activity',
+        label: 'Mở hoạt động',
+        action: 'open_link',
+        href: getAttendancePrimaryPath(role, activityId),
+        variant: 'primary' as const,
+      },
+    ];
+  }
+
+  return [
+    {
+      id: 'open_checkin',
+      label: 'Điểm danh',
+      action: 'open_link',
+      href: getAttendancePrimaryPath(role, activityId),
+      variant: 'primary' as const,
+    },
+  ];
+}
+
+function hasAttendanceShortcut(
+  buttons: RealtimeNotificationActionButton[],
+  recipientRole: NotificationRecipientRole
+) {
+  return buttons.some((button) => {
+    const href = normalizeToken(button.href);
+    if (!href) {
+      return false;
+    }
+
+    if (recipientRole === 'teacher') {
+      return href.includes('/teacher/qr');
+    }
+    if (recipientRole === 'admin') {
+      return href.includes('/admin/activities/');
+    }
+
+    return href.includes('/student/check-in');
+  });
+}
+
+function dedupeActionButtons(buttons: RealtimeNotificationActionButton[]) {
+  const seen = new Set<string>();
+  return buttons.filter((button) => {
+    const key = [
+      normalizeToken(button.id),
+      normalizeToken(button.label),
+      normalizeToken(button.action),
+      normalizeToken(button.href),
+    ].join('|');
+
+    if (seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
+}
+
+function withAttendanceShortcutIfMissing(
+  buttons: RealtimeNotificationActionButton[],
+  notificationType: string,
+  recipientRole: NotificationRecipientRole,
+  relatedTable: string,
+  relatedId: number
+) {
+  if (
+    !isAttendanceNotification(notificationType) ||
+    relatedTable !== 'activities' ||
+    relatedId <= 0 ||
+    hasAttendanceShortcut(buttons, recipientRole)
+  ) {
+    return buttons;
+  }
+
+  const canonicalButtons = buildAttendanceActionButtons(recipientRole, relatedId);
+  return dedupeActionButtons([...canonicalButtons, ...buttons]).slice(0, 3);
+}
+
 export function resolveNotificationActionButtons(
   notification: NotificationActionSource
 ): RealtimeNotificationActionButton[] {
   const directButtons = normalizeActionButtons(notification.action_buttons);
-  if (directButtons.length > 0) {
-    return directButtons;
-  }
-
   const relatedTable = String(notification.related_table || '').trim();
   const relatedId = Number(notification.related_id || 0);
   const notificationType = String(notification.type || '').trim();
   const recipientRole = normalizeRecipientRole(notification.recipient_role);
 
+  if (directButtons.length > 0) {
+    return withAttendanceShortcutIfMissing(
+      directButtons,
+      notificationType,
+      recipientRole,
+      relatedTable,
+      relatedId
+    );
+  }
+
   if (relatedTable === 'activities' && relatedId > 0) {
     if (isAttendanceNotification(notificationType)) {
-      if (recipientRole === 'teacher') {
-        return [
-          {
-            id: 'open_teacher_qr',
-            label: 'Mở điểm danh',
-            action: 'open_link',
-            href: `/teacher/qr?activity_id=${relatedId}&projector=1`,
-            variant: 'primary',
-          },
-        ];
-      }
-
-      if (recipientRole === 'admin') {
-        return [
-          {
-            id: 'open_admin_activity',
-            label: 'Mở hoạt động',
-            action: 'open_link',
-            href: `/admin/activities/${relatedId}`,
-            variant: 'primary',
-          },
-        ];
-      }
-
-      return [
-        {
-          id: 'open_checkin',
-          label: 'Điểm danh',
-          action: 'open_link',
-          href: `/student/check-in?activityId=${relatedId}`,
-          variant: 'primary',
-        },
-      ];
+      return buildAttendanceActionButtons(recipientRole, relatedId);
     }
 
     if (recipientRole === 'teacher') {

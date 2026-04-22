@@ -1189,6 +1189,67 @@ Yeu cau:
 - [x] `npm.cmd run build` -> PASS
 - [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests)
 
+## 9.23) Batch lon uu tien - attendance notification action hardening + QR projector shortcut + camera/mobile reliability + landing dark contrast v4
+
+### Muc tieu
+
+- Dong bo nghiep vu diem danh: giang vien mo/chien QR, hoc vien quet QR.
+- Bao dam thong bao attendance luon co CTA hop role (student check-in, teacher QR/projector, admin activity).
+- Giam nham lan loi camera mobile "browser khong ho tro camera" bang thong diep huong dan ro nguyen nhan.
+- Tang contrast landing page cho dark/system mode de tranh text chim nen.
+
+### Prompt batch lon (copy de tiep tuc)
+
+```text
+Ban dong vai Principal Fullstack Reliability Engineer.
+Uu tien release:
+1) Attendance notification action integrity:
+- Neu notification attendance den ma payload action_buttons khong du CTA dung role, bo sung fallback canonical ngay tai resolver.
+- Teacher phai co 2 nut: "Mo diem danh" va "Chieu QR".
+- Student phai co nut "Diem danh" vao /student/check-in.
+2) Teacher activity quick actions:
+- Neu activity dang co QR session active, hien them nut "Chieu QR" (projector=1) ngay tren card.
+3) Camera mobile hardening:
+- Nang cap camera helper thong diep loi cho insecure context, in-app browser/webview, iOS va browser khong expose Camera API.
+- Khong doi contract API diem danh.
+4) Landing dark/system contrast:
+- Refine token-based landing styles de heading/body/card doc ro hon trong dark/system.
+- Tranh hardcode inline style mau de giam drift.
+Yeu cau:
+- Patch nho/co gia tri release, them regression test, chay lint/test/build/test:backbone/release-check.
+- Cap nhat docs batch ngay sau khi xanh.
+```
+
+### Viec can lam
+
+- [x] `src/lib/notification-actions.ts`:
+  - [x] attendance resolver bo sung canonical CTA theo role ngay ca khi payload co direct action_buttons nhung thieu CTA attendance dung muc dich.
+  - [x] teacher attendance fallback co 2 nut: `/teacher/qr?activity_id=...` va `/teacher/qr?activity_id=...&projector=1`.
+- [x] `src/app/teacher/activities/page.tsx`:
+  - [x] them nut `Chieu QR` ben canh nut `Diem danh` khi co active QR session.
+- [x] `src/lib/camera-stream.ts`:
+  - [x] cap nhat camera helper cho 4 nhom loi: insecure context, embedded/in-app browser, unsupported camera API, runtime camera conflict.
+  - [x] bo sung thong diep hoi phuc ro cho test mobile tren LAN/http.
+- [x] `src/app/page.tsx` + `src/app/globals.css`:
+  - [x] bo inline color-mix style tren landing badge.
+  - [x] bo sung class token `landing-badge`, `landing-action-primary`, `landing-heading-emphasis`.
+  - [x] refine landing light/dark gradients + contrast + prefers-contrast fallback.
+- [x] `test/notification-actions.test.ts`:
+  - [x] assert teacher attendance fallback co 2 CTA (`Mo diem danh`, `Chieu QR`).
+  - [x] assert direct action attendance van duoc bo sung check-in CTA cho student neu thieu.
+- [x] `test/teacher-activities-page.test.tsx`:
+  - [x] them regression assert link projector `&projector=1`.
+- [x] `test/camera-stream.test.ts`:
+  - [x] them unit test cho permission error, embedded NotSupported, missing Camera API, insecure context.
+
+### Verification
+
+- [x] `npm.cmd run lint -- --file "src/lib/notification-actions.ts" --file "src/app/teacher/activities/page.tsx" --file "src/lib/camera-stream.ts" --file "src/app/page.tsx" --file "test/notification-actions.test.ts" --file "test/teacher-activities-page.test.tsx" --file "test/camera-stream.test.ts"` -> PASS (0 warning)
+- [x] `npm.cmd test -- test/notification-actions.test.ts test/teacher-activities-page.test.tsx test/camera-stream.test.ts test/realtime-notification-bridge.test.tsx test/teacher-qr-page.test.tsx` -> PASS (5 files / 22 tests)
+- [x] `npm.cmd run build` -> PASS
+- [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests)
+- [x] `npm.cmd run release:check:full` -> PASS (4/4 checks)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix
@@ -1216,6 +1277,7 @@ Yeu cau:
 - [x] Commit 20: biometric pages camera helper alignment + tests (batch 9.20) (`b9c18a3`)
 - [x] Commit 21: navbar actor integrity + dedupe hardening + landing dark/system rescue (batch 9.21) (`176eec4`)
 - [x] Commit 22: server-side push notification dedupe guard + tests (batch 9.22) (`cf46bf7`)
+- [ ] Commit 23: attendance CTA hardening + projector quick action + camera helper + landing contrast v4 (batch 9.23)
 
 ---
 

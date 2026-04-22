@@ -19,6 +19,7 @@ import {
   Users,
   CalendarDays,
   MapPin,
+  Maximize2,
   UserCheck2,
   Ban,
   ChevronLeft,
@@ -555,13 +556,22 @@ export default function TeacherActivitiesPage() {
                             Xem chi tiết
                           </Link>
                           {activeQrSession && (
-                            <Link
-                              href={`/teacher/qr?activity_id=${activity.id}&session_id=${activeQrSession.session_id}`}
-                              className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-emerald-700"
-                            >
-                              <UserCheck2 className="h-4 w-4" />
-                              Điểm danh
-                            </Link>
+                            <>
+                              <Link
+                                href={`/teacher/qr?activity_id=${activity.id}&session_id=${activeQrSession.session_id}`}
+                                className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-emerald-700"
+                              >
+                                <UserCheck2 className="h-4 w-4" />
+                                Điểm danh
+                              </Link>
+                              <Link
+                                href={`/teacher/qr?activity_id=${activity.id}&session_id=${activeQrSession.session_id}&projector=1`}
+                                className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100"
+                              >
+                                <Maximize2 className="h-4 w-4" />
+                                Chiếu QR
+                              </Link>
+                            </>
                           )}
                         </div>
                       </div>
@@ -713,13 +723,22 @@ export default function TeacherActivitiesPage() {
                       </Link>
 
                       {activeQrSession && (
-                        <Link
-                          href={`/teacher/qr?activity_id=${activity.id}&session_id=${activeQrSession.session_id}`}
-                          className="inline-flex items-center gap-1 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700"
-                        >
-                          <UserCheck2 className="h-4 w-4" />
-                          Điểm danh
-                        </Link>
+                        <>
+                          <Link
+                            href={`/teacher/qr?activity_id=${activity.id}&session_id=${activeQrSession.session_id}`}
+                            className="inline-flex items-center gap-1 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700"
+                          >
+                            <UserCheck2 className="h-4 w-4" />
+                            Điểm danh
+                          </Link>
+                          <Link
+                            href={`/teacher/qr?activity_id=${activity.id}&session_id=${activeQrSession.session_id}&projector=1`}
+                            className="inline-flex items-center gap-1 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100"
+                          >
+                            <Maximize2 className="h-4 w-4" />
+                            Chiếu QR
+                          </Link>
+                        </>
                       )}
 
                       {canEditAndResubmit && (

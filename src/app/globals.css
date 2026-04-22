@@ -885,30 +885,32 @@ button:disabled,
 .landing-shell {
   min-height: 100vh;
   background:
-    radial-gradient(circle at 12% 10%, rgba(147, 197, 253, 0.45), transparent 35%),
-    linear-gradient(160deg, #f3f6fd 0%, #e6edf8 48%, #dfe8f5 100%);
+    radial-gradient(circle at 9% 7%, rgba(147, 197, 253, 0.52), transparent 36%),
+    radial-gradient(circle at 92% 10%, rgba(59, 130, 246, 0.18), transparent 31%),
+    linear-gradient(160deg, #f7faff 0%, #ebf1fa 48%, #dde7f5 100%);
+  color: var(--app-text-default);
 }
 
 .landing-hero {
   border: 1px solid color-mix(in srgb, var(--app-border-default) 84%, transparent);
   background:
-    linear-gradient(175deg, rgba(255, 255, 255, 0.92), rgba(248, 250, 252, 0.84)),
+    linear-gradient(175deg, rgba(255, 255, 255, 0.97), rgba(248, 250, 252, 0.9)),
     var(--app-surface-base);
-  box-shadow: 0 22px 52px rgba(15, 23, 42, 0.12);
+  box-shadow: 0 24px 56px rgba(15, 23, 42, 0.12);
 }
 
 .landing-nav {
   border-bottom: 1px solid color-mix(in srgb, var(--app-border-default) 88%, transparent);
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(14px);
 }
 
 .landing-panel {
   border: 1px solid color-mix(in srgb, var(--app-border-default) 84%, transparent);
   background:
-    linear-gradient(165deg, rgba(255, 255, 255, 0.92), rgba(248, 250, 252, 0.86)),
+    linear-gradient(165deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.9)),
     var(--app-surface-base);
-  box-shadow: 0 22px 50px rgba(15, 23, 42, 0.14);
+  box-shadow: 0 24px 52px rgba(15, 23, 42, 0.14);
 }
 
 .landing-metric {
@@ -941,6 +943,34 @@ button:disabled,
   background: color-mix(in srgb, var(--app-link) 30%, transparent);
 }
 
+.landing-badge {
+  color: var(--app-accent-subtle-text);
+  border: 1px solid color-mix(in srgb, var(--app-link) 28%, transparent);
+  background: var(--app-accent-subtle-bg);
+}
+
+.landing-heading-emphasis {
+  text-decoration-thickness: 0.08em;
+  text-underline-offset: 0.14em;
+}
+
+.landing-action-primary {
+  background: linear-gradient(
+    135deg,
+    var(--app-action-primary-bg) 0%,
+    color-mix(in srgb, var(--app-action-primary-bg) 82%, #2563eb) 100%
+  );
+  box-shadow: 0 12px 28px color-mix(in srgb, var(--app-action-primary-bg) 26%, transparent);
+}
+
+.landing-action-primary:hover {
+  background: linear-gradient(
+    135deg,
+    var(--app-action-primary-bg-hover) 0%,
+    color-mix(in srgb, var(--app-action-primary-bg-hover) 82%, #1d4ed8) 100%
+  );
+}
+
 .landing-text-strong {
   color: var(--app-text-strong);
 }
@@ -963,16 +993,17 @@ button:disabled,
 
 :root[data-theme='dark'] .landing-shell {
   background:
-    radial-gradient(circle at 15% 12%, rgba(56, 189, 248, 0.22), transparent 38%),
-    linear-gradient(160deg, #020817 0%, #081327 46%, #0b1a33 100%);
+    radial-gradient(circle at 11% 8%, rgba(56, 189, 248, 0.25), transparent 38%),
+    radial-gradient(circle at 86% 14%, rgba(37, 99, 235, 0.24), transparent 34%),
+    linear-gradient(160deg, #030b1d 0%, #08162b 46%, #0c1f38 100%);
 }
 
 :root[data-theme='dark'] .landing-hero {
   border-color: color-mix(in srgb, var(--app-border-default) 88%, transparent);
   background:
-    linear-gradient(175deg, rgba(15, 23, 42, 0.95), rgba(17, 24, 39, 0.88)),
+    linear-gradient(175deg, rgba(15, 23, 42, 0.97), rgba(17, 24, 39, 0.92)),
     var(--app-surface-base);
-  box-shadow: 0 24px 58px rgba(2, 6, 23, 0.52);
+  box-shadow: 0 24px 60px rgba(2, 6, 23, 0.54);
 }
 
 :root[data-theme='dark'] .landing-nav {
@@ -983,9 +1014,9 @@ button:disabled,
 :root[data-theme='dark'] .landing-panel {
   border-color: color-mix(in srgb, var(--app-border-default) 88%, transparent);
   background:
-    linear-gradient(165deg, rgba(15, 23, 42, 0.95), rgba(17, 24, 39, 0.88)),
+    linear-gradient(165deg, rgba(15, 23, 42, 0.97), rgba(17, 24, 39, 0.92)),
     var(--app-surface-base);
-  box-shadow: 0 24px 58px rgba(2, 6, 23, 0.52);
+  box-shadow: 0 24px 60px rgba(2, 6, 23, 0.54);
 }
 
 :root[data-theme='dark'] .landing-metric {
@@ -1018,19 +1049,30 @@ button:disabled,
   background: color-mix(in srgb, var(--app-link) 42%, transparent);
 }
 
+:root[data-theme='dark'] .landing-badge {
+  border-color: color-mix(in srgb, var(--app-link) 44%, transparent);
+  background: color-mix(in srgb, var(--app-link) 24%, transparent);
+  color: #dbeafe;
+}
+
+:root[data-theme='dark'] .landing-action-primary {
+  box-shadow: 0 12px 28px color-mix(in srgb, #2563eb 40%, transparent);
+}
+
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) .landing-shell {
     background:
-      radial-gradient(circle at 15% 12%, rgba(56, 189, 248, 0.22), transparent 38%),
-      linear-gradient(160deg, #020817 0%, #081327 46%, #0b1a33 100%);
+      radial-gradient(circle at 11% 8%, rgba(56, 189, 248, 0.25), transparent 38%),
+      radial-gradient(circle at 86% 14%, rgba(37, 99, 235, 0.24), transparent 34%),
+      linear-gradient(160deg, #030b1d 0%, #08162b 46%, #0c1f38 100%);
   }
 
   :root:not([data-theme='light']) .landing-hero {
     border-color: color-mix(in srgb, var(--app-border-default) 88%, transparent);
     background:
-      linear-gradient(175deg, rgba(15, 23, 42, 0.95), rgba(17, 24, 39, 0.88)),
+      linear-gradient(175deg, rgba(15, 23, 42, 0.97), rgba(17, 24, 39, 0.92)),
       var(--app-surface-base);
-    box-shadow: 0 24px 58px rgba(2, 6, 23, 0.52);
+    box-shadow: 0 24px 60px rgba(2, 6, 23, 0.54);
   }
 
   :root:not([data-theme='light']) .landing-nav {
@@ -1041,9 +1083,9 @@ button:disabled,
   :root:not([data-theme='light']) .landing-panel {
     border-color: color-mix(in srgb, var(--app-border-default) 88%, transparent);
     background:
-      linear-gradient(165deg, rgba(15, 23, 42, 0.95), rgba(17, 24, 39, 0.88)),
+      linear-gradient(165deg, rgba(15, 23, 42, 0.97), rgba(17, 24, 39, 0.92)),
       var(--app-surface-base);
-    box-shadow: 0 24px 58px rgba(2, 6, 23, 0.52);
+    box-shadow: 0 24px 60px rgba(2, 6, 23, 0.54);
   }
 
   :root:not([data-theme='light']) .landing-metric {
@@ -1075,6 +1117,31 @@ button:disabled,
   :root:not([data-theme='light']) .landing-skeleton {
     background: color-mix(in srgb, var(--app-link) 42%, transparent);
   }
+
+  :root:not([data-theme='light']) .landing-badge {
+    border-color: color-mix(in srgb, var(--app-link) 44%, transparent);
+    background: color-mix(in srgb, var(--app-link) 24%, transparent);
+    color: #dbeafe;
+  }
+
+  :root:not([data-theme='light']) .landing-action-primary {
+    box-shadow: 0 12px 28px color-mix(in srgb, #2563eb 40%, transparent);
+  }
+}
+
+@media (prefers-contrast: more) {
+  .landing-text-strong,
+  .landing-text-default,
+  .landing-text-muted {
+    color: var(--app-text-strong);
+  }
+
+  .landing-badge,
+  .landing-hero,
+  .landing-panel,
+  .landing-feature-card {
+    border-width: 2px;
+  }
 }
 
 @supports not (color: color-mix(in srgb, #000 50%, #fff 50%)) {
@@ -1095,6 +1162,18 @@ button:disabled,
 
   .landing-skeleton {
     background: var(--app-surface-soft);
+  }
+
+  .landing-badge {
+    border-color: var(--app-border-default);
+    background: var(--app-accent-subtle-bg);
+    color: var(--app-accent-subtle-text);
+  }
+
+  .landing-action-primary,
+  .landing-action-primary:hover {
+    background: var(--app-action-primary-bg);
+    box-shadow: none;
   }
 }
 
