@@ -1,23 +1,19 @@
 # CODEX IDE TRANSITION PACK (CLONE TO NEW MACHINE)
 
-Ngay cap nhat: 2026-04-21  
+Ngay cap nhat: 2026-04-22  
 Pham vi: handoff de clone repo sang may khac va tiep tuc hoan thanh cac luong nong cot bang Codex.
 
 ## 1) Snapshot hien tai
-- Da hoan tat Batch 1 -> Batch 6 theo `docs/release-backbone-batch-todos.md`.
+- Da hoan tat Batch 1 -> Batch 9.7 theo `docs/release-backbone-batch-todos.md`.
 - Da pass:
-  - `npm run test:backbone` -> 11 files / 47 tests.
-  - Batch 5 regression -> 10 files / 41 tests.
-  - UAT actor smoke (admin/teacher/student) tren dev mode.
-- Blocker con lai truoc RC:
-  - Production build fail do:
-    - missing export `ensureActivityStudentScope`
-    - type mismatch `attendance_status === 'present'`
-  - Local DB schema drift co the xay ra:
-    - `point_calculations` thieu cot `activity_id`/`coefficient`.
-  - Decision gate chua chot:
-    - thu vien liveness/matching production
-    - embedding retention policy.
+  - `npm run test:backbone` -> 11 files / 47 tests (2026-04-22).
+  - FaceID regression bundle -> 10 files / 41 tests (2026-04-22).
+  - `npm run release:check:full` -> 4/4 checks pass (2026-04-22).
+  - UAT actor smoke (admin/teacher/student) pass tren dev mode (2026-04-22).
+- Blocker truoc RC da dong:
+  - Build blocker `ensureActivityStudentScope` + `attendance_status` type mismatch da fix.
+  - Schema drift `point_calculations.activity_id/coefficient` da co self-heal/backfill.
+  - Decision gate production liveness/matching + embedding retention da chot va implement.
 
 ## 2) Clone + bootstrap tren may moi
 Chay tu PowerShell:

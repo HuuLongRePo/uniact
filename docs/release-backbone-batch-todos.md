@@ -1,6 +1,6 @@
 # RELEASE BACKBONE TODOS (BATCH PLAN)
 
-Ngay cap nhat: 2026-04-21
+Ngay cap nhat: 2026-04-22
 Muc tieu: Release he thong theo duong xuong song, sua loi va mo rong tinh nang theo tung batch nho, tranh qua tai context.
 
 ## 1) Nguyen tac van hanh (bat buoc)
@@ -352,20 +352,22 @@ Yeu cau:
   - [x] Batch 5 FaceID regression: `10 files / 41 tests` pass (2026-04-21)
 - [x] Chay regression bundle backbone truoc release candidate.
   - [x] `npm run test:backbone` -> `11 files / 47 tests` pass (2026-04-21)
+  - [x] `npm run test:backbone` -> `11 files / 47 tests` pass (2026-04-22)
 - [x] Manual QA theo role:
   - [x] Admin: actor UAT `test/uat/actor-admin/02-activity-approval.spec.ts` pass (2026-04-21)
   - [x] Giang vien: actor UAT `test/uat/actor-teacher/04-qr-refresh-close.spec.ts` pass (2026-04-21)
   - [x] Hoc vien: actor UAT `test/uat/actor-student/02-qr-checkin.spec.ts` pass (2026-04-21)
+  - [x] Re-run actor smoke bundle: `test/uat/actor-admin/02-activity-approval.spec.ts` + `test/uat/actor-teacher/04-qr-refresh-close.spec.ts` + `test/uat/actor-student/02-qr-checkin.spec.ts` pass (2026-04-22)
 - [x] Chot release note:
   - [x] da xong: Batch 5 FaceID foundation (scope guard + identify API + runtime fallback test + notification matrix v1)
-  - [x] con defer: production liveness/matching library decision, embedding retention policy
+  - [x] da dong defer production policy (2026-04-22): matching/liveness engine + embedding retention policy da duoc chot va thi hanh trong batch 9.7
   - [x] risk con lai: runtime model unavailable se fallback manual; can tiep tuc monitor audit no-match anomaly
   - [x] da fix blocker build (2026-04-21): re-export `ensureActivityStudentScope`, dong bo type admin participants voi contract `present/absent/not_participated`
   - [x] da harden schema drift (2026-04-21): tu bo sung cot `activity_id`/`coefficient` cho `point_calculations` trong scoring + seed
   - [x] Internal RC summary cap nhat: `docs/INTERNAL_RC_SUMMARY_2026-04-21.md`
   - [x] Full release check pass (2026-04-21): `npm.cmd run release:check:full`
   - [x] Re-run full release check pass (2026-04-22): `npm.cmd run release:check:full` (4/4 checks)
-- [x] Tat ca Gate A-E da xanh (2026-04-21).
+- [x] Tat ca Gate A-E da xanh (2026-04-21), da re-verify regression release (2026-04-22).
 - [x] Gan tag RC noi bo `internal-rc-2026-04-21` sau khi xac nhan build + backbone regression + docs release (2026-04-21).
 
 ## 9.1) Batch uu tien nong sau RC - QR / Notification action / Mobile camera
