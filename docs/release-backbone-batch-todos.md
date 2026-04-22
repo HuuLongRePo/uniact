@@ -867,6 +867,27 @@ Yeu cau thi hanh:
 - [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests)
 - [x] `npm.cmd run release:check:full` -> PASS (4/4 checks)
 
+## 9.16) Batch tiep theo - Face attendance camera error harmonization
+
+### Muc tieu
+
+- Dong bo luong `teacher/attendance/face` voi camera error helper moi de giam false-negative "trinh duyet khong ho tro camera".
+- Bo sung regression test cho secure-context camera failure UX.
+
+### Viec can lam
+
+- [x] `teacher/attendance/face/page.tsx`:
+  - [x] dung `getCameraAccessErrorMessage` de map loi camera theo ngu canh HTTPS/quyen/device.
+  - [x] bo guard `navigator.mediaDevices` hardcode, dung luon helper `requestPreferredCameraStream`.
+  - [x] harden typing cho `preview`/`submitResult`, bo `any`.
+- [x] `test/teacher-face-attendance-page.test.tsx`:
+  - [x] mock `camera-stream` va them test regression cho secure-context error message.
+
+### Verification
+
+- [x] `npm.cmd run lint -- --file "src/app/teacher/attendance/face/page.tsx" --file "src/lib/camera-stream.ts"` -> PASS (0 warning)
+- [x] `npm.cmd test -- test/teacher-face-attendance-page.test.tsx test/attendance-runtime-bridge.test.ts test/face-attendance-route.test.ts` -> PASS (3 files / 22 tests)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix

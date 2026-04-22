@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const detectSingleEmbeddingMock = vi.fn();
 const performLivenessCheckMock = vi.fn();
+const requestPreferredCameraStreamMock = vi.fn();
 
 vi.mock('@/lib/biometrics/face-runtime', () => ({
   detectSingleEmbedding: detectSingleEmbeddingMock,
@@ -29,12 +30,22 @@ vi.mock('react-hot-toast', () => ({
   },
 }));
 
+vi.mock('@/lib/camera-stream', () => ({
+  requestPreferredCameraStream: requestPreferredCameraStreamMock,
+  getCameraAccessErrorMessage: (error: unknown) =>
+    error instanceof Error && error.message ? error.message : 'Không truy cập được camera.',
+}));
+
 describe('TeacherFaceAttendancePage', () => {
   beforeEach(() => {
     toastSuccessMock.mockReset();
     toastErrorMock.mockReset();
     detectSingleEmbeddingMock.mockReset();
     performLivenessCheckMock.mockReset();
+    requestPreferredCameraStreamMock.mockReset();
+    requestPreferredCameraStreamMock.mockResolvedValue({
+      getTracks: () => [{ stop: vi.fn() }],
+    });
     vi.stubGlobal('navigator', {
       mediaDevices: {
         getUserMedia: vi.fn(async () => ({
@@ -42,6 +53,30 @@ describe('TeacherFaceAttendancePage', () => {
         })),
       },
     } as any);
+  });
+
+  it('surfaces secure-context camera error before preview submission', async () => {
+    requestPreferredCameraStreamMock.mockRejectedValue(
+      new Error(
+        'Camera chỉ hoạt động trên kết nối bảo mật (HTTPS hoặc localhost). Hãy mở lại bằng trình duyệt ngoài ứng dụng nhúng.'
+      )
+    );
+
+    const fetchMock = vi.fn() as any;
+    vi.stubGlobal('fetch', fetchMock);
+    window.fetch = fetchMock as typeof fetch;
+
+    const Page = (await import('../src/app/teacher/attendance/face/page')).default;
+    render(<Page />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Lấy candidate từ camera' }));
+
+    await waitFor(() => {
+      expect(toastErrorMock).toHaveBeenCalledWith(
+        'Camera chỉ hoạt động trên kết nối bảo mật (HTTPS hoặc localhost). Hãy mở lại bằng trình duyệt ngoài ứng dụng nhúng.'
+      );
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it('creates candidate preview payload for face attendance', async () => {

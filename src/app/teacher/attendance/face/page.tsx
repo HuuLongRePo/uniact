@@ -9,9 +9,14 @@ import {
   FaceDetectionError,
   FACE_BIOMETRIC_RUNTIME_ENABLED,
 } from '@/lib/biometrics/face-runtime';
-import { requestPreferredCameraStream } from '@/lib/camera-stream';
+import { getCameraAccessErrorMessage, requestPreferredCameraStream } from '@/lib/camera-stream';
 
 function getCameraCaptureErrorMessage(error: unknown) {
+  const cameraErrorMessage = getCameraAccessErrorMessage(error);
+  if (cameraErrorMessage !== 'Không truy cập được camera.') {
+    return cameraErrorMessage;
+  }
+
   if (error instanceof FaceBiometricUnavailableError) {
     return error.message;
   }
@@ -40,6 +45,23 @@ function normalizeEmbeddingDraft(input: string): number[] {
   return normalized;
 }
 
+type CandidatePreviewPayload = {
+  candidate_embedding: number[];
+  quality_score?: number;
+  liveness_score?: number;
+  verification_method?: string;
+  upstream_verified?: boolean;
+  [key: string]: unknown;
+};
+
+type FaceAttendanceSubmitResult = {
+  recorded?: boolean;
+  verification_source?: string;
+  verification_method?: string;
+  runtime_mode?: string;
+  [key: string]: unknown;
+};
+
 export default function TeacherFaceAttendancePage() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -50,8 +72,8 @@ export default function TeacherFaceAttendancePage() {
   const [qualityScore, setQualityScore] = useState('75');
   const [livenessScore, setLivenessScore] = useState('0.91');
   const [deviceId, setDeviceId] = useState('cam-a1');
-  const [preview, setPreview] = useState<any>(null);
-  const [submitResult, setSubmitResult] = useState<any>(null);
+  const [preview, setPreview] = useState<CandidatePreviewPayload | null>(null);
+  const [submitResult, setSubmitResult] = useState<FaceAttendanceSubmitResult | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -67,10 +89,6 @@ export default function TeacherFaceAttendancePage() {
   }, []);
 
   const startCamera = async () => {
-    if (!navigator?.mediaDevices?.getUserMedia) {
-      throw new Error('Trình duyệt không hỗ trợ camera');
-    }
-
     const stream = await requestPreferredCameraStream({
       facingMode: 'user',
       width: 1280,
