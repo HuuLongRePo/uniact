@@ -1106,7 +1106,7 @@ Yeu cau:
 - [x] Commit 18: teacher activities UI modernization (batch 9.18)
   - [x] Split commits: `07e5ac8`, `59efe67`, `a8d0b8e`
 - [x] Commit 19: landing contrast rescue v2 + scanner/inbox polish (batch 9.19) (`c304ca7`)
-- [ ] Commit 20: biometric pages camera helper alignment + tests (batch 9.20)
+- [x] Commit 20: biometric pages camera helper alignment + tests (batch 9.20) (`b9c18a3`)
 
 ---
 
