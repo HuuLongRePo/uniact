@@ -101,8 +101,11 @@ export default function TeacherQRPage() {
   const [selectedBulkSession, setSelectedBulkSession] = useState<number | null>(null);
   const [showQrProjector, setShowQrProjector] = useState(false);
   const projectorRef = useRef<HTMLDivElement | null>(null);
+  const projectorAutoOpenedRef = useRef(false);
 
   const activeBulkSessionId = selectedBulkSession ?? history[0]?.id ?? null;
+  const autoProjectorRequested =
+    searchParams.get('projector') === '1' || searchParams.get('fullscreen') === '1';
 
   useEffect(() => {
     const load = async () => {
@@ -281,6 +284,20 @@ export default function TeacherQRPage() {
 
     void element.requestFullscreen().catch(() => undefined);
   }, [showQrProjector]);
+
+  useEffect(() => {
+    if (!autoProjectorRequested || !createdSession || showQrProjector || projectorAutoOpenedRef.current) {
+      return;
+    }
+
+    projectorAutoOpenedRef.current = true;
+    setShowQrProjector(true);
+  }, [autoProjectorRequested, createdSession, showQrProjector]);
+
+  useEffect(() => {
+    if (autoProjectorRequested) return;
+    projectorAutoOpenedRef.current = false;
+  }, [autoProjectorRequested]);
 
   const handleTabChange = (tab: TeacherQrTab) => {
     setActiveTab(tab);

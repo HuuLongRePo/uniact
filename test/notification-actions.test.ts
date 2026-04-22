@@ -24,7 +24,7 @@ describe('resolveNotificationActionButtons', () => {
     });
 
     expect(buttons).toHaveLength(1);
-    expect(buttons[0].href).toBe('/teacher/qr?activity_id=91');
+    expect(buttons[0].href).toBe('/teacher/qr?activity_id=91&projector=1');
     expect(buttons[0].label).toBe('Mở điểm danh');
   });
 

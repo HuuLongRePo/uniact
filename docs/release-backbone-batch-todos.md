@@ -888,6 +888,57 @@ Yeu cau thi hanh:
 - [x] `npm.cmd run lint -- --file "src/app/teacher/attendance/face/page.tsx" --file "src/lib/camera-stream.ts"` -> PASS (0 warning)
 - [x] `npm.cmd test -- test/teacher-face-attendance-page.test.tsx test/attendance-runtime-bridge.test.ts test/face-attendance-route.test.ts` -> PASS (3 files / 22 tests)
 
+## 9.17) Batch uu tien nong - Dark contrast rescue + notification projector CTA + navbar integrity
+
+### Muc tieu
+
+- Khac phuc triet de tinh trang noi dung kho doc trong dark mode/system dark, dac biet voi utility mau co opacity (`bg-white/80`, `bg-white/75`...).
+- Dong bo luong hanh dong thong bao attendance cho giang vien theo huong "mo QR + chieu toan man hinh" ngay tu CTA.
+- Tang do on dinh mobile camera fallback voi huong dan ro khi nguoi dung mo app bang trinh duyet nhung.
+- Them regression test xac nhan navbar actor co "Thong bao" o vung uu tien va tat ca link sidebar deu map dung route hien co.
+
+### Prompt batch lon (copy de tiep tuc)
+
+```text
+Ban dong vai Principal Frontend + QA Engineer. Hay uu tien hotfix release theo thu tu:
+1) Dark/system mode contrast rescue:
+- Sửa các utility màu có opacity gây lệch tương phản (bg-white/80, bg-white/75, bg-gray-50/70...) bằng token dark ổn định.
+- Landing page dùng trực tiếp token text/surface, không phụ thuộc map utility mong manh.
+2) Notification action flow:
+- Với thông báo attendance cho giảng viên, CTA phải mở trang QR theo activity và tự bật chế độ chiếu toàn màn hình.
+3) Mobile camera support message:
+- Khi phát hiện in-app browser/webview, trả message hướng dẫn mở bằng Chrome/Safari/Edge rõ ràng.
+4) Navbar integrity:
+- Viết regression test đảm bảo Thông báo xuất hiện sớm cho từng actor và các link sidebar đều trỏ tới route thật trong src/app.
+Yêu cầu:
+- Liệt kê file trước khi sửa, patch nhỏ, chạy lint/test/build liên quan, cập nhật docs batch và commit rõ ràng.
+```
+
+### Viec can lam
+
+- [x] Landing/UI token:
+  - [x] doi `src/app/page.tsx` sang token text/surface/accent style de khong bi xung dot dark mode.
+  - [x] bo utility mau opacity rui ro tren landing (`bg-white/80`, `bg-white/75`), thay bang style token.
+- [x] Global dark-mode hardening:
+  - [x] bo sung map dark cho utility opacity `bg-white/*`, `bg-gray-50/70`, `bg-gray-100/80`.
+  - [x] bo sung fallback `forced-colors: active` de dam bao do tuong phan tren Windows high-contrast.
+- [x] Notification CTA + QR projector:
+  - [x] `resolveNotificationActionButtons` teacher attendance -> `/teacher/qr?activity_id=<id>&projector=1`.
+  - [x] `teacher/qr` auto open projector mode khi co query `projector=1|fullscreen=1` va da co session.
+- [x] Camera helper:
+  - [x] detect in-app browser/webview va tra thong diep huong dan mo trinh duyet he thong.
+  - [x] dong bo mapping `NotAllowedError` / `NotSupportedError` de thong diep ro nguyen nhan.
+- [x] Regression tests:
+  - [x] update test action button notification.
+  - [x] bo sung test auto projector query mode.
+  - [x] bo sung test navbar integrity theo actor + route resolvable.
+
+### Verification
+
+- [x] `npm.cmd run lint -- --file "src/app/page.tsx" --file "src/lib/camera-stream.ts" --file "src/lib/notification-actions.ts" --file "src/app/teacher/qr/page.tsx" --file "test/notification-actions.test.ts" --file "test/teacher-qr-page.test.tsx" --file "test/sidebar-teacher-links.test.tsx"` -> PASS (0 warning)
+- [x] `npm.cmd test -- test/notification-actions.test.ts test/teacher-qr-page.test.tsx test/sidebar-teacher-links.test.tsx` -> PASS (3 files / 11 tests)
+- [x] `npm.cmd run build` -> PASS
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix
@@ -907,6 +958,7 @@ Yeu cau thi hanh:
 - [x] Commit 14: admin classes lint/type cleanup (batch 9.12) (`4c37921`)
 - [x] Commit 15: admin awards/bonus/reports/scores lint cleanup (batch 9.13) (`b48ef66`)
 - [x] Commit 16: admin scoring/scoring-config lint/type cleanup (batch 9.14) (`5f06b16`)
+- [ ] Commit 17: dark contrast + notification projector CTA + navbar integrity (batch 9.17)
 
 ---
 

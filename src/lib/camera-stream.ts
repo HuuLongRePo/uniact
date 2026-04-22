@@ -1,3 +1,14 @@
+function isLikelyEmbeddedBrowser() {
+  if (typeof navigator === 'undefined') return false;
+
+  const userAgent = navigator.userAgent.toLowerCase();
+  return /fban|fbav|instagram|zalo|line\/|micromessenger|wv\)|webview/.test(userAgent);
+}
+
+function getEmbeddedBrowserCameraHint() {
+  return 'Thiết bị đang mở trong trình duyệt nhúng của ứng dụng. Hãy mở liên kết bằng Chrome/Safari/Edge để dùng camera ổn định.';
+}
+
 export async function requestPreferredCameraStream(options?: {
   facingMode?: 'user' | 'environment';
   width?: number;
@@ -8,15 +19,11 @@ export async function requestPreferredCameraStream(options?: {
   }
 
   if (!window.isSecureContext) {
-    throw new Error(
-      'Camera chỉ hoạt động trên kết nối bảo mật (HTTPS hoặc localhost). Hãy mở lại bằng trình duyệt ngoài ứng dụng nhúng.'
-    );
+    throw new Error(isLikelyEmbeddedBrowser() ? getEmbeddedBrowserCameraHint() : 'Camera chỉ hoạt động trên kết nối bảo mật (HTTPS hoặc localhost). Hãy mở lại bằng trình duyệt ngoài ứng dụng nhúng.');
   }
 
   if (!navigator?.mediaDevices?.getUserMedia) {
-    throw new Error(
-      'Trình duyệt hiện tại chưa hỗ trợ camera đầy đủ. Hãy cập nhật Chrome/Safari/Edge hoặc mở bằng trình duyệt ngoài ứng dụng.'
-    );
+    throw new Error(isLikelyEmbeddedBrowser() ? getEmbeddedBrowserCameraHint() : 'Trình duyệt hiện tại chưa hỗ trợ camera đầy đủ. Hãy cập nhật Chrome/Safari/Edge hoặc mở bằng trình duyệt ngoài ứng dụng.');
   }
 
   const facingMode = options?.facingMode || 'environment';
@@ -71,6 +78,9 @@ export function getCameraAccessErrorMessage(error: unknown) {
     error instanceof Error ? error.name : String((error as { name?: string })?.name || '');
 
   if (errorName === 'NotAllowedError' || errorName === 'SecurityError') {
+    if (isLikelyEmbeddedBrowser()) {
+      return `${getEmbeddedBrowserCameraHint()} Nếu đã cấp quyền nhưng vẫn lỗi, hãy đóng ứng dụng nhúng rồi mở lại bằng trình duyệt hệ thống.`;
+    }
     return 'Bạn đã từ chối quyền camera. Hãy bật lại quyền camera trong trình duyệt rồi thử lại.';
   }
 
@@ -87,6 +97,9 @@ export function getCameraAccessErrorMessage(error: unknown) {
   }
 
   if (errorName === 'NotSupportedError') {
+    if (isLikelyEmbeddedBrowser()) {
+      return getEmbeddedBrowserCameraHint();
+    }
     return 'Thiết bị hoặc trình duyệt chưa hỗ trợ camera cho tác vụ này. Hãy dùng Chrome/Safari/Edge bản mới.';
   }
 

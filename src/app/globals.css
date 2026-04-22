@@ -393,6 +393,15 @@ button:disabled,
   background-color: var(--app-surface-base) !important;
 }
 
+:root[data-theme='dark'] .bg-white\/95,
+:root[data-theme='dark'] .bg-white\/90,
+:root[data-theme='dark'] .bg-white\/85,
+:root[data-theme='dark'] .bg-white\/80,
+:root[data-theme='dark'] .bg-white\/75,
+:root[data-theme='dark'] .bg-white\/70 {
+  background-color: color-mix(in srgb, var(--app-surface-base) 88%, transparent) !important;
+}
+
 :root[data-theme='dark'] .bg-gray-50 {
   background-color: var(--app-surface-elevated) !important;
 }
@@ -403,6 +412,15 @@ button:disabled,
 
 :root[data-theme='dark'] .bg-gray-200 {
   background-color: var(--app-surface-soft) !important;
+}
+
+:root[data-theme='dark'] .bg-gray-50\/90,
+:root[data-theme='dark'] .bg-gray-50\/80,
+:root[data-theme='dark'] .bg-gray-50\/70,
+:root[data-theme='dark'] .bg-gray-100\/90,
+:root[data-theme='dark'] .bg-gray-100\/80,
+:root[data-theme='dark'] .bg-gray-100\/70 {
+  background-color: color-mix(in srgb, var(--app-surface-elevated) 85%, transparent) !important;
 }
 
 :root[data-theme='dark'] .bg-slate-50,
@@ -881,5 +899,30 @@ button:disabled,
   .sidebar-item {
     user-select: none;
     -webkit-user-select: none;
+  }
+}
+
+@media (forced-colors: active) {
+  :root {
+    --app-action-primary-bg: ButtonFace;
+    --app-action-primary-bg-hover: Highlight;
+    --app-action-primary-text: ButtonText;
+    --app-border-default: CanvasText;
+  }
+
+  .page-surface,
+  .content-card {
+    background: Canvas !important;
+    color: CanvasText !important;
+    border-color: CanvasText !important;
+    box-shadow: none !important;
+  }
+
+  a,
+  button,
+  input,
+  textarea,
+  select {
+    forced-color-adjust: auto;
   }
 }

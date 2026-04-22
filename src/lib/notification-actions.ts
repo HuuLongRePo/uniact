@@ -47,7 +47,7 @@ export function resolveNotificationActionButtons(
             id: 'open_teacher_qr',
             label: 'Mở điểm danh',
             action: 'open_link',
-            href: `/teacher/qr?activity_id=${relatedId}`,
+            href: `/teacher/qr?activity_id=${relatedId}&projector=1`,
             variant: 'primary',
           },
         ];

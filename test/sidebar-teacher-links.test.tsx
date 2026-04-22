@@ -1,6 +1,8 @@
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import path from 'node:path';
+import fs from 'node:fs';
 import Sidebar from '@/components/Sidebar';
 import { useAuth, type AuthContextType } from '@/contexts/AuthContext';
 
@@ -41,6 +43,16 @@ function createAuthState(role: 'admin' | 'teacher' | 'student'): AuthContextType
     logout: vi.fn(async () => undefined),
     register: vi.fn(async () => undefined),
   };
+}
+
+function routeExists(href: string) {
+  const base = path.join(process.cwd(), 'src', 'app', ...href.split('/').filter(Boolean));
+  return (
+    fs.existsSync(path.join(base, 'page.tsx')) ||
+    fs.existsSync(path.join(base, 'page.ts')) ||
+    fs.existsSync(path.join(base, 'route.ts')) ||
+    fs.existsSync(path.join(base, 'route.tsx'))
+  );
 }
 
 describe('Sidebar navigation coverage', () => {
@@ -110,5 +122,48 @@ describe('Sidebar navigation coverage', () => {
     expect(container.querySelector('a[href="/admin/reports/activity-statistics"]')).toBeTruthy();
     expect(container.querySelector('a[href="/admin/reports/scores"]')).toBeTruthy();
     expect(container.querySelector('a[href="/admin/reports/teachers"]')).toBeTruthy();
+  });
+
+  it('places notification routes early and keeps every sidebar route resolvable', async () => {
+    const assertions: Array<{
+      role: 'admin' | 'teacher' | 'student';
+      notificationPath: string;
+      anchorPath: string;
+    }> = [
+      { role: 'admin', notificationPath: '/admin/notifications', anchorPath: '/admin/users' },
+      {
+        role: 'teacher',
+        notificationPath: '/teacher/notifications',
+        anchorPath: '/teacher/activities',
+      },
+      {
+        role: 'student',
+        notificationPath: '/student/notifications',
+        anchorPath: '/student/activities',
+      },
+    ];
+
+    for (const item of assertions) {
+      vi.mocked(useAuth).mockReturnValue(createAuthState(item.role));
+      const { container, unmount } = render(<Sidebar />);
+
+      await waitFor(() => {
+        expect(container.querySelector(`a[href="${item.notificationPath}"]`)).toBeTruthy();
+      });
+
+      const links = Array.from(container.querySelectorAll('a[href^="/"]')).map(
+        (anchor) => anchor.getAttribute('href') || ''
+      );
+
+      const notificationIndex = links.indexOf(item.notificationPath);
+      const anchorIndex = links.indexOf(item.anchorPath);
+
+      expect(notificationIndex).toBeGreaterThanOrEqual(0);
+      expect(anchorIndex).toBeGreaterThan(notificationIndex);
+
+      const unresolved = links.filter((href) => !routeExists(href));
+      expect(unresolved).toEqual([]);
+      unmount();
+    }
   });
 });
