@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const pushMock = vi.fn();
@@ -32,7 +32,13 @@ describe('TeacherNotifyStudentsPage', () => {
       if (url === '/api/teacher/students') {
         return {
           ok: true,
-          json: async () => ({ data: { students: [{ id: 12, name: 'Nguyễn Văn A', email: 'a@student.edu.vn', total_points: 20 }] } }),
+          json: async () => ({
+            data: {
+              students: [
+                { id: 12, name: 'Nguyễn Văn A', email: 'a@student.edu.vn', total_points: 20 },
+              ],
+            },
+          }),
         } as Response;
       }
       if (url === '/api/teacher/notifications/history') {
@@ -50,7 +56,7 @@ describe('TeacherNotifyStudentsPage', () => {
     const Page = (await import('../src/app/teacher/notify-students/page')).default;
     render(<Page />);
 
-    expect(await screen.findByText('Gửi Thông Báo Cho Học Viên')).toBeInTheDocument();
+    expect(await screen.findByText('Gửi thông báo cho học viên')).toBeInTheDocument();
     expect(await screen.findByText('Nguyễn Văn A')).toBeInTheDocument();
   });
 });

@@ -465,6 +465,32 @@ Yeu cau thi hanh:
 - Cap nhat docs/release-backbone-batch-todos.md sau khi xong.
 ```
 
+## 9.3) Batch lon uu tien nong - Teacher QR shell + Notify students shell
+
+### Muc tieu
+
+- Refactor man hinh `teacher/qr` va `teacher/notify-students` theo `page-shell/page-surface/content-card`.
+- Chuan hoa copy tieng Viet co dau, bo text mojibake tren 2 man hinh uu tien nong.
+- Giu nguyen contract API va luong nghiep vu tao QR / gui thong bao / len lich.
+
+### Viec can lam
+
+- [x] Refactor UI `src/app/teacher/qr/page.tsx`:
+  - [x] shell moi + tabs ro rang cho create/history/bulk/analytics.
+  - [x] the hien thong tin session QR, export CSV, bang du lieu quet va thong ke.
+  - [x] sua toan bo message/toast sang tieng Viet co dau.
+- [x] Refactor UI `src/app/teacher/notify-students/page.tsx`:
+  - [x] shell moi + dashboard card + tabs send/scheduled/history.
+  - [x] bo loc hoc vien theo lop + preview noi dung + len lich gui.
+  - [x] bang lich su/len lich contrast tot trong light/dark.
+- [x] Cap nhat regression tests text payload:
+  - [x] `test/teacher-notify-students-page.test.tsx`.
+  - [x] giu `test/teacher-qr-page.test.tsx` xanh voi flow canonical.
+- [x] Chay test/build cum lien quan va xac nhan PASS:
+  - [x] `npm.cmd test -- test/teacher-qr-page.test.tsx test/teacher-notify-students-page.test.tsx`
+  - [x] `npm.cmd test -- test/qr-session-reuse-route.test.ts test/notification-realtime-routes.test.ts test/realtime-notification-bridge.test.tsx`
+  - [x] `npm.cmd run build`
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix

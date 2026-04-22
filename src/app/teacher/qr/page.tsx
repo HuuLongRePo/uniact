@@ -1,13 +1,21 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useSearchParams } from 'next/navigation';
-import { Clock, History, RotateCw, Zap, BarChart3, Download } from 'lucide-react';
+import {
+  BarChart3,
+  Clock,
+  Download,
+  History,
+  QrCode as QrCodeIcon,
+  RotateCw,
+  Zap,
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Button } from '@/components/ui/Button';
 
-const QRCode = dynamic(() => import('react-qr-code'), { ssr: false });
+const QrCodeSvg = dynamic(() => import('react-qr-code'), { ssr: false });
 
 type Activity = {
   id: number;
@@ -38,6 +46,8 @@ interface BulkScanRecord {
   class_name: string;
   scanned_at: string;
 }
+
+type TeacherQrTab = 'create' | 'history' | 'bulk' | 'analytics';
 
 function parseQrSessionOptions(raw: unknown): { single_use?: boolean; max_scans?: number | null } {
   if (!raw) return {};
@@ -76,10 +86,10 @@ export default function TeacherQRPage() {
   const [singleUse, setSingleUse] = useState<boolean>(false);
   const [maxScans, setMaxScans] = useState<number | ''>('');
   const [createdSession, setCreatedSession] = useState<CreatedQrSession | null>(null);
-  const [options, setOptions] = useState<any>(null);
+  const [options, setOptions] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'create' | 'history' | 'bulk' | 'analytics'>('create');
+  const [activeTab, setActiveTab] = useState<TeacherQrTab>('create');
   const [history, setHistory] = useState<QRSession[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(true);
@@ -87,6 +97,8 @@ export default function TeacherQRPage() {
   const [bulkScans, setBulkScans] = useState<BulkScanRecord[]>([]);
   const [bulkLoading, setBulkLoading] = useState(false);
   const [selectedBulkSession, setSelectedBulkSession] = useState<number | null>(null);
+
+  const activeBulkSessionId = selectedBulkSession ?? history[0]?.id ?? null;
 
   useEffect(() => {
     const load = async () => {
@@ -98,26 +110,19 @@ export default function TeacherQRPage() {
         setActivities(list);
 
         const tabParam = searchParams.get('tab');
-        if (
-          tabParam === 'create' ||
-          tabParam === 'history' ||
-          tabParam === 'bulk' ||
-          tabParam === 'analytics'
-        ) {
+        if (tabParam === 'create' || tabParam === 'history' || tabParam === 'bulk' || tabParam === 'analytics') {
           setActiveTab(tabParam);
         }
 
         const requestedIdRaw = searchParams.get('activity_id');
         const requestedId = requestedIdRaw ? Number(requestedIdRaw) : null;
-        if (requestedId && !Number.isNaN(requestedId) && list.some((a) => a.id === requestedId)) {
+        if (requestedId && !Number.isNaN(requestedId) && list.some((activity) => activity.id === requestedId)) {
           setSelectedActivity(requestedId);
         } else if (requestedId && !Number.isNaN(requestedId)) {
           const requestedActivity = await loadActivityOption(requestedId);
           if (requestedActivity) {
             setActivities((prev) =>
-              prev.some((activity) => activity.id === requestedActivity.id)
-                ? prev
-                : [...prev, requestedActivity]
+              prev.some((activity) => activity.id === requestedActivity.id) ? prev : [...prev, requestedActivity]
             );
             setSelectedActivity(requestedActivity.id);
           } else if (list.length > 0) {
@@ -126,14 +131,14 @@ export default function TeacherQRPage() {
         } else if (list.length > 0) {
           setSelectedActivity(list[0].id);
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error(err);
-        const message = err?.message || 'Không thể tải danh sách hoạt động';
+        const message = err instanceof Error ? err.message : 'Không thể tải danh sách hoạt động';
         setError(message);
         toast.error(message);
       }
     };
-    load();
+    void load();
   }, [searchParams]);
 
   useEffect(() => {
@@ -173,22 +178,38 @@ export default function TeacherQRPage() {
       }
     };
 
-    hydrateActiveSession();
+    void hydrateActiveSession();
 
     return () => {
       cancelled = true;
     };
   }, [selectedActivity]);
 
-  // Auto-refresh history when in history tab and auto-refresh is enabled
+  const fetchHistory = async () => {
+    try {
+      if (!autoRefresh) setHistoryLoading(true);
+      const res = await fetch('/api/qr-sessions');
+      if (!res.ok) throw new Error('Không thể tải lịch sử');
+      const json = await res.json();
+      setHistory(json.sessions || json.data?.sessions || []);
+    } catch (err: unknown) {
+      console.error(err);
+      if (!autoRefresh) {
+        const message = err instanceof Error ? err.message : 'Không thể tải lịch sử';
+        setError(message);
+        toast.error(message);
+      }
+    } finally {
+      if (!autoRefresh) setHistoryLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (activeTab === 'history' && autoRefresh) {
-      // Initial fetch
-      fetchHistory();
+      void fetchHistory();
 
-      // Set up interval for periodic refresh (every 3 seconds)
       refreshIntervalRef.current = setInterval(() => {
-        fetchHistory();
+        void fetchHistory();
       }, 3000);
     }
 
@@ -199,58 +220,44 @@ export default function TeacherQRPage() {
     };
   }, [activeTab, autoRefresh]);
 
-  const fetchHistory = async () => {
-    try {
-      // Only set loading if we're not in auto-refresh mode
-      if (!autoRefresh) setHistoryLoading(true);
-      const res = await fetch('/api/qr-sessions');
-      if (!res.ok) throw new Error('Không thể tải lịch sử');
-      const json = await res.json();
-      setHistory(json.sessions || json.data?.sessions || []);
-    } catch (err: any) {
-      console.error(err);
-      if (!autoRefresh) {
-        const message = err?.message || 'Không thể tải lịch sử';
-        setError(message);
-        toast.error(message);
-      }
-    } finally {
-      if (!autoRefresh) setHistoryLoading(false);
-    }
-  };
-
-  const handleManualRefresh = () => {
-    setHistoryLoading(true);
-    fetchHistory();
-  };
-
-  const handleTabChange = (tab: 'create' | 'history' | 'bulk' | 'analytics') => {
-    setActiveTab(tab);
-    if (tab === 'bulk' || tab === 'analytics') {
-      fetchBulkScans();
-    }
-  };
-
   const fetchBulkScans = async () => {
     try {
       setBulkLoading(true);
-      const sessionId = selectedBulkSession || history[0]?.id;
+      const sessionId = activeBulkSessionId;
       if (!sessionId) return;
 
       const res = await fetch(`/api/qr-sessions/${sessionId}/scans`);
       if (!res.ok) throw new Error('Không thể tải dữ liệu quét');
       const json = await res.json();
       setBulkScans(json.scans || json.data?.scans || []);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      toast.error(err?.message || 'Không thể tải dữ liệu quét');
+      toast.error(err instanceof Error ? err.message : 'Không thể tải dữ liệu quét');
     } finally {
       setBulkLoading(false);
     }
   };
 
+  useEffect(() => {
+    if ((activeTab === 'bulk' || activeTab === 'analytics') && activeBulkSessionId) {
+      void fetchBulkScans();
+    }
+  }, [activeTab, activeBulkSessionId]);
+
+  const handleTabChange = (tab: TeacherQrTab) => {
+    setActiveTab(tab);
+    if (tab === 'bulk' || tab === 'analytics') {
+      void fetchBulkScans();
+    }
+  };
+
+  const handleManualRefresh = () => {
+    setHistoryLoading(true);
+    void fetchHistory();
+  };
+
   const handleExportBulkScans = () => {
-    const sessionId = selectedBulkSession || history[0]?.id;
+    const sessionId = activeBulkSessionId;
     if (!sessionId) {
       toast.error('Vui lòng chọn phiên QR để tải CSV');
       return;
@@ -260,13 +267,17 @@ export default function TeacherQRPage() {
     window.location.href = `/api/qr-sessions/${sessionId}/scans/export`;
   };
 
-  const createSession = async (e: any) => {
-    e.preventDefault();
-    if (!selectedActivity) return setError('Vui lòng chọn hoạt động');
+  const createSession = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!selectedActivity) {
+      setError('Vui lòng chọn hoạt động');
+      return;
+    }
+
     setLoading(true);
     setError(null);
     try {
-      const payload: any = {
+      const payload: Record<string, number | boolean> = {
         activity_id: selectedActivity,
         expires_minutes: Number(expiresMinutes),
       };
@@ -278,11 +289,11 @@ export default function TeacherQRPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      const j = await res.json().catch(() => ({}));
+      const json = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error(j?.message || j?.error || 'Không thể tạo phiên QR');
+        throw new Error(json?.message || json?.error || 'Không thể tạo phiên QR');
       }
-      const data = j?.data || j;
+      const data = json?.data || json;
       const nextSessionId = Number(data?.session_id);
       const nextToken = String(data?.session_token || '');
 
@@ -296,213 +307,348 @@ export default function TeacherQRPage() {
         payload: JSON.stringify({ s: nextSessionId, t: nextToken }),
       });
       setOptions(data?.options || null);
-      toast.success(data?.reused ? 'Da tai lai phien QR dang hoat dong' : 'Tao ma QR thanh cong');
-    } catch (err: any) {
+      toast.success(data?.reused ? 'Đã tái sử dụng phiên QR đang hoạt động' : 'Tạo mã QR thành công');
+    } catch (err: unknown) {
       console.error(err);
-      setError(err?.message || 'Lỗi khi tạo phiên');
-      toast.error(err?.message || 'Lỗi khi tạo phiên');
+      const message = err instanceof Error ? err.message : 'Lỗi khi tạo phiên QR';
+      setError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
   };
 
+  const tabs: Array<{ id: TeacherQrTab; label: string; icon: typeof Clock }> = [
+    { id: 'create', label: 'Tạo mã QR', icon: Clock },
+    { id: 'history', label: `Lịch sử (${history.length})`, icon: History },
+    { id: 'bulk', label: 'Quét hàng loạt', icon: Zap },
+    { id: 'analytics', label: 'Phân tích', icon: BarChart3 },
+  ];
+
+  const analyticsClassStats = Array.from(new Set(bulkScans.map((scan) => scan.class_name))).map(
+    (className) => {
+      const classScans = bulkScans.filter((scan) => scan.class_name === className);
+      const ratio = bulkScans.length > 0 ? Math.round((classScans.length / bulkScans.length) * 100) : 0;
+      return { className, total: classScans.length, ratio };
+    }
+  );
+
+  const analyticsByHour = (() => {
+    const hourMap = new Map<string, number>();
+    bulkScans.forEach((scan) => {
+      const hour = new Date(scan.scanned_at).getHours().toString().padStart(2, '0');
+      hourMap.set(hour, (hourMap.get(hour) || 0) + 1);
+    });
+    const entries = Array.from(hourMap.entries()).sort(([left], [right]) => left.localeCompare(right));
+    const maxCount = entries.length > 0 ? Math.max(...entries.map(([, count]) => count)) : 0;
+    return entries.map(([hour, count]) => ({
+      hour,
+      count,
+      ratio: maxCount > 0 ? Math.round((count / maxCount) * 100) : 0,
+    }));
+  })();
+
   return (
-    <div>
-      <main className="max-w-6xl mx-auto p-6">
-        <h1 className="text-3xl font-bold mb-6">Quản lý mã QR điểm danh</h1>
-
-        {/* Tab Navigation */}
-        <div className="border-b flex gap-2 mb-6 overflow-x-auto">
-          <button
-            onClick={() => handleTabChange('create')}
-            className={`py-3 px-6 font-medium flex items-center gap-2 whitespace-nowrap ${
-              activeTab === 'create' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-600'
-            }`}
-          >
-            <Clock size={18} />
-            Tạo mã QR
-          </button>
-          <button
-            onClick={() => handleTabChange('history')}
-            className={`py-3 px-6 font-medium flex items-center gap-2 whitespace-nowrap ${
-              activeTab === 'history' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-600'
-            }`}
-          >
-            <History size={18} />
-            Lịch sử ({history.length})
-          </button>
-          <button
-            onClick={() => handleTabChange('bulk')}
-            className={`py-3 px-6 font-medium flex items-center gap-2 whitespace-nowrap ${
-              activeTab === 'bulk' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-600'
-            }`}
-          >
-            <Zap size={18} />
-            Bulk Scan
-          </button>
-          <button
-            onClick={() => handleTabChange('analytics')}
-            className={`py-3 px-6 font-medium flex items-center gap-2 whitespace-nowrap ${
-              activeTab === 'analytics'
-                ? 'text-blue-600 border-b-2 border-blue-600'
-                : 'text-gray-600'
-            }`}
-          >
-            <BarChart3 size={18} />
-            Phân tích
-          </button>
-        </div>
-
-        {activeTab === 'create' ? (
-          <>
-            <form onSubmit={createSession} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium">Chọn hoạt động</label>
-                <select
-                  value={selectedActivity ?? ''}
-                  onChange={(e) => setSelectedActivity(Number(e.target.value))}
-                  className="mt-1 block w-full border rounded p-2"
-                >
-                  {activities.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.title}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex space-x-4">
-                <div>
-                  <label className="block text-sm">Thời lượng (phút)</label>
-                  <input
-                    type="number"
-                    value={expiresMinutes}
-                    onChange={(e) => setExpiresMinutes(Number(e.target.value))}
-                    className="mt-1 border rounded p-2 w-32"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm">Dùng một lần</label>
-                  <input
-                    type="checkbox"
-                    checked={singleUse}
-                    onChange={(e) => setSingleUse(e.target.checked)}
-                    className="ml-2"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm">Giới hạn số lượt quét</label>
-                  <input
-                    type="number"
-                    value={maxScans as any}
-                    onChange={(e) =>
-                      setMaxScans(e.target.value === '' ? '' : Number(e.target.value))
-                    }
-                    className="mt-1 border rounded p-2 w-32"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <Button
-                  type="submit"
-                  isLoading={loading}
-                  loadingText="Đang tạo..."
-                  variant="primary"
-                >
-                  Tạo mã QR
-                </Button>
-              </div>
-            </form>
-
-            {error && <p className="text-red-600 mt-4">{error}</p>}
-
-            {createdSession && (
-              <div className="mt-6 border rounded p-4 bg-blue-50">
-                <div className="mb-3">
-                  ID phiên:{' '}
-                  <code className="bg-white px-2 py-1 rounded font-mono text-sm">
-                    {createdSession.sessionId}
-                  </code>
-                </div>
-                <div className="mb-3">
-                  Mã phiên:{' '}
-                  <code className="bg-white px-2 py-1 rounded font-mono text-sm">
-                    {createdSession.token}
-                  </code>
-                </div>
-                <div className="mb-3">Tùy chọn: {JSON.stringify(options || {})}</div>
-                <div className="mb-3 break-all text-sm text-gray-700">
-                  Dữ liệu QR:{' '}
-                  <code className="bg-white px-2 py-1 rounded">{createdSession.payload}</code>
-                </div>
-                <div className="bg-white p-4 inline-block">
-                  {/* react-qr-code renders SVG */}
-                  <QRCode value={createdSession.payload} />
-                </div>
-                <div className="mt-2 text-sm text-gray-600">
-                  Chia sẻ mã QR này cho học viên. Mã đã chứa cả session_id và qr_token.
-                </div>
-              </div>
-            )}
-          </>
-        ) : activeTab === 'bulk' ? (
-          <>
-            {/* Bulk Scan Mode */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium mb-2">Chọn phiên QR</label>
-              <select
-                value={selectedBulkSession || ''}
-                onChange={(e) => setSelectedBulkSession(Number(e.target.value) || null)}
-                className="block w-full border rounded p-2"
-              >
-                <option value="">-- Chọn phiên --</option>
-                {history.map((session) => (
-                  <option key={session.id} value={session.id}>
-                    {session.activity_title} -{' '}
-                    {new Date(session.created_at).toLocaleString('vi-VN')} (
-                    {session.attendance_count} quét)
-                  </option>
-                ))}
-              </select>
+    <div className="page-shell">
+      <section className="page-surface overflow-hidden rounded-[1.75rem]">
+        <header className="border-b border-gray-200 px-5 py-5 sm:px-7">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="max-w-3xl">
+              <h1 className="flex items-center gap-2 text-2xl font-bold text-gray-900 sm:text-3xl">
+                <QrCodeIcon className="h-6 w-6 text-blue-600" />
+                Quản lý mã QR điểm danh
+              </h1>
+              <p className="mt-2 text-sm leading-6 text-gray-600 sm:text-base">
+                Tạo phiên QR cho hoạt động đang diễn ra, theo dõi lượt quét và xuất báo cáo theo lớp.
+              </p>
             </div>
+            <div className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-medium text-blue-700">
+              Đang có {activities.length} hoạt động khả dụng
+            </div>
+          </div>
+        </header>
 
-            {(selectedBulkSession || history.length > 0) && (
-              <>
-                <div className="mb-4 flex gap-2">
-                  <button
-                    onClick={() => fetchBulkScans()}
-                    disabled={bulkLoading}
-                    className="flex items-center gap-2 px-3 py-2 border rounded hover:bg-gray-50 disabled:opacity-50"
+        <div className="space-y-6 px-5 py-6 sm:px-7">
+          <div className="flex flex-wrap gap-2 border-b border-gray-200 pb-3">
+            {tabs.map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => handleTabChange(tab.id)}
+                  className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-colors ${
+                    isActive
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  <Icon className="h-4 w-4" />
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {activeTab === 'create' && (
+            <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_24rem]">
+              <form onSubmit={createSession} className="content-card space-y-5 p-5 sm:p-6">
+                <h2 className="text-lg font-semibold text-gray-900">Thiết lập phiên QR</h2>
+
+                <div>
+                  <label htmlFor="qr-activity-select" className="mb-2 block text-sm font-medium text-gray-700">
+                    Chọn hoạt động
+                  </label>
+                  <select
+                    id="qr-activity-select"
+                    value={selectedActivity ?? ''}
+                    onChange={(event) => setSelectedActivity(Number(event.target.value))}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-transparent focus:ring-2 focus:ring-blue-500"
                   >
-                    <RotateCw size={16} className={bulkLoading ? 'animate-spin' : ''} />
+                    {activities.length === 0 && <option value="">Không có hoạt động đang diễn ra</option>}
+                    {activities.map((activity) => (
+                      <option key={activity.id} value={activity.id}>
+                        {activity.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                  <div>
+                    <label htmlFor="qr-expire-minutes" className="mb-2 block text-sm font-medium text-gray-700">
+                      Thời lượng (phút)
+                    </label>
+                    <input
+                      id="qr-expire-minutes"
+                      type="number"
+                      min={1}
+                      value={expiresMinutes}
+                      onChange={(event) => setExpiresMinutes(Number(event.target.value))}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-transparent focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="qr-max-scans" className="mb-2 block text-sm font-medium text-gray-700">
+                      Giới hạn lượt quét
+                    </label>
+                    <input
+                      id="qr-max-scans"
+                      type="number"
+                      min={1}
+                      value={maxScans}
+                      onChange={(event) => setMaxScans(event.target.value === '' ? '' : Number(event.target.value))}
+                      placeholder="Không giới hạn"
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-transparent focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  <div className="flex items-end">
+                    <label className="inline-flex w-full cursor-pointer items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50">
+                      <input
+                        type="checkbox"
+                        checked={singleUse}
+                        onChange={(event) => setSingleUse(event.target.checked)}
+                        className="h-4 w-4 rounded border-gray-300 accent-blue-600"
+                      />
+                      Dùng một lần
+                    </label>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3">
+                  <Button type="submit" isLoading={loading} loadingText="Đang tạo..." variant="primary">
+                    Tạo mã QR
+                  </Button>
+                  {createdSession && (
+                    <span className="text-sm text-gray-600">
+                      Phiên hiện tại: <span className="font-semibold text-gray-900">{createdSession.sessionId}</span>
+                    </span>
+                  )}
+                </div>
+
+                {error && (
+                  <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                    {error}
+                  </div>
+                )}
+              </form>
+
+              <aside className="content-card p-5 sm:p-6">
+                {!createdSession ? (
+                  <div className="flex h-full min-h-[18rem] flex-col items-center justify-center text-center">
+                    <QrCodeIcon className="mb-3 h-10 w-10 text-gray-300" />
+                    <p className="text-sm text-gray-600">Chưa có mã QR. Hãy tạo phiên để hiển thị mã tại đây.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <div className="text-xs uppercase tracking-wide text-gray-500">ID phiên</div>
+                      <code className="block rounded bg-gray-100 px-2 py-1 font-mono text-sm text-gray-800">
+                        {createdSession.sessionId}
+                      </code>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="text-xs uppercase tracking-wide text-gray-500">Mã phiên</div>
+                      <code className="block break-all rounded bg-gray-100 px-2 py-1 font-mono text-sm text-gray-800">
+                        {createdSession.token}
+                      </code>
+                    </div>
+                    <div className="rounded-xl bg-white p-4">
+                      <QrCodeSvg value={createdSession.payload} />
+                    </div>
+                    <div className="text-xs leading-5 text-gray-600">
+                      Dữ liệu QR: <code className="rounded bg-gray-100 px-1 py-0.5">{createdSession.payload}</code>
+                    </div>
+                    <div className="text-xs text-gray-500">Tùy chọn phiên: {JSON.stringify(options || {})}</div>
+                  </div>
+                )}
+              </aside>
+            </div>
+          )}
+
+          {activeTab === 'history' && (
+            <div className="space-y-4">
+              <div className="content-card flex flex-wrap items-center justify-between gap-3 p-4">
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={handleManualRefresh}
+                    disabled={historyLoading}
+                    className="inline-flex items-center gap-2 rounded-xl border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <RotateCw size={16} className={historyLoading ? 'animate-spin' : ''} />
                     Làm mới
                   </button>
-                  <button
-                    onClick={handleExportBulkScans}
-                    className="flex items-center gap-2 px-3 py-2 border rounded hover:bg-gray-50 text-blue-600"
+                  <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-gray-700">
+                    <input
+                      type="checkbox"
+                      checked={autoRefresh}
+                      onChange={(event) => setAutoRefresh(event.target.checked)}
+                      className="h-4 w-4 rounded border-gray-300 accent-blue-600"
+                    />
+                    Tự động cập nhật mỗi 3 giây
+                  </label>
+                </div>
+                <span className="text-sm text-gray-500">Tổng phiên: {history.length}</span>
+              </div>
+
+              {history.length === 0 ? (
+                <div className="content-card p-12 text-center text-gray-500">Chưa có lịch sử QR nào.</div>
+              ) : (
+                <div className="space-y-3">
+                  {history.map((session) => {
+                    const sessionOptions = parseQrSessionOptions(session.metadata);
+                    const isExpired = new Date(session.expires_at) < new Date();
+                    return (
+                      <article key={session.id} className="content-card p-4 transition-colors hover:bg-gray-50/70">
+                        <div className="flex flex-wrap items-start justify-between gap-4">
+                          <div className="min-w-0 flex-1">
+                            <h3 className="truncate text-base font-semibold text-gray-900">{session.activity_title}</h3>
+                            <p className="mt-1 text-xs text-gray-500">
+                              Tạo lúc {new Date(session.created_at).toLocaleString('vi-VN')} • Hết hạn{' '}
+                              {new Date(session.expires_at).toLocaleString('vi-VN')}
+                            </p>
+                            <p className="mt-2 text-sm text-gray-700">
+                              Mã phiên:{' '}
+                              <code className="rounded bg-gray-100 px-2 py-1 font-mono text-xs">
+                                {session.session_token}
+                              </code>
+                            </p>
+                            {(sessionOptions.single_use || sessionOptions.max_scans) && (
+                              <p className="mt-2 text-xs text-blue-700">
+                                {sessionOptions.single_use && 'Dùng một lần'}
+                                {sessionOptions.single_use && sessionOptions.max_scans ? ' • ' : ''}
+                                {sessionOptions.max_scans && `Tối đa ${sessionOptions.max_scans} lượt quét`}
+                              </p>
+                            )}
+                          </div>
+                          <div className="rounded-xl bg-gray-100 px-4 py-3 text-right">
+                            <div className="text-xs uppercase tracking-wide text-gray-500">Lượt quét</div>
+                            <div className="text-2xl font-bold text-blue-600">{session.attendance_count}</div>
+                            <span
+                              className={`mt-2 inline-block rounded-full px-2 py-1 text-xs font-medium ${
+                                isExpired ? 'bg-gray-200 text-gray-700' : 'bg-emerald-100 text-emerald-700'
+                              }`}
+                            >
+                              {isExpired ? 'Đã hết hạn' : 'Còn hiệu lực'}
+                            </span>
+                          </div>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {(activeTab === 'bulk' || activeTab === 'analytics') && (
+            <div className="content-card space-y-4 p-5">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_auto_auto] md:items-end">
+                <div>
+                  <label htmlFor="qr-bulk-session" className="mb-2 block text-sm font-medium text-gray-700">
+                    Chọn phiên QR
+                  </label>
+                  <select
+                    id="qr-bulk-session"
+                    value={selectedBulkSession ?? ''}
+                    onChange={(event) => setSelectedBulkSession(Number(event.target.value) || null)}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-transparent focus:ring-2 focus:ring-blue-500"
                   >
-                    <Download size={16} />
-                    Xuất CSV
-                  </button>
+                    <option value="">-- Chọn phiên --</option>
+                    {history.map((session) => (
+                      <option key={session.id} value={session.id}>
+                        {session.activity_title} - {new Date(session.created_at).toLocaleString('vi-VN')}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
-                {bulkScans.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => void fetchBulkScans()}
+                  disabled={bulkLoading || !activeBulkSessionId}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <RotateCw size={16} className={bulkLoading ? 'animate-spin' : ''} />
+                  Làm mới dữ liệu
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleExportBulkScans}
+                  disabled={!activeBulkSessionId}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <Download size={16} />
+                  Xuất CSV
+                </button>
+              </div>
+
+              {activeTab === 'bulk' ? (
+                bulkScans.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-gray-300 p-10 text-center text-sm text-gray-500">
+                    Chưa có lượt quét trong phiên đã chọn.
+                  </div>
+                ) : (
                   <div className="overflow-x-auto">
-                    <table className="w-full border-collapse text-sm">
-                      <thead>
-                        <tr className="bg-gray-100 border-b">
-                          <th className="border px-4 py-2 text-left">Học viên</th>
-                          <th className="border px-4 py-2 text-left">Lớp</th>
-                          <th className="border px-4 py-2 text-left">Thời gian quét</th>
+                    <table className="w-full min-w-[680px]">
+                      <thead className="border-b border-gray-200 bg-gray-50">
+                        <tr>
+                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Học viên</th>
+                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Lớp</th>
+                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Thời gian quét</th>
                         </tr>
                       </thead>
-                      <tbody>
-                        {bulkScans.map((scan, idx) => (
-                          <tr key={idx} className="border-b hover:bg-gray-50">
-                            <td className="border px-4 py-2">{scan.student_name}</td>
-                            <td className="border px-4 py-2">{scan.class_name}</td>
-                            <td className="border px-4 py-2">
+                      <tbody className="divide-y divide-gray-200">
+                        {bulkScans.map((scan, index) => (
+                          <tr key={`${scan.student_id}-${scan.scanned_at}-${index}`} className="hover:bg-gray-50">
+                            <td className="px-4 py-3 text-sm font-medium text-gray-900">{scan.student_name}</td>
+                            <td className="px-4 py-3 text-sm text-gray-700">{scan.class_name}</td>
+                            <td className="px-4 py-3 text-sm text-gray-600">
                               {new Date(scan.scanned_at).toLocaleString('vi-VN')}
                             </td>
                           </tr>
@@ -510,201 +656,85 @@ export default function TeacherQRPage() {
                       </tbody>
                     </table>
                   </div>
-                ) : (
-                  <p className="text-gray-500 text-center py-8">Chưa có lượt quét nào</p>
-                )}
-              </>
-            )}
-          </>
-        ) : activeTab === 'analytics' ? (
-          <>
-            {/* Analytics View */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium mb-2">Chọn phiên QR</label>
-              <select
-                value={selectedBulkSession || ''}
-                onChange={(e) => setSelectedBulkSession(Number(e.target.value) || null)}
-                className="block w-full border rounded p-2"
-              >
-                <option value="">-- Chọn phiên --</option>
-                {history.map((session) => (
-                  <option key={session.id} value={session.id}>
-                    {session.activity_title} -{' '}
-                    {new Date(session.created_at).toLocaleString('vi-VN')}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {(selectedBulkSession || history.length > 0) && bulkScans.length > 0 && (
-              <>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                  <div className="border rounded p-4 bg-blue-50">
-                    <div className="text-sm text-gray-600 font-medium">Tổng lượt quét</div>
-                    <div className="text-3xl font-bold text-blue-600 mt-2">{bulkScans.length}</div>
-                  </div>
-                  <div className="border rounded p-4 bg-green-50">
-                    <div className="text-sm text-gray-600 font-medium">Học viên quết</div>
-                    <div className="text-3xl font-bold text-green-600 mt-2">
-                      {new Set(bulkScans.map((s) => s.student_id)).size}
+                )
+              ) : bulkScans.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-gray-300 p-10 text-center text-sm text-gray-500">
+                  Chưa có dữ liệu để phân tích.
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                    <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
+                      <div className="text-sm text-blue-900">Tổng lượt quét</div>
+                      <div className="mt-2 text-3xl font-bold text-blue-700">{bulkScans.length}</div>
                     </div>
-                  </div>
-                  <div className="border rounded p-4 bg-purple-50">
-                    <div className="text-sm text-gray-600 font-medium">Lớp tham gia</div>
-                    <div className="text-3xl font-bold text-purple-600 mt-2">
-                      {new Set(bulkScans.map((s) => s.class_name)).size}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Class Summary */}
-                <div className="mb-6">
-                  <h3 className="text-lg font-semibold mb-4">Thống kê theo lớp</h3>
-                  <div className="space-y-3">
-                    {Array.from(new Set(bulkScans.map((s) => s.class_name))).map((cls) => {
-                      const classScans = bulkScans.filter((s) => s.class_name === cls);
-                      const percentage = Math.round((classScans.length / bulkScans.length) * 100);
-                      return (
-                        <div key={cls}>
-                          <div className="flex justify-between items-center mb-1">
-                            <span className="font-medium">{cls}</span>
-                            <span className="text-sm text-gray-600">
-                              {classScans.length} ({percentage}%)
-                            </span>
-                          </div>
-                          <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div
-                              className="bg-blue-600 h-2 rounded-full transition-all"
-                              style={{ width: `${percentage}%` }}
-                            ></div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Time Distribution */}
-                <div className="mb-6">
-                  <h3 className="text-lg font-semibold mb-4">Phân bố theo thời gian</h3>
-                  <div className="overflow-x-auto">
-                    <table className="w-full border-collapse text-sm">
-                      <thead>
-                        <tr className="bg-gray-100 border-b">
-                          <th className="border px-4 py-2 text-left">Giờ</th>
-                          <th className="border px-4 py-2 text-left">Số lượt quét</th>
-                          <th className="border px-4 py-2 text-left">Biểu đồ</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {(() => {
-                          const hourMap = new Map<string, number>();
-                          bulkScans.forEach((scan) => {
-                            const hour = new Date(scan.scanned_at)
-                              .getHours()
-                              .toString()
-                              .padStart(2, '0');
-                            hourMap.set(hour, (hourMap.get(hour) || 0) + 1);
-                          });
-                          const maxCount = Math.max(...Array.from(hourMap.values()));
-                          return Array.from(hourMap.entries()).map(([hour, count]) => (
-                            <tr key={hour} className="border-b hover:bg-gray-50">
-                              <td className="border px-4 py-2">{hour}:00</td>
-                              <td className="border px-4 py-2">{count}</td>
-                              <td className="border px-4 py-2">
-                                <div className="w-32 bg-gray-200 rounded h-2">
-                                  <div
-                                    className="bg-green-600 h-2 rounded transition-all"
-                                    style={{ width: `${(count / maxCount) * 100}%` }}
-                                  ></div>
-                                </div>
-                              </td>
-                            </tr>
-                          ));
-                        })()}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </>
-            )}
-          </>
-        ) : (
-          <>
-            <div className="mb-4 flex items-center gap-3">
-              <button
-                onClick={handleManualRefresh}
-                disabled={historyLoading}
-                className="flex items-center gap-2 px-3 py-2 border rounded hover:bg-gray-50 disabled:opacity-50"
-              >
-                <RotateCw size={16} className={historyLoading ? 'animate-spin' : ''} />
-                Làm mới
-              </button>
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={autoRefresh}
-                  onChange={(e) => setAutoRefresh(e.target.checked)}
-                  className="rounded"
-                />
-                Tự động cập nhật (mỗi 3 giây)
-              </label>
-            </div>
-
-            {history.length > 0 ? (
-              <div className="space-y-3">
-                {history.map((session) => {
-                  const options = parseQrSessionOptions(session.metadata);
-                  const isExpired = new Date(session.expires_at) < new Date();
-                  return (
-                    <div key={session.id} className="border rounded p-4 hover:bg-gray-50">
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <h3 className="font-medium text-lg">{session.activity_title}</h3>
-                          <p className="text-sm text-gray-600 mt-1">
-                            Mã:{' '}
-                            <code className="bg-gray-100 px-2 py-1 rounded">
-                              {session.session_token.substring(0, 8)}...
-                            </code>
-                          </p>
-                          <p className="text-xs text-gray-500 mt-1">
-                            Tạo: {new Date(session.created_at).toLocaleString('vi-VN')} | Hết hạn:{' '}
-                            {new Date(session.expires_at).toLocaleString('vi-VN')}
-                          </p>
-                          {(options.single_use || options.max_scans) && (
-                            <p className="text-xs text-blue-600 mt-1">
-                              {options.single_use && '• Dùng một lần'}{' '}
-                              {options.max_scans && `• Giới hạn ${options.max_scans} lượt`}
-                            </p>
-                          )}
-                        </div>
-                        <div className="text-right ml-4">
-                          <div className="text-sm text-gray-600">Quét</div>
-                          <div className="text-2xl font-bold text-blue-600">
-                            {session.attendance_count}
-                          </div>
-                          {isExpired && (
-                            <span className="inline-block mt-2 px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">
-                              Đã hết hạn
-                            </span>
-                          )}
-                          {!isExpired && (
-                            <span className="inline-block mt-2 px-2 py-1 bg-green-100 text-green-700 text-xs rounded">
-                              Còn hiệu lực
-                            </span>
-                          )}
-                        </div>
+                    <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                      <div className="text-sm text-emerald-900">Học viên đã quét</div>
+                      <div className="mt-2 text-3xl font-bold text-emerald-700">
+                        {new Set(bulkScans.map((scan) => scan.student_id)).size}
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <p className="text-gray-500 text-center py-8">Chưa có lịch sử QR nào</p>
-            )}
-          </>
-        )}
-      </main>
+                    <div className="rounded-xl border border-violet-200 bg-violet-50 p-4">
+                      <div className="text-sm text-violet-900">Lớp tham gia</div>
+                      <div className="mt-2 text-3xl font-bold text-violet-700">
+                        {new Set(bulkScans.map((scan) => scan.class_name)).size}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+                    <section className="rounded-xl border border-gray-200 p-4">
+                      <h3 className="text-base font-semibold text-gray-900">Phân bổ theo lớp</h3>
+                      <div className="mt-4 space-y-3">
+                        {analyticsClassStats.map((row) => (
+                          <div key={row.className} className="space-y-1">
+                            <div className="flex items-center justify-between text-sm text-gray-700">
+                              <span className="font-medium">{row.className}</span>
+                              <span>
+                                {row.total} lượt ({row.ratio}%)
+                              </span>
+                            </div>
+                            <div className="h-2 rounded-full bg-gray-200">
+                              <div
+                                className="h-2 rounded-full bg-blue-600 transition-all"
+                                style={{ width: `${row.ratio}%` }}
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+
+                    <section className="rounded-xl border border-gray-200 p-4">
+                      <h3 className="text-base font-semibold text-gray-900">Phân bổ theo giờ</h3>
+                      {analyticsByHour.length === 0 ? (
+                        <p className="mt-3 text-sm text-gray-500">Chưa có dữ liệu theo giờ.</p>
+                      ) : (
+                        <div className="mt-4 space-y-3">
+                          {analyticsByHour.map((row) => (
+                            <div key={row.hour} className="space-y-1">
+                              <div className="flex items-center justify-between text-sm text-gray-700">
+                                <span>{row.hour}:00</span>
+                                <span>{row.count} lượt</span>
+                              </div>
+                              <div className="h-2 rounded-full bg-gray-200">
+                                <div
+                                  className="h-2 rounded-full bg-emerald-600 transition-all"
+                                  style={{ width: `${row.ratio}%` }}
+                                />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </section>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </section>
     </div>
   );
 }
