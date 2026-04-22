@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Button } from '@/components/ui/Button';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
@@ -34,7 +34,10 @@ export default function AdminAwardsPage() {
   const [confirmAction, setConfirmAction] = useState<'approve' | 'reject' | null>(null);
   const [confirmId, setConfirmId] = useState<number | null>(null);
 
-  const fetchSuggestions = async () => {
+  const getErrorMessage = (err: unknown, fallback: string) =>
+    err instanceof Error && err.message ? err.message : fallback;
+
+  const fetchSuggestions = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -43,17 +46,17 @@ export default function AdminAwardsPage() {
       if (!res.ok) throw new Error('Không thể tải danh sách');
       const json = await res.json();
       setSuggestions(json.suggestions || []);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      setError(err?.message || 'Lỗi');
+      setError(getErrorMessage(err, 'Lỗi'));
     } finally {
       setLoading(false);
     }
-  };
+  }, [statusFilter]);
 
   useEffect(() => {
     fetchSuggestions();
-  }, [statusFilter]);
+  }, [fetchSuggestions]);
 
   const generateSuggestions = async () => {
     setGenerating(true);
@@ -67,9 +70,9 @@ export default function AdminAwardsPage() {
       const json = await res.json();
       toast.success(`Đã tạo ${json.count} đề xuất mới`);
       await fetchSuggestions();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      setError(err?.message || 'Lỗi khi tạo đề xuất');
+      setError(getErrorMessage(err, 'Lỗi khi tạo đề xuất'));
     } finally {
       setGenerating(false);
     }
@@ -89,9 +92,9 @@ export default function AdminAwardsPage() {
       if (!res.ok) throw new Error('Không thể thực hiện');
       setNote({ ...note, [id]: '' });
       await fetchSuggestions();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      setError(err?.message || 'Lỗi khi thực hiện hành động');
+      setError(getErrorMessage(err, 'Lỗi khi thực hiện hành động'));
     }
   };
 

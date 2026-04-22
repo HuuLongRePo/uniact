@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import LoadingSpinner from '@/components/LoadingSpinner';
@@ -33,15 +33,7 @@ export default function AdminLeaderboardPage() {
     activities_count: true,
   });
 
-  useEffect(() => {
-    if (!authLoading && (!user || user.role !== 'admin')) {
-      router.push('/login');
-      return;
-    }
-    if (user) fetchLeaderboard();
-  }, [user, authLoading, limit, router]);
-
-  const fetchLeaderboard = async () => {
+  const fetchLeaderboard = useCallback(async () => {
     try {
       setLoading(true);
       const res = await fetch(`/api/admin/leaderboard?limit=${limit}`);
@@ -50,7 +42,17 @@ export default function AdminLeaderboardPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [limit]);
+
+  useEffect(() => {
+    if (!authLoading && (!user || user.role !== 'admin')) {
+      router.push('/login');
+      return;
+    }
+    if (user) {
+      void fetchLeaderboard();
+    }
+  }, [authLoading, fetchLeaderboard, router, user]);
 
   const exportToCSV = () => {
     if (leaderboard.length === 0) {

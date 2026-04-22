@@ -2,18 +2,9 @@
 
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import {
-  ArrowLeft,
-  CheckCircle,
-  XCircle,
-  Eye,
-  Filter,
-  Loader,
-  AlertCircle,
-  Download,
-} from 'lucide-react';
+import { ArrowLeft, CheckCircle, XCircle, Eye, Loader, AlertCircle, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface BonusProposal {
@@ -47,7 +38,7 @@ export default function AdminBonusApprovePage() {
   );
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'created' | 'points' | 'student'>('created');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [sortOrder] = useState<'asc' | 'desc'>('desc');
 
   const [selectedProposal, setSelectedProposal] = useState<BonusProposal | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
@@ -63,10 +54,6 @@ export default function AdminBonusApprovePage() {
       fetchProposals();
     }
   }, [currentUser, loading, router]);
-
-  useEffect(() => {
-    applyFiltersAndSort();
-  }, [proposals, filterStatus, searchQuery, sortBy, sortOrder]);
 
   const fetchProposals = async () => {
     try {
@@ -86,7 +73,7 @@ export default function AdminBonusApprovePage() {
     }
   };
 
-  const applyFiltersAndSort = () => {
+  const applyFiltersAndSort = useCallback(() => {
     let filtered = [...proposals];
 
     // Filter by status
@@ -119,7 +106,11 @@ export default function AdminBonusApprovePage() {
     });
 
     setFilteredProposals(filtered);
-  };
+  }, [filterStatus, proposals, searchQuery, sortBy, sortOrder]);
+
+  useEffect(() => {
+    applyFiltersAndSort();
+  }, [applyFiltersAndSort]);
 
   const handleApprove = async (proposal: BonusProposal) => {
     setIsProcessing(proposal.id);
@@ -303,7 +294,9 @@ export default function AdminBonusApprovePage() {
               <label className="block text-sm font-semibold text-gray-700 mb-2">Trạng thái</label>
               <select
                 value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value as any)}
+                onChange={(e) =>
+                  setFilterStatus(e.target.value as 'all' | 'pending' | 'approved' | 'rejected')
+                }
                 className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
               >
                 <option value="all">Tất cả</option>
@@ -330,7 +323,7 @@ export default function AdminBonusApprovePage() {
               <label className="block text-sm font-semibold text-gray-700 mb-2">Sắp xếp</label>
               <select
                 value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as any)}
+                onChange={(e) => setSortBy(e.target.value as 'created' | 'points' | 'student')}
                 className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
               >
                 <option value="created">Mới nhất</option>

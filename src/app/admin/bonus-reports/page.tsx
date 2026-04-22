@@ -2,7 +2,7 @@
 
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
   ArrowLeft,
@@ -60,13 +60,7 @@ export default function BonusReportsPage() {
     }
   }, [loading, currentUser, router]);
 
-  useEffect(() => {
-    if (currentUser?.role === 'admin') {
-      fetchReport();
-    }
-  }, [currentUser, semester, academicYear]);
-
-  const fetchReport = async () => {
+  const fetchReport = useCallback(async () => {
     setIsLoading(true);
     try {
       const [reportRes, statsRes] = await Promise.all([
@@ -89,7 +83,13 @@ export default function BonusReportsPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [academicYear, semester]);
+
+  useEffect(() => {
+    if (currentUser?.role === 'admin') {
+      void fetchReport();
+    }
+  }, [currentUser, fetchReport]);
 
   const handleExport = async (type: 'csv' | 'xlsx' | 'json') => {
     try {

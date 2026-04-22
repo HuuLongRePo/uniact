@@ -1,11 +1,16 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter, useParams } from 'next/navigation';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { ArrowLeft, Save, Plus, Minus } from 'lucide-react';
 import toast from 'react-hot-toast';
+
+type StudentProfile = {
+  name: string;
+  email: string;
+};
 
 export default function AdjustScorePage() {
   const { user, loading: authLoading } = useAuth();
@@ -14,11 +19,28 @@ export default function AdjustScorePage() {
   const userId = params?.id as string;
 
   const [loading, setLoading] = useState(true);
-  const [student, setStudent] = useState<any>(null);
+  const [student, setStudent] = useState<StudentProfile | null>(null);
   const [adjustmentType, setAdjustmentType] = useState<'bonus' | 'penalty'>('bonus');
   const [points, setPoints] = useState<string>('');
   const [reason, setReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  const getErrorMessage = (error: unknown, fallback: string) =>
+    error instanceof Error && error.message ? error.message : fallback;
+
+  const fetchStudent = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await fetch(`/api/admin/users/${userId}`);
+      if (!res.ok) throw new Error('Không thể tải thông tin học viên');
+      const data = await res.json();
+      setStudent(data);
+    } catch (_error) {
+      toast.error('Không thể tải thông tin sinh viên');
+    } finally {
+      setLoading(false);
+    }
+  }, [userId]);
 
   useEffect(() => {
     if (!authLoading && (!user || user.role !== 'admin')) {
@@ -26,23 +48,9 @@ export default function AdjustScorePage() {
       return;
     }
     if (user && userId) {
-      fetchStudent();
+      void fetchStudent();
     }
-  }, [user, authLoading, userId, router]);
-
-  const fetchStudent = async () => {
-    try {
-      setLoading(true);
-      const res = await fetch(`/api/admin/users/${userId}`);
-      if (!res.ok) throw new Error('Không thể tải thông tin học viên');
-      const data = await res.json();
-      setStudent(data);
-    } catch (error) {
-      toast.error('Không thể tải thông tin sinh viên');
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [authLoading, fetchStudent, router, user, userId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,8 +83,8 @@ export default function AdjustScorePage() {
 
       toast.success('Đã điều chỉnh điểm');
       router.push('/admin/scores');
-    } catch (error: any) {
-      toast.error(error.message || 'Điều chỉnh thất bại');
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, 'Điều chỉnh thất bại'));
     } finally {
       setSubmitting(false);
     }

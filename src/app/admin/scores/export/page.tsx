@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import LoadingSpinner from '@/components/LoadingSpinner';
@@ -22,6 +22,11 @@ interface StudentScore {
   rank: number;
 }
 
+interface ClassOption {
+  id: number;
+  name: string;
+}
+
 export default function ExportScoresPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
@@ -31,20 +36,9 @@ export default function ExportScoresPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [classFilter, setClassFilter] = useState('');
   const [minPoints, setMinPoints] = useState('');
-  const [classes, setClasses] = useState<any[]>([]);
+  const [classes, setClasses] = useState<ClassOption[]>([]);
 
-  useEffect(() => {
-    if (!authLoading && (!user || user.role !== 'admin')) {
-      router.push('/login');
-      return;
-    }
-    if (user) {
-      fetchClasses();
-      fetchScores();
-    }
-  }, [user, authLoading, router]);
-
-  const fetchClasses = async () => {
+  const fetchClasses = useCallback(async () => {
     try {
       const response = await fetch('/api/classes');
       const data = await response.json();
@@ -54,9 +48,9 @@ export default function ExportScoresPage() {
     } catch (error) {
       console.error('Fetch classes error:', error);
     }
-  };
+  }, []);
 
-  const fetchScores = async () => {
+  const fetchScores = useCallback(async () => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
@@ -78,7 +72,18 @@ export default function ExportScoresPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [classFilter, minPoints, searchTerm]);
+
+  useEffect(() => {
+    if (!authLoading && (!user || user.role !== 'admin')) {
+      router.push('/login');
+      return;
+    }
+    if (user) {
+      void fetchClasses();
+      void fetchScores();
+    }
+  }, [authLoading, fetchClasses, fetchScores, router, user]);
 
   const handleExport = async (format: 'csv' | 'excel') => {
     try {

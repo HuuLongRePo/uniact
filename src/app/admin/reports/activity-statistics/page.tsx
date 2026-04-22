@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import {
@@ -67,20 +67,23 @@ export default function ActivityStatisticsPage() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
-  const fetchData = async (nextStartDate = startDate, nextEndDate = endDate) => {
-    try {
-      setLoading(true);
-      const data = await requestActivityStatistics(nextStartDate, nextEndDate);
-      setActivities(data.activities);
-      setStats(data.statistics);
-      setInsights(data.insights);
-    } catch (error) {
-      console.error('Fetch activity statistics error:', error);
-      toast.error(getErrorMessage(error, 'Lỗi khi tải báo cáo thống kê.'));
-    } finally {
-      setLoading(false);
-    }
-  };
+  const fetchData = useCallback(
+    async (nextStartDate = startDate, nextEndDate = endDate) => {
+      try {
+        setLoading(true);
+        const data = await requestActivityStatistics(nextStartDate, nextEndDate);
+        setActivities(data.activities);
+        setStats(data.statistics);
+        setInsights(data.insights);
+      } catch (error) {
+        console.error('Fetch activity statistics error:', error);
+        toast.error(getErrorMessage(error, 'Lỗi khi tải báo cáo thống kê.'));
+      } finally {
+        setLoading(false);
+      }
+    },
+    [endDate, startDate]
+  );
 
   useEffect(() => {
     if (!authLoading && (!user || user.role !== 'admin')) {
@@ -91,7 +94,7 @@ export default function ActivityStatisticsPage() {
     if (user) {
       void fetchData('', '');
     }
-  }, [authLoading, router, user]);
+  }, [authLoading, fetchData, router, user]);
 
   const handleExport = () => {
     const params = new URLSearchParams();

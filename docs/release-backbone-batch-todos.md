@@ -762,6 +762,41 @@ Yeu cau thi hanh:
 - [x] `npm.cmd run build` -> PASS
 - [x] `npm.cmd run release:check:full` -> PASS (4/4 checks)
 
+## 9.13) Batch hardening - Admin awards/bonus/reports/scores lint cleanup
+
+### Muc tieu
+
+- Don warning lint o cum admin awards + bonus + reports + scores de on dinh nhanh gate E.
+- Khong doi nghiep vu/contract; chi harden typing, hook dependencies va error handling.
+
+### Viec can lam
+
+- [x] `admin/awards/page.tsx`:
+  - [x] bo `any` trong `catch`, them helper `getErrorMessage`.
+  - [x] dong bo `fetchSuggestions` voi `useCallback` + deps dung cho `useEffect`.
+- [x] `admin/bonus-approval/page.tsx`:
+  - [x] bo import/state khong su dung (`Filter`, `setSortOrder`).
+  - [x] `applyFiltersAndSort` dung `useCallback` + effect dependency callback.
+  - [x] bo cast `as any` trong filter/sort select.
+- [x] `admin/bonus-reports/page.tsx`:
+  - [x] dong bo `fetchReport` bang `useCallback`, effect phu thuoc callback.
+- [x] `admin/scores/[id]/adjust/page.tsx`:
+  - [x] bo `any` cho `student` state va `catch`.
+  - [x] them helper `getErrorMessage`, dong bo `fetchStudent` callback dependency.
+- [x] `admin/scores/export/page.tsx`:
+  - [x] bo `classes: any[]`, thay bang typed `ClassOption[]`.
+  - [x] dong bo `fetchClasses/fetchScores` bang `useCallback` + effect dependency callback.
+- [x] `admin/leaderboard/page.tsx`:
+  - [x] dong bo `fetchLeaderboard` bang `useCallback` + deps dung.
+- [x] `admin/reports/activity-statistics/page.tsx`:
+  - [x] dong bo `fetchData` bang `useCallback`, effect phu thuoc callback.
+
+### Verification
+
+- [x] `npm.cmd run lint -- --file src/app/admin/awards/page.tsx --file src/app/admin/bonus-approval/page.tsx --file src/app/admin/bonus-reports/page.tsx --file src/app/admin/scores/[id]/adjust/page.tsx --file src/app/admin/scores/export/page.tsx --file src/app/admin/leaderboard/page.tsx --file src/app/admin/reports/activity-statistics/page.tsx` -> PASS (0 warnings)
+- [x] `npm.cmd run release:check:full` -> PASS (4/4 checks, build passed trong pipeline)
+- [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix
@@ -779,6 +814,7 @@ Yeu cau thi hanh:
 - [x] Commit 12: admin users lint/type cleanup (batch 9.11) (`1f8265c`)
 - [x] Commit 13: format admin user pages for release check (`cb33491`)
 - [x] Commit 14: admin classes lint/type cleanup (batch 9.12) (`4c37921`)
+- [ ] Commit 15: admin awards/bonus/reports/scores lint cleanup (batch 9.13)
 
 ---
 
