@@ -28,7 +28,10 @@ type UserDialogFormData = {
   date_of_birth: string;
 };
 
-type UserDialogPayload = Omit<UserDialogFormData, 'student_code' | 'class_id' | 'teaching_class_id'> & {
+type UserDialogPayload = Omit<
+  UserDialogFormData,
+  'student_code' | 'class_id' | 'teaching_class_id'
+> & {
   student_code: string | null;
   class_id: number | null;
   teaching_class_id: number | null;
@@ -121,7 +124,10 @@ export default function UserDialog({
       const res = await fetch(`/api/admin/users/${userId}`);
       if (!res.ok) return;
       const data = await res.json();
-      const resolvedUser = (data?.user ?? data?.data?.user ?? data?.data ?? null) as Partial<User> | null;
+      const resolvedUser = (data?.user ??
+        data?.data?.user ??
+        data?.data ??
+        null) as Partial<User> | null;
       if (!data?.success || !resolvedUser) return;
 
       setFormData((prev) => ({

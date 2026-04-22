@@ -105,7 +105,9 @@ export default function UserDetailPage() {
         const userData = data.data as Partial<UserDetail>;
         setUser({
           ...(userData as UserDetail),
-          recentActivities: Array.isArray(userData.recentActivities) ? userData.recentActivities : [],
+          recentActivities: Array.isArray(userData.recentActivities)
+            ? userData.recentActivities
+            : [],
           awards: Array.isArray(userData.awards) ? userData.awards : [],
         });
       } else {
