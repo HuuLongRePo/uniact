@@ -194,6 +194,7 @@ export async function sendBulkDatabaseNotifications(params: {
 
   let created = 0;
   let failed = 0;
+  const failedUserIds: number[] = [];
   for (const userId of uniqueUserIds) {
     try {
       await sendDatabaseNotification({
@@ -214,6 +215,7 @@ export async function sendBulkDatabaseNotifications(params: {
     } catch (error) {
       console.error(`Failed to send notification to user ${userId}:`, error);
       failed += 1;
+      failedUserIds.push(userId);
       await recordRealtimeMetric({
         metricType: 'delivery_fail',
         userId,
@@ -237,7 +239,7 @@ export async function sendBulkDatabaseNotifications(params: {
     );
   }
 
-  return { created, targetCount: uniqueUserIds.length, failed };
+  return { created, targetCount: uniqueUserIds.length, failed, failedUserIds };
 }
 
 export async function getTeacherManagedStudentIds(teacherId: number): Promise<number[]> {

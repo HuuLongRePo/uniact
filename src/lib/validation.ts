@@ -121,7 +121,7 @@ export const updateParticipationSchema = z.object({
 // QR Session schemas
 export const createQRSessionSchema = z.object({
   activity_id: z.number().int().positive(),
-  expires_minutes: z.number().int().positive().max(60).default(5),
+  expires_minutes: z.number().int().positive().max(60).default(10),
   single_use: z.boolean().default(false),
   max_scans: z.number().int().positive().optional(),
 });

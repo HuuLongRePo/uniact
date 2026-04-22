@@ -4,6 +4,10 @@ import { apiHandler, ApiError, successResponse } from '@/lib/api-response';
 import { requireApiRole } from '@/lib/guards';
 import { sendBulkDatabaseNotifications } from '@/lib/notifications';
 import { normalizeActionButtons } from '@/lib/realtime-notification-model';
+import { rateLimit } from '@/lib/rateLimit';
+
+const PUSH_RATE_LIMIT_MAX = 20;
+const PUSH_RATE_LIMIT_WINDOW_MS = 60 * 1000;
 
 const actionButtonSchema = z
   .object({
@@ -32,6 +36,13 @@ const pushNotificationSchema = z.object({
 });
 
 export const POST = apiHandler(async (request: NextRequest) => {
+  const limiter = rateLimit(request, PUSH_RATE_LIMIT_MAX, PUSH_RATE_LIMIT_WINDOW_MS);
+  if (!limiter.allowed) {
+    throw new ApiError('RATE_LIMITED', 'Ban dang gui thong bao qua nhanh, vui long thu lai sau.', 429, {
+      retry_after_ms: Math.max(0, Number(limiter.resetAt || Date.now()) - Date.now()),
+    });
+  }
+
   const actor = await requireApiRole(request, ['admin', 'teacher']);
 
   let parsedBody: z.infer<typeof pushNotificationSchema>;
@@ -60,7 +71,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
 
   const normalizedActionButtons = normalizeActionButtons(parsedBody.action_buttons);
 
-  const sendResult = await sendBulkDatabaseNotifications({
+  const basePayload = {
     userIds: targetUserIds,
     type: parsedBody.type,
     title: parsedBody.title,
@@ -78,7 +89,31 @@ export const POST = apiHandler(async (request: NextRequest) => {
           source: 'api.notifications.push',
         }
       : { source: 'api.notifications.push' },
-  });
+  };
+
+  const firstAttempt = await sendBulkDatabaseNotifications(basePayload);
+  const retryTargets = Array.isArray(firstAttempt.failedUserIds) ? firstAttempt.failedUserIds : [];
+  const retryAttempt =
+    retryTargets.length > 0
+      ? await sendBulkDatabaseNotifications({
+          ...basePayload,
+          userIds: retryTargets,
+          metadata: {
+            ...(parsedBody.metadata || {}),
+            source: 'api.notifications.push',
+            retry_attempt: 1,
+            retry_for_event_type: parsedBody.event_type,
+          },
+        })
+      : null;
+
+  const sendResult = {
+    created: firstAttempt.created + (retryAttempt?.created || 0),
+    targetCount: firstAttempt.targetCount,
+    failed: retryAttempt ? retryAttempt.failed : firstAttempt.failed,
+    retry_once: retryTargets.length,
+    retry_recovered: retryAttempt?.created || 0,
+  };
 
   return successResponse(
     {

@@ -67,6 +67,69 @@ describe('qr session reuse routes', () => {
     expect(createQRSession).not.toHaveBeenCalled();
   });
 
+  it('POST /api/qr-sessions uses 10-minute default TTL when expires_minutes is omitted', async () => {
+    vi.useFakeTimers();
+    const baseTime = new Date('2026-04-22T09:00:00.000Z');
+    vi.setSystemTime(baseTime);
+    try {
+      const createQRSession = vi.fn(async () => ({ lastID: 777 }));
+      const dbGet = vi.fn(async (query: string) => {
+        if (query.includes('FROM activities')) {
+          return {
+            id: 42,
+            teacher_id: 12,
+            title: 'Sinh hoat toan khoa',
+            status: 'published',
+            approval_status: 'approved',
+          };
+        }
+
+        if (query.includes('FROM qr_sessions')) {
+          return undefined;
+        }
+
+        return undefined;
+      });
+
+      vi.doMock('@/lib/guards', () => ({
+        requireApiRole: async () => ({ id: 12, role: 'teacher' }),
+      }));
+
+      vi.doMock('@/lib/activity-access', () => ({
+        teacherCanAccessActivity: async () => true,
+      }));
+
+      vi.doMock('@/lib/rateLimit', () => ({
+        rateLimit: () => ({ allowed: true }),
+      }));
+
+      vi.doMock('@/lib/notifications', () => ({
+        sendBulkDatabaseNotifications: vi.fn(async () => ({ created: 0, targetCount: 0, failed: 0 })),
+      }));
+
+      vi.doMock('@/lib/database', () => ({
+        dbGet,
+        dbAll: vi.fn(async () => []),
+        dbHelpers: {
+          createQRSession,
+        },
+      }));
+
+      const route = await import('../src/app/api/qr-sessions/route');
+      const response = await route.POST({
+        json: async () => ({ activity_id: 42 }),
+      } as any);
+
+      expect(response.status).toBe(201);
+      expect(createQRSession).toHaveBeenCalledTimes(1);
+      const expiresAtIso = createQRSession.mock.calls[0][3];
+      const expiresAtMs = new Date(expiresAtIso).getTime();
+      expect(expiresAtMs).toBe(baseTime.getTime() + 10 * 60 * 1000);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('GET /api/qr-sessions/active returns active session payload for selected activity', async () => {
     const dbGet = vi.fn(async (query: string) => {
       if (query.includes('FROM activities')) {

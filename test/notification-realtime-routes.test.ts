@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   requireApiRole: vi.fn(),
   requireApiAuth: vi.fn(),
   sendBulkDatabaseNotifications: vi.fn(),
+  rateLimit: vi.fn(),
   ensureRealtimeNotificationTables: vi.fn(),
   listRealtimeEventsForUser: vi.fn(),
   recordRealtimeMetric: vi.fn(),
@@ -17,6 +18,10 @@ vi.mock('@/lib/guards', () => ({
 
 vi.mock('@/lib/notifications', () => ({
   sendBulkDatabaseNotifications: mocks.sendBulkDatabaseNotifications,
+}));
+
+vi.mock('@/lib/rateLimit', () => ({
+  rateLimit: mocks.rateLimit,
 }));
 
 vi.mock('@/lib/realtime-notifications', () => ({
@@ -61,7 +66,9 @@ describe('notification realtime routes', () => {
       created: 2,
       targetCount: 2,
       failed: 0,
+      failedUserIds: [],
     });
+    mocks.rateLimit.mockReturnValue({ allowed: true, resetAt: Date.now() + 1000 });
     mocks.ensureRealtimeNotificationTables.mockResolvedValue(undefined);
     mocks.listRealtimeEventsForUser.mockResolvedValue([]);
     mocks.recordRealtimeMetric.mockResolvedValue(undefined);
@@ -110,6 +117,65 @@ describe('notification realtime routes', () => {
     } as any);
 
     expect(response.status).toBe(400);
+  });
+
+  it('POST /api/notifications/push retries failed recipients once', async () => {
+    mocks.sendBulkDatabaseNotifications
+      .mockResolvedValueOnce({
+        created: 1,
+        targetCount: 2,
+        failed: 1,
+        failedUserIds: [12],
+      })
+      .mockResolvedValueOnce({
+        created: 1,
+        targetCount: 1,
+        failed: 0,
+        failedUserIds: [],
+      });
+
+    const route = await import('../src/app/api/notifications/push/route');
+    const response = await route.POST({
+      json: async () => ({
+        event_type: 'attendance_started',
+        target_user_ids: [11, 12],
+        type: 'system',
+        title: 'Bat dau diem danh',
+        message: 'Moi ban vao phien diem danh',
+      }),
+    } as any);
+
+    expect(response.status).toBe(200);
+    expect(mocks.sendBulkDatabaseNotifications).toHaveBeenCalledTimes(2);
+    expect(mocks.sendBulkDatabaseNotifications).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        userIds: [12],
+        metadata: expect.objectContaining({ retry_attempt: 1 }),
+      })
+    );
+
+    const body = await response.json();
+    expect(body.data.delivery.retry_once).toBe(1);
+    expect(body.data.delivery.retry_recovered).toBe(1);
+    expect(body.data.delivery.failed).toBe(0);
+  });
+
+  it('POST /api/notifications/push returns 429 when rate-limited', async () => {
+    mocks.rateLimit.mockReturnValueOnce({ allowed: false, resetAt: Date.now() + 5000 });
+    const route = await import('../src/app/api/notifications/push/route');
+
+    const response = await route.POST({
+      json: async () => ({
+        event_type: 'attendance_started',
+        target_user_ids: [11],
+        type: 'system',
+        title: 'Bat dau diem danh',
+        message: 'Moi ban vao phien diem danh',
+      }),
+    } as any);
+
+    expect(response.status).toBe(429);
+    expect(mocks.requireApiRole).not.toHaveBeenCalled();
   });
 
   it.each(['student', 'teacher', 'admin'] as const)(

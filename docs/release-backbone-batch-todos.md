@@ -160,8 +160,10 @@ Yeu cau:
 
 ### Decision Gates (neu can)
 
-- [ ] Can chot 1 trong 2: SSE-only hay Socket hybrid.
-- [ ] Can chot chinh sach retry/backoff va rate-limit push.
+- [x] Can chot 1 trong 2: SSE-only hay Socket hybrid.
+  - [x] Chot SSE-only cho release backbone hien tai (khong mo socket hybrid trong batch nay).
+- [x] Can chot chinh sach retry/backoff va rate-limit push.
+  - [x] Chot policy: rate-limit push theo IP + retry nhe 1 lan cho nhom fail, sau do tra ket qua fail cuoi.
 
 ---
 
@@ -199,7 +201,8 @@ Yeu cau:
 ### Decision Gates (neu can)
 
 - [ ] Quyen gui lien lop cua giang vien: tam mo hay gioi han theo config.
-- [ ] Uu tien mandatory khi trung rule voi voluntary.
+- [x] Uu tien mandatory khi trung rule voi voluntary.
+  - [x] Chot theo D11: `mandatory > voluntary` (class scope + direct student scope).
 
 ### Prompt bo sung (copy de chay batch nay)
 
@@ -251,8 +254,10 @@ Yeu cau:
 
 ### Decision Gates (neu can)
 
-- [ ] Session reuse policy: 1 session/activity hay nhieu session theo khung gio.
-- [ ] TTL default cho QR theo nghiep vu.
+- [x] Session reuse policy: 1 session/activity hay nhieu session theo khung gio.
+  - [x] Chot theo D65: 1 session QR active / activity, neu con hieu luc thi reuse.
+- [x] TTL default cho QR theo nghiep vu.
+  - [x] Chot mac dinh 10 phut cho tao session QR moi (co the override 1-60 phut).
 
 ---
 
@@ -292,7 +297,8 @@ Yeu cau:
 
 - [x] FaceID co API/frame on dinh (co the pilot truoc model production).
   - [x] Regression batch 5: `10 files / 41 tests` pass (2026-04-21)
-- [ ] Notification trigger matrix duoc duyet lam chuan.
+- [x] Notification trigger matrix duoc duyet lam chuan.
+  - [x] Dung matrix v1 lam baseline van hanh release backbone.
 - [x] Test runtime fallback (runtime_unavailable, low_quality, multi_faces) pass.
   - [x] `test/face-attendance-route.test.ts`
   - [x] `test/teacher-face-attendance-page.test.tsx`
@@ -542,6 +548,34 @@ Yeu cau thi hanh:
   - [x] `npm.cmd test -- test/sidebar-teacher-links.test.tsx test/teacher-attendance-page.test.tsx test/teacher-participation-page.test.tsx`
   - [x] `npm.cmd run build`
 
+## 9.6) Batch lon uu tien nong - Decision policy hardening (Notification + QR defaults)
+
+### Muc tieu
+
+- Dong cac decision gate con mo cua luong thong bao/QR theo huong khuyen nghi da chot.
+- Chuyen policy thanh behavior thuc thi de release backbone on dinh hon.
+
+### Viec can lam
+
+- [x] Push notification:
+  - [x] them rate-limit route `POST /api/notifications/push` (20 req/phut/IP).
+  - [x] them retry nhe 1 lan cho danh sach user fail o lan gui dau.
+  - [x] bo sung metadata ket qua `retry_once`, `retry_recovered`, `failed`.
+- [x] Notification delivery helper:
+  - [x] `sendBulkDatabaseNotifications` tra ve `failedUserIds` de route co the retry muc tieu.
+- [x] QR policy:
+  - [x] dong bo TTL mac dinh tao QR session = 10 phut tai API + validation schema + teacher QR UI.
+  - [x] giu reuse policy 1 session active/activity.
+- [x] Regression tests:
+  - [x] bo sung test retry/rate-limit cho `notifications/push`.
+  - [x] bo sung test default TTL 10 phut cho `qr-sessions`.
+
+### Verification
+
+- [x] `npm.cmd test -- test/notification-realtime-routes.test.ts test/realtime-notification-bridge.test.tsx test/qr-session-reuse-route.test.ts test/teacher-qr-page.test.tsx` -> PASS (4 files / 19 tests)
+- [x] `npm.cmd run build` -> PASS
+- [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix
@@ -579,5 +613,5 @@ Prompt nay da gom thu tu xu ly blocker + workflow batch + format bao cao.
 
 - [x] Xac nhan env local trong Codex IDE (`.env`, migrate, seed:qa, build/start) o muc build/test backbone cho batch blocker (2026-04-21).
 - [ ] Chot branch lam viec cho batch hien tai.
-- [ ] Chay test cum lien quan truoc va sau khi sua.
-- [ ] Cap nhat lai checklist batch + risk/defer ngay trong file nay.
+- [x] Chay test cum lien quan truoc va sau khi sua.
+- [x] Cap nhat lai checklist batch + risk/defer ngay trong file nay.

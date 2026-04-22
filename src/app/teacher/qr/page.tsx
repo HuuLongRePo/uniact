@@ -82,7 +82,7 @@ export default function TeacherQRPage() {
   const searchParams = useSearchParams();
   const [activities, setActivities] = useState<Activity[]>([]);
   const [selectedActivity, setSelectedActivity] = useState<number | null>(null);
-  const [expiresMinutes, setExpiresMinutes] = useState<number>(5);
+  const [expiresMinutes, setExpiresMinutes] = useState<number>(10);
   const [singleUse, setSingleUse] = useState<boolean>(false);
   const [maxScans, setMaxScans] = useState<number | ''>('');
   const [createdSession, setCreatedSession] = useState<CreatedQrSession | null>(null);

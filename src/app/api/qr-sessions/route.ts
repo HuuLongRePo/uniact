@@ -10,7 +10,7 @@ import { sendBulkDatabaseNotifications } from '@/lib/notifications';
 
 const MIN_EXPIRES_MINUTES = 1;
 const MAX_EXPIRES_MINUTES = 60;
-const DEFAULT_EXPIRES_MINUTES = 5;
+const DEFAULT_EXPIRES_MINUTES = 10;
 const MAX_ALLOWED_SCANS = 5000;
 
 type SessionOptions = {
