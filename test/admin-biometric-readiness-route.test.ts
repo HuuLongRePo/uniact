@@ -39,6 +39,13 @@ describe('GET /api/admin/biometrics/readiness', () => {
       training_route_ready: true,
       enrollment_flow_ready: true,
       embedding_storage_ready: true,
+      face_matching_engine: 'cosine_distance_local_v1',
+      face_liveness_engine: 'candidate_preview_signal_v1',
+      face_distance_threshold: 0.18,
+      embedding_encryption_scheme: 'aes-256-gcm-pbkdf2',
+      embedding_retention_days: 365,
+      retention_cleanup_enabled: true,
+      production_policy_ready: true,
       total_students: 1200,
       recommended_next_batch: 'face_runtime_enablement',
     });

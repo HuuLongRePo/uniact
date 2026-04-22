@@ -4,6 +4,7 @@ import { ensureStudentBiometricSchema } from '@/infrastructure/db/student-biomet
 import { decryptEmbedding } from './encryption';
 import { cosineDistance } from './face-runtime';
 import { getFaceRuntimeCapability } from './runtime-capability';
+import { getBiometricProductionPolicy } from './production-policy';
 
 export type FaceAttendanceVerificationInput = {
   confidenceScore: number;
@@ -22,12 +23,12 @@ export type FaceAttendanceVerificationResult = {
   runtimeMode: string;
 };
 
-const FACE_EMBEDDING_DISTANCE_THRESHOLD = 0.18;
-
 export async function verifyFaceAttendanceRuntime(
   input: FaceAttendanceVerificationInput
 ): Promise<FaceAttendanceVerificationResult> {
   const capability = getFaceRuntimeCapability();
+  const biometricPolicy = getBiometricProductionPolicy();
+  const distanceThreshold = biometricPolicy.face_distance_threshold;
 
   await ensureStudentBiometricSchema();
 
@@ -96,14 +97,15 @@ export async function verifyFaceAttendanceRuntime(
     );
     const distance = cosineDistance(Array.from(storedEmbedding), input.candidateEmbedding);
 
-    if (!Number.isFinite(distance) || distance > FACE_EMBEDDING_DISTANCE_THRESHOLD) {
+    if (!Number.isFinite(distance) || distance > distanceThreshold) {
       throw new ApiError(
         'FACE_EMBEDDING_MISMATCH',
         'Biometric template không khớp để tự động xác nhận face attendance',
         409,
         {
           distance,
-          distance_threshold: FACE_EMBEDDING_DISTANCE_THRESHOLD,
+          distance_threshold: distanceThreshold,
+          matching_engine: biometricPolicy.face_matching_engine,
           recommended_fallback: 'manual',
         }
       );

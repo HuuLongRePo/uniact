@@ -306,8 +306,10 @@ Yeu cau:
 
 ### Decision Gates (neu can)
 
-- [ ] Thu vien matching/liveness chinh thuc cho production.
-- [ ] Chinh sach luu tru embedding + ma hoa + retention.
+- [x] Thu vien matching/liveness chinh thuc cho production.
+  - [x] Chot baseline release: `cosine_distance_local_v1` + `candidate_preview_signal_v1` (offline-first, khong them cloud dependency trong backbone release).
+- [x] Chinh sach luu tru embedding + ma hoa + retention.
+  - [x] Chot policy: luu duy nhat embedding da ma hoa (`aes-256-gcm-pbkdf2`), retention mac dinh 365 ngay, co cron cleanup purge embedding het han.
 
 ### Notification trigger matrix (v1)
 
@@ -575,6 +577,38 @@ Yeu cau thi hanh:
 
 - [x] `npm.cmd test -- test/notification-realtime-routes.test.ts test/realtime-notification-bridge.test.tsx test/qr-session-reuse-route.test.ts test/teacher-qr-page.test.tsx` -> PASS (4 files / 19 tests)
 - [x] `npm.cmd test -- test/teacher-notification-routes.test.ts` -> PASS (1 file / 7 tests)
+- [x] `npm.cmd run build` -> PASS
+- [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests)
+
+## 9.7) Batch lon uu tien nong - Face production policy closeout (matching/liveness + retention)
+
+### Muc tieu
+
+- Dong decision gate Face production bang policy ro rang, khong doi nghiep vu backbone.
+- Chuan hoa nguong matching/liveness theo policy tap trung.
+- Them co che retention cleanup cho biometric embedding.
+
+### Viec can lam
+
+- [x] Tao policy module `production-policy` cho Face:
+  - [x] matching engine: `cosine_distance_local_v1`
+  - [x] liveness engine: `candidate_preview_signal_v1`
+  - [x] distance threshold + retention days co the override qua env
+  - [x] encryption scheme: `aes-256-gcm-pbkdf2`
+- [x] Dong bo consume policy:
+  - [x] `attendance-runtime-bridge` dung threshold tu policy (bo hardcode)
+  - [x] `biometric/identify` dung threshold/policy metadata trong response + audit
+  - [x] readiness route expose production policy fields
+- [x] Them cron route cleanup retention:
+  - [x] `GET /api/cron/cleanup-biometric` (auth `CRON_SECRET`)
+  - [x] purge embedding qua han, rollback status `ready/trained` ve `captured/pending`
+- [x] Bo sung/duy tri regression tests:
+  - [x] policy util + cleanup cron route
+  - [x] readiness/runtime/identify/bridge tests
+
+### Verification
+
+- [x] `npm.cmd test -- test/biometric-production-policy.test.ts test/biometric-cleanup-cron-route.test.ts test/admin-biometric-readiness-route.test.ts test/biometric-runtime-capability.test.ts test/attendance-runtime-bridge.test.ts test/biometric-identify-route.test.ts test/admin-system-health-page.test.tsx` -> PASS (7 files / 19 tests)
 - [x] `npm.cmd run build` -> PASS
 - [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests)
 

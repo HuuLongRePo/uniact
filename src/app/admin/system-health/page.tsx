@@ -14,6 +14,13 @@ interface HealthData {
     embedding_detection_ready?: boolean;
     liveness_check_ready?: boolean;
     liveness_status?: string;
+    face_matching_engine?: string;
+    face_liveness_engine?: string;
+    face_distance_threshold?: number;
+    embedding_encryption_scheme?: string;
+    embedding_retention_days?: number;
+    retention_cleanup_enabled?: boolean;
+    production_policy_ready?: boolean;
     enrollment_flow_ready: boolean;
     embedding_storage_ready: boolean;
     training_route_ready: boolean;
@@ -323,6 +330,11 @@ export default function SystemHealthPage() {
                 </div>
               </div>
               <div className="rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                <div className="mb-2 text-xs text-amber-900">
+                  Matching: {data.biometric_readiness.face_matching_engine || 'n/a'} | Liveness:{' '}
+                  {data.biometric_readiness.face_liveness_engine || 'n/a'} | Retention:{' '}
+                  {data.biometric_readiness.embedding_retention_days ?? 'n/a'} ngay
+                </div>
                 <div className="font-medium mb-2">Blockers hiện tại</div>
                 <ul className="list-disc pl-5 space-y-1">
                   {data.biometric_readiness.blockers.map((blocker) => (

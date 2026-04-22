@@ -6,13 +6,12 @@ import { teacherCanAccessActivity } from '@/lib/activity-access';
 import { ensureStudentBiometricSchema } from '@/infrastructure/db/student-biometric-schema';
 import { decryptEmbedding } from '@/lib/biometrics/encryption';
 import { cosineDistance } from '@/lib/biometrics/face-runtime';
+import { getBiometricProductionPolicy } from '@/lib/biometrics/production-policy';
 
 const MIN_CANDIDATE_EMBEDDING_LENGTH = 3;
 const MAX_CANDIDATE_EMBEDDING_LENGTH = 2048;
 const DEFAULT_MAX_CANDIDATES = 5;
 const MAX_MAX_CANDIDATES = 20;
-const FACE_EMBEDDING_DISTANCE_THRESHOLD = 0.18;
-
 function normalizeEmbedding(input: unknown): number[] {
   if (!Array.isArray(input)) {
     throw ApiError.validation('candidate_embedding phai la mang so hop le');
@@ -45,6 +44,8 @@ function similarityPercent(distance: number): number {
 
 export async function POST(request: NextRequest) {
   try {
+    const biometricPolicy = getBiometricProductionPolicy();
+    const distanceThreshold = biometricPolicy.face_distance_threshold;
     const user = await requireApiRole(request, ['admin', 'teacher']);
     const body = await request.json().catch(() => ({}));
     const activityId = Number(body?.activity_id);
@@ -149,7 +150,8 @@ export async function POST(request: NextRequest) {
         matched: false,
         activity_id: activityId,
         activity_title: String(activity.title || ''),
-        threshold: FACE_EMBEDDING_DISTANCE_THRESHOLD,
+        threshold: distanceThreshold,
+        matching_engine: biometricPolicy.face_matching_engine,
         evaluated_count: 0,
         reason: 'no_ready_biometric_profiles',
         candidate: null,
@@ -193,9 +195,7 @@ export async function POST(request: NextRequest) {
     }));
 
     const bestCandidate = topCandidates[0] || null;
-    const matched = Boolean(
-      bestCandidate && Number(bestCandidate.distance) <= FACE_EMBEDDING_DISTANCE_THRESHOLD
-    );
+    const matched = Boolean(bestCandidate && Number(bestCandidate.distance) <= distanceThreshold);
 
     try {
       await dbHelpers.createAuditLog({
@@ -206,7 +206,8 @@ export async function POST(request: NextRequest) {
         details: {
           actor_role: user.role,
           evaluated_count: scoredCandidates.length,
-          threshold: FACE_EMBEDDING_DISTANCE_THRESHOLD,
+          threshold: distanceThreshold,
+          matching_engine: biometricPolicy.face_matching_engine,
           best_student_id: bestCandidate?.student_id ?? null,
           best_distance: bestCandidate?.distance ?? null,
         },
@@ -219,7 +220,8 @@ export async function POST(request: NextRequest) {
       matched,
       activity_id: activityId,
       activity_title: String(activity.title || ''),
-      threshold: FACE_EMBEDDING_DISTANCE_THRESHOLD,
+      threshold: distanceThreshold,
+      matching_engine: biometricPolicy.face_matching_engine,
       evaluated_count: scoredCandidates.length,
       reason: matched
         ? null

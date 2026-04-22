@@ -3,6 +3,7 @@ import {
   FACE_BIOMETRIC_RUNTIME_MODE,
   getFaceModelLoadState,
 } from './face-runtime';
+import { getBiometricProductionPolicy } from './production-policy';
 
 export type FaceRuntimeCapability = {
   runtime_enabled: boolean;
@@ -13,11 +14,15 @@ export type FaceRuntimeCapability = {
   liveness_status: 'runtime_unavailable' | 'insufficient_signal' | 'passed';
   attendance_api_accepting_runtime_verification: boolean;
   mode: 'stubbed' | 'config_enabled_stubbed' | 'runtime_ready';
+  selected_matching_engine: string;
+  selected_liveness_engine: string;
+  selected_distance_threshold: number;
   blockers: string[];
 };
 
 export function getFaceRuntimeCapability(): FaceRuntimeCapability {
   const modelLoadState = getFaceModelLoadState();
+  const policy = getBiometricProductionPolicy();
 
   if (!FACE_BIOMETRIC_RUNTIME_ENABLED) {
     return {
@@ -29,6 +34,9 @@ export function getFaceRuntimeCapability(): FaceRuntimeCapability {
       liveness_status: 'runtime_unavailable',
       attendance_api_accepting_runtime_verification: false,
       mode: 'stubbed',
+      selected_matching_engine: policy.face_matching_engine,
+      selected_liveness_engine: policy.face_liveness_engine,
+      selected_distance_threshold: policy.face_distance_threshold,
       blockers: [
         'Face biometric runtime đang bị tắt',
         'Model loading chưa được bật',
@@ -48,6 +56,9 @@ export function getFaceRuntimeCapability(): FaceRuntimeCapability {
       liveness_status: 'runtime_unavailable',
       attendance_api_accepting_runtime_verification: false,
       mode: 'config_enabled_stubbed',
+      selected_matching_engine: policy.face_matching_engine,
+      selected_liveness_engine: policy.face_liveness_engine,
+      selected_distance_threshold: policy.face_distance_threshold,
       blockers: [
         'Runtime đã được bật bằng config nhưng inference path vẫn đang stubbed',
         'Model loading chưa được nối vào runtime thật',
@@ -68,6 +79,9 @@ export function getFaceRuntimeCapability(): FaceRuntimeCapability {
     liveness_status: modelLoadingReady ? 'insufficient_signal' : 'runtime_unavailable',
     attendance_api_accepting_runtime_verification: false,
     mode: 'runtime_ready',
+    selected_matching_engine: policy.face_matching_engine,
+    selected_liveness_engine: policy.face_liveness_engine,
+    selected_distance_threshold: policy.face_distance_threshold,
     blockers: modelLoadingReady
       ? [
           'Embedding detection chưa sẵn sàng cho production',

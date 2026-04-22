@@ -3,6 +3,7 @@ import { requireApiRole } from '@/lib/guards';
 import { successResponse, ApiError, errorResponse } from '@/lib/api-response';
 import { dbGet } from '@/lib/database';
 import { getFaceRuntimeCapability } from '@/lib/biometrics/runtime-capability';
+import { getBiometricProductionPolicy } from '@/lib/biometrics/production-policy';
 
 export async function GET(request: NextRequest) {
   try {
@@ -13,6 +14,7 @@ export async function GET(request: NextRequest) {
     );
 
     const runtimeCapability = getFaceRuntimeCapability();
+    const productionPolicy = getBiometricProductionPolicy();
 
     const readiness = {
       runtime_enabled: runtimeCapability.runtime_enabled,
@@ -26,6 +28,13 @@ export async function GET(request: NextRequest) {
         runtimeCapability.attendance_api_accepting_runtime_verification,
       enrollment_flow_ready: true,
       embedding_storage_ready: true,
+      face_matching_engine: productionPolicy.face_matching_engine,
+      face_liveness_engine: productionPolicy.face_liveness_engine,
+      face_distance_threshold: productionPolicy.face_distance_threshold,
+      embedding_encryption_scheme: productionPolicy.embedding_encryption_scheme,
+      embedding_retention_days: productionPolicy.embedding_retention_days,
+      retention_cleanup_enabled: productionPolicy.retention_cleanup_enabled,
+      production_policy_ready: true,
       training_route_ready: true,
       face_attendance_route_ready: true,
       total_students: Number(totalStudentsRow?.count ?? 0),
