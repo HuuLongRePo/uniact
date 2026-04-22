@@ -2,8 +2,6 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
-import LoadingSpinner from '@/components/LoadingSpinner';
 import { toast } from 'react-hot-toast';
 import {
   AlertTriangle,
@@ -15,6 +13,8 @@ import {
   History,
   Search,
 } from 'lucide-react';
+import LoadingSpinner from '@/components/LoadingSpinner';
+import { useAuth } from '@/contexts/AuthContext';
 
 type ReadDevice = 'web' | 'mobile' | 'email' | 'sms' | 'unknown';
 
@@ -56,11 +56,11 @@ interface NotificationHistorySummary {
 
 function getClasses(payload: unknown): Array<{ id: number; name: string }> {
   if (!payload || typeof payload !== 'object') return [];
-  const record = payload as {
+  const data = payload as {
     data?: { classes?: Array<{ id: number; name: string }> };
     classes?: Array<{ id: number; name: string }>;
   };
-  return record.data?.classes ?? record.classes ?? [];
+  return data.data?.classes ?? data.classes ?? [];
 }
 
 function getHistoryPayload(payload: unknown): {
@@ -82,7 +82,7 @@ function getHistoryPayload(payload: unknown): {
     };
   }
 
-  const record = payload as {
+  const data = payload as {
     data?: {
       records?: NotificationRecord[];
       notifications?: NotificationSummaryItem[];
@@ -94,10 +94,11 @@ function getHistoryPayload(payload: unknown): {
   };
 
   return {
-    records: record.data?.records ?? record.records ?? [],
-    notifications: record.data?.notifications ?? record.notifications ?? [],
-    summary: record.data?.summary ??
-      record.summary ?? {
+    records: data.data?.records ?? data.records ?? [],
+    notifications: data.data?.notifications ?? data.notifications ?? [],
+    summary:
+      data.data?.summary ??
+      data.summary ?? {
         total_notifications: 0,
         total_recipients: 0,
         total_read: 0,
@@ -125,7 +126,7 @@ export default function NotificationHistoryPage() {
 
   const [filters, setFilters] = useState({
     readStatus: '',
-    classId: '',
+    className: '',
     dateStart: '',
     dateEnd: '',
   });
@@ -141,7 +142,7 @@ export default function NotificationHistoryPage() {
     }
 
     if (user?.role !== 'teacher' && user?.role !== 'admin') {
-      toast.error('Chỉ giảng viên mới có quyền xem lịch sử thông báo');
+      toast.error('Chỉ giảng viên hoặc quản trị viên mới được xem lịch sử thông báo');
       router.push('/dashboard');
       return;
     }
@@ -154,20 +155,19 @@ export default function NotificationHistoryPage() {
   const fetchData = async () => {
     try {
       setLoading(true);
-
       const [classesRes, historyRes] = await Promise.all([
         fetch('/api/classes'),
         fetch('/api/teacher/notifications/history'),
       ]);
 
       if (classesRes.ok) {
-        const classesData = await classesRes.json();
-        setClasses(getClasses(classesData));
+        const classPayload = await classesRes.json();
+        setClasses(getClasses(classPayload));
       }
 
       if (historyRes.ok) {
-        const historyData = await historyRes.json();
-        const normalized = getHistoryPayload(historyData);
+        const historyPayload = await historyRes.json();
+        const normalized = getHistoryPayload(historyPayload);
         setRecords(normalized.records);
         setFilteredRecords(normalized.records);
         setBroadcasts(normalized.notifications);
@@ -182,38 +182,36 @@ export default function NotificationHistoryPage() {
   };
 
   useEffect(() => {
-    let filtered = [...records];
+    let next = [...records];
 
     if (filters.readStatus === 'read') {
-      filtered = filtered.filter((record) => record.is_read);
+      next = next.filter((record) => record.is_read);
     } else if (filters.readStatus === 'unread') {
-      filtered = filtered.filter((record) => !record.is_read);
+      next = next.filter((record) => !record.is_read);
     }
 
-    if (filters.classId) {
-      filtered = filtered.filter((record) => record.class_name === filters.classId);
+    if (filters.className) {
+      next = next.filter((record) => record.class_name === filters.className);
     }
 
     if (filters.dateStart) {
-      filtered = filtered.filter(
-        (record) => new Date(record.sent_at) >= new Date(filters.dateStart)
-      );
+      next = next.filter((record) => new Date(record.sent_at) >= new Date(filters.dateStart));
     }
 
     if (filters.dateEnd) {
-      filtered = filtered.filter((record) => new Date(record.sent_at) <= new Date(filters.dateEnd));
+      next = next.filter((record) => new Date(record.sent_at) <= new Date(filters.dateEnd));
     }
 
-    if (searchTerm) {
-      const normalizedSearch = searchTerm.toLowerCase();
-      filtered = filtered.filter(
+    if (searchTerm.trim()) {
+      const q = searchTerm.trim().toLowerCase();
+      next = next.filter(
         (record) =>
-          record.student_name.toLowerCase().includes(normalizedSearch) ||
-          record.notification_title.toLowerCase().includes(normalizedSearch)
+          record.student_name.toLowerCase().includes(q) ||
+          record.notification_title.toLowerCase().includes(q)
       );
     }
 
-    filtered.sort((left, right) => {
+    next.sort((left, right) => {
       let leftValue: string | number = '';
       let rightValue: string | number = '';
 
@@ -231,22 +229,27 @@ export default function NotificationHistoryPage() {
       if (sortOrder === 'asc') {
         return leftValue > rightValue ? 1 : leftValue < rightValue ? -1 : 0;
       }
-
       return leftValue < rightValue ? 1 : leftValue > rightValue ? -1 : 0;
     });
 
-    setFilteredRecords(filtered);
-  }, [filters, records, searchTerm, sortBy, sortOrder]);
+    setFilteredRecords(next);
+  }, [records, filters, searchTerm, sortBy, sortOrder]);
 
   const handleExport = async () => {
     try {
       const response = await fetch('/api/teacher/notifications/history/export', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ filters }),
+        body: JSON.stringify({
+          filters: {
+            readStatus: filters.readStatus,
+            className: filters.className,
+            dateStart: filters.dateStart,
+            dateEnd: filters.dateEnd,
+          },
+        }),
       });
-
-      if (!response.ok) throw new Error('Export failed');
+      if (!response.ok) throw new Error('Không thể xuất tệp');
 
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
@@ -254,26 +257,31 @@ export default function NotificationHistoryPage() {
       anchor.href = url;
       anchor.download = `notification-history-${Date.now()}.csv`;
       anchor.click();
-      toast.success('Đã xuất lịch sử thông báo');
+      toast.success('Đã xuất CSV lịch sử thông báo');
     } catch (error) {
       console.error('Error exporting history:', error);
-      toast.error('Không thể xuất lịch sử');
+      toast.error('Không thể xuất lịch sử thông báo');
     }
   };
 
   const readRate = useMemo(() => {
-    return summary.total_recipients > 0 ? (summary.total_read / summary.total_recipients) * 100 : 0;
+    if (summary.total_recipients === 0) return 0;
+    return (summary.total_read / summary.total_recipients) * 100;
   }, [summary.total_read, summary.total_recipients]);
 
   if (authLoading || loading) {
     return <LoadingSpinner />;
   }
 
+  const sortIndicator = (field: 'sent_at' | 'student' | 'read_at') =>
+    sortBy === field ? (sortOrder === 'asc' ? '↑' : '↓') : '';
+
   return (
     <div className="page-shell">
       <section className="page-surface overflow-hidden rounded-[1.75rem]">
-        <div className="border-b border-gray-200 px-5 py-5 sm:px-7">
+        <header className="border-b border-gray-200 px-5 py-5 sm:px-7">
           <button
+            type="button"
             onClick={() => router.back()}
             className="mb-4 inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-700"
           >
@@ -288,11 +296,11 @@ export default function NotificationHistoryPage() {
                 Lịch sử thông báo
               </h1>
               <p className="mt-2 text-sm leading-6 text-gray-600 sm:text-base">
-                Theo dõi độ phủ gửi, tỷ lệ đọc và những broadcast có nguy cơ đọc thấp để tối ưu nội
-                dung, thời gian gửi và kênh tiếp cận.
+                Theo dõi độ phủ gửi, tỷ lệ đọc và các thông báo có hiệu suất thấp để tối ưu nội dung.
               </p>
             </div>
             <button
+              type="button"
               onClick={handleExport}
               className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
             >
@@ -300,12 +308,12 @@ export default function NotificationHistoryPage() {
               Xuất CSV
             </button>
           </div>
-        </div>
+        </header>
 
         <div className="space-y-6 px-5 py-6 sm:px-7">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
             <div className="content-card p-4">
-              <div className="mb-1 text-sm text-gray-600">Broadcast đã gửi</div>
+              <div className="mb-1 text-sm text-gray-600">Thông báo đã gửi</div>
               <div className="text-3xl font-bold text-blue-600">{summary.total_notifications}</div>
             </div>
             <div className="content-card p-4">
@@ -314,7 +322,7 @@ export default function NotificationHistoryPage() {
             </div>
             <div className="content-card p-4">
               <div className="mb-1 text-sm text-gray-600">Đã đọc</div>
-              <div className="text-3xl font-bold text-green-600">{summary.total_read}</div>
+              <div className="text-3xl font-bold text-emerald-600">{summary.total_read}</div>
             </div>
             <div className="content-card p-4" data-testid="notification-read-rate-card">
               <div className="mb-1 text-sm text-gray-600">Tỷ lệ đọc</div>
@@ -322,57 +330,43 @@ export default function NotificationHistoryPage() {
             </div>
           </div>
 
-          <div
-            className="content-card border-orange-200 bg-orange-50 p-6"
-            data-testid="notification-low-read-section"
-          >
+          <div className="content-card border-orange-200 bg-orange-50 p-6" data-testid="notification-low-read-section">
             <div className="mb-4 flex items-start gap-3">
               <AlertTriangle className="mt-0.5 h-5 w-5 text-orange-600" />
               <div>
-                <h2 className="text-lg font-semibold text-orange-900">
-                  Broadcast có tỷ lệ đọc thấp
-                </h2>
+                <h2 className="text-lg font-semibold text-orange-900">Thông báo có tỷ lệ đọc thấp</h2>
                 <p className="text-sm text-orange-800">
-                  Những thông báo có read-rate thấp nhất để bạn cân nhắc gửi lại, đổi tiêu đề hoặc
-                  điều chỉnh thời điểm gửi.
+                  Cân nhắc điều chỉnh tiêu đề, nội dung hoặc thời điểm gửi cho nhóm dưới đây.
                 </p>
               </div>
             </div>
 
             {summary.low_read_notifications.length === 0 ? (
               <div className="rounded-lg bg-white/80 p-4 text-sm text-orange-900">
-                Chưa có broadcast nào đủ dữ liệu để đánh giá read-rate.
+                Chưa có đủ dữ liệu để đánh giá tỷ lệ đọc thấp.
               </div>
             ) : (
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
                 {summary.low_read_notifications.map((item) => (
                   <div key={item.id} className="rounded-lg bg-white/80 p-4 shadow-sm">
                     <div className="text-sm font-semibold text-gray-900">{item.title}</div>
-                    <div className="mt-2 text-xs text-gray-500">
-                      {item.target_names || 'Tất cả đối tượng phù hợp'}
-                    </div>
+                    <div className="mt-2 text-xs text-gray-500">{item.target_names || 'Tất cả nhóm phù hợp'}</div>
                     <div className="mt-3 grid grid-cols-3 gap-2 text-sm">
                       <div>
                         <div className="text-xs uppercase tracking-wide text-gray-400">Nhận</div>
-                        <div className="mt-1 font-semibold text-blue-700">
-                          {item.delivered_count}
-                        </div>
+                        <div className="mt-1 font-semibold text-blue-700">{item.delivered_count}</div>
                       </div>
                       <div>
                         <div className="text-xs uppercase tracking-wide text-gray-400">Đã đọc</div>
-                        <div className="mt-1 font-semibold text-green-700">{item.read_count}</div>
+                        <div className="mt-1 font-semibold text-emerald-700">{item.read_count}</div>
                       </div>
                       <div>
-                        <div className="text-xs uppercase tracking-wide text-gray-400">
-                          Chưa đọc
-                        </div>
-                        <div className="mt-1 font-semibold text-orange-800">
-                          {item.unread_count}
-                        </div>
+                        <div className="text-xs uppercase tracking-wide text-gray-400">Chưa đọc</div>
+                        <div className="mt-1 font-semibold text-orange-800">{item.unread_count}</div>
                       </div>
                     </div>
                     <div className="mt-3 text-sm text-orange-900">
-                      Read rate: <span className="font-semibold">{item.read_rate.toFixed(1)}%</span>
+                      Tỷ lệ đọc: <span className="font-semibold">{item.read_rate.toFixed(1)}%</span>
                     </div>
                   </div>
                 ))}
@@ -389,7 +383,7 @@ export default function NotificationHistoryPage() {
                 </label>
                 <input
                   type="text"
-                  placeholder="Tên học viên hoặc thông báo..."
+                  placeholder="Tên học viên hoặc tiêu đề thông báo..."
                   value={searchTerm}
                   onChange={(event) => setSearchTerm(event.target.value)}
                   className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
@@ -401,8 +395,8 @@ export default function NotificationHistoryPage() {
                   Lớp
                 </label>
                 <select
-                  value={filters.classId}
-                  onChange={(event) => setFilters({ ...filters, classId: event.target.value })}
+                  value={filters.className}
+                  onChange={(event) => setFilters((prev) => ({ ...prev, className: event.target.value }))}
                   className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">-- Tất cả lớp --</option>
@@ -414,12 +408,10 @@ export default function NotificationHistoryPage() {
                 </select>
               </div>
               <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700">
-                  Trạng thái đọc
-                </label>
+                <label className="mb-2 block text-sm font-medium text-gray-700">Trạng thái đọc</label>
                 <select
                   value={filters.readStatus}
-                  onChange={(event) => setFilters({ ...filters, readStatus: event.target.value })}
+                  onChange={(event) => setFilters((prev) => ({ ...prev, readStatus: event.target.value }))}
                   className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">-- Tất cả --</option>
@@ -433,7 +425,7 @@ export default function NotificationHistoryPage() {
                   <input
                     type="date"
                     value={filters.dateStart}
-                    onChange={(event) => setFilters({ ...filters, dateStart: event.target.value })}
+                    onChange={(event) => setFilters((prev) => ({ ...prev, dateStart: event.target.value }))}
                     className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -442,7 +434,7 @@ export default function NotificationHistoryPage() {
                   <input
                     type="date"
                     value={filters.dateEnd}
-                    onChange={(event) => setFilters({ ...filters, dateEnd: event.target.value })}
+                    onChange={(event) => setFilters((prev) => ({ ...prev, dateEnd: event.target.value }))}
                     className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -458,58 +450,42 @@ export default function NotificationHistoryPage() {
                     <th
                       onClick={() => {
                         setSortBy('student');
-                        setSortOrder((current) =>
-                          sortBy === 'student' && current === 'asc' ? 'desc' : 'asc'
-                        );
+                        setSortOrder((current) => (sortBy === 'student' && current === 'asc' ? 'desc' : 'asc'));
                       }}
                       className="cursor-pointer px-4 py-3 text-left text-sm font-semibold text-gray-900 hover:bg-gray-100"
                     >
-                      Học viên {sortBy === 'student' && (sortOrder === 'asc' ? '↑' : '↓')}
+                      Học viên {sortIndicator('student')}
                     </th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Lớp</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
-                      Thông báo
-                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Thông báo</th>
                     <th
                       onClick={() => {
                         setSortBy('sent_at');
-                        setSortOrder((current) =>
-                          sortBy === 'sent_at' && current === 'asc' ? 'desc' : 'asc'
-                        );
+                        setSortOrder((current) => (sortBy === 'sent_at' && current === 'asc' ? 'desc' : 'asc'));
                       }}
                       className="cursor-pointer px-4 py-3 text-left text-sm font-semibold text-gray-900 hover:bg-gray-100"
                     >
-                      Gửi lúc {sortBy === 'sent_at' && (sortOrder === 'asc' ? '↑' : '↓')}
+                      Gửi lúc {sortIndicator('sent_at')}
                     </th>
                     <th
                       onClick={() => {
                         setSortBy('read_at');
-                        setSortOrder((current) =>
-                          sortBy === 'read_at' && current === 'asc' ? 'desc' : 'asc'
-                        );
+                        setSortOrder((current) => (sortBy === 'read_at' && current === 'asc' ? 'desc' : 'asc'));
                       }}
                       className="cursor-pointer px-4 py-3 text-left text-sm font-semibold text-gray-900 hover:bg-gray-100"
                     >
-                      Đọc lúc {sortBy === 'read_at' && (sortOrder === 'asc' ? '↑' : '↓')}
+                      Đọc lúc {sortIndicator('read_at')}
                     </th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
-                      Trạng thái
-                    </th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
-                      Thiết bị
-                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Trạng thái</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Thiết bị</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {filteredRecords.map((record) => (
                     <tr key={record.id} className="transition-colors hover:bg-gray-50">
-                      <td className="px-4 py-4 text-sm font-medium text-gray-900">
-                        {record.student_name}
-                      </td>
+                      <td className="px-4 py-4 text-sm font-medium text-gray-900">{record.student_name}</td>
                       <td className="px-4 py-4 text-sm text-gray-600">{record.class_name}</td>
-                      <td className="px-4 py-4 text-sm text-blue-600">
-                        {record.notification_title}
-                      </td>
+                      <td className="px-4 py-4 text-sm text-blue-600">{record.notification_title}</td>
                       <td className="px-4 py-4 text-sm text-gray-600">
                         {new Date(record.sent_at).toLocaleString('vi-VN')}
                       </td>
@@ -518,21 +494,19 @@ export default function NotificationHistoryPage() {
                       </td>
                       <td className="px-4 py-4">
                         {record.is_read ? (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-800">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-800">
                             <CheckCircle2 className="h-3 w-3" />
                             Đã đọc
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-yellow-100 px-3 py-1 text-xs font-medium text-yellow-800">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-800">
                             <Clock className="h-3 w-3" />
                             Chưa đọc
                           </span>
                         )}
                       </td>
                       <td className="px-4 py-4 text-sm text-gray-600">
-                        {record.read_on_device === 'unknown'
-                          ? 'Không theo dõi'
-                          : record.read_on_device}
+                        {record.read_on_device === 'unknown' ? 'Không theo dõi' : record.read_on_device}
                       </td>
                     </tr>
                   ))}
@@ -543,15 +517,13 @@ export default function NotificationHistoryPage() {
             {filteredRecords.length === 0 && (
               <div className="p-12 text-center">
                 <History className="mx-auto mb-4 h-16 w-16 text-gray-400" />
-                <p className="text-lg text-gray-600">Không có lịch sử thông báo nào</p>
+                <p className="text-lg text-gray-600">Không có bản ghi thông báo nào</p>
               </div>
             )}
           </div>
 
           {broadcasts.length > 0 && (
-            <div className="text-right text-sm text-gray-500">
-              Theo dõi {broadcasts.length} broadcast gần nhất.
-            </div>
+            <div className="text-right text-sm text-gray-500">Đang theo dõi {broadcasts.length} chiến dịch gần nhất.</div>
           )}
         </div>
       </section>

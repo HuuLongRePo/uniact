@@ -7,7 +7,7 @@ export default function StudentNotificationsPage() {
   const { user } = useAuth();
 
   if (!user) {
-    return <div className="p-8 text-center">Vui lòng đăng nhập</div>;
+    return <div className="p-8 text-center text-gray-700">Vui lòng đăng nhập</div>;
   }
 
   return <NotificationInbox title="Thông báo" showSettings />;

@@ -37,14 +37,12 @@ describe('NotificationInbox', () => {
     vi.stubGlobal('fetch', fetchMock);
     window.fetch = fetchMock as typeof fetch;
 
-    const NotificationInbox = (await import('../src/components/notifications/NotificationInbox'))
-      .default;
+    const NotificationInbox = (await import('../src/components/notifications/NotificationInbox')).default;
     render(<NotificationInbox title="Thông báo giảng viên" />);
 
     expect(await screen.findByTestId('notifications-heading')).toBeInTheDocument();
     expect(await screen.findByText('Có thông báo mới')).toBeInTheDocument();
     expect(screen.getByText('Trang 1/2')).toBeInTheDocument();
-
     expect(fetchMock).toHaveBeenCalledWith('/api/notifications');
   });
 
@@ -73,8 +71,7 @@ describe('NotificationInbox', () => {
     vi.stubGlobal('fetch', fetchMock);
     window.fetch = fetchMock as typeof fetch;
 
-    const NotificationInbox = (await import('../src/components/notifications/NotificationInbox'))
-      .default;
+    const NotificationInbox = (await import('../src/components/notifications/NotificationInbox')).default;
     render(<NotificationInbox />);
 
     const unreadTab = await screen.findByRole('button', { name: /chưa đọc/i });

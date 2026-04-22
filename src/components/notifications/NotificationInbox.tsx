@@ -5,14 +5,8 @@ import toast from 'react-hot-toast';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useEffectEventCompat } from '@/lib/useEffectEventCompat';
-import {
-  executeNotificationAction,
-  resolveNotificationActionButtons,
-} from '@/lib/notification-actions';
-import {
-  normalizeActionButtons,
-  RealtimeNotificationActionButton,
-} from '@/lib/realtime-notification-model';
+import { executeNotificationAction, resolveNotificationActionButtons } from '@/lib/notification-actions';
+import { normalizeActionButtons, RealtimeNotificationActionButton } from '@/lib/realtime-notification-model';
 
 interface NotificationItem {
   id: number;
@@ -40,10 +34,7 @@ interface NotificationInboxProps {
 
 const PER_PAGE = 20;
 
-export default function NotificationInbox({
-  title = 'Thông báo',
-  showSettings = false,
-}: NotificationInboxProps) {
+export default function NotificationInbox({ title = 'Thông báo', showSettings = false }: NotificationInboxProps) {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -88,7 +79,7 @@ export default function NotificationInbox({
       setNotifications(normalized?.notifications || []);
       setUnreadCount(normalized?.meta?.total_unread || 0);
       setTotal(normalized?.meta?.total || 0);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Fetch notifications error:', error);
       toast.error(error instanceof Error ? error.message : 'Không thể tải thông báo');
     } finally {
@@ -97,9 +88,7 @@ export default function NotificationInbox({
   });
 
   const fetchSettings = useEffectEventCompat(async () => {
-    if (!showSettings) {
-      return;
-    }
+    if (!showSettings) return;
 
     try {
       const response = await fetch('/api/notifications/settings');
@@ -111,26 +100,26 @@ export default function NotificationInbox({
       }
 
       const nextSettings = normalized?.settings;
-      if (nextSettings) {
-        setSettings({
-          email_enabled: !!nextSettings.email_enabled,
-          new_activity_enabled: !!nextSettings.new_activity_enabled,
-          reminder_enabled: !!nextSettings.reminder_enabled,
-          reminder_days: Number(nextSettings.reminder_days || 1),
-        });
-      }
-    } catch (error) {
+      if (!nextSettings) return;
+
+      setSettings({
+        email_enabled: !!nextSettings.email_enabled,
+        new_activity_enabled: !!nextSettings.new_activity_enabled,
+        reminder_enabled: !!nextSettings.reminder_enabled,
+        reminder_days: Number(nextSettings.reminder_days || 1),
+      });
+    } catch (error: unknown) {
       console.error('Fetch settings error:', error);
       toast.error(error instanceof Error ? error.message : 'Không thể tải cài đặt thông báo');
     }
   });
 
   useEffect(() => {
-    fetchNotifications();
+    void fetchNotifications();
   }, [fetchNotifications, filter, page]);
 
   useEffect(() => {
-    fetchSettings();
+    void fetchSettings();
   }, [fetchSettings]);
 
   useEffect(() => {
@@ -144,14 +133,11 @@ export default function NotificationInbox({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id }),
       });
-
       if (!response.ok) {
         throw new Error('Không thể đánh dấu đã đọc');
       }
 
-      setNotifications((prev) =>
-        prev.map((item) => (item.id === id ? { ...item, is_read: 1 } : item))
-      );
+      setNotifications((prev) => prev.map((item) => (item.id === id ? { ...item, is_read: 1 } : item)));
       setUnreadCount((prev) => Math.max(0, prev - 1));
     } catch (error) {
       console.error('Mark notification read error:', error);
@@ -170,9 +156,7 @@ export default function NotificationInbox({
   };
 
   const markSelectedAsRead = async () => {
-    if (selectedIds.size === 0) {
-      return;
-    }
+    if (selectedIds.size === 0) return;
 
     try {
       const response = await fetch('/api/notifications/read', {
@@ -180,18 +164,13 @@ export default function NotificationInbox({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ids: Array.from(selectedIds) }),
       });
-
       if (!response.ok) {
         throw new Error('Không thể đánh dấu đã đọc');
       }
 
       const selected = new Set(selectedIds);
-      const newlyRead = notifications.filter(
-        (item) => selected.has(item.id) && !item.is_read
-      ).length;
-      setNotifications((prev) =>
-        prev.map((item) => (selected.has(item.id) ? { ...item, is_read: 1 } : item))
-      );
+      const newlyRead = notifications.filter((item) => selected.has(item.id) && !item.is_read).length;
+      setNotifications((prev) => prev.map((item) => (selected.has(item.id) ? { ...item, is_read: 1 } : item)));
       setSelectedIds(new Set());
       setUnreadCount((prev) => Math.max(0, prev - newlyRead));
       toast.success('Đã đánh dấu đã đọc cho thông báo đã chọn');
@@ -203,9 +182,7 @@ export default function NotificationInbox({
 
   const markCurrentPageAsRead = async () => {
     const unreadIds = notifications.filter((item) => !item.is_read).map((item) => item.id);
-    if (unreadIds.length === 0) {
-      return;
-    }
+    if (unreadIds.length === 0) return;
 
     try {
       const response = await fetch('/api/notifications/read', {
@@ -213,7 +190,6 @@ export default function NotificationInbox({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ids: unreadIds }),
       });
-
       if (!response.ok) {
         throw new Error('Không thể đánh dấu đã đọc');
       }
@@ -229,9 +205,7 @@ export default function NotificationInbox({
   };
 
   const deleteSelected = async () => {
-    if (selectedIds.size === 0) {
-      return;
-    }
+    if (selectedIds.size === 0) return;
 
     try {
       const response = await fetch('/api/notifications/delete', {
@@ -239,15 +213,12 @@ export default function NotificationInbox({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ids: Array.from(selectedIds) }),
       });
-
       if (!response.ok) {
         throw new Error('Không thể xóa thông báo');
       }
 
       const selected = new Set(selectedIds);
-      const deletedUnread = notifications.filter(
-        (item) => selected.has(item.id) && !item.is_read
-      ).length;
+      const deletedUnread = notifications.filter((item) => selected.has(item.id) && !item.is_read).length;
       setNotifications((prev) => prev.filter((item) => !selected.has(item.id)));
       setSelectedIds(new Set());
       setUnreadCount((prev) => Math.max(0, prev - deletedUnread));
@@ -268,14 +239,12 @@ export default function NotificationInbox({
         body: JSON.stringify(settings),
       });
       const payload = await response.json().catch(() => null);
-
       if (!response.ok) {
         throw new Error(payload?.error || payload?.message || 'Không thể lưu cài đặt thông báo');
       }
-
       toast.success(payload?.message || 'Đã lưu cài đặt thông báo');
       setShowSettingsModal(false);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Save notification settings error:', error);
       toast.error(error instanceof Error ? error.message : 'Không thể lưu cài đặt thông báo');
     }
@@ -313,30 +282,25 @@ export default function NotificationInbox({
     return date.toLocaleDateString('vi-VN');
   };
 
-  const hasAnyUnreadOnPage = useMemo(
-    () => notifications.some((item) => !item.is_read),
-    [notifications]
-  );
+  const hasAnyUnreadOnPage = useMemo(() => notifications.some((item) => !item.is_read), [notifications]);
 
   return (
     <div className="page-shell">
-      <section className="page-surface overflow-hidden rounded-[1.75rem] px-5 py-6 text-gray-900 sm:px-7">
-        <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+      <section className="page-surface overflow-hidden rounded-[1.75rem] px-5 py-6 sm:px-7">
+        <header className="mb-6 flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1
-              data-testid="notifications-heading"
-              className="text-2xl font-bold text-gray-900 sm:text-3xl"
-            >
+            <h1 data-testid="notifications-heading" className="text-2xl font-bold text-gray-900 sm:text-3xl">
               {title}
             </h1>
             {unreadCount > 0 ? (
-              <p className="mt-1 text-gray-600">{unreadCount} thông báo chưa đọc</p>
+              <p className="mt-1 text-sm text-gray-600">{unreadCount} thông báo chưa đọc</p>
             ) : (
-              <p className="mt-1 text-gray-600">Đã đọc hết thông báo</p>
+              <p className="mt-1 text-sm text-gray-600">Bạn đã đọc hết thông báo</p>
             )}
           </div>
           <div className="flex flex-wrap gap-2">
             <button
+              type="button"
               onClick={markCurrentPageAsRead}
               disabled={!hasAnyUnreadOnPage}
               className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
@@ -345,18 +309,20 @@ export default function NotificationInbox({
             </button>
             {showSettings && (
               <button
+                type="button"
                 onClick={() => setShowSettingsModal(true)}
-                className="rounded-xl bg-gray-700 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-800"
+                className="rounded-xl bg-slate-700 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-800"
               >
                 Cài đặt
               </button>
             )}
           </div>
-        </div>
+        </header>
 
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-gray-300 pb-2">
           <div className="flex gap-2">
             <button
+              type="button"
               onClick={() => {
                 setFilter('all');
                 setPage(1);
@@ -370,6 +336,7 @@ export default function NotificationInbox({
               Tất cả
             </button>
             <button
+              type="button"
               onClick={() => {
                 setFilter('unread');
                 setPage(1);
@@ -385,14 +352,16 @@ export default function NotificationInbox({
           </div>
           {selectedIds.size > 0 && (
             <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600">{selectedIds.size} đã chọn</span>
+              <span className="text-sm text-gray-600">{selectedIds.size} mục đã chọn</span>
               <button
+                type="button"
                 onClick={markSelectedAsRead}
                 className="rounded-md bg-blue-100 px-3 py-1 text-sm text-blue-700 hover:bg-blue-200"
               >
                 Đánh dấu đã đọc
               </button>
               <button
+                type="button"
                 onClick={() => setIsDeleteConfirmOpen(true)}
                 className="rounded-md bg-red-100 px-3 py-1 text-sm text-red-700 hover:bg-red-200"
               >
@@ -403,7 +372,7 @@ export default function NotificationInbox({
         </div>
 
         <div className="content-card mb-4 flex items-center justify-between rounded-2xl bg-gray-100 px-3 py-2">
-          <div className="flex items-center gap-2">
+          <label className="flex items-center gap-2">
             <input
               type="checkbox"
               className="h-4 w-4"
@@ -417,7 +386,7 @@ export default function NotificationInbox({
               }}
             />
             <span className="text-sm text-gray-700">Chọn tất cả trong trang</span>
-          </div>
+          </label>
           <div className="text-sm text-gray-600">
             Trang {Math.min(page, totalPages)}/{totalPages}
           </div>
@@ -441,7 +410,7 @@ export default function NotificationInbox({
                   : resolveNotificationActionButtons(notification);
 
               return (
-                <div
+                <article
                   key={notification.id}
                   data-notification-id={notification.id}
                   className={`flex items-start gap-3 rounded-2xl border p-4 ${
@@ -472,9 +441,7 @@ export default function NotificationInbox({
                       <div className="flex-1">
                         <h3 className="font-semibold text-gray-900">{notification.title}</h3>
                         <p className="mt-1 text-gray-700">{notification.message}</p>
-                        <p className="mt-2 text-sm text-gray-500">
-                          {formatDate(notification.created_at)}
-                        </p>
+                        <p className="mt-2 text-sm text-gray-500">{formatDate(notification.created_at)}</p>
                         {actionButtons.length > 0 && (
                           <div className="mt-3 flex flex-wrap gap-2">
                             {actionButtons.map((button) => (
@@ -499,14 +466,15 @@ export default function NotificationInbox({
                     </div>
                     {!notification.is_read && (
                       <button
-                        onClick={() => markAsRead(notification.id)}
+                        type="button"
+                        onClick={() => void markAsRead(notification.id)}
                         className="text-sm font-medium text-blue-600 hover:text-blue-700"
                       >
                         Đánh dấu đã đọc
                       </button>
                     )}
                   </div>
-                </div>
+                </article>
               );
             })}
           </div>
@@ -514,6 +482,7 @@ export default function NotificationInbox({
 
         <div className="content-card mt-6 flex items-center justify-between rounded-2xl bg-white px-4 py-3">
           <button
+            type="button"
             onClick={() => setPage((current) => Math.max(1, current - 1))}
             disabled={page <= 1 || loading}
             className="rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-700 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
@@ -524,6 +493,7 @@ export default function NotificationInbox({
             Hiển thị {(page - 1) * PER_PAGE + 1} - {Math.min(page * PER_PAGE, total)} / {total}
           </span>
           <button
+            type="button"
             onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
             disabled={page >= totalPages || loading}
             className="rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-700 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
@@ -544,9 +514,7 @@ export default function NotificationInbox({
                   type="checkbox"
                   className="h-5 w-5"
                   checked={settings.email_enabled}
-                  onChange={(event) =>
-                    setSettings((prev) => ({ ...prev, email_enabled: event.target.checked }))
-                  }
+                  onChange={(event) => setSettings((prev) => ({ ...prev, email_enabled: event.target.checked }))}
                 />
               </label>
               <label className="flex items-center justify-between text-gray-700">
@@ -561,14 +529,12 @@ export default function NotificationInbox({
                 />
               </label>
               <label className="flex items-center justify-between text-gray-700">
-                <span>Nhắc nhở trước hoạt động</span>
+                <span>Nhắc trước hoạt động</span>
                 <input
                   type="checkbox"
                   className="h-5 w-5"
                   checked={settings.reminder_enabled}
-                  onChange={(event) =>
-                    setSettings((prev) => ({ ...prev, reminder_enabled: event.target.checked }))
-                  }
+                  onChange={(event) => setSettings((prev) => ({ ...prev, reminder_enabled: event.target.checked }))}
                 />
               </label>
               {settings.reminder_enabled && (
@@ -592,12 +558,14 @@ export default function NotificationInbox({
             </div>
             <div className="mt-6 flex gap-3">
               <button
+                type="button"
                 onClick={saveSettings}
                 className="flex-1 rounded-xl bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
               >
                 Lưu
               </button>
               <button
+                type="button"
                 onClick={() => setShowSettingsModal(false)}
                 className="flex-1 rounded-xl bg-gray-300 px-4 py-2 text-gray-800 hover:bg-gray-400"
               >
