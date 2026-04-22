@@ -1,16 +1,45 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { User } from './types';
 import toast from 'react-hot-toast';
 import { ROLE_OPTIONS } from './roles';
+
+type ClassOption = {
+  id: number;
+  name: string;
+  grade?: string | number | null;
+};
+
+type UserDialogFormData = {
+  email: string;
+  username: string;
+  full_name: string;
+  password: string;
+  phone: string;
+  role: string;
+  student_code: string;
+  class_id: string;
+  teaching_class_id: string;
+  teacher_rank: string;
+  academic_title: string;
+  academic_degree: string;
+  gender: string;
+  date_of_birth: string;
+};
+
+type UserDialogPayload = Omit<UserDialogFormData, 'student_code' | 'class_id' | 'teaching_class_id'> & {
+  student_code: string | null;
+  class_id: number | null;
+  teaching_class_id: number | null;
+};
 
 interface UserDialogProps {
   isOpen: boolean;
   user: User | null;
   initialRole?: string;
   onClose: () => void;
-  onSave: (userData: any) => Promise<void>;
+  onSave: (userData: UserDialogPayload) => Promise<void>;
   loading: boolean;
 }
 
@@ -22,7 +51,7 @@ export default function UserDialog({
   onSave,
   loading,
 }: UserDialogProps) {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<UserDialogFormData>({
     email: '',
     username: '',
     full_name: '',
@@ -38,8 +67,7 @@ export default function UserDialog({
     gender: '',
     date_of_birth: '',
   });
-  const [classes, setClasses] = useState<any[]>([]);
-  const [resetPassword, setResetPassword] = useState(false);
+  const [classes, setClasses] = useState<ClassOption[]>([]);
 
   useEffect(() => {
     if (isOpen) {
@@ -79,7 +107,6 @@ export default function UserDialog({
           date_of_birth: '',
         });
       }
-      setResetPassword(false);
       fetchClasses();
 
       // For edit: fetch full user details to ensure teacher fields and teaching class are populated.
@@ -94,25 +121,25 @@ export default function UserDialog({
       const res = await fetch(`/api/admin/users/${userId}`);
       if (!res.ok) return;
       const data = await res.json();
-      const resolvedUser = data?.user || data?.data?.user || data?.data || null;
+      const resolvedUser = (data?.user ?? data?.data?.user ?? data?.data ?? null) as Partial<User> | null;
       if (!data?.success || !resolvedUser) return;
 
-      const u = resolvedUser as any;
       setFormData((prev) => ({
         ...prev,
-        email: u.email ?? prev.email,
-        username: u.username ?? prev.username,
-        full_name: u.full_name ?? prev.full_name,
-        role: u.role || prev.role,
-        phone: u.phone ?? prev.phone,
-        gender: u.gender ?? prev.gender,
-        date_of_birth: u.date_of_birth ?? prev.date_of_birth,
-        student_code: u.student_code ?? prev.student_code,
-        class_id: u.class_id?.toString?.() || '',
-        teaching_class_id: u.teaching_class_id?.toString?.() || '',
-        teacher_rank: u.teacher_rank || '',
-        academic_title: u.academic_title || '',
-        academic_degree: u.academic_degree || '',
+        email: resolvedUser.email ?? prev.email,
+        username: resolvedUser.username ?? prev.username,
+        full_name: resolvedUser.full_name ?? prev.full_name,
+        role: resolvedUser.role ?? prev.role,
+        phone: resolvedUser.phone ?? prev.phone,
+        gender: resolvedUser.gender ?? prev.gender,
+        date_of_birth: resolvedUser.date_of_birth ?? prev.date_of_birth,
+        student_code: resolvedUser.student_code ?? prev.student_code,
+        class_id: resolvedUser.class_id != null ? String(resolvedUser.class_id) : '',
+        teaching_class_id:
+          resolvedUser.teaching_class_id != null ? String(resolvedUser.teaching_class_id) : '',
+        teacher_rank: resolvedUser.teacher_rank ?? '',
+        academic_title: resolvedUser.academic_title ?? '',
+        academic_degree: resolvedUser.academic_degree ?? '',
       }));
     } catch (error) {
       console.error('Error fetching user details:', error);
@@ -124,7 +151,10 @@ export default function UserDialog({
       const params = new URLSearchParams({ page: '1', limit: '1000' });
       const res = await fetch(`/api/admin/classes?${params}`);
       const data = await res.json().catch(() => ({}));
-      if (data?.success) setClasses(data.classes || data.data?.classes || data.data || []);
+      const classData = data?.classes ?? data?.data?.classes ?? data?.data;
+      if (data?.success && Array.isArray(classData)) {
+        setClasses(classData as ClassOption[]);
+      }
     } catch (error) {
       console.error('Error fetching classes:', error);
     }
@@ -144,11 +174,10 @@ export default function UserDialog({
         toast.success(`Mật khẩu mới: ${newPassword}`, { duration: 10000 });
         navigator.clipboard.writeText(newPassword);
         toast.success('Đã copy mật khẩu vào clipboard', { duration: 3000 });
-        setResetPassword(false);
       } else {
         toast.error(data.error || 'Không thể reset mật khẩu');
       }
-    } catch (error) {
+    } catch (_error) {
       toast.error('Lỗi khi reset mật khẩu');
     }
   };
@@ -157,7 +186,7 @@ export default function UserDialog({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const normalizeIntOrNull = (value: any) => {
+    const normalizeIntOrNull = (value: string | number | null | undefined) => {
       if (value === '' || value === null || value === undefined) return null;
       const n = parseInt(String(value), 10);
       return Number.isFinite(n) ? n : null;

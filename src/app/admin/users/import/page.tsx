@@ -27,6 +27,13 @@ interface ImportResult {
   message: string;
 }
 
+type ParsedImportUser = {
+  email: string;
+  name: string;
+  role: string;
+  password: string;
+};
+
 export default function UserImportPage() {
   const router = useRouter();
   const [csvText, setCsvText] = useState('');
@@ -63,7 +70,7 @@ admin@example.com,Nguyen Van C,admin,admin123`;
       return [];
     }
 
-    const users: any[] = [];
+    const users: ParsedImportUser[] = [];
     const headers = lines[0]
       .toLowerCase()
       .split(',')
@@ -71,7 +78,7 @@ admin@example.com,Nguyen Van C,admin,admin123`;
 
     for (let i = 1; i < lines.length; i++) {
       const values = lines[i].split(',').map((v) => v.trim());
-      const user: any = {};
+      const user: Partial<ParsedImportUser> = {};
 
       headers.forEach((header, idx) => {
         const value = values[idx]?.trim();
@@ -87,7 +94,12 @@ admin@example.com,Nguyen Van C,admin,admin123`;
         continue;
       }
 
-      users.push(user);
+      users.push({
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        password: user.password,
+      });
     }
 
     return users;

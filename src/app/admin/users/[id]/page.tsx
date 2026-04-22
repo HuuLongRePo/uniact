@@ -2,7 +2,7 @@
 
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter, useParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
   ArrowLeft,
@@ -53,17 +53,34 @@ interface UserDetail {
     total_points: number;
     completed_activities: number;
   };
-  recentActivities: any[];
-  awards: any[];
+  recentActivities: UserRecentActivity[];
+  awards: UserAward[];
 }
 
 type PendingUserAction = 'reset-password' | 'toggle-status' | 'delete-user';
 
+type UserRecentActivity = {
+  id: number;
+  title: string;
+  date_time: string;
+  achievement_level?: string | null;
+  points: number;
+};
+
+type UserAward = {
+  id: number;
+  title: string;
+  description?: string | null;
+  award_type?: string | null;
+  awarded_at: string;
+  points_awarded: number;
+};
+
 export default function UserDetailPage() {
   const { user: currentUser, loading } = useAuth();
   const router = useRouter();
-  const params = useParams();
-  const userId = params.id as string;
+  const params = useParams<{ id: string }>();
+  const userId = params.id;
   const [user, setUser] = useState<UserDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [pendingAction, setPendingAction] = useState<PendingUserAction | null>(null);
@@ -75,26 +92,32 @@ export default function UserDetailPage() {
     }
 
     if (currentUser) {
-      fetchUserData();
+      void fetchUserData();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser, loading, router]);
 
-  const fetchUserData = async () => {
+  const fetchUserData = useCallback(async () => {
     try {
       const res = await fetch(`/api/admin/users/${userId}`);
       if (res.ok) {
         const data = await res.json();
-        setUser(data.data);
+        const userData = data.data as Partial<UserDetail>;
+        setUser({
+          ...(userData as UserDetail),
+          recentActivities: Array.isArray(userData.recentActivities) ? userData.recentActivities : [],
+          awards: Array.isArray(userData.awards) ? userData.awards : [],
+        });
       } else {
         throw new Error('Không tìm thấy người dùng');
       }
-    } catch (error: any) {
-      console.error('Lỗi tải dữ liệu người dùng:', error);
+    } catch (_error) {
+      console.error('Lỗi tải dữ liệu người dùng:', _error);
       toast.error('Không thể tải thông tin người dùng');
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [userId]);
 
   const handleResetPassword = async () => {
     try {
@@ -115,7 +138,7 @@ export default function UserDetailPage() {
       } else {
         toast.error(data.error || 'Không thể đặt lại mật khẩu');
       }
-    } catch (error) {
+    } catch (_error) {
       toast.error('Lỗi đặt lại mật khẩu');
     }
   };
@@ -154,7 +177,7 @@ export default function UserDetailPage() {
       toast.success(data.message);
 
       // Reload user data
-      fetchUserData();
+      void fetchUserData();
     } catch (error) {
       console.error('Toggle status error:', error);
       toast.error(error instanceof Error ? error.message : 'Lỗi khi cập nhật trạng thái');
@@ -181,7 +204,7 @@ export default function UserDetailPage() {
   const getRoleDisplay = (role: string) => getRoleLabel(role);
 
   const getAchievementColor = (level: string) => {
-    const colors: any = {
+    const colors: Record<string, string> = {
       Excellent: 'text-yellow-600 bg-yellow-50 border-yellow-200',
       Good: 'text-blue-600 bg-blue-50 border-blue-200',
       Participated: 'text-gray-600 bg-gray-50 border-gray-200',
@@ -529,7 +552,7 @@ export default function UserDetailPage() {
                   Hoạt động gần đây
                 </h3>
                 <div className="space-y-3">
-                  {user.recentActivities.map((activity: any) => (
+                  {user.recentActivities.map((activity) => (
                     <div
                       key={activity.id}
                       className="flex items-start justify-between p-3 bg-gray-50 rounded-lg"
@@ -578,7 +601,7 @@ export default function UserDetailPage() {
                   Giải thưởng
                 </h3>
                 <div className="space-y-3">
-                  {user.awards.map((award: any) => (
+                  {user.awards.map((award) => (
                     <div
                       key={award.id}
                       className="flex items-start justify-between p-3 bg-yellow-50 border border-yellow-200 rounded-lg"

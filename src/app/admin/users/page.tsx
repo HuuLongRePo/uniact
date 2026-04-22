@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter, useSearchParams } from 'next/navigation';
 import LoadingSpinner from '@/components/LoadingSpinner';
@@ -70,19 +70,7 @@ export default function AdminUsersPage() {
   const [showViewDialog, setShowViewDialog] = useState(false);
   const [userToView, setUserToView] = useState<User | null>(null);
 
-  useEffect(() => {
-    if (!authLoading && (!user || user.role !== 'admin')) {
-      router.push('/login');
-      return;
-    }
-    if (!user) return;
-    // Avoid loading for 1-character queries; wait for at least 2 chars.
-    if (effectiveSearch.length === 1) return;
-    fetchUsers();
-    fetchTotalCounts(); // Fetch counts for badges
-  }, [user, authLoading, router, effectiveSearch, roleFilter, page]);
-
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
       setIsListLoading(true);
       const params = new URLSearchParams({
@@ -105,9 +93,9 @@ export default function AdminUsersPage() {
     } finally {
       setIsListLoading(false);
     }
-  };
+  }, [effectiveSearch, page, roleFilter]);
 
-  const fetchTotalCounts = async () => {
+  const fetchTotalCounts = useCallback(async () => {
     try {
       // Fetch counts for all roles
       const [allRes, teacherRes, studentRes] = await Promise.all([
@@ -130,7 +118,19 @@ export default function AdminUsersPage() {
     } catch (error) {
       console.error('Error fetching counts:', error);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (!authLoading && (!user || user.role !== 'admin')) {
+      router.push('/login');
+      return;
+    }
+    if (!user) return;
+    // Avoid loading for 1-character queries; wait for at least 2 chars.
+    if (effectiveSearch.length === 1) return;
+    void fetchUsers();
+    void fetchTotalCounts(); // Fetch counts for badges
+  }, [authLoading, effectiveSearch, fetchTotalCounts, fetchUsers, router, user]);
 
   // Bulk selection handlers
   const toggleSelectAll = () => {
@@ -165,7 +165,7 @@ export default function AdminUsersPage() {
       toast.success(`Đã xóa ${successCount}/${selectedUsers.size} người dùng`);
       setSelectedUsers(new Set());
       setShowBulkDeleteDialog(false);
-      fetchUsers();
+      void fetchUsers();
     } catch (error) {
       console.error('Bulk delete error:', error);
       toast.error('Lỗi khi xóa hàng loạt');
@@ -215,7 +215,7 @@ export default function AdminUsersPage() {
 
       if (res.ok) {
         toast.success(data.message || 'Đã vô hiệu hóa người dùng');
-        fetchUsers();
+        void fetchUsers();
         setShowDeleteDialog(false);
         setUserToDelete(null);
       } else {
@@ -343,7 +343,7 @@ export default function AdminUsersPage() {
           setPage(1);
         }}
         roleFilter={roleFilter}
-        onRoleFilterChange={(value) => {
+        onRoleFilterChange={(_value) => {
           // Role filter is controlled by tabs, but keep the prop for backward compatibility
           // Do nothing here as tabs handle filtering
         }}
@@ -418,12 +418,12 @@ export default function AdminUsersPage() {
               if (data.temporaryPassword) {
                 toast.success(`Mật khẩu: ${data.temporaryPassword}`, { duration: 10000 });
               }
-              fetchUsers();
+              void fetchUsers();
               setShowCreateForm(false);
             } else {
               toast.error(data.error || 'Không thể thêm người dùng');
             }
-          } catch (error) {
+          } catch (_error) {
             toast.error('Lỗi khi thêm người dùng');
           } finally {
             setIsSavingUser(false);
@@ -453,13 +453,13 @@ export default function AdminUsersPage() {
 
             if (res.ok) {
               toast.success(data.message || 'Cập nhật người dùng thành công');
-              fetchUsers();
+              void fetchUsers();
               setShowEditForm(false);
               setUserToEdit(null);
             } else {
               toast.error(data.error || 'Không thể cập nhật người dùng');
             }
-          } catch (error) {
+          } catch (_error) {
             toast.error('Lỗi khi cập nhật người dùng');
           } finally {
             setIsSavingUser(false);

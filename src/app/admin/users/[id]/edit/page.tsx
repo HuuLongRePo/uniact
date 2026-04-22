@@ -2,20 +2,47 @@
 
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter, useParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, type ChangeEvent } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Save, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { ROLE_OPTIONS } from '../../roles';
+import { User } from '../../types';
+
+type ClassOption = {
+  id: number;
+  name: string;
+};
+
+type UserEditFormData = {
+  username: string;
+  full_name: string;
+  email: string;
+  role: string;
+  class_id: number | null;
+  teaching_class_id: number | null;
+  phone: string;
+  gender: string;
+  date_of_birth: string;
+  citizen_id: string;
+  province: string;
+  district: string;
+  ward: string;
+  address_detail: string;
+  address: string;
+  teacher_rank: string;
+  academic_title: string;
+  academic_degree: string;
+};
 
 export default function UserEditPage() {
   const { user: currentUser, loading } = useAuth();
   const router = useRouter();
-  const params = useParams();
-  const userId = params.id as string;
+  const params = useParams<{ id: string }>();
+  const userId = params.id;
 
-  const [user, setUser] = useState<any>(null);
-  const [formData, setFormData] = useState({
+  const [user, setUser] = useState<User | null>(null);
+  const [formData, setFormData] = useState<UserEditFormData>({
     username: '',
     full_name: '',
     email: '',
@@ -35,7 +62,7 @@ export default function UserEditPage() {
     academic_title: '',
     academic_degree: '',
   });
-  const [classes, setClasses] = useState<any[]>([]);
+  const [classes, setClasses] = useState<ClassOption[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -55,33 +82,35 @@ export default function UserEditPage() {
         }
       })();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser, loading, router]);
 
-  const fetchUserData = async () => {
+  const fetchUserData = useCallback(async () => {
     try {
       const res = await fetch(`/api/admin/users/${userId}`);
       if (res.ok) {
         const data = await res.json();
-        setUser(data.data);
+        const userData = data.data as User;
+        setUser(userData);
         setFormData({
-          username: data.data.username ?? '',
-          full_name: data.data.full_name ?? '',
-          email: data.data.email ?? '',
-          role: data.data.role ?? 'student',
-          class_id: data.data.class_id ?? null,
-          teaching_class_id: data.data.teaching_class_id ?? null,
-          phone: data.data.phone ?? '',
-          gender: data.data.gender ?? '',
-          date_of_birth: data.data.date_of_birth ?? '',
-          citizen_id: data.data.citizen_id ?? '',
-          province: data.data.province ?? '',
-          district: data.data.district ?? '',
-          ward: data.data.ward ?? '',
-          address_detail: data.data.address_detail ?? '',
-          address: data.data.address ?? '',
-          teacher_rank: data.data.teacher_rank ?? '',
-          academic_title: data.data.academic_title ?? '',
-          academic_degree: data.data.academic_degree ?? '',
+          username: userData.username ?? '',
+          full_name: userData.full_name ?? '',
+          email: userData.email ?? '',
+          role: userData.role ?? 'student',
+          class_id: userData.class_id ?? null,
+          teaching_class_id: userData.teaching_class_id ?? null,
+          phone: userData.phone ?? '',
+          gender: userData.gender ?? '',
+          date_of_birth: userData.date_of_birth ?? '',
+          citizen_id: userData.citizen_id ?? '',
+          province: userData.province ?? '',
+          district: userData.district ?? '',
+          ward: userData.ward ?? '',
+          address_detail: userData.address_detail ?? '',
+          address: userData.address ?? '',
+          teacher_rank: userData.teacher_rank ?? '',
+          academic_title: userData.academic_title ?? '',
+          academic_degree: userData.academic_degree ?? '',
         });
       } else if (res.status === 404) {
         setUser(null);
@@ -92,23 +121,26 @@ export default function UserEditPage() {
     } catch (error) {
       console.error('Lỗi tải dữ liệu người dùng:', error);
     }
-  };
+  }, [userId]);
 
-  const fetchClasses = async () => {
+  const fetchClasses = useCallback(async () => {
     try {
       // Admin edit page: use admin classes endpoint (fresh DB view, no in-memory cache)
       const params = new URLSearchParams({ page: '1', limit: '1000' });
       const res = await fetch(`/api/admin/classes?${params}`);
       if (res.ok) {
         const data = await res.json();
-        setClasses(data.data || []);
+        const classData = data?.data ?? [];
+        if (Array.isArray(classData)) {
+          setClasses(classData as ClassOption[]);
+        }
       }
     } catch (error) {
       console.error('Lỗi tải danh sách lớp:', error);
     }
-  };
+  }, []);
 
-  const handleChange = (e: any) => {
+  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
@@ -129,7 +161,7 @@ export default function UserEditPage() {
 
     setIsSaving(true);
     try {
-      const res = await fetch(`/api/admin/users/${params.id}`, {
+      const res = await fetch(`/api/admin/users/${userId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
@@ -137,12 +169,12 @@ export default function UserEditPage() {
 
       if (res.ok) {
         toast.success('Cập nhật người dùng thành công');
-        router.push(`/admin/users/${params.id}`);
+        router.push(`/admin/users/${userId}`);
       } else {
         throw new Error('Cập nhật thất bại');
       }
-    } catch (error: any) {
-      toast.error(error.message || 'Có lỗi xảy ra');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Có lỗi xảy ra');
     } finally {
       setIsSaving(false);
     }

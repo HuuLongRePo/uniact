@@ -696,6 +696,40 @@ Yeu cau thi hanh:
 - [x] `npm.cmd run build` -> PASS
 - [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests)
 
+## 9.11) Batch hardening - Admin users lint/type cleanup
+
+### Muc tieu
+
+- Don canh bao lint/type o cum quan tri nguoi dung de on dinh nhanh luong CRUD user.
+- Khong doi nghiep vu/contract, chi harden typing + hook deps + error handling.
+
+### Viec can lam
+
+- [x] `admin/users/UserDialog.tsx`:
+  - [x] bo `any` cho payload/dialog state va class options.
+  - [x] bo state reset password khong su dung.
+- [x] `admin/users/[id]/activities/page.tsx`:
+  - [x] bo `any` o params/catch.
+  - [x] dong bo `load` callback va effect dependencies.
+- [x] `admin/users/[id]/edit/page.tsx`:
+  - [x] bo `any` o user/class/form change/catch.
+  - [x] chuan hoa fetch callbacks + class list typing.
+- [x] `admin/users/[id]/page.tsx`:
+  - [x] bo `any` o recent activities/awards/color map.
+  - [x] harden `fetchUserData` typing + map fallback arrays.
+- [x] `admin/users/import/page.tsx`:
+  - [x] bo `any` trong parser CSV, dung typed parsed user object.
+- [x] `admin/users/page.tsx`:
+  - [x] dong bo `fetchUsers/fetchTotalCounts` voi `useCallback`.
+  - [x] bo param/catch khong dung, chuan hoa goi refresh `void fetchUsers()`.
+
+### Verification
+
+- [x] `npm.cmd run lint -- --file "src/app/admin/users/UserDialog.tsx" --file "src/app/admin/users/[id]/activities/page.tsx" --file "src/app/admin/users/[id]/edit/page.tsx" --file "src/app/admin/users/[id]/page.tsx" --file "src/app/admin/users/import/page.tsx" --file "src/app/admin/users/page.tsx"` -> PASS (0 warnings)
+- [x] `npm.cmd test -- test/admin-users-route.test.ts` -> PASS (1 file / 2 tests)
+- [x] `npm.cmd run build` -> PASS
+- [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix
@@ -710,6 +744,7 @@ Yeu cau thi hanh:
 - [x] Commit 9: activity workflow lint/type hardening (batch 9.8) (`7769e0b`)
 - [x] Commit 10: admin approvals lint/type hardening (batch 9.9) (`36564a2`)
 - [x] Commit 11: admin alerts/audit lint cleanup (batch 9.10) (`76771f1`)
+- [ ] Commit 12: admin users lint/type cleanup (batch 9.11)
 
 ---
 

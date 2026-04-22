@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import LoadingSpinner from '@/components/LoadingSpinner';
@@ -46,12 +46,12 @@ type TeacherActivityRow = {
 };
 
 export default function AdminUserActivitiesPage() {
-  const params = useParams();
+  const params = useParams<{ id: string }>();
   const router = useRouter();
   const { user: currentUser, loading: authLoading } = useAuth();
 
   const userId = useMemo(() => {
-    const raw = (params as any)?.id;
+    const raw = params?.id;
     const parsed = typeof raw === 'string' ? Number.parseInt(raw, 10) : NaN;
     return Number.isFinite(parsed) ? parsed : null;
   }, [params]);
@@ -75,11 +75,13 @@ export default function AdminUserActivitiesPage() {
       return;
     }
 
-    load();
+    void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser, authLoading, userId]);
+  }, [authLoading, currentUser, router, userId]);
 
-  const load = async () => {
+  const load = useCallback(async () => {
+    if (!userId) return;
+
     try {
       setLoading(true);
       const userRes = await fetch(`/api/admin/users/${userId}`);
@@ -106,13 +108,13 @@ export default function AdminUserActivitiesPage() {
         setStudentActivities([]);
         setTeacherActivities([]);
       }
-    } catch (e: any) {
-      console.error('Load user activities error:', e);
-      toast.error(e?.message || 'Không thể tải dữ liệu');
+    } catch (error: unknown) {
+      console.error('Load user activities error:', error);
+      toast.error(error instanceof Error ? error.message : 'Không thể tải dữ liệu');
     } finally {
       setLoading(false);
     }
-  };
+  }, [userId]);
 
   if (authLoading || loading) return <LoadingSpinner />;
 
