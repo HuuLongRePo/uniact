@@ -21,6 +21,18 @@ function setUserAgent(value: string) {
   });
 }
 
+function setPermissionsPolicy(allowsCamera: boolean | null) {
+  Object.defineProperty(document, 'permissionsPolicy', {
+    configurable: true,
+    value:
+      allowsCamera === null
+        ? undefined
+        : {
+            allowsFeature: (feature: string) => (feature === 'camera' ? allowsCamera : true),
+          },
+  });
+}
+
 describe('camera-stream helper', () => {
   beforeEach(() => {
     vi.resetModules();
@@ -29,6 +41,7 @@ describe('camera-stream helper', () => {
       getUserMedia: vi.fn(),
     } as unknown as MediaDevices);
     setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64)');
+    setPermissionsPolicy(null);
   });
 
   it('returns clear permission message for NotAllowedError', async () => {
@@ -84,5 +97,23 @@ describe('camera-stream helper', () => {
 
     expect(tips.join(' ')).toMatch(/quyền Camera|quyền camera/i);
     expect(tips.join(' ')).toMatch(/tải lại trang/i);
+  });
+  it('throws explicit permission-policy hint when camera is blocked by document policy', async () => {
+    setPermissionsPolicy(false);
+    const { requestPreferredCameraStream } = await import('../src/lib/camera-stream');
+
+    await expect(requestPreferredCameraStream()).rejects.toThrow(/Permissions-Policy|camera/i);
+  });
+
+  it('returns permission-policy message for policy-controlled camera errors', async () => {
+    const { getCameraAccessErrorMessage, getCameraTroubleshootingSteps } = await import(
+      '../src/lib/camera-stream'
+    );
+
+    const policyError = new Error('Permissions policy controlled feature: camera');
+    expect(getCameraAccessErrorMessage(policyError)).toMatch(/Permissions-Policy|camera/i);
+    expect(getCameraTroubleshootingSteps(policyError).join(' ')).toMatch(
+      /Permissions-Policy|camera/i
+    );
   });
 });

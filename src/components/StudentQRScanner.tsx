@@ -169,6 +169,40 @@ export function StudentQRScanner({ onScan }: Props) {
     await submitRawValue(manualToken.trim());
   }
 
+  async function handleImageUpload(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+
+    if (!file) {
+      return;
+    }
+
+    if (!detectorRef.current || typeof window.createImageBitmap !== 'function') {
+      toast.error('Trình duyệt không hỗ trợ quét QR từ ảnh. Hãy dùng nhập thủ công.');
+      return;
+    }
+
+    try {
+      setError(null);
+      setScanState('scanning');
+
+      const imageBitmap = await window.createImageBitmap(file);
+      const results = await detectorRef.current.detect(imageBitmap);
+      imageBitmap.close();
+
+      const firstValue = String(results?.[0]?.rawValue || '').trim();
+      if (!firstValue) {
+        throw new Error('Không đọc được mã QR từ ảnh.');
+      }
+
+      await submitRawValue(firstValue);
+    } catch (err) {
+      setScanState('error');
+      setError(err instanceof Error ? err.message : 'Không thể quét mã QR từ ảnh');
+      toast.error('Không thể quét mã QR từ ảnh');
+    }
+  }
+
   async function submitRawValue(rawValue: string) {
     if (submittingRef.current) return;
     submittingRef.current = true;
@@ -249,6 +283,23 @@ export function StudentQRScanner({ onScan }: Props) {
               <Pause className="h-4 w-4" />
               Tạm dừng
             </button>
+          </div>
+
+          <div className="rounded-2xl border border-indigo-200 bg-indigo-50 px-3 py-3 text-sm text-indigo-900">
+            <div className="font-semibold">Không dùng được camera?</div>
+            <p className="mt-1 text-xs leading-5">
+              Bạn có thể tải ảnh chứa mã QR để hệ thống đọc thay cho camera, hoặc dán dữ liệu QR ở
+              khung nhập thủ công.
+            </p>
+            <label className="mt-2 inline-flex cursor-pointer items-center gap-2 rounded-xl border border-indigo-300 bg-white px-3.5 py-2 text-sm font-semibold text-indigo-700 transition-colors hover:bg-indigo-100">
+              Tải ảnh QR
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(event) => void handleImageUpload(event)}
+              />
+            </label>
           </div>
 
           <div className="rounded-2xl border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-900">

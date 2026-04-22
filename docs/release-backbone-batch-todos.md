@@ -1429,6 +1429,37 @@ Yeu cau:
 - [x] `npm.cmd run build` -> PASS
 - [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests)
 
+## 9.29) Batch uu tien truoc - browser camera fallback cho QR scan
+
+### Muc tieu
+
+- Dua vao TODO uu tien xu ly truong hop trinh duyet khong su dung duoc camera khi hoc vien quet QR.
+- Khoi phuc camera access do server header dang chan `camera` toan cuc.
+- Them fallback scan bang anh QR (khong can mo camera) de giam fail tren mobile/in-app browser.
+
+### Viec can lam
+
+- [x] `src/lib/security-headers.ts`:
+  - [x] doi `Permissions-Policy` tu `camera=()` sang `camera=(self)` de camera duoc cap cho origin noi bo.
+- [x] `src/lib/camera-stream.ts`:
+  - [x] them detect `Permissions-Policy` block (`document.permissionsPolicy`/`featurePolicy`).
+  - [x] tra message/tips rieng cho loi policy-controlled camera.
+  - [x] chan som trong `requestPreferredCameraStream` neu policy dang block camera.
+- [x] `src/components/StudentQRScanner.tsx`:
+  - [x] them fallback `Tai anh QR` (input image/*) + decode bang `BarcodeDetector`.
+  - [x] giu fallback nhap QR thu cong nhu kenh cuu sinh cuoi.
+- [x] Tests:
+  - [x] `test/camera-stream.test.ts`: bo sung case permissions policy block + policy-controlled error messaging.
+  - [x] `test/security-headers.test.ts`: regression guard cho header `camera=(self)`.
+
+### Verification
+
+- [x] `npm.cmd run lint -- --file "src/components/StudentQRScanner.tsx" --file "src/lib/camera-stream.ts" --file "src/lib/security-headers.ts" --file "test/camera-stream.test.ts" --file "test/security-headers.test.ts"` -> PASS (0 warning)
+- [x] `npm.cmd test -- test/camera-stream.test.ts test/security-headers.test.ts` -> PASS (2 files / 9 tests)
+- [x] `npm.cmd run build` -> PASS
+- [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests)
+- [x] `npm.cmd run release:check:full` -> PASS (4/4 checks, lint warnings legacy scope khong block)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix

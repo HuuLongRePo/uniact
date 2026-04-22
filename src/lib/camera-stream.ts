@@ -79,6 +79,45 @@ function normalizeCameraErrorName(error: unknown) {
   return error instanceof Error ? error.name : String((error as { name?: string })?.name || '');
 }
 
+function isCameraBlockedByPermissionsPolicy() {
+  if (typeof document === 'undefined') return false;
+
+  type PolicyLike = {
+    allowsFeature?: (feature: string) => boolean;
+  };
+
+  const docWithPolicy = document as Document & {
+    permissionsPolicy?: PolicyLike;
+    featurePolicy?: PolicyLike;
+  };
+
+  const policy = docWithPolicy.permissionsPolicy ?? docWithPolicy.featurePolicy;
+  if (!policy || typeof policy.allowsFeature !== 'function') return false;
+
+  try {
+    return policy.allowsFeature('camera') === false;
+  } catch {
+    return false;
+  }
+}
+
+function isPermissionsPolicyError(error: unknown) {
+  const name = normalizeCameraErrorName(error).toLowerCase();
+  const message = error instanceof Error ? error.message.toLowerCase() : '';
+
+  return (
+    name.includes('securityerror') ||
+    message.includes('permissions policy') ||
+    message.includes('permission policy') ||
+    message.includes('policy controlled feature') ||
+    message.includes('camera has been disabled')
+  );
+}
+
+function getPermissionsPolicyCameraHint() {
+  return 'Camera Ä‘ang bá»‹ cháº·n bá»Ÿi Permissions-Policy cá»§a há»‡ thá»‘ng. HÃ£y cho phÃ©p camera cho origin hiá»‡n táº¡i rá»“i táº£i láº¡i trang.';
+}
+
 export function getCameraTroubleshootingSteps(error?: unknown) {
   const tips: string[] = [];
   const errorName = normalizeCameraErrorName(error);
@@ -97,6 +136,10 @@ export function getCameraTroubleshootingSteps(error?: unknown) {
     if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function') {
       tips.push(getUnsupportedCameraApiHint());
     }
+  }
+
+  if (isCameraBlockedByPermissionsPolicy() || isPermissionsPolicyError(error)) {
+    tips.push(getPermissionsPolicyCameraHint());
   }
 
   if (errorName === 'NotAllowedError' || errorName === 'SecurityError') {
@@ -131,6 +174,10 @@ export async function requestPreferredCameraStream(options?: {
 
   if (!window.isSecureContext) {
     throw new Error(getInsecureContextHint());
+  }
+
+  if (isCameraBlockedByPermissionsPolicy()) {
+    throw new Error(getPermissionsPolicyCameraHint());
   }
 
   if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function') {
@@ -190,6 +237,10 @@ export function getCameraAccessErrorMessage(error: unknown) {
   const errorMessage = error instanceof Error ? error.message.toLowerCase() : '';
 
   if (errorName === 'NotAllowedError' || errorName === 'SecurityError') {
+    if (isPermissionsPolicyError(error) || isCameraBlockedByPermissionsPolicy()) {
+      return getPermissionsPolicyCameraHint();
+    }
+
     if (isLikelyEmbeddedBrowser()) {
       return `${getEmbeddedBrowserCameraHint()} Nếu đã cấp quyền nhưng vẫn lỗi, hãy mở bằng trình duyệt hệ thống rồi thử lại.`;
     }
@@ -214,6 +265,10 @@ export function getCameraAccessErrorMessage(error: unknown) {
 
   if (errorName === 'NotSupportedError' || errorName === 'TypeError') {
     return getUnsupportedCameraApiHint();
+  }
+
+  if (isCameraBlockedByPermissionsPolicy() || isPermissionsPolicyError(error)) {
+    return getPermissionsPolicyCameraHint();
   }
 
   if (
