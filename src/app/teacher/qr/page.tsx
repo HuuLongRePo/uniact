@@ -8,8 +8,10 @@ import {
   Clock,
   Download,
   History,
+  Maximize2,
   QrCode as QrCodeIcon,
   RotateCw,
+  X,
   Zap,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -97,6 +99,8 @@ export default function TeacherQRPage() {
   const [bulkScans, setBulkScans] = useState<BulkScanRecord[]>([]);
   const [bulkLoading, setBulkLoading] = useState(false);
   const [selectedBulkSession, setSelectedBulkSession] = useState<number | null>(null);
+  const [showQrProjector, setShowQrProjector] = useState(false);
+  const projectorRef = useRef<HTMLDivElement | null>(null);
 
   const activeBulkSessionId = selectedBulkSession ?? history[0]?.id ?? null;
 
@@ -119,7 +123,7 @@ export default function TeacherQRPage() {
           setActiveTab(tabParam);
         }
 
-        const requestedIdRaw = searchParams.get('activity_id');
+        const requestedIdRaw = searchParams.get('activity_id') ?? searchParams.get('activityId');
         const requestedId = requestedIdRaw ? Number(requestedIdRaw) : null;
         if (
           requestedId &&
@@ -229,6 +233,7 @@ export default function TeacherQRPage() {
         clearInterval(refreshIntervalRef.current);
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, autoRefresh]);
 
   const fetchBulkScans = async () => {
@@ -253,7 +258,29 @@ export default function TeacherQRPage() {
     if ((activeTab === 'bulk' || activeTab === 'analytics') && activeBulkSessionId) {
       void fetchBulkScans();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, activeBulkSessionId]);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      if (!document.fullscreenElement) {
+        setShowQrProjector(false);
+      }
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!showQrProjector) return;
+    const element = projectorRef.current;
+    if (!element?.requestFullscreen) return;
+
+    void element.requestFullscreen().catch(() => undefined);
+  }, [showQrProjector]);
 
   const handleTabChange = (tab: TeacherQrTab) => {
     setActiveTab(tab);
@@ -265,6 +292,18 @@ export default function TeacherQRPage() {
   const handleManualRefresh = () => {
     setHistoryLoading(true);
     void fetchHistory();
+  };
+
+  const openQrProjector = () => {
+    if (!createdSession) return;
+    setShowQrProjector(true);
+  };
+
+  const closeQrProjector = () => {
+    setShowQrProjector(false);
+    if (document.fullscreenElement) {
+      void document.exitFullscreen().catch(() => undefined);
+    }
   };
 
   const handleExportBulkScans = () => {
@@ -539,6 +578,14 @@ export default function TeacherQRPage() {
                     <div className="rounded-xl bg-white p-4">
                       <QrCodeSvg value={createdSession.payload} />
                     </div>
+                    <button
+                      type="button"
+                      onClick={openQrProjector}
+                      className="inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 transition-colors hover:bg-blue-100"
+                    >
+                      <Maximize2 className="h-3.5 w-3.5" />
+                      Chiếu mã QR toàn màn hình
+                    </button>
                     <div className="text-xs leading-5 text-gray-600">
                       Dữ liệu QR:{' '}
                       <code className="rounded bg-gray-100 px-1 py-0.5">
@@ -811,6 +858,41 @@ export default function TeacherQRPage() {
           )}
         </div>
       </section>
+
+      {showQrProjector && createdSession && (
+        <div ref={projectorRef} className="fixed inset-0 z-[70] bg-black p-4 sm:p-8">
+          <div className="flex h-full flex-col">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-slate-300">Trình chiếu QR</p>
+                <h2 className="text-lg font-semibold text-white sm:text-xl">
+                  Giảng viên chiếu mã để học viên quét
+                </h2>
+              </div>
+              <button
+                type="button"
+                onClick={closeQrProjector}
+                className="inline-flex items-center gap-2 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm font-medium text-slate-100 hover:bg-slate-700"
+              >
+                <X className="h-4 w-4" />
+                Đóng
+              </button>
+            </div>
+
+            <div className="mt-5 flex flex-1 items-center justify-center">
+              <div className="rounded-3xl bg-white p-5 shadow-2xl sm:p-8">
+                <div className="w-[min(86vw,860px)]">
+                  <QrCodeSvg value={createdSession.payload} />
+                </div>
+              </div>
+            </div>
+
+            <div className="mx-auto mt-4 max-w-4xl rounded-xl border border-slate-700 bg-slate-900/90 px-4 py-3 text-center text-xs text-slate-200 sm:text-sm">
+              Phiên #{createdSession.sessionId} • Mã phiên: {createdSession.token}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

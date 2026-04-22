@@ -7,23 +7,56 @@ import { getCameraAccessErrorMessage, requestPreferredCameraStream } from '@/lib
 
 type ScanState = 'idle' | 'scanning' | 'success' | 'error';
 
+type BarcodeDetectorResult = {
+  rawValue?: string;
+};
+
+type BarcodeDetectorInstance = {
+  detect: (source: ImageBitmapSource) => Promise<BarcodeDetectorResult[]>;
+};
+
+type BarcodeDetectorConstructor = new (options?: { formats?: string[] }) => BarcodeDetectorInstance;
+
 interface Props {
   onScan: (rawValue: string) => Promise<void>;
 }
 
-// Lightweight wrapper around native getUserMedia; we avoid adding new deps.
-// The parent page receives the raw QR payload and is responsible for parsing it.
-// Fallback manual input provided below.
+function createBarcodeDetector(): BarcodeDetectorInstance | null {
+  if (typeof window === 'undefined') return null;
+
+  const DetectorCtor = (window as unknown as { BarcodeDetector?: BarcodeDetectorConstructor })
+    .BarcodeDetector;
+
+  if (!DetectorCtor) return null;
+
+  try {
+    return new DetectorCtor({ formats: ['qr_code'] });
+  } catch {
+    try {
+      return new DetectorCtor();
+    } catch {
+      return null;
+    }
+  }
+}
+
 export function StudentQRScanner({ onScan }: Props) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const frameRequest = useRef<number | undefined>(undefined);
+  const detectorRef = useRef<BarcodeDetectorInstance | null>(null);
+  const submittingRef = useRef(false);
+  const processingFrameRef = useRef(false);
+  const lastDecodeAtRef = useRef(0);
+  const lastScannedRawRef = useRef('');
+
   const [scanState, setScanState] = useState<ScanState>('idle');
   const [manualToken, setManualToken] = useState('');
-  const [lastResult, setLastResult] = useState<string>('');
+  const [lastResult, setLastResult] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const frameRequest = useRef<number | undefined>(undefined);
+  const [autoScanSupported, setAutoScanSupported] = useState(false);
 
-  function stopScan() {
+  function stopScan(nextState: ScanState = 'idle') {
     if (frameRequest.current) {
       cancelAnimationFrame(frameRequest.current);
       frameRequest.current = undefined;
@@ -36,11 +69,14 @@ export function StudentQRScanner({ onScan }: Props) {
       videoRef.current.srcObject = null;
     }
 
-    setScanState('idle');
+    setScanState(nextState);
   }
 
   useEffect(() => {
-    startScan();
+    detectorRef.current = createBarcodeDetector();
+    setAutoScanSupported(Boolean(detectorRef.current));
+
+    void startScan();
     return () => {
       stopScan();
     };
@@ -48,9 +84,10 @@ export function StudentQRScanner({ onScan }: Props) {
   }, []);
 
   async function startScan() {
-    stopScan();
+    stopScan('idle');
     setError(null);
     setScanState('scanning');
+    lastScannedRawRef.current = '';
 
     try {
       const mediaStream = await requestPreferredCameraStream({
@@ -59,8 +96,11 @@ export function StudentQRScanner({ onScan }: Props) {
 
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream;
-        videoRef.current.play().catch(() => undefined);
-        frameRequest.current = requestAnimationFrame(tick);
+        await videoRef.current.play().catch(() => undefined);
+
+        if (detectorRef.current) {
+          frameRequest.current = requestAnimationFrame(tick);
+        }
       }
     } catch (err: unknown) {
       setError(getCameraAccessErrorMessage(err));
@@ -69,7 +109,7 @@ export function StudentQRScanner({ onScan }: Props) {
   }
 
   function tick() {
-    if (!videoRef.current || !canvasRef.current) {
+    if (!videoRef.current || !canvasRef.current || !detectorRef.current) {
       frameRequest.current = requestAnimationFrame(tick);
       return;
     }
@@ -86,7 +126,30 @@ export function StudentQRScanner({ onScan }: Props) {
     canvas.height = video.videoHeight;
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    // Proper QR decode can be plugged here later (jsQR / @zxing/browser).
+    const now = Date.now();
+    const shouldDecode = now - lastDecodeAtRef.current >= 240;
+
+    if (shouldDecode && !submittingRef.current && !processingFrameRef.current) {
+      lastDecodeAtRef.current = now;
+      processingFrameRef.current = true;
+
+      void detectorRef.current
+        .detect(canvas)
+        .then(async (results) => {
+          const firstValue = String(results?.[0]?.rawValue || '').trim();
+          if (!firstValue || firstValue === lastScannedRawRef.current) {
+            return;
+          }
+
+          lastScannedRawRef.current = firstValue;
+          await submitRawValue(firstValue);
+        })
+        .catch(() => undefined)
+        .finally(() => {
+          processingFrameRef.current = false;
+        });
+    }
+
     frameRequest.current = requestAnimationFrame(tick);
   }
 
@@ -100,16 +163,22 @@ export function StudentQRScanner({ onScan }: Props) {
   }
 
   async function submitRawValue(rawValue: string) {
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+
     try {
       setScanState('scanning');
+      setError(null);
       await onScan(rawValue);
       setLastResult(rawValue);
-      setScanState('success');
+      stopScan('success');
       toast.success('Điểm danh thành công');
-    } catch (err: any) {
+    } catch (err: unknown) {
       setScanState('error');
-      setError(err?.message || 'Xác thực thất bại');
+      setError(err instanceof Error ? err.message : 'Xác thực thất bại');
       toast.error('Mã QR không hợp lệ hoặc đã hết hạn');
+    } finally {
+      submittingRef.current = false;
     }
   }
 
@@ -119,7 +188,7 @@ export function StudentQRScanner({ onScan }: Props) {
         <div className="border-b border-gray-200 px-4 py-3 sm:px-5">
           <h2 className="text-base font-semibold text-gray-900 sm:text-lg">Quét mã QR điểm danh</h2>
           <p className="mt-1 text-sm text-gray-600">
-            Ứng dụng ưu tiên camera sau trên điện thoại để quét nhanh và ổn định hơn.
+            Học viên dùng camera sau để quét mã QR do giảng viên mở tại lớp.
           </p>
         </div>
 
@@ -128,6 +197,13 @@ export function StudentQRScanner({ onScan }: Props) {
             <video ref={videoRef} className="aspect-video w-full object-cover" muted playsInline />
           </div>
           <canvas ref={canvasRef} className="hidden" />
+
+          {!autoScanSupported && (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+              Trình duyệt hiện tại chưa hỗ trợ quét QR tự động. Bạn vẫn có thể nhập dữ liệu QR thủ
+              công ở bên dưới.
+            </div>
+          )}
 
           {scanState === 'success' && (
             <div className="rounded-2xl border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800">
@@ -151,7 +227,7 @@ export function StudentQRScanner({ onScan }: Props) {
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              onClick={startScan}
+              onClick={() => void startScan()}
               className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
             >
               <RotateCcw className="h-4 w-4" />
@@ -159,7 +235,7 @@ export function StudentQRScanner({ onScan }: Props) {
             </button>
             <button
               type="button"
-              onClick={stopScan}
+              onClick={() => stopScan('idle')}
               className="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-gray-100 px-3.5 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-200"
             >
               <Pause className="h-4 w-4" />

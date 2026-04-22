@@ -66,7 +66,7 @@ async function validateAttendance(payload: ParsedQrPayload) {
 
 export default function StudentCheckInPage() {
   const searchParams = useSearchParams();
-  const activityId = searchParams.get('activityId');
+  const activityId = searchParams.get('activityId') ?? searchParams.get('activity_id');
 
   return (
     <div className="page-shell">
@@ -74,12 +74,12 @@ export default function StudentCheckInPage() {
         <div className="border-b border-gray-200 px-5 py-5 sm:px-7">
           <div className="max-w-3xl space-y-2">
             <div className="inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold tracking-wide text-blue-800">
-              Điểm danh QR
+              Điểm danh QR cho học viên
             </div>
             <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">Điểm danh hoạt động</h1>
             <p className="text-sm leading-6 text-gray-600 sm:text-base">
-              Quét QR hoặc dán dữ liệu QR để xác thực tham gia. Hệ thống sẽ tự kiểm tra phiên điểm
-              danh còn hiệu lực và trạng thái đăng ký của bạn.
+              Giảng viên tạo mã QR tại trang quản lý điểm danh. Học viên dùng trang này để quét mã
+              và xác thực tham gia.
             </p>
             {activityId && (
               <div className="inline-flex rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700">

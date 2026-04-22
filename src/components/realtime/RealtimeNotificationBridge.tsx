@@ -11,6 +11,7 @@ import {
 } from '@/lib/realtime-notification-model';
 import {
   executeNotificationAction,
+  NotificationRecipientRole,
   resolveNotificationActionButtons,
 } from '@/lib/notification-actions';
 
@@ -27,6 +28,7 @@ type ApiNotificationItem = {
 };
 
 const POLLING_INTERVAL_MS = 15000;
+const CONTENT_DEDUPE_WINDOW_MS = 12000;
 
 function toSafeInteger(value: unknown, fallback = 0) {
   const parsed = Number(value);
@@ -58,13 +60,15 @@ function adaptApiNotificationToRealtime(
 }
 
 function resolveFallbackActionButtons(
-  event: RealtimeNotificationEvent
+  event: RealtimeNotificationEvent,
+  recipientRole: NotificationRecipientRole
 ): RealtimeNotificationActionButton[] {
   const fallbackButtons = resolveNotificationActionButtons({
     type: event.notification.type,
     related_table: event.notification.related_table,
     related_id: event.notification.related_id,
     action_buttons: event.action_buttons,
+    recipient_role: recipientRole,
   });
   const dismissButton: RealtimeNotificationActionButton = {
     id: 'dismiss',
@@ -85,6 +89,7 @@ export function RealtimeNotificationBridge() {
   const activeRef = useRef(false);
   const knownNotificationIdsRef = useRef<Set<number>>(new Set());
   const shownToastKeysRef = useRef<Set<string>>(new Set());
+  const recentContentDedupeRef = useRef<Map<string, number>>(new Map());
   const lastEventIdRef = useRef(0);
 
   const clearReconnectTimer = () => {
@@ -101,10 +106,21 @@ export function RealtimeNotificationBridge() {
     }
   };
 
-  const showRealtimeToast = (event: RealtimeNotificationEvent) => {
+  const showRealtimeToast = (
+    event: RealtimeNotificationEvent,
+    recipientRole: NotificationRecipientRole
+  ) => {
     const notificationId = toSafeInteger(event.notification?.id, 0);
     const dedupeKey =
       notificationId > 0 ? `notification:${notificationId}` : `event:${event.event_id}`;
+    const contentDedupeKey = `${event.notification?.type || 'system'}|${event.notification?.title || ''}|${event.notification?.message || ''}|${event.notification?.related_table || ''}|${event.notification?.related_id || ''}|${event.event_type || ''}`;
+    const now = Date.now();
+
+    for (const [key, timestamp] of recentContentDedupeRef.current.entries()) {
+      if (now - timestamp > CONTENT_DEDUPE_WINDOW_MS) {
+        recentContentDedupeRef.current.delete(key);
+      }
+    }
     const toastId =
       event.event_id > 0
         ? `realtime-notification-${event.event_id}`
@@ -115,11 +131,18 @@ export function RealtimeNotificationBridge() {
     if (shownToastKeysRef.current.has(dedupeKey)) {
       return;
     }
+    const previousTimestamp = recentContentDedupeRef.current.get(contentDedupeKey);
+    if (previousTimestamp && now - previousTimestamp < CONTENT_DEDUPE_WINDOW_MS) {
+      return;
+    }
     shownToastKeysRef.current.add(dedupeKey);
+    recentContentDedupeRef.current.set(contentDedupeKey, now);
 
     const normalizedButtons = normalizeActionButtons(event.action_buttons);
     const buttons =
-      normalizedButtons.length > 0 ? normalizedButtons : resolveFallbackActionButtons(event);
+      normalizedButtons.length > 0
+        ? normalizedButtons
+        : resolveFallbackActionButtons(event, recipientRole);
     const duration = getToastDurationMs(event.priority, event.ttl_seconds);
 
     toast.custom(
@@ -187,7 +210,10 @@ export function RealtimeNotificationBridge() {
         continue;
       }
 
-      showRealtimeToast(adaptApiNotificationToRealtime(item));
+      showRealtimeToast(
+        adaptApiNotificationToRealtime(item),
+        (user?.role as NotificationRecipientRole) || 'student'
+      );
     }
   };
 
@@ -257,7 +283,7 @@ export function RealtimeNotificationBridge() {
           knownNotificationIdsRef.current.add(notificationId);
         }
 
-        showRealtimeToast(payload);
+        showRealtimeToast(payload, (user?.role as NotificationRecipientRole) || 'student');
       } catch (error) {
         console.error('Realtime notification parse error:', error);
       }
@@ -285,6 +311,7 @@ export function RealtimeNotificationBridge() {
     stopPolling();
     knownNotificationIdsRef.current = new Set();
     shownToastKeysRef.current = new Set();
+    recentContentDedupeRef.current = new Map();
     lastEventIdRef.current = 0;
 
     void fetchNotificationsForPolling(true).catch(() => undefined);
@@ -296,6 +323,7 @@ export function RealtimeNotificationBridge() {
       clearReconnectTimer();
       stopPolling();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
   return null;

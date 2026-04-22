@@ -830,6 +830,43 @@ Yeu cau thi hanh:
 - [x] `npm.cmd run release:check:full` -> PASS (4/4 checks)
 - [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests)
 
+## 9.15) Batch uu tien nong - Dark mode landing + camera QR mobile + notification action role + QR fullscreen
+
+### Muc tieu
+
+- Xu ly gap giao dien landing o dark mode/system dark de dam bao contrast doc duoc.
+- Dong bo dung vai tro diem danh: giang vien tao/chien QR, hoc vien la nguoi quet QR.
+- Rasoat va sua fallback logic action button thong bao day/inbox theo actor.
+- Giam push toast bi lap lai va bo sung che do chieu ma QR toan man hinh cho giang vien.
+
+### Viec can lam
+
+- [x] Landing page:
+  - [x] thay theme shell + cards token-based de dark mode doc ro.
+  - [x] cap nhat copy UI cho dung role/flow QR.
+- [x] Student QR scanner:
+  - [x] bo sung auto decode qua `BarcodeDetector` khi trinh duyet ho tro.
+  - [x] giu fallback nhap tay va thong diep loi camera ro nguyen nhan (HTTPS/quyen/in-app browser).
+- [x] Camera helper:
+  - [x] harden `requestPreferredCameraStream` cho secure context + unsupported browser message.
+  - [x] bo sung mapping loi `NotSupportedError`/security context.
+- [x] Notification action logic:
+  - [x] `resolveNotificationActionButtons` role-aware (`student`/`teacher`/`admin`) cho attendance/activity/participation.
+  - [x] `NotificationInbox` truyen role theo pathname de fallback action dung actor.
+  - [x] `RealtimeNotificationBridge` truyen role cho fallback action + them content dedupe window de chan toast lap.
+- [x] Teacher QR + activity management:
+  - [x] them nut "Chieu ma QR toan man hinh" va overlay projector.
+  - [x] dong bo query canonical `activity_id/session_id` tu trang teacher activities -> teacher qr.
+  - [x] bo sung nut diem danh cho card hoat dong "sap dien ra" neu dang co active QR session.
+
+### Verification
+
+- [x] `npm.cmd run lint -- --file "src/app/page.tsx" --file "src/lib/camera-stream.ts" --file "src/components/StudentQRScanner.tsx" --file "src/app/student/check-in/page.tsx" --file "src/lib/notification-actions.ts" --file "src/components/notifications/NotificationInbox.tsx" --file "src/components/realtime/RealtimeNotificationBridge.tsx" --file "src/app/teacher/qr/page.tsx" --file "src/app/teacher/activities/page.tsx"` -> PASS (0 warning)
+- [x] `npm.cmd test -- test/teacher-qr-page.test.tsx test/teacher-activities-page.test.tsx test/realtime-notification-bridge.test.tsx test/notification-inbox.test.tsx test/notification-actions.test.ts test/qr-session-reuse-route.test.ts test/notification-realtime-routes.test.ts` -> PASS (7 files / 29 tests)
+- [x] `npm.cmd run build` -> PASS
+- [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests)
+- [x] `npm.cmd run release:check:full` -> PASS (4/4 checks)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix

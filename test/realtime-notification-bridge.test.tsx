@@ -141,6 +141,41 @@ describe('RealtimeNotificationBridge', () => {
     expect(screen.getByText('Bỏ qua')).toBeInTheDocument();
   });
 
+  it('suppresses duplicate toast payloads with the same content in a short window', async () => {
+    const Bridge = (await import('../src/components/realtime/RealtimeNotificationBridge'))
+      .RealtimeNotificationBridge;
+
+    render(<Bridge />);
+    const source = MockEventSource.instances[0];
+
+    const duplicatedPayload = {
+      event_id: 301,
+      event_type: 'attendance_started',
+      actor_id: 1,
+      target_user_ids: [7],
+      priority: 'normal' as const,
+      ttl_seconds: 7,
+      action_buttons: [],
+      notification: {
+        id: null,
+        type: 'attendance',
+        title: 'Bat dau diem danh',
+        message: 'Hoat dong da mo QR',
+        related_table: 'activities',
+        related_id: 77,
+        created_at: '2026-04-22T09:00:00.000Z',
+      },
+      created_at: '2026-04-22T09:00:00.000Z',
+    };
+
+    source.emit('notification', duplicatedPayload);
+    source.emit('notification', { ...duplicatedPayload, event_id: 302 });
+
+    await waitFor(() => {
+      expect(toastCustomMock).toHaveBeenCalledTimes(1);
+    });
+  });
+
   it.each(['student', 'teacher', 'admin'] as const)(
     'connects and receives realtime notification for %s role',
     async (role) => {

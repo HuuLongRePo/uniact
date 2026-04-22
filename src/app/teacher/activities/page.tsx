@@ -500,25 +500,45 @@ export default function TeacherActivitiesPage() {
                 </span>
               </div>
               <div className="space-y-3">
-                {upcomingActivities.map((activity) => (
-                  <div
-                    key={`upcoming-${activity.id}`}
-                    className="rounded-lg border border-amber-200 bg-white p-4"
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <div className="text-base font-semibold text-gray-900">
-                          {activity.title}
+                {upcomingActivities.map((activity) => {
+                  const activeQrSession = activeQrSessions[activity.id];
+                  return (
+                    <div
+                      key={`upcoming-${activity.id}`}
+                      className="rounded-lg border border-amber-200 bg-white p-4"
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <div className="text-base font-semibold text-gray-900">
+                            {activity.title}
+                          </div>
+                          <div className="mt-1 text-sm text-gray-600">{activity.location}</div>
+                          <div className="mt-1 text-sm text-gray-500">
+                            {new Date(activity.date_time).toLocaleString('vi-VN')}
+                          </div>
                         </div>
-                        <div className="mt-1 text-sm text-gray-600">{activity.location}</div>
-                        <div className="mt-1 text-sm text-gray-500">
-                          {new Date(activity.date_time).toLocaleString('vi-VN')}
-                        </div>
+                        {getStatusBadge(getDisplayStatus(activity))}
                       </div>
-                      {getStatusBadge(getDisplayStatus(activity))}
+
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        <Link
+                          href={`/activities/${activity.id}`}
+                          className="px-3 py-1.5 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition text-sm"
+                        >
+                          👁️ Xem chi tiết
+                        </Link>
+                        {activeQrSession && (
+                          <Link
+                            href={`/teacher/qr?activity_id=${activity.id}&session_id=${activeQrSession.session_id}`}
+                            className="px-3 py-1.5 bg-emerald-600 text-white rounded hover:bg-emerald-700 transition text-sm"
+                          >
+                            ✅ Điểm danh
+                          </Link>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
@@ -647,7 +667,7 @@ export default function TeacherActivitiesPage() {
 
                     {activeQrSession && (
                       <Link
-                        href={`/teacher/qr?activityId=${activity.id}&sessionId=${activeQrSession.session_id}`}
+                        href={`/teacher/qr?activity_id=${activity.id}&session_id=${activeQrSession.session_id}`}
                         className="px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 transition text-sm"
                       >
                         ✅ Điểm danh

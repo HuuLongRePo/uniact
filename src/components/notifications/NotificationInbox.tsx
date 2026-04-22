@@ -7,6 +7,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useEffectEventCompat } from '@/lib/useEffectEventCompat';
 import {
   executeNotificationAction,
+  NotificationRecipientRole,
   resolveNotificationActionButtons,
 } from '@/lib/notification-actions';
 import {
@@ -40,6 +41,12 @@ interface NotificationInboxProps {
 
 const PER_PAGE = 20;
 
+function resolveRecipientRoleFromPathname(pathname: string): NotificationRecipientRole {
+  if (pathname.startsWith('/admin')) return 'admin';
+  if (pathname.startsWith('/teacher')) return 'teacher';
+  return 'student';
+}
+
 export default function NotificationInbox({
   title = 'Thông báo',
   showSettings = false,
@@ -59,6 +66,10 @@ export default function NotificationInbox({
     reminder_enabled: true,
     reminder_days: 1,
   });
+  const recipientRole = useMemo<NotificationRecipientRole>(() => {
+    if (typeof window === 'undefined') return 'student';
+    return resolveRecipientRoleFromPathname(window.location.pathname);
+  }, []);
 
   const totalPages = Math.max(1, Math.ceil(total / PER_PAGE));
 
@@ -430,7 +441,10 @@ export default function NotificationInbox({
               const actionButtons =
                 normalizedActionButtons.length > 0
                   ? normalizedActionButtons
-                  : resolveNotificationActionButtons(notification);
+                  : resolveNotificationActionButtons({
+                      ...notification,
+                      recipient_role: recipientRole,
+                    });
 
               return (
                 <article

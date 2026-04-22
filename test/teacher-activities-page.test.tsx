@@ -177,6 +177,63 @@ describe('TeacherActivitiesPage', () => {
     expect(screen.getByText('Hoạt động nháp')).toBeInTheDocument();
   });
 
+  it('renders attendance shortcut with canonical teacher QR query params when active session exists', async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+
+      if (url.startsWith('/api/activities?')) {
+        return {
+          ok: true,
+          json: async () => ({
+            activities: [
+              {
+                id: 31,
+                title: 'Hoạt động đang mở điểm danh',
+                description: 'Mô tả',
+                date_time: '2099-04-21T08:00:00.000Z',
+                location: 'Phòng 301',
+                max_participants: 60,
+                status: 'published',
+                participant_count: 33,
+                attended_count: 11,
+              },
+            ],
+            total: 1,
+          }),
+        } as Response;
+      }
+
+      if (url === '/api/qr-sessions/active?activity_id=31') {
+        return {
+          ok: true,
+          json: async () => ({
+            data: {
+              session: {
+                id: 9001,
+                session_id: 9001,
+                expires_at: '2099-04-21T10:00:00.000Z',
+              },
+            },
+          }),
+        } as Response;
+      }
+
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
+
+    vi.stubGlobal('fetch', fetchMock);
+    window.fetch = fetchMock as typeof fetch;
+
+    const { default: TeacherActivitiesPage } = await import('../src/app/teacher/activities/page');
+    render(<TeacherActivitiesPage />);
+
+    const attendanceLink = await screen.findByRole('link', { name: /điểm danh/i });
+    expect(attendanceLink).toHaveAttribute(
+      'href',
+      '/teacher/qr?activity_id=31&session_id=9001'
+    );
+  });
+
   it('uses API message for submit approval success toast', async () => {
     const { toast } = await import('@/lib/toast');
 
