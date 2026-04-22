@@ -457,7 +457,8 @@ button:disabled,
     background 0.2s ease;
 }
 
-:root[data-theme='dark'] a {
+:root[data-theme='dark'] a:not([class]),
+:root[data-theme='dark'] a[class=''] {
   color: var(--app-link);
 }
 
@@ -1023,6 +1024,7 @@ button:disabled,
     var(--app-action-primary-bg) 0%,
     color-mix(in srgb, var(--app-action-primary-bg) 82%, #2563eb) 100%
   );
+  color: var(--app-action-primary-text) !important;
   box-shadow: var(--landing-action-shadow);
 }
 
@@ -1032,6 +1034,7 @@ button:disabled,
     var(--app-action-primary-bg-hover) 0%,
     color-mix(in srgb, var(--app-action-primary-bg-hover) 82%, #1d4ed8) 100%
   );
+  color: var(--app-action-primary-text) !important;
 }
 
 .landing-text-strong {

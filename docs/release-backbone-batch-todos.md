@@ -1340,6 +1340,38 @@ Yeu cau:
 - [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests)
 - [x] `npm.cmd run release:check:full` -> PASS (4/4 checks, lint warnings legacy scope khong block)
 
+## 9.26) Batch uu tien nong - dark mode button-link contrast guard (landing + system-wide)
+
+### Muc tieu
+
+- Sua loi UI 2 nut dang nhap tren landing dark mode bi mau chu giong trang thai disabled (do rule global dark-mode ghi de mau link).
+- Quet va chan tri de loi hien thi tuong tu tren toan he thong voi cac `Link`/`a` duoc style nhu button.
+- Them regression guard de tranh tai phat khi refactor theme.
+
+### Viec can lam
+
+- [x] Root-cause:
+  - [x] xac nhan global rule `:root[data-theme='dark'] a { color: var(--app-link); }` dang ghi de mau chu cua link-button.
+  - [x] xac nhan 2 nut tren landing (`Dang nhap`, `Dang nhap he thong`) bi anh huong truc tiep.
+- [x] Theme fix:
+  - [x] scope lai dark-link rule chi cho anchor khong co class (`a:not([class])`, `a[class='']`).
+  - [x] bo sung mau chu explicit cho `.landing-action-primary` va hover (`var(--app-action-primary-text) !important`).
+- [x] Scan toan he thong:
+  - [x] quet nhanh `Link/a` co class nen (`bg-*`) de danh gia nhom co nguy co bi ghi de mau.
+  - [x] chot fix o global theme rule de bao toan ca nhom link da duoc style rieng.
+- [x] Regression:
+  - [x] them `test/theme-link-contrast-guard.test.ts` de chan rule dark-link blanket va giu explicit contrast cho landing action.
+- [x] Pipeline:
+  - [x] fix blocker format check (format lai `teacher/activities/[id]/attendance/history/page.tsx`) de khoi phuc `release:check:full` xanh.
+
+### Verification
+
+- [x] `npm.cmd test -- test/theme-link-contrast-guard.test.ts test/teacher-route-integrity.test.ts` -> PASS (2 files / 8 tests)
+- [x] `npm.cmd run lint -- --file "test/theme-link-contrast-guard.test.ts" --file "src/app/page.tsx"` -> PASS (0 warning)
+- [x] `npm.cmd run build` -> PASS
+- [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests)
+- [x] `npm.cmd run release:check:full` -> PASS (4/4 checks, lint warnings legacy scope khong block)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix
@@ -1368,6 +1400,7 @@ Yeu cau:
 - [x] Commit 21: navbar actor integrity + dedupe hardening + landing dark/system rescue (batch 9.21) (`176eec4`)
 - [x] Commit 22: server-side push notification dedupe guard + tests (batch 9.22) (`cf46bf7`)
 - [x] Commit 23: attendance CTA hardening + projector quick action + camera helper + landing contrast v4 (batch 9.23) (`a58233c`)
+- [x] Commit 24: actor route namespace integrity hardening (batch 9.25) (`1be6968`)
 
 ---
 
