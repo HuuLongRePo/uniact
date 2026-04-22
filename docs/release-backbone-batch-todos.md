@@ -1162,7 +1162,7 @@ Yeu cau:
   - [x] Split commits: `07e5ac8`, `59efe67`, `a8d0b8e`
 - [x] Commit 19: landing contrast rescue v2 + scanner/inbox polish (batch 9.19) (`c304ca7`)
 - [x] Commit 20: biometric pages camera helper alignment + tests (batch 9.20) (`b9c18a3`)
-- [ ] Commit 21: navbar actor integrity + dedupe hardening + landing dark/system rescue (batch 9.21)
+- [x] Commit 21: navbar actor integrity + dedupe hardening + landing dark/system rescue (batch 9.21) (`176eec4`)
 
 ---
 
