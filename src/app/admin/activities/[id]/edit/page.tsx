@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import LoadingSpinner from '@/components/LoadingSpinner';
@@ -20,6 +20,18 @@ interface Activity {
   created_by: number;
 }
 
+interface ActivityFormData {
+  title: string;
+  description: string;
+  date_time: string;
+  location: string;
+  activity_type_id: number;
+  organization_level_id: number;
+  max_participants: number;
+}
+
+type ActivityFormField = keyof ActivityFormData;
+
 export default function AdminEditActivityPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
@@ -29,7 +41,7 @@ export default function AdminEditActivityPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activity, setActivity] = useState<Activity | null>(null);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<ActivityFormData>({
     title: '',
     description: '',
     date_time: '',
@@ -38,18 +50,10 @@ export default function AdminEditActivityPage() {
     organization_level_id: 1,
     max_participants: 0,
   });
-  const [changes, setChanges] = useState<Record<string, any>>({});
+  const [changes, setChanges] = useState<Partial<ActivityFormData>>({});
   const [showConfirmModal, setShowConfirmModal] = useState(false);
 
-  useEffect(() => {
-    if (!authLoading && (!user || user.role !== 'admin')) {
-      router.push('/login');
-      return;
-    }
-    if (user) fetchActivity();
-  }, [user, authLoading, router]);
-
-  const fetchActivity = async () => {
+  const fetchActivity = useCallback(async () => {
     try {
       const response = await fetch(`/api/admin/activities/${activityId}`);
       const data = await response.json();
@@ -75,19 +79,39 @@ export default function AdminEditActivityPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [activityId, router]);
 
-  const handleFieldChange = (field: string, value: any) => {
+  useEffect(() => {
+    if (!authLoading && (!user || user.role !== 'admin')) {
+      router.push('/login');
+      return;
+    }
+    if (user) {
+      void fetchActivity();
+    }
+  }, [user, authLoading, router, fetchActivity]);
+
+  const handleFieldChange = <K extends ActivityFormField>(field: K, value: ActivityFormData[K]) => {
     const newFormData = { ...formData, [field]: value };
     setFormData(newFormData);
 
     // Track changes
-    const newChanges: Record<string, any> = {};
-    Object.keys(newFormData).forEach((key) => {
-      if ((newFormData as Record<string, any>)[key] !== activity?.[key as keyof Activity]) {
-        newChanges[key] = (newFormData as Record<string, any>)[key];
-      }
-    });
+    const newChanges: Partial<ActivityFormData> = {};
+    if (newFormData.title !== activity?.title) newChanges.title = newFormData.title;
+    if (newFormData.description !== activity?.description) {
+      newChanges.description = newFormData.description;
+    }
+    if (newFormData.date_time !== activity?.date_time) newChanges.date_time = newFormData.date_time;
+    if (newFormData.location !== activity?.location) newChanges.location = newFormData.location;
+    if (newFormData.activity_type_id !== activity?.activity_type_id) {
+      newChanges.activity_type_id = newFormData.activity_type_id;
+    }
+    if (newFormData.organization_level_id !== activity?.organization_level_id) {
+      newChanges.organization_level_id = newFormData.organization_level_id;
+    }
+    if (newFormData.max_participants !== activity?.max_participants) {
+      newChanges.max_participants = newFormData.max_participants;
+    }
     setChanges(newChanges);
   };
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import LoadingSpinner from '@/components/LoadingSpinner';
@@ -33,17 +33,7 @@ export default function PendingActivitiesPage() {
   const [approveTargetId, setApproveTargetId] = useState<number | null>(null);
   const [rejectTargetId, setRejectTargetId] = useState<number | null>(null);
 
-  useEffect(() => {
-    if (!authLoading && (!user || user.role !== 'admin')) {
-      router.push('/login');
-      return;
-    }
-    if (user) {
-      fetchActivities();
-    }
-  }, [user, authLoading, router, page]);
-
-  const fetchActivities = async () => {
+  const fetchActivities = useCallback(async () => {
     try {
       setLoading(true);
       const res = await fetch(`/api/admin/activities/pending?page=${page}&limit=10`);
@@ -53,12 +43,22 @@ export default function PendingActivitiesPage() {
       setPagination(
         data.pagination || { page, limit: 10, total: data.activities?.length || 0, pages: 1 }
       );
-    } catch (error) {
+    } catch (_error) {
       toast.error('Không thể tải danh sách');
     } finally {
       setLoading(false);
     }
-  };
+  }, [page]);
+
+  useEffect(() => {
+    if (!authLoading && (!user || user.role !== 'admin')) {
+      router.push('/login');
+      return;
+    }
+    if (user) {
+      void fetchActivities();
+    }
+  }, [user, authLoading, router, fetchActivities]);
 
   const quickApprove = async (activityId: number) => {
     try {
@@ -71,8 +71,8 @@ export default function PendingActivitiesPage() {
       if (!res.ok) throw new Error('Không thể phê duyệt hoạt động');
 
       toast.success('Đã phê duyệt');
-      fetchActivities();
-    } catch (error) {
+      await fetchActivities();
+    } catch (_error) {
       toast.error('Phê duyệt thất bại');
     }
   };
@@ -250,8 +250,8 @@ export default function PendingActivitiesPage() {
 
               if (!res.ok) throw new Error('Không thể từ chối hoạt động');
               toast.success('Đã từ chối');
-              fetchActivities();
-            } catch (error) {
+              await fetchActivities();
+            } catch (_error) {
               toast.error('Từ chối thất bại');
             }
           }}

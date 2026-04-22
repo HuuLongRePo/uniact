@@ -616,6 +616,31 @@ Yeu cau thi hanh:
 - [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests)
 - [x] `npm.cmd run release:check:full` -> PASS (4/4 checks)
 
+## 9.8) Batch hardening - Activity workflow lint/type cleanup
+
+### Muc tieu
+
+- Giam warning lint o cum Activity workflow (detail/admin edit/pending approvals) de giam no ky thuat truoc khi chot backbone.
+- Khong doi nghiep vu, chi harden hooks deps + typing form diff.
+
+### Viec can lam
+
+- [x] `activities/[id]/page.tsx`:
+  - [x] dong bo `useEffect` voi `fetchActivity` callback dependency de khong warning `react-hooks/exhaustive-deps`.
+- [x] `admin/activities/[id]/edit/page.tsx`:
+  - [x] bo `any` o state `changes` + `handleFieldChange`.
+  - [x] chuan hoa diff builder theo typed fields, tranh type error khi build production.
+- [x] `admin/activities/pending/page.tsx`:
+  - [x] dong bo `fetchActivities` bang `useCallback` + deps dung cho `useEffect`.
+  - [x] bo unused `catch (error)` vars.
+  - [x] refresh list sau approve/reject theo `await fetchActivities()`.
+
+### Verification
+
+- [x] `npm.cmd run lint -- --file "src/app/activities/[id]/page.tsx" --file "src/app/admin/activities/[id]/edit/page.tsx" --file "src/app/admin/activities/pending/page.tsx"` -> PASS (0 warnings)
+- [x] `npm.cmd test -- test/admin-approvals-page.test.tsx test/activities.test.ts test/admin-pending-activities-route.test.ts` -> PASS (3 files / 12 tests)
+- [x] `npm.cmd run build` -> PASS
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix
@@ -626,6 +651,8 @@ Yeu cau thi hanh:
   - [x] Split commits: `194c4eb`, `de6900c`, `0e1e5bb`, `9e221ac`
 - [x] Commit 6: Final regression fixes + release docs
 - [x] Commit 7: Production build hardening + point_calculations schema self-heal
+- [x] Commit 8: docs sync baseline + clone handoff (`804d71a`)
+- [ ] Commit 9: activity workflow lint/type hardening (batch 9.8)
 
 ---
 

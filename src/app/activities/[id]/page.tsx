@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter, useParams } from 'next/navigation';
 import LoadingSpinner from '@/components/LoadingSpinner';
@@ -31,15 +31,7 @@ export default function ActivityDetailPage() {
   const [activity, setActivity] = useState<Activity | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (!authLoading && !user) {
-      router.push('/login');
-      return;
-    }
-    if (user && activityId) fetchActivity();
-  }, [user, authLoading, router, activityId]);
-
-  const fetchActivity = async () => {
+  const fetchActivity = useCallback(async () => {
     if (!activityId) return;
     try {
       setLoading(true);
@@ -56,7 +48,17 @@ export default function ActivityDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [activityId]);
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push('/login');
+      return;
+    }
+    if (user && activityId) {
+      void fetchActivity();
+    }
+  }, [user, authLoading, router, activityId, fetchActivity]);
 
   if (authLoading || loading) {
     return <LoadingSpinner />;
