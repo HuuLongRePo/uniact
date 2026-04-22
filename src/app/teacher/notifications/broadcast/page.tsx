@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Send, Clock, Users, Trash2, Edit2, Save } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Clock, Edit2, Plus, Save, Send, Trash2, Users } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
@@ -31,6 +31,28 @@ type PendingBroadcastAction = {
   notification: BroadcastNotification;
 } | null;
 
+function getClasses(payload: unknown): Class[] {
+  if (!payload || typeof payload !== 'object') return [];
+  const normalized = payload as {
+    classes?: Class[];
+    data?: {
+      classes?: Class[];
+    };
+  };
+  return normalized.data?.classes ?? normalized.classes ?? [];
+}
+
+function getNotifications(payload: unknown): BroadcastNotification[] {
+  if (!payload || typeof payload !== 'object') return [];
+  const normalized = payload as {
+    notifications?: BroadcastNotification[];
+    data?: {
+      notifications?: BroadcastNotification[];
+    };
+  };
+  return normalized.data?.notifications ?? normalized.notifications ?? [];
+}
+
 export default function BroadcastNotificationsPage() {
   const [notifications, setNotifications] = useState<BroadcastNotification[]>([]);
   const [classes, setClasses] = useState<Class[]>([]);
@@ -40,7 +62,6 @@ export default function BroadcastNotificationsPage() {
   const [filter, setFilter] = useState<'all' | 'draft' | 'scheduled' | 'sent'>('all');
   const [pendingAction, setPendingAction] = useState<PendingBroadcastAction>(null);
 
-  // Form state
   const [formData, setFormData] = useState({
     title: '',
     message: '',
@@ -52,7 +73,7 @@ export default function BroadcastNotificationsPage() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    fetchData();
+    void fetchData();
   }, [filter]);
 
   const fetchData = async () => {
@@ -64,13 +85,12 @@ export default function BroadcastNotificationsPage() {
       ]);
 
       if (!notificationsRes.ok) throw new Error('Không thể tải thông báo');
-
       const notificationsData = await notificationsRes.json();
-      setNotifications(notificationsData.notifications || []);
+      setNotifications(getNotifications(notificationsData));
 
       if (classesRes.ok) {
         const classesData = await classesRes.json();
-        setClasses(classesData.classes || []);
+        setClasses(getClasses(classesData));
       }
     } catch (error) {
       console.error(error);
@@ -112,7 +132,7 @@ export default function BroadcastNotificationsPage() {
 
       toast.success(formData.is_draft ? 'Lưu nháp thành công' : 'Tạo thông báo thành công');
       resetForm();
-      fetchData();
+      void fetchData();
     } catch (error: unknown) {
       console.error(error);
       toast.error(error instanceof Error ? error.message : 'Không thể tạo thông báo');
@@ -149,7 +169,7 @@ export default function BroadcastNotificationsPage() {
 
       toast.success('Cập nhật thông báo thành công');
       resetForm();
-      fetchData();
+      void fetchData();
     } catch (error: unknown) {
       console.error(error);
       toast.error(error instanceof Error ? error.message : 'Không thể cập nhật thông báo');
@@ -170,7 +190,7 @@ export default function BroadcastNotificationsPage() {
       }
 
       toast.success('Gửi thông báo thành công');
-      fetchData();
+      void fetchData();
     } catch (error: unknown) {
       console.error(error);
       toast.error(error instanceof Error ? error.message : 'Không thể gửi thông báo');
@@ -189,7 +209,7 @@ export default function BroadcastNotificationsPage() {
       }
 
       toast.success('Xóa thông báo thành công');
-      fetchData();
+      void fetchData();
     } catch (error: unknown) {
       console.error(error);
       toast.error(error instanceof Error ? error.message : 'Không thể xóa thông báo');
@@ -206,6 +226,7 @@ export default function BroadcastNotificationsPage() {
       is_draft: notification.status === 'draft',
     });
     setEditingId(notification.id);
+    setIsCreating(false);
   };
 
   const resetForm = () => {
@@ -237,11 +258,11 @@ export default function BroadcastNotificationsPage() {
   const getStatusLabel = (status: string) => {
     switch (status) {
       case 'draft':
-        return '📝 Nháp';
+        return 'Nháp';
       case 'scheduled':
-        return '⏳ Đã lên lịch';
+        return 'Đã lên lịch';
       case 'sent':
-        return '✓ Đã gửi';
+        return 'Đã gửi';
       default:
         return status;
     }
@@ -268,263 +289,265 @@ export default function BroadcastNotificationsPage() {
 
   if (loading && !isCreating && !editingId) {
     return (
-      <div className="min-h-screen bg-gray-50 py-8">
-        <div className="max-w-6xl mx-auto">
-          <div className="bg-white rounded-lg shadow p-12 text-center">
-            <div className="animate-spin inline-block w-8 h-8 border-4 border-gray-200 border-t-blue-600 rounded-full"></div>
-            <p className="mt-4 text-gray-600">Đang tải...</p>
-          </div>
-        </div>
+      <div className="page-shell">
+        <section className="page-surface rounded-[1.75rem] p-12 text-center">
+          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-blue-600" />
+          <p className="mt-4 text-gray-600">Đang tải...</p>
+        </section>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-6xl mx-auto px-4">
-        {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900">Thông báo quảng bá</h1>
-          <p className="text-gray-600 mt-2">Gửi thông báo đến các lớp học hoặc toàn trường</p>
+    <div className="page-shell">
+      <section className="page-surface overflow-hidden rounded-[1.75rem]">
+        <div className="border-b border-gray-200 px-5 py-5 sm:px-7">
+          <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">Thông báo quảng bá</h1>
+          <p className="mt-2 text-sm leading-6 text-gray-600 sm:text-base">
+            Gửi thông báo đến lớp học hoặc toàn trường theo dạng gửi ngay, lưu nháp hoặc lên lịch.
+          </p>
         </div>
 
-        {/* Create Button */}
-        {!isCreating && !editingId ? (
-          <button
-            onClick={() => setIsCreating(true)}
-            className="mb-6 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition flex items-center gap-2"
-          >
-            <Send className="w-5 h-5" />
-            Tạo thông báo mới
-          </button>
-        ) : null}
+        <div className="space-y-6 px-5 py-6 sm:px-7">
+          {!isCreating && !editingId && (
+            <button
+              onClick={() => setIsCreating(true)}
+              className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+            >
+              <Plus className="h-4 w-4" />
+              Tạo thông báo mới
+            </button>
+          )}
 
-        {/* Form */}
-        {(isCreating || editingId) && (
-          <div className="mb-6 bg-white rounded-lg shadow p-6 border border-gray-200">
-            <h2 className="text-lg font-bold text-gray-900 mb-4">
-              {editingId ? 'Chỉnh sửa thông báo' : 'Tạo thông báo mới'}
-            </h2>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Tiêu đề *</label>
-                <input
-                  type="text"
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  placeholder="Nhập tiêu đề thông báo"
-                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Nội dung *</label>
-                <textarea
-                  value={formData.message}
-                  onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                  placeholder="Nhập nội dung thông báo"
-                  rows={4}
-                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {(isCreating || editingId) && (
+            <div className="content-card p-5">
+              <h2 className="mb-4 text-lg font-bold text-gray-900">
+                {editingId ? 'Chỉnh sửa thông báo' : 'Tạo thông báo mới'}
+              </h2>
+              <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Đối tượng nhận *
-                  </label>
-                  <select
-                    value={formData.target_type}
-                    onChange={(e) => {
-                      setFormData({
-                        ...formData,
-                        target_type: e.target.value as typeof formData.target_type,
-                        target_ids: [],
-                      });
-                    }}
-                    className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="all">👥 Tất cả học viên</option>
-                    <option value="class">📚 Lớp cụ thể</option>
-                    <option value="grade">🎓 Khối cụ thể</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Thời gian gửi (tùy chọn)
-                  </label>
+                  <label className="mb-2 block text-sm font-medium text-gray-700">Tiêu đề *</label>
                   <input
-                    type="datetime-local"
-                    value={formData.scheduled_at}
-                    onChange={(e) => setFormData({ ...formData, scheduled_at: e.target.value })}
-                    className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    type="text"
+                    value={formData.title}
+                    onChange={(event) => setFormData({ ...formData, title: event.target.value })}
+                    placeholder="Nhập tiêu đề thông báo"
+                    className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
-                  <p className="text-xs text-gray-500 mt-1">Để trống để gửi ngay</p>
                 </div>
-              </div>
 
-              {formData.target_type !== 'all' && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {formData.target_type === 'class' ? 'Chọn lớp *' : 'Chọn khối *'}
-                  </label>
-                  <div className="space-y-2 max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-4">
-                    {classes.map((cls) => (
-                      <label key={cls.id} className="flex items-center gap-3">
-                        <input
-                          type="checkbox"
-                          checked={formData.target_ids.includes(cls.id)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setFormData({
-                                ...formData,
-                                target_ids: [...formData.target_ids, cls.id],
-                              });
-                            } else {
-                              setFormData({
-                                ...formData,
-                                target_ids: formData.target_ids.filter((id) => id !== cls.id),
-                              });
-                            }
-                          }}
-                          className="w-4 h-4 rounded border-gray-300"
-                        />
-                        <span className="text-sm text-gray-700">
-                          {cls.name} ({cls.student_count} học viên)
-                        </span>
-                      </label>
-                    ))}
+                  <label className="mb-2 block text-sm font-medium text-gray-700">Nội dung *</label>
+                  <textarea
+                    value={formData.message}
+                    onChange={(event) => setFormData({ ...formData, message: event.target.value })}
+                    placeholder="Nhập nội dung thông báo"
+                    rows={4}
+                    className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-gray-700">
+                      Đối tượng nhận *
+                    </label>
+                    <select
+                      value={formData.target_type}
+                      onChange={(event) => {
+                        setFormData({
+                          ...formData,
+                          target_type: event.target.value as typeof formData.target_type,
+                          target_ids: [],
+                        });
+                      }}
+                      className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="all">Tất cả học viên</option>
+                      <option value="class">Lớp cụ thể</option>
+                      <option value="grade">Khối cụ thể</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-gray-700">
+                      Thời gian gửi (tuỳ chọn)
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={formData.scheduled_at}
+                      onChange={(event) =>
+                        setFormData({ ...formData, scheduled_at: event.target.value })
+                      }
+                      className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <p className="mt-1 text-xs text-gray-500">Để trống để gửi ngay.</p>
                   </div>
                 </div>
-              )}
 
-              <div className="flex gap-3">
-                <button
-                  onClick={resetForm}
-                  disabled={saving}
-                  className="flex-1 px-4 py-2 border rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition"
-                >
-                  Hủy
-                </button>
-                <button
-                  onClick={() => {
-                    if (editingId) {
-                      handleUpdate(editingId);
-                    } else {
-                      handleCreate();
-                    }
-                  }}
-                  disabled={saving}
-                  className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition disabled:opacity-50 flex items-center justify-center gap-2"
-                >
-                  <Save className="w-5 h-5" />
-                  {saving ? 'Đang lưu...' : editingId ? 'Cập nhật' : 'Tạo'}
-                </button>
+                {formData.target_type !== 'all' && (
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-gray-700">
+                      {formData.target_type === 'class' ? 'Chọn lớp *' : 'Chọn khối *'}
+                    </label>
+                    <div className="max-h-52 space-y-2 overflow-y-auto rounded-lg border border-gray-200 p-4">
+                      {classes.map((cls) => (
+                        <label key={cls.id} className="flex items-center gap-3">
+                          <input
+                            type="checkbox"
+                            checked={formData.target_ids.includes(cls.id)}
+                            onChange={(event) => {
+                              if (event.target.checked) {
+                                setFormData({
+                                  ...formData,
+                                  target_ids: [...formData.target_ids, cls.id],
+                                });
+                              } else {
+                                setFormData({
+                                  ...formData,
+                                  target_ids: formData.target_ids.filter((id) => id !== cls.id),
+                                });
+                              }
+                            }}
+                            className="h-4 w-4 rounded border-gray-300"
+                          />
+                          <span className="text-sm text-gray-700">
+                            {cls.name} ({cls.student_count} học viên)
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={resetForm}
+                    disabled={saving}
+                    className="flex-1 rounded-xl border border-gray-300 px-4 py-2 font-medium text-gray-700 transition-colors hover:bg-gray-50"
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (editingId) {
+                        void handleUpdate(editingId);
+                      } else {
+                        void handleCreate();
+                      }
+                    }}
+                    disabled={saving}
+                    className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2 font-semibold text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    <Save className="h-4 w-4" />
+                    {saving ? 'Đang lưu...' : editingId ? 'Cập nhật' : 'Tạo'}
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Filter Tabs */}
-        <div className="flex gap-2 mb-6 border-b">
-          {(['all', 'draft', 'scheduled', 'sent'] as const).map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setFilter(tab)}
-              className={`py-3 px-4 font-medium transition ${
-                filter === tab
-                  ? 'text-blue-600 border-b-2 border-blue-600'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              {tab === 'all' && '📋 Tất cả'}
-              {tab === 'draft' && '📝 Nháp'}
-              {tab === 'scheduled' && '⏳ Đã lên lịch'}
-              {tab === 'sent' && '✓ Đã gửi'}
-            </button>
-          ))}
-        </div>
-
-        {/* Notifications List */}
-        {notifications.length === 0 ? (
-          <div className="bg-white rounded-lg shadow p-12 text-center border border-gray-200">
-            <p className="text-gray-600">Không có thông báo nào</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 gap-4">
-            {notifications.map((notification) => (
-              <div
-                key={notification.id}
-                className="bg-white rounded-lg shadow p-6 border border-gray-200 hover:shadow-md transition"
+          <div className="flex gap-2 border-b border-gray-200">
+            {(['all', 'draft', 'scheduled', 'sent'] as const).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setFilter(tab)}
+                className={`px-4 py-3 text-sm font-medium transition ${
+                  filter === tab
+                    ? 'border-b-2 border-blue-600 text-blue-600'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
               >
-                <div className="flex items-start justify-between gap-4 mb-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <h3 className="text-lg font-bold text-gray-900">{notification.title}</h3>
-                      <span
-                        className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(notification.status)}`}
-                      >
-                        {getStatusLabel(notification.status)}
-                      </span>
-                    </div>
-                    <p className="text-gray-700 whitespace-pre-wrap mb-3">{notification.message}</p>
-
-                    <div className="flex flex-wrap gap-4 text-sm text-gray-600">
-                      <span className="flex items-center gap-1">
-                        <Users className="w-4 h-4" />
-                        {notification.recipient_count} người nhận
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Clock className="w-4 h-4" />
-                        {new Date(notification.created_at).toLocaleString('vi-VN')}
-                      </span>
-                      {notification.scheduled_at && notification.status === 'scheduled' && (
-                        <span className="flex items-center gap-1 text-blue-600">
-                          ⏰ Gửi: {new Date(notification.scheduled_at).toLocaleString('vi-VN')}
-                        </span>
-                      )}
-                      {notification.sent_at && (
-                        <span className="flex items-center gap-1 text-green-600">
-                          ✓ Đã gửi: {new Date(notification.sent_at).toLocaleString('vi-VN')}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    {notification.status === 'draft' && (
-                      <>
-                        <button
-                          onClick={() => startEditing(notification)}
-                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
-                        >
-                          <Edit2 className="w-5 h-5" />
-                        </button>
-                        <button
-                          onClick={() => setPendingAction({ type: 'delete', notification })}
-                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
-                        >
-                          <Trash2 className="w-5 h-5" />
-                        </button>
-                      </>
-                    )}
-                    {notification.status === 'scheduled' && (
-                      <button
-                        onClick={() => setPendingAction({ type: 'send', notification })}
-                        className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition flex items-center gap-2"
-                      >
-                        <Send className="w-4 h-4" />
-                        Gửi ngay
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
+                {tab === 'all' && 'Tất cả'}
+                {tab === 'draft' && 'Nháp'}
+                {tab === 'scheduled' && 'Đã lên lịch'}
+                {tab === 'sent' && 'Đã gửi'}
+              </button>
             ))}
           </div>
-        )}
-      </div>
+
+          {notifications.length === 0 ? (
+            <div className="content-card p-12 text-center">
+              <p className="text-gray-600">Không có thông báo nào</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-4">
+              {notifications.map((notification) => (
+                <div key={notification.id} className="content-card p-6 transition hover:shadow-md">
+                  <div className="mb-4 flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <div className="mb-2 flex items-center gap-3">
+                        <h3 className="text-lg font-bold text-gray-900">{notification.title}</h3>
+                        <span
+                          className={`rounded-full px-3 py-1 text-sm font-medium ${getStatusColor(
+                            notification.status
+                          )}`}
+                        >
+                          {getStatusLabel(notification.status)}
+                        </span>
+                      </div>
+                      <p className="mb-3 whitespace-pre-wrap text-gray-700">
+                        {notification.message}
+                      </p>
+
+                      <div className="flex flex-wrap gap-4 text-sm text-gray-600">
+                        <span className="inline-flex items-center gap-1">
+                          <Users className="h-4 w-4" />
+                          {notification.recipient_count} người nhận
+                        </span>
+                        <span className="inline-flex items-center gap-1">
+                          <Clock className="h-4 w-4" />
+                          {new Date(notification.created_at).toLocaleString('vi-VN')}
+                        </span>
+                        {notification.scheduled_at && notification.status === 'scheduled' && (
+                          <span className="text-blue-600">
+                            Gửi: {new Date(notification.scheduled_at).toLocaleString('vi-VN')}
+                          </span>
+                        )}
+                        {notification.sent_at && (
+                          <span className="text-green-600">
+                            Đã gửi: {new Date(notification.sent_at).toLocaleString('vi-VN')}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex shrink-0 items-center gap-2">
+                      {notification.status === 'draft' && (
+                        <>
+                          <button
+                            onClick={() => startEditing(notification)}
+                            className="rounded-lg p-2 text-blue-600 transition-colors hover:bg-blue-50"
+                            title="Chỉnh sửa"
+                          >
+                            <Edit2 className="h-5 w-5" />
+                          </button>
+                          <button
+                            onClick={() => setPendingAction({ type: 'delete', notification })}
+                            className="rounded-lg p-2 text-red-600 transition-colors hover:bg-red-50"
+                            title="Xóa"
+                          >
+                            <Trash2 className="h-5 w-5" />
+                          </button>
+                        </>
+                      )}
+                      {notification.status === 'scheduled' && (
+                        <button
+                          onClick={() => setPendingAction({ type: 'send', notification })}
+                          className="inline-flex items-center gap-2 rounded-xl bg-green-600 px-4 py-2 font-medium text-white transition-colors hover:bg-green-700"
+                        >
+                          <Send className="h-4 w-4" />
+                          Gửi ngay
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
 
       <ConfirmDialog
         isOpen={pendingAction !== null}

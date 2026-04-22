@@ -26,13 +26,38 @@ describe('StudentNotifications', () => {
       if (url === '/api/notifications') {
         return {
           ok: true,
-          json: async () => ({ data: { notifications: [{ id: 1, type: 'system', title: 'Có thông báo mới', message: 'Test', related_table: null, related_id: null, is_read: 0, created_at: '2026-04-19T10:00:00Z' }], meta: { total_unread: 1 } } }),
+          json: async () => ({
+            data: {
+              notifications: [
+                {
+                  id: 1,
+                  type: 'system',
+                  title: 'Có thông báo mới',
+                  message: 'Test',
+                  related_table: null,
+                  related_id: null,
+                  is_read: 0,
+                  created_at: '2026-04-19T10:00:00Z',
+                },
+              ],
+              meta: { total_unread: 1 },
+            },
+          }),
         } as Response;
       }
       if (url === '/api/notifications/settings') {
         return {
           ok: true,
-          json: async () => ({ data: { settings: { email_enabled: true, new_activity_enabled: true, reminder_enabled: true, reminder_days: 2 } } }),
+          json: async () => ({
+            data: {
+              settings: {
+                email_enabled: true,
+                new_activity_enabled: true,
+                reminder_enabled: true,
+                reminder_days: 2,
+              },
+            },
+          }),
         } as Response;
       }
       throw new Error(`Unexpected fetch: ${url}`);
@@ -77,7 +102,16 @@ describe('StudentNotifications', () => {
       if (url === '/api/notifications/settings') {
         return {
           ok: true,
-          json: async () => ({ data: { settings: { email_enabled: true, new_activity_enabled: true, reminder_enabled: true, reminder_days: 2 } } }),
+          json: async () => ({
+            data: {
+              settings: {
+                email_enabled: true,
+                new_activity_enabled: true,
+                reminder_enabled: true,
+                reminder_days: 2,
+              },
+            },
+          }),
         } as Response;
       }
       throw new Error(`Unexpected fetch: ${url}`);
@@ -121,7 +155,16 @@ describe('StudentNotifications', () => {
       if (url === '/api/notifications/settings') {
         return {
           ok: true,
-          json: async () => ({ data: { settings: { email_enabled: true, new_activity_enabled: true, reminder_enabled: true, reminder_days: 2 } } }),
+          json: async () => ({
+            data: {
+              settings: {
+                email_enabled: true,
+                new_activity_enabled: true,
+                reminder_enabled: true,
+                reminder_days: 2,
+              },
+            },
+          }),
         } as Response;
       }
       throw new Error(`Unexpected fetch: ${url}`);
@@ -142,10 +185,23 @@ describe('StudentNotifications', () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
       if (url === '/api/notifications') {
-        return { ok: false, json: async () => ({ error: 'Không thể tải thông báo mới' }) } as Response;
+        return {
+          ok: false,
+          json: async () => ({ error: 'Không thể tải thông báo mới' }),
+        } as Response;
       }
       if (url === '/api/notifications/settings') {
-        return { ok: true, json: async () => ({ settings: { email_enabled: true, new_activity_enabled: true, reminder_enabled: true, reminder_days: 1 } }) } as Response;
+        return {
+          ok: true,
+          json: async () => ({
+            settings: {
+              email_enabled: true,
+              new_activity_enabled: true,
+              reminder_enabled: true,
+              reminder_days: 1,
+            },
+          }),
+        } as Response;
       }
       throw new Error(`Unexpected fetch: ${url}`);
     });

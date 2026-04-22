@@ -319,11 +319,14 @@ export default function NotificationInbox({
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6 text-gray-900">
-      <div className="mx-auto max-w-5xl">
+    <div className="page-shell">
+      <section className="page-surface overflow-hidden rounded-[1.75rem] px-5 py-6 text-gray-900 sm:px-7">
         <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 data-testid="notifications-heading" className="text-3xl font-bold text-gray-900">
+            <h1
+              data-testid="notifications-heading"
+              className="text-2xl font-bold text-gray-900 sm:text-3xl"
+            >
               {title}
             </h1>
             {unreadCount > 0 ? (
@@ -332,18 +335,18 @@ export default function NotificationInbox({
               <p className="mt-1 text-gray-600">Đã đọc hết thông báo</p>
             )}
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <button
               onClick={markCurrentPageAsRead}
               disabled={!hasAnyUnreadOnPage}
-              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Đánh dấu đã đọc trang này
             </button>
             {showSettings && (
               <button
                 onClick={() => setShowSettingsModal(true)}
-                className="rounded-lg bg-gray-700 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-800"
+                className="rounded-xl bg-gray-700 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-800"
               >
                 Cài đặt
               </button>
@@ -358,7 +361,7 @@ export default function NotificationInbox({
                 setFilter('all');
                 setPage(1);
               }}
-              className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+              className={`rounded-xl px-3 py-2 text-sm font-medium transition-colors ${
                 filter === 'all'
                   ? 'bg-blue-100 text-blue-700'
                   : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
@@ -371,7 +374,7 @@ export default function NotificationInbox({
                 setFilter('unread');
                 setPage(1);
               }}
-              className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+              className={`rounded-xl px-3 py-2 text-sm font-medium transition-colors ${
                 filter === 'unread'
                   ? 'bg-blue-100 text-blue-700'
                   : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
@@ -399,7 +402,7 @@ export default function NotificationInbox({
           )}
         </div>
 
-        <div className="mb-4 flex items-center justify-between rounded-lg border border-gray-200 bg-gray-100 px-3 py-2">
+        <div className="content-card mb-4 flex items-center justify-between rounded-2xl bg-gray-100 px-3 py-2">
           <div className="flex items-center gap-2">
             <input
               type="checkbox"
@@ -423,7 +426,7 @@ export default function NotificationInbox({
         {loading ? (
           <LoadingSpinner />
         ) : notifications.length === 0 ? (
-          <div className="rounded-lg border border-gray-200 bg-white py-12 text-center shadow-sm">
+          <div className="content-card rounded-2xl py-12 text-center">
             <p className="text-lg text-gray-600">
               {filter === 'unread' ? 'Không có thông báo chưa đọc' : 'Chưa có thông báo nào'}
             </p>
@@ -441,7 +444,7 @@ export default function NotificationInbox({
                 <div
                   key={notification.id}
                   data-notification-id={notification.id}
-                  className={`flex items-start gap-3 rounded-lg border p-4 ${
+                  className={`flex items-start gap-3 rounded-2xl border p-4 ${
                     notification.is_read
                       ? 'border-gray-200 bg-white text-gray-900 shadow-sm'
                       : 'border-blue-300 bg-blue-50 text-gray-900 shadow-sm'
@@ -509,7 +512,7 @@ export default function NotificationInbox({
           </div>
         )}
 
-        <div className="mt-6 flex items-center justify-between rounded-lg border border-gray-200 bg-white px-4 py-3">
+        <div className="content-card mt-6 flex items-center justify-between rounded-2xl bg-white px-4 py-3">
           <button
             onClick={() => setPage((current) => Math.max(1, current - 1))}
             disabled={page <= 1 || loading}
@@ -528,11 +531,11 @@ export default function NotificationInbox({
             Trang sau
           </button>
         </div>
-      </div>
+      </section>
 
       {showSettingsModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-          <div className="w-full max-w-md rounded-lg border border-gray-200 bg-white p-6 shadow-xl">
+          <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-xl">
             <h2 className="mb-4 text-2xl font-bold text-gray-900">Cài đặt thông báo</h2>
             <div className="space-y-4">
               <label className="flex items-center justify-between text-gray-700">
@@ -590,13 +593,13 @@ export default function NotificationInbox({
             <div className="mt-6 flex gap-3">
               <button
                 onClick={saveSettings}
-                className="flex-1 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+                className="flex-1 rounded-xl bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
               >
                 Lưu
               </button>
               <button
                 onClick={() => setShowSettingsModal(false)}
-                className="flex-1 rounded-lg bg-gray-300 px-4 py-2 text-gray-800 hover:bg-gray-400"
+                className="flex-1 rounded-xl bg-gray-300 px-4 py-2 text-gray-800 hover:bg-gray-400"
               >
                 Hủy
               </button>

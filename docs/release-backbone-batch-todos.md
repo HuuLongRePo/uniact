@@ -428,9 +428,13 @@ Yeu cau:
 - [x] Tiep tuc quet nhanh nhan UI chung co text tieng Anh/khong dau o lop shell, toolbar, button va heading de doi sang tieng Viet co dau.
 - [x] Uu tien sua cac trang bao cao giang vien co mojibake/khong dau o heading, filter, badge va bang du lieu.
 - [x] Chuan hoa thong diep save/submit user-facing o `ActivityDialog` de khong con loi ma hoa.
+- [x] Dong bo cum notification UI theo shell moi (inbox, teacher history/settings/broadcast) va loai bo text mojibake.
+- [x] Tang do doc dark mode cho cum notification qua token hoa card/filter/table/action states.
 - [x] Chay test navbar/shell lien quan + build va commit rieng.
   - [x] `npm.cmd test -- test/sidebar-teacher-links.test.tsx test/teacher-attendance-page.test.tsx test/teacher-participation-page.test.tsx test/notification-inbox.test.tsx`
   - [x] `npm.cmd run build`
+  - [x] `npm.cmd test -- test/notification-inbox.test.tsx test/student-notifications-page.test.tsx test/teacher-notification-settings-page.test.tsx test/teacher-notification-routes.test.ts test/teacher-notification-history-route.test.ts test/teacher-notification-history-export-route.test.ts test/notification-realtime-routes.test.ts test/realtime-notification-bridge.test.tsx`
+  - [x] `npm.cmd run build` (recheck sau batch notification shell)
 
 ### Prompt bo sung (copy de chay batch nay)
 
