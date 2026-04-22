@@ -1058,7 +1058,7 @@ Yeu cau:
   - [x] Split commits: `435ec7c`, `e50f9c7`
 - [x] Commit 18: teacher activities UI modernization (batch 9.18)
   - [x] Split commits: `07e5ac8`, `59efe67`, `a8d0b8e`
-- [ ] Commit 19: landing contrast rescue v2 + scanner/inbox polish (batch 9.19)
+- [x] Commit 19: landing contrast rescue v2 + scanner/inbox polish (batch 9.19) (`c304ca7`)
 
 ---
 
