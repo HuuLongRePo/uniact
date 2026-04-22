@@ -938,6 +938,8 @@ Yêu cầu:
 - [x] `npm.cmd run lint -- --file "src/app/page.tsx" --file "src/lib/camera-stream.ts" --file "src/lib/notification-actions.ts" --file "src/app/teacher/qr/page.tsx" --file "test/notification-actions.test.ts" --file "test/teacher-qr-page.test.tsx" --file "test/sidebar-teacher-links.test.tsx"` -> PASS (0 warning)
 - [x] `npm.cmd test -- test/notification-actions.test.ts test/teacher-qr-page.test.tsx test/sidebar-teacher-links.test.tsx` -> PASS (3 files / 11 tests)
 - [x] `npm.cmd run build` -> PASS
+- [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests)
+- [x] `npm.cmd run release:check:full` -> PASS (4/4 checks, sau khi format lai `src/app/page.tsx`, `src/app/teacher/qr/page.tsx`, `src/lib/camera-stream.ts`)
 
 ## 10) Ke hoach commit de xuat
 

@@ -286,7 +286,12 @@ export default function TeacherQRPage() {
   }, [showQrProjector]);
 
   useEffect(() => {
-    if (!autoProjectorRequested || !createdSession || showQrProjector || projectorAutoOpenedRef.current) {
+    if (
+      !autoProjectorRequested ||
+      !createdSession ||
+      showQrProjector ||
+      projectorAutoOpenedRef.current
+    ) {
       return;
     }
 

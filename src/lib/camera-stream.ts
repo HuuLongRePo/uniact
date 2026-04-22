@@ -19,11 +19,19 @@ export async function requestPreferredCameraStream(options?: {
   }
 
   if (!window.isSecureContext) {
-    throw new Error(isLikelyEmbeddedBrowser() ? getEmbeddedBrowserCameraHint() : 'Camera chỉ hoạt động trên kết nối bảo mật (HTTPS hoặc localhost). Hãy mở lại bằng trình duyệt ngoài ứng dụng nhúng.');
+    throw new Error(
+      isLikelyEmbeddedBrowser()
+        ? getEmbeddedBrowserCameraHint()
+        : 'Camera chỉ hoạt động trên kết nối bảo mật (HTTPS hoặc localhost). Hãy mở lại bằng trình duyệt ngoài ứng dụng nhúng.'
+    );
   }
 
   if (!navigator?.mediaDevices?.getUserMedia) {
-    throw new Error(isLikelyEmbeddedBrowser() ? getEmbeddedBrowserCameraHint() : 'Trình duyệt hiện tại chưa hỗ trợ camera đầy đủ. Hãy cập nhật Chrome/Safari/Edge hoặc mở bằng trình duyệt ngoài ứng dụng.');
+    throw new Error(
+      isLikelyEmbeddedBrowser()
+        ? getEmbeddedBrowserCameraHint()
+        : 'Trình duyệt hiện tại chưa hỗ trợ camera đầy đủ. Hãy cập nhật Chrome/Safari/Edge hoặc mở bằng trình duyệt ngoài ứng dụng.'
+    );
   }
 
   const facingMode = options?.facingMode || 'environment';

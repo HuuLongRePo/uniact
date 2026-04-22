@@ -146,7 +146,10 @@ export default function Home() {
             className="content-card rounded-3xl border border-gray-200 p-5 shadow-lg sm:p-6"
             style={sidePanelStyle}
           >
-            <div className="space-y-4 rounded-2xl border border-blue-200 p-4" style={accentBlockStyle}>
+            <div
+              className="space-y-4 rounded-2xl border border-blue-200 p-4"
+              style={accentBlockStyle}
+            >
               <div className="h-11 rounded-xl bg-gradient-to-r from-blue-200 to-indigo-200" />
               <div className="space-y-2">
                 <div className="h-3 rounded bg-blue-200/70" />
@@ -212,7 +215,10 @@ export default function Home() {
             'linear-gradient(180deg, color-mix(in srgb, var(--app-surface-base) 92%, transparent 8%), var(--app-surface-base))',
         }}
       >
-        <div className="mx-auto max-w-7xl px-4 text-center text-sm sm:px-6 lg:px-8" style={textDefaultStyle}>
+        <div
+          className="mx-auto max-w-7xl px-4 text-center text-sm sm:px-6 lg:px-8"
+          style={textDefaultStyle}
+        >
           <p>© 2026 Trường Đại học An ninh nhân dân - Bộ Công an. Tất cả quyền được bảo lưu.</p>
           <p className="mt-2 text-xs" style={textMutedStyle}>
             Hệ thống nội bộ dành cho cán bộ và học viên ANND
