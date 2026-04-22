@@ -1277,7 +1277,7 @@ Yeu cau:
 - [x] Commit 20: biometric pages camera helper alignment + tests (batch 9.20) (`b9c18a3`)
 - [x] Commit 21: navbar actor integrity + dedupe hardening + landing dark/system rescue (batch 9.21) (`176eec4`)
 - [x] Commit 22: server-side push notification dedupe guard + tests (batch 9.22) (`cf46bf7`)
-- [ ] Commit 23: attendance CTA hardening + projector quick action + camera helper + landing contrast v4 (batch 9.23)
+- [x] Commit 23: attendance CTA hardening + projector quick action + camera helper + landing contrast v4 (batch 9.23) (`a58233c`)
 
 ---
 
