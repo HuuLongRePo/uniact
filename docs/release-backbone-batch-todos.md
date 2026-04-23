@@ -2071,6 +2071,43 @@ Yeu cau:
 - [x] `npm.cmd test -- test/audit.test.ts test/admin-users-route.test.ts` -> PASS (2 files / 5 tests, 2026-04-24)
 - [x] `npm.cmd run build` -> PASS (2026-04-24)
 
+## 9.52) Batch uu tien nong - timezone VN admin awards/bonus/classes + poll surfaces
+
+### Muc tieu
+
+- Dong bo timezone VN cho cum con lai: khen thuong, duyet cong diem, classes export va poll pages (teacher/student).
+- Dong bo ten file export CSV theo ngay Viet Nam cho bonus/classes/polls.
+- Hardening bo loc thoi gian poll responses de so sanh theo moc parse Vietnam timezone thay vi local timezone may khach.
+
+### Viec can lam
+
+- [x] Admin awards/bonus:
+  - [x] `src/app/admin/awards/page.tsx`
+  - [x] `src/app/admin/bonus-approval/page.tsx`
+- [x] Admin classes:
+  - [x] `src/app/admin/classes/page.tsx`
+  - [x] `src/app/admin/classes/ClassTable.tsx`
+  - [x] `src/app/admin/classes/ClassViewDialog.tsx`
+  - [x] `src/app/admin/classes/[id]/page.tsx`
+  - [x] `src/app/admin/classes/[id]/students/page.tsx`
+- [x] Poll surfaces:
+  - [x] `src/app/teacher/polls/page.tsx`
+  - [x] `src/app/student/polls/page.tsx`
+  - [x] `src/app/teacher/polls/[id]/page.tsx`
+  - [x] `src/app/teacher/polls/responses/page.tsx`
+
+### Risk / defer
+
+- [ ] Con cum timezone chua audit het o `admin leaderboard/scoreboard/scores/export/custom/time-slots` va mot so export filename phu.
+- [ ] Trang `bonus-reports` con dung `new Date().getFullYear()` cho filter nam; can quyet dinh neu muon neo theo nam hoc hoac nam lich VN timezone.
+
+### Verification
+
+- [x] `npm.cmd test -- test/admin-classes-route.test.ts test/admin-pending-activities-route.test.ts` -> PASS (2 files / 4 tests, 2026-04-24)
+- [x] `npm.cmd test -- test/admin-class-detail-route.test.ts test/admin-classes-route.test.ts test/award-and-alert-notifications.test.ts` -> PASS (3 files / 7 tests, 2026-04-24)
+- [x] `npm.cmd run build` -> PASS (2026-04-24)
+- [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests, 2026-04-24)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix

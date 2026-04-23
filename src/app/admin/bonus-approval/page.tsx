@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, CheckCircle, XCircle, Eye, Loader, AlertCircle, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { formatVietnamDateTime, parseVietnamDate, toVietnamDatetimeLocalValue } from '@/lib/timezone';
 
 interface BonusProposal {
   id: number;
@@ -96,7 +97,9 @@ export default function AdminBonusApprovePage() {
     filtered.sort((a, b) => {
       let comparison = 0;
       if (sortBy === 'created') {
-        comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        comparison =
+          (parseVietnamDate(a.created_at)?.getTime() ?? 0) -
+          (parseVietnamDate(b.created_at)?.getTime() ?? 0);
       } else if (sortBy === 'points') {
         comparison = a.points - b.points;
       } else if (sortBy === 'student') {
@@ -206,8 +209,8 @@ export default function AdminBonusApprovePage() {
       link.href = downloadUrl;
       link.download =
         format === 'csv'
-          ? `bonus-report-${new Date().toISOString().split('T')[0]}.csv`
-          : `bonus-report-${new Date().toISOString().split('T')[0]}.json`;
+          ? `bonus-report-${toVietnamDatetimeLocalValue(new Date()).slice(0, 10)}.csv`
+          : `bonus-report-${toVietnamDatetimeLocalValue(new Date()).slice(0, 10)}.json`;
       link.click();
       window.URL.revokeObjectURL(downloadUrl);
 
@@ -472,10 +475,10 @@ export default function AdminBonusApprovePage() {
 
               {/* Timeline */}
               <div className="text-xs text-gray-500 space-y-1">
-                <p>🕐 Tạo: {new Date(selectedProposal.created_at).toLocaleString('vi-VN')}</p>
+                <p>🕐 Tạo: {formatVietnamDateTime(selectedProposal.created_at)}</p>
                 {selectedProposal.status !== 'pending' && (
                   <p>
-                    ✅ Cập nhật: {new Date(selectedProposal.updated_at).toLocaleString('vi-VN')}
+                    ✅ Cập nhật: {formatVietnamDateTime(selectedProposal.updated_at)}
                   </p>
                 )}
               </div>

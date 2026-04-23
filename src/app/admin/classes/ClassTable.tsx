@@ -2,6 +2,7 @@
 
 import { Class } from './types';
 import { useState } from 'react';
+import { formatVietnamDateTime } from '@/lib/timezone';
 
 interface ClassTableProps {
   classes: Class[];
@@ -134,7 +135,7 @@ export default function ClassTable({
                     </button>
                   </td>
                   <td className="px-4 py-4 text-sm text-gray-500 text-center hidden sm:table-cell">
-                    {new Date(cls.created_at).toLocaleDateString('vi-VN')}
+                    {formatVietnamDateTime(cls.created_at, 'date')}
                   </td>
                   <td className="px-4 py-4 text-center relative">
                     <button

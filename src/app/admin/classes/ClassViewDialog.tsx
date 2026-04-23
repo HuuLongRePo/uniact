@@ -2,6 +2,7 @@
 
 import { Class } from './types';
 import { Button } from '@/components/ui/Button';
+import { formatVietnamDateTime } from '@/lib/timezone';
 
 interface ClassViewDialogProps {
   isOpen: boolean;
@@ -53,7 +54,7 @@ export default function ClassViewDialog({ isOpen, cls, onClose }: ClassViewDialo
           <div>
             <div className="text-xs text-gray-500">Ngày tạo</div>
             <div className="text-sm text-gray-900">
-              {new Date(cls.created_at).toLocaleDateString('vi-VN')}
+              {formatVietnamDateTime(cls.created_at, 'date')}
             </div>
           </div>
 

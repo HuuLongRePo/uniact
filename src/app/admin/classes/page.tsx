@@ -13,6 +13,7 @@ import ClassDialog from './ClassDialog';
 import ClassViewDialog from './ClassViewDialog';
 import { Class, Teacher } from './types';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { toVietnamDatetimeLocalValue } from '@/lib/timezone';
 
 type TeacherApiUser = {
   id: number;
@@ -194,7 +195,7 @@ export default function AdminClassesPage() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `Danh-sach-lop-${className.replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]}.csv`;
+      a.download = `Danh-sach-lop-${className.replace(/\s+/g, '-')}-${toVietnamDatetimeLocalValue(new Date()).slice(0, 10)}.csv`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);

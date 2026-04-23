@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Button } from '@/components/ui/Button';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { formatVietnamDateTime } from '@/lib/timezone';
 
 type AwardSuggestion = {
   id: number;
@@ -202,7 +203,7 @@ export default function AdminAwardsPage() {
                     Điểm: {s.score_snapshot || 0} / Yêu cầu tối thiểu: {s.award_min_points || 0}
                   </div>
                   <div className="text-sm text-gray-500 mt-1">
-                    {s.suggested_at && new Date(s.suggested_at).toLocaleString('vi-VN')}
+                    {s.suggested_at && formatVietnamDateTime(s.suggested_at)}
                   </div>
                   {s.note && (
                     <div className="mt-2 text-sm bg-gray-100 p-2 rounded">Ghi chú: {s.note}</div>

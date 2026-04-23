@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { BarChart3, Search, Filter, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { formatVietnamDateTime, parseVietnamDate, toVietnamDatetimeLocalValue } from '@/lib/timezone';
 
 interface PollResponse {
   id: number;
@@ -105,13 +106,20 @@ export default function PollResponsesPage() {
 
     // Filter by date range
     if (filters.dateStart) {
-      const startDate = new Date(filters.dateStart);
-      result = result.filter((r) => new Date(r.responded_at) >= startDate);
+      const startDate = parseVietnamDate(`${filters.dateStart}T00:00`);
+      if (startDate) {
+        result = result.filter(
+          (r) => (parseVietnamDate(r.responded_at)?.getTime() ?? Number.NEGATIVE_INFINITY) >= startDate.getTime()
+        );
+      }
     }
     if (filters.dateEnd) {
-      const endDate = new Date(filters.dateEnd);
-      endDate.setHours(23, 59, 59, 999);
-      result = result.filter((r) => new Date(r.responded_at) <= endDate);
+      const endDate = parseVietnamDate(`${filters.dateEnd}T23:59:59`);
+      if (endDate) {
+        result = result.filter(
+          (r) => (parseVietnamDate(r.responded_at)?.getTime() ?? Number.POSITIVE_INFINITY) <= endDate.getTime()
+        );
+      }
     }
 
     // Search by student name
@@ -126,8 +134,8 @@ export default function PollResponsesPage() {
 
       switch (sortBy) {
         case 'responded_at':
-          aVal = new Date(a.responded_at).getTime();
-          bVal = new Date(b.responded_at).getTime();
+          aVal = parseVietnamDate(a.responded_at)?.getTime() ?? 0;
+          bVal = parseVietnamDate(b.responded_at)?.getTime() ?? 0;
           break;
         case 'student_name':
           aVal = a.student_name.toLowerCase();
@@ -138,8 +146,8 @@ export default function PollResponsesPage() {
           bVal = b.selected_option.toLowerCase();
           break;
         default:
-          aVal = new Date(a.responded_at).getTime();
-          bVal = new Date(b.responded_at).getTime();
+          aVal = parseVietnamDate(a.responded_at)?.getTime() ?? 0;
+          bVal = parseVietnamDate(b.responded_at)?.getTime() ?? 0;
       }
 
       if (aVal < bVal) return sortOrder === 'asc' ? -1 : 1;
@@ -168,7 +176,7 @@ export default function PollResponsesPage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `poll-responses-${Date.now()}.csv`;
+      a.download = `poll-responses-${toVietnamDatetimeLocalValue(new Date()).slice(0, 10)}.csv`;
       a.click();
       toast.success('Xuất phản hồi thành công');
     } catch (error) {
@@ -420,7 +428,7 @@ export default function PollResponsesPage() {
                           </span>
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-700">
-                          {new Date(response.responded_at).toLocaleString('vi-VN')}
+                          {formatVietnamDateTime(response.responded_at)}
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-700">
                           {response.response_text || '-'}

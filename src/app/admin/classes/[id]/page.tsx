@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Users, Edit, Award, Download } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
+import { toVietnamDatetimeLocalValue } from '@/lib/timezone';
 import { Class as AdminClass } from '../types';
 
 type ClassStudent = {
@@ -97,7 +98,7 @@ export default function ClassDetailPage() {
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = `class_${classData.name}_roster_${new Date().toISOString().split('T')[0]}.csv`;
+    link.download = `class_${classData.name}_roster_${toVietnamDatetimeLocalValue(new Date()).slice(0, 10)}.csv`;
     link.click();
   };
 

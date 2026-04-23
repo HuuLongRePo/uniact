@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import toast from 'react-hot-toast';
+import { formatVietnamDateTime } from '@/lib/timezone';
 
 interface Poll {
   id: number;
@@ -227,7 +228,7 @@ export default function StudentPollsPage() {
                   <div className="flex gap-3 mt-2 text-sm text-gray-500">
                     <span>🏫 {poll.class_name}</span>
                     <span>👥 {poll.response_count} phản hồi</span>
-                    <span>{new Date(poll.created_at).toLocaleDateString('vi-VN')}</span>
+                    <span>{formatVietnamDateTime(poll.created_at, 'date')}</span>
                   </div>
                 </div>
                 {poll.has_voted > 0 ? (

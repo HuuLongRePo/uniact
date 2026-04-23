@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import toast from 'react-hot-toast';
+import { formatVietnamDateTime } from '@/lib/timezone';
 
 interface Poll {
   id: number;
@@ -305,7 +306,7 @@ export default function TeacherPollsPage() {
                 <div className="flex gap-3 mt-2 text-sm text-gray-500">
                   <span>🏫 {poll.class_name || 'Tất cả lớp'}</span>
                   <span>👥 {poll.response_count} phản hồi</span>
-                  <span>{new Date(poll.created_at).toLocaleDateString('vi-VN')}</span>
+                  <span>{formatVietnamDateTime(poll.created_at, 'date')}</span>
                 </div>
               </div>
               <div className="flex gap-2">

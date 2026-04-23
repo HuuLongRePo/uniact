@@ -13,6 +13,7 @@ import { Student, Class, StudentSummary } from './types';
 import StudentFilters from './StudentFilters';
 import { useDebounce } from '@/lib/debounce-hooks';
 import TransferDialog from './TransferDialog';
+import { toVietnamDatetimeLocalValue } from '@/lib/timezone';
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -279,7 +280,7 @@ export default function ClassStudentsPage({ params }: PageProps) {
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = `class-${classId}-students-export-${new Date().toISOString().split('T')[0]}.csv`;
+    link.download = `class-${classId}-students-export-${toVietnamDatetimeLocalValue(new Date()).slice(0, 10)}.csv`;
     link.click();
 
     toast.success(`Đã xuất ${selectedStudents.size} học viên`);
