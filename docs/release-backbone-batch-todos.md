@@ -2008,6 +2008,36 @@ Yeu cau:
 - [x] `npm.cmd test -- test/student-scores-page.test.tsx test/student-points-page.test.tsx test/teacher-attendance-page.test.tsx` -> PASS (3 files / 5 tests, 2026-04-24)
 - [x] `npm.cmd run build` -> PASS (2026-04-24)
 
+## 9.50) Batch uu tien nong - timezone VN teacher student-profile/notes + admin backup/system-health
+
+### Muc tieu
+
+- Don tiep cac surface giao vien/admin van hien thi ngay gio theo timezone may khach o ho so hoc vien, ghi chu va trang van hanh he thong.
+- Chuyen cac bo loc "hom nay/7 ngay" o trang ghi chu giao vien sang moc Vietnam timezone de tranh lech ngay quanh moc 00:00.
+- Sua nhe mot loi UI co san trong timeline ho so hoc vien: className icon dang bi render nhu chuoi thuong thay vi noi suy.
+
+### Viec can lam
+
+- [x] Teacher student profile/notes:
+  - [x] `src/app/teacher/students/[id]/page.tsx`
+  - [x] `src/app/teacher/students/[id]/notes/page.tsx`
+  - [x] `src/app/teacher/students/notes/page.tsx`
+- [x] Admin system surfaces:
+  - [x] `src/app/admin/backup/page.tsx`
+  - [x] `src/app/admin/system-health/page.tsx`
+- [x] Dong bo format ngay gio ve helper `src/lib/timezone.ts` cho cac diem vua audit.
+
+### Risk / defer
+
+- [ ] Con cum `admin search/audit/users/students`, `polls`, `bonus/awards`, `classes export filenames` va mot so surface phu van chua audit het timezone VN.
+- [ ] Van con text mojibake/cu phap cu o vai trang teacher/admin; batch nay chi sua formatter va mot bug className o timeline, chua dot pha sua toan bo text/UI.
+
+### Verification
+
+- [x] `npm.cmd test -- test/teacher-student-profile-page.test.tsx test/admin-system-health-page.test.tsx` -> PASS (2 files / 2 tests, 2026-04-24)
+- [x] `npm.cmd run build` -> PASS (2026-04-24)
+- [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests, 2026-04-24)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix

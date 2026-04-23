@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { formatVietnamDateTime } from '@/lib/timezone';
 import toast from 'react-hot-toast';
 import {
   Database,
@@ -254,7 +255,7 @@ export default function BackupRestorePage() {
                 <div className="text-sm text-gray-600">Backup cuối</div>
                 <div className="text-sm font-medium text-orange-600">
                   {dbStats.last_backup
-                    ? new Date(dbStats.last_backup).toLocaleDateString('vi-VN')
+                    ? formatVietnamDateTime(dbStats.last_backup, 'date')
                     : 'Chưa có'}
                 </div>
               </div>
@@ -311,7 +312,7 @@ export default function BackupRestorePage() {
                           {backup.size_mb.toFixed(2)} MB
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-600">
-                          {new Date(backup.created_at).toLocaleString('vi-VN')}
+                          {formatVietnamDateTime(backup.created_at)}
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-600">{backup.created_by}</td>
                         <td className="px-6 py-4 text-right">

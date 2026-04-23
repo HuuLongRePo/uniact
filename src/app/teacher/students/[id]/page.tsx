@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { formatVietnamDateTime, formatVietnamWithOptions, parseVietnamDate } from '@/lib/timezone';
 import toast from 'react-hot-toast';
 
 interface StudentProfile {
@@ -273,7 +274,7 @@ export default function StudentProfilePage() {
                       .map((act) => (
                         <tr key={act.id} className="hover:bg-gray-50">
                           <td className="px-4 py-3 text-sm">
-                            {new Date(act.date_time).toLocaleDateString('vi-VN')}
+                            {formatVietnamDateTime(act.date_time, 'date')}
                           </td>
                           <td className="px-4 py-3 text-sm font-medium">{act.title}</td>
                           <td className="px-4 py-3 text-sm text-gray-600">{act.activity_type}</td>
@@ -337,7 +338,7 @@ export default function StudentProfilePage() {
                         <div className="flex-1">
                           <h4 className="font-semibold text-gray-900">{act.title}</h4>
                           <p className="text-sm text-gray-500 mt-1">
-                            {new Date(act.date_time).toLocaleDateString('vi-VN')} •{' '}
+                            {formatVietnamDateTime(act.date_time, 'date')} •{' '}
                             {act.activity_type} • {act.org_level}
                           </p>
                         </div>
@@ -389,18 +390,23 @@ export default function StudentProfilePage() {
                     id: `award-${aw.id}`,
                   })),
                 ]
-                  .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                  .sort(
+                    (a, b) =>
+                      (parseVietnamDate(b.date)?.getTime() ?? 0) -
+                      (parseVietnamDate(a.date)?.getTime() ?? 0)
+                  )
                   .map((event) => (
                     <div key={event.id} className="flex gap-4">
                       <div
-                        className='flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center text-xl
-                        ${event.type === "activity" ? "bg-blue-100" : "bg-yellow-100"}'
+                        className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center text-xl ${
+                          event.type === 'activity' ? 'bg-blue-100' : 'bg-yellow-100'
+                        }`}
                       >
                         {event.type === 'activity' ? '📅' : '🏆'}
                       </div>
                       <div className="flex-grow border-l-2 border-gray-200 pl-6 pb-6">
                         <div className="text-xs text-gray-500 mb-1">
-                          {new Date(event.date).toLocaleDateString('vi-VN', {
+                          {formatVietnamWithOptions(event.date, {
                             year: 'numeric',
                             month: 'long',
                             day: 'numeric',
@@ -472,7 +478,7 @@ export default function StudentProfilePage() {
                         <p className="whitespace-pre-wrap">{note.content}</p>
                         <p className="text-xs text-gray-500 mt-2">
                           {note.created_by_name} |{' '}
-                          {new Date(note.created_at).toLocaleString('vi-VN')}
+                          {formatVietnamDateTime(note.created_at)}
                         </p>
                       </div>
                       <button

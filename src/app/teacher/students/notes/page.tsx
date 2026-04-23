@@ -17,6 +17,7 @@ import {
 import toast from 'react-hot-toast';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { formatVietnamDateTime, parseVietnamDate, toVietnamDatetimeLocalValue } from '@/lib/timezone';
 
 interface Note {
   id: number;
@@ -34,6 +35,15 @@ interface Student {
   name: string;
   email: string;
   className: string;
+}
+
+function getVietnamNow() {
+  return parseVietnamDate(toVietnamDatetimeLocalValue(new Date())) ?? new Date();
+}
+
+function getVietnamStartOfToday() {
+  const todayValue = `${toVietnamDatetimeLocalValue(new Date()).slice(0, 10)}T00:00`;
+  return parseVietnamDate(todayValue) ?? new Date();
 }
 
 export default function TeacherNotesPage() {
@@ -178,18 +188,20 @@ export default function TeacherNotesPage() {
 
     // Filter by date
     if (dateFilter !== 'all') {
-      const now = new Date();
-      const filterDate = new Date();
+      const now = getVietnamNow();
+      const filterDate = new Date(now);
 
       if (dateFilter === 'today') {
-        filterDate.setHours(0, 0, 0, 0);
+        filterDate.setTime(getVietnamStartOfToday().getTime());
       } else if (dateFilter === 'week') {
         filterDate.setDate(now.getDate() - 7);
       } else if (dateFilter === 'month') {
         filterDate.setMonth(now.getMonth() - 1);
       }
 
-      filtered = filtered.filter((n) => new Date(n.createdAt) >= filterDate);
+      filtered = filtered.filter(
+        (n) => (parseVietnamDate(n.createdAt)?.getTime() ?? 0) >= filterDate.getTime()
+      );
     }
 
     // Filter by search query
@@ -262,9 +274,9 @@ export default function TeacherNotesPage() {
               <p className="text-2xl font-bold text-purple-600">
                 {
                   notes.filter((n) => {
-                    const weekAgo = new Date();
+                    const weekAgo = getVietnamNow();
                     weekAgo.setDate(weekAgo.getDate() - 7);
-                    return new Date(n.createdAt) >= weekAgo;
+                    return (parseVietnamDate(n.createdAt)?.getTime() ?? 0) >= weekAgo.getTime();
                   }).length
                 }
               </p>
@@ -274,9 +286,10 @@ export default function TeacherNotesPage() {
               <p className="text-2xl font-bold text-yellow-600">
                 {
                   notes.filter((n) => {
-                    const today = new Date();
-                    today.setHours(0, 0, 0, 0);
-                    return new Date(n.createdAt) >= today;
+                    return (
+                      (parseVietnamDate(n.createdAt)?.getTime() ?? 0) >=
+                      getVietnamStartOfToday().getTime()
+                    );
                   }).length
                 }
               </p>
@@ -467,12 +480,12 @@ export default function TeacherNotesPage() {
                 <div className="mt-3 flex items-center gap-4 text-sm text-gray-500">
                   <div className="flex items-center gap-1">
                     <Calendar className="w-4 h-4" />
-                    <span>Tạo: {new Date(note.createdAt).toLocaleString('vi-VN')}</span>
+                    <span>Tạo: {formatVietnamDateTime(note.createdAt)}</span>
                   </div>
                   {note.updatedAt !== note.createdAt && (
                     <div className="flex items-center gap-1">
                       <Edit2 className="w-4 h-4" />
-                      <span>Sửa: {new Date(note.updatedAt).toLocaleString('vi-VN')}</span>
+                      <span>Sửa: {formatVietnamDateTime(note.updatedAt)}</span>
                     </div>
                   )}
                 </div>

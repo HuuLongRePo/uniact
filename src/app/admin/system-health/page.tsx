@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import { formatVietnamDateTime } from '@/lib/timezone';
 
 interface HealthData {
   biometric_readiness?: {
@@ -190,7 +191,7 @@ export default function SystemHealthPage() {
               <div className="text-orange-800 text-sm font-medium">Node.js</div>
               <div className="text-xl font-bold text-orange-900">{data.system.node_version}</div>
               <div className="text-xs text-orange-700">
-                Last update: {new Date(data.timestamp).toLocaleTimeString('vi-VN')}
+                Last update: {formatVietnamDateTime(data.timestamp, 'time')}
               </div>
             </div>
           </div>
@@ -418,7 +419,7 @@ export default function SystemHealthPage() {
                     <div className="font-medium text-red-800">{err.action}</div>
                     <div className="text-sm text-red-600">{err.details}</div>
                     <div className="text-xs text-red-500">
-                      {new Date(err.created_at).toLocaleString('vi-VN')}
+                      {formatVietnamDateTime(err.created_at)}
                     </div>
                   </div>
                 ))}

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Trash2, Edit2, Save, Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { formatVietnamDateTime } from '@/lib/timezone';
 
 interface StudentNote {
   id: number;
@@ -426,9 +427,9 @@ export default function StudentNotesPage({ params }: { params: Promise<{ id: str
                     <div className="text-xs text-gray-500 flex justify-between">
                       <span>Bởi: {note.created_by}</span>
                       <span>
-                        {new Date(note.created_at).toLocaleString('vi-VN')}
+                        {formatVietnamDateTime(note.created_at)}
                         {note.updated_at !== note.created_at &&
-                          ` (cập nhật: ${new Date(note.updated_at).toLocaleString('vi-VN')})`}
+                          ` (cập nhật: ${formatVietnamDateTime(note.updated_at)})`}
                       </span>
                     </div>
                   </>
