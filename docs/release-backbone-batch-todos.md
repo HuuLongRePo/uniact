@@ -1705,6 +1705,26 @@ Yeu cau:
 
 - [x] `npm.cmd test -- test/sidebar-teacher-links.test.tsx` -> PASS (1 file / 5 tests, 2026-04-23)
 
+## 9.39) Batch uu tien nong - camera mobile autoplay/gesture fallback (student QR)
+
+### Muc tieu
+
+- Fix truong hop tren dien thoai (dac biet iOS/Safari hoac embedded WebView) chặn `video.play()` tu dong -> camera den/man hinh den du da cap quyen.
+- Sua message Permissions-Policy bi loi ma hoa trong `camera-stream` (hien thong diep ro rang neu bi chan boi policy).
+
+### Viec can lam
+
+- [x] `src/lib/camera-stream.ts`: sua `getPermissionsPolicyCameraHint()` ve tieng Viet dung.
+- [x] `src/components/StudentQRScanner.tsx`:
+  - [x] neu `video.play()` bi block, hien overlay + nut `Bat camera` de nguoi dung tap 1 lan.
+  - [x] giu nguyen fallback: tai anh QR / nhap thu cong.
+- [x] `test/student-qr-scanner-playback-gesture.test.tsx`: them regression cho overlay `Bat camera`.
+
+### Verification
+
+- [x] `npm.cmd test -- test/student-qr-scanner-playback-gesture.test.tsx` -> PASS (1 file / 1 test, 2026-04-23)
+- [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests, 2026-04-23)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix

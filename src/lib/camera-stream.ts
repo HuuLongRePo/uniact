@@ -115,7 +115,7 @@ function isPermissionsPolicyError(error: unknown) {
 }
 
 function getPermissionsPolicyCameraHint() {
-  return 'Camera Ä‘ang bá»‹ cháº·n bá»Ÿi Permissions-Policy cá»§a há»‡ thá»‘ng. HÃ£y cho phÃ©p camera cho origin hiá»‡n táº¡i rá»“i táº£i láº¡i trang.';
+  return 'Camera đang bị chặn bởi Permissions-Policy của hệ thống. Hãy cho phép camera cho origin hiện tại rồi tải lại trang.';
 }
 
 export function getCameraTroubleshootingSteps(error?: unknown) {

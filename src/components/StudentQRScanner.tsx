@@ -35,6 +35,7 @@ export function StudentQRScanner({ onScan }: Props) {
   const lastScannedRawRef = useRef('');
 
   const [scanState, setScanState] = useState<ScanState>('idle');
+  const [needsPlaybackGesture, setNeedsPlaybackGesture] = useState(false);
   const [manualToken, setManualToken] = useState('');
   const [lastResult, setLastResult] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -54,6 +55,7 @@ export function StudentQRScanner({ onScan }: Props) {
       videoRef.current.srcObject = null;
     }
 
+    setNeedsPlaybackGesture(false);
     setScanState(nextState);
   }
 
@@ -92,6 +94,7 @@ export function StudentQRScanner({ onScan }: Props) {
     await ensureDecoderReady();
 
     stopScan('idle');
+    setNeedsPlaybackGesture(false);
     setError(null);
     setScanState('scanning');
     lastScannedRawRef.current = '';
@@ -104,7 +107,15 @@ export function StudentQRScanner({ onScan }: Props) {
 
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream;
-        await videoRef.current.play().catch(() => undefined);
+        try {
+          await videoRef.current.play();
+        } catch {
+          // Mobile Safari / embedded browsers may block autoplay even with muted + playsInline.
+          // Keep the stream and ask the user to tap once to start playback.
+          setNeedsPlaybackGesture(true);
+          setScanState('idle');
+          return;
+        }
 
         if (detectorRef.current || jsQrDecoderRef.current) {
           frameRequest.current = requestAnimationFrame(tick);
@@ -114,6 +125,28 @@ export function StudentQRScanner({ onScan }: Props) {
       setError(getCameraAccessErrorMessage(err));
       setCameraTips(getCameraTroubleshootingSteps(err));
       setScanState('error');
+    }
+  }
+
+  async function enablePlayback() {
+    if (!videoRef.current) return;
+
+    setError(null);
+    setNeedsPlaybackGesture(false);
+    setScanState('scanning');
+
+    try {
+      await videoRef.current.play();
+    } catch (err: unknown) {
+      setError(getCameraAccessErrorMessage(err));
+      setCameraTips(getCameraTroubleshootingSteps(err));
+      setNeedsPlaybackGesture(true);
+      setScanState('error');
+      return;
+    }
+
+    if (detectorRef.current || jsQrDecoderRef.current) {
+      frameRequest.current = requestAnimationFrame(tick);
     }
   }
 
@@ -281,8 +314,27 @@ export function StudentQRScanner({ onScan }: Props) {
         </div>
 
         <div className="space-y-4 p-4 sm:p-5">
-          <div className="overflow-hidden rounded-2xl border border-gray-200 bg-black/95">
+          <div className="relative overflow-hidden rounded-2xl border border-gray-200 bg-black/95">
             <video ref={videoRef} className="aspect-video w-full object-cover" muted playsInline />
+            {needsPlaybackGesture && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/50 px-4">
+                <div className="w-full max-w-sm rounded-2xl border border-white/15 bg-slate-950/85 p-4 text-white shadow-xl backdrop-blur">
+                  <div className="text-sm font-semibold">Trình duyệt đang chặn bật camera tự động</div>
+                  <div className="mt-1 text-xs text-slate-200">
+                    Nhấn nút bên dưới để bật camera. Nếu vẫn lỗi, dùng mục "Không dùng được camera?"
+                    để tải ảnh QR hoặc nhập thủ công.
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => void enablePlayback()}
+                    className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+                    data-testid="qr-enable-camera"
+                  >
+                    Bật camera
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
           <canvas ref={canvasRef} className="hidden" />
 
