@@ -54,6 +54,34 @@ describe('TeacherQRPage', () => {
         } as Response;
       }
 
+      if (url === '/api/activities/1/participants') {
+        return {
+          ok: true,
+          json: async () => ({
+            data: {
+              participations: [
+                {
+                  id: 101,
+                  student_id: 3001,
+                  student_name: 'Nguyễn Văn A',
+                  student_code: 'HV001',
+                  class_name: 'D1',
+                  attendance_status: 'registered',
+                },
+                {
+                  id: 102,
+                  student_id: 3002,
+                  student_name: 'Nguyễn Văn B',
+                  student_code: 'HV002',
+                  class_name: 'D1',
+                  attendance_status: 'attended',
+                },
+              ],
+            },
+          }),
+        } as Response;
+      }
+
       if (url === '/api/qr-sessions') {
         return {
           ok: true,
@@ -88,14 +116,25 @@ describe('TeacherQRPage', () => {
 
     expect(await screen.findByText('QR Activity')).toBeInTheDocument();
     expect(await screen.findByText('reuse-token-11')).toBeInTheDocument();
+    expect(await screen.findByTestId('pending-attendance-count')).toHaveTextContent('1');
+    expect(screen.getByText('Nguyễn Văn A')).toBeInTheDocument();
+    expect(screen.getByText('D1')).toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledWith('/api/qr-sessions/active?activity_id=1');
   });
 
   it('surfaces load errors for activity options', async () => {
-    const fetchMock = vi.fn(async () => ({
-      ok: false,
-      json: async () => ({}),
-    })) as unknown as typeof fetch;
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+
+      if (url === '/api/activities?scope=operational&status=ongoing') {
+        return {
+          ok: false,
+          json: async () => ({}),
+        } as Response;
+      }
+
+      throw new Error(`Unexpected fetch: ${url}`);
+    }) as unknown as typeof fetch;
 
     vi.stubGlobal('fetch', fetchMock);
     window.fetch = fetchMock as typeof fetch;
@@ -135,6 +174,13 @@ describe('TeacherQRPage', () => {
               },
             },
           }),
+        } as Response;
+      }
+
+      if (url === '/api/activities/1/participants') {
+        return {
+          ok: true,
+          json: async () => ({ data: { participations: [] } }),
         } as Response;
       }
 
@@ -183,6 +229,13 @@ describe('TeacherQRPage', () => {
               },
             },
           }),
+        } as Response;
+      }
+
+      if (url === '/api/activities/1/participants') {
+        return {
+          ok: true,
+          json: async () => ({ data: { participations: [] } }),
         } as Response;
       }
 

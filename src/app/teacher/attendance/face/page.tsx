@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
+import { PendingAttendanceRoster } from '@/components/attendance/PendingAttendanceRoster';
 import {
   detectSingleEmbedding,
   performLivenessCheck,
@@ -62,6 +63,15 @@ type FaceAttendanceSubmitResult = {
   [key: string]: unknown;
 };
 
+type ActivityParticipant = {
+  id: number;
+  student_id: number;
+  student_name: string;
+  student_code?: string;
+  class_name?: string;
+  attendance_status: 'registered' | 'attended' | 'absent';
+};
+
 export default function TeacherFaceAttendancePage() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -78,6 +88,9 @@ export default function TeacherFaceAttendancePage() {
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [capturing, setCapturing] = useState(false);
+  const [participants, setParticipants] = useState<ActivityParticipant[]>([]);
+  const [participantsLoading, setParticipantsLoading] = useState(false);
+  const [participantsError, setParticipantsError] = useState<string | null>(null);
 
   useEffect(() => {
     return () => {
@@ -87,6 +100,57 @@ export default function TeacherFaceAttendancePage() {
       }
     };
   }, []);
+
+  useEffect(() => {
+    setParticipants([]);
+    setParticipantsError(null);
+  }, [activityId]);
+
+  const refreshParticipants = async (silent = false) => {
+    const normalizedActivityId = Number(activityId);
+    if (!Number.isFinite(normalizedActivityId)) {
+      setParticipants([]);
+      setParticipantsError(null);
+      return;
+    }
+
+    try {
+      if (!silent) {
+        setParticipantsLoading(true);
+      }
+      setParticipantsError(null);
+
+      const res = await fetch(`/api/activities/${normalizedActivityId}/participants`);
+      if (!res.ok) {
+        throw new Error('Không thể tải danh sách học viên tham gia');
+      }
+
+      const data = await res.json();
+      setParticipants(data.participations || data.data?.participations || []);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Không thể tải danh sách học viên tham gia';
+      setParticipantsError(message);
+      if (!silent) {
+        toast.error(message);
+      }
+    } finally {
+      if (!silent) {
+        setParticipantsLoading(false);
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (!submitResult) return;
+
+    const interval = setInterval(() => {
+      void refreshParticipants(true);
+    }, 5000);
+
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [submitResult, activityId]);
 
   const startCamera = async () => {
     const stream = await requestPreferredCameraStream({
@@ -219,6 +283,7 @@ export default function TeacherFaceAttendancePage() {
       }
       setSubmitResult(data?.data || null);
       setSubmitError(null);
+      void refreshParticipants();
       toast.success('Đã gửi face attendance thành công');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Không thể gửi face attendance');
@@ -408,6 +473,13 @@ export default function TeacherFaceAttendancePage() {
           )}
         </div>
       </div>
+
+      <PendingAttendanceRoster
+        participants={participants}
+        loading={participantsLoading}
+        error={participantsError}
+        title={`Học viên chưa điểm danh - hoạt động ${activityId}`}
+      />
     </main>
   );
 }

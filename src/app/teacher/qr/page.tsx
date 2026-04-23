@@ -15,6 +15,7 @@ import {
   Zap,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { PendingAttendanceRoster } from '@/components/attendance/PendingAttendanceRoster';
 import { Button } from '@/components/ui/Button';
 import { formatDate } from '@/lib/formatters';
 
@@ -49,6 +50,15 @@ interface BulkScanRecord {
   student_name: string;
   class_name: string;
   scanned_at: string;
+}
+
+interface ActivityParticipant {
+  id: number;
+  student_id: number;
+  student_name: string;
+  student_code?: string;
+  class_name?: string;
+  attendance_status: 'registered' | 'attended' | 'absent';
 }
 
 type TeacherQrTab = 'create' | 'history' | 'bulk' | 'analytics';
@@ -129,6 +139,9 @@ export default function TeacherQRPage() {
   const [bulkScans, setBulkScans] = useState<BulkScanRecord[]>([]);
   const [bulkLoading, setBulkLoading] = useState(false);
   const [selectedBulkSession, setSelectedBulkSession] = useState<number | null>(null);
+  const [participants, setParticipants] = useState<ActivityParticipant[]>([]);
+  const [participantsLoading, setParticipantsLoading] = useState(false);
+  const [participantsError, setParticipantsError] = useState<string | null>(null);
   const [showQrProjector, setShowQrProjector] = useState(false);
   const [isProjectorFullscreen, setIsProjectorFullscreen] = useState(false);
   const [fullscreenAutoRequestBlocked, setFullscreenAutoRequestBlocked] = useState(false);
@@ -139,6 +152,8 @@ export default function TeacherQRPage() {
   const activeBulkSessionId = selectedBulkSession ?? history[0]?.id ?? null;
   const autoProjectorRequested =
     searchParams.get('projector') === '1' || searchParams.get('fullscreen') === '1';
+  const selectedActivityTitle =
+    activities.find((activity) => activity.id === selectedActivity)?.title || 'Hoạt động đang chọn';
 
   const getFullscreenElement = () => {
     const fullscreenDocument = document as FullscreenCapableDocument;
@@ -313,6 +328,41 @@ export default function TeacherQRPage() {
     }
   };
 
+  const refreshParticipants = async (silent = false) => {
+    if (!selectedActivity) {
+      setParticipants([]);
+      setParticipantsError(null);
+      return;
+    }
+
+    try {
+      if (!silent) {
+        setParticipantsLoading(true);
+      }
+      setParticipantsError(null);
+
+      const res = await fetch(`/api/activities/${selectedActivity}/participants`);
+      if (!res.ok) {
+        throw new Error('Không thể tải danh sách học viên tham gia');
+      }
+
+      const json = await res.json();
+      setParticipants(json.participations || json.data?.participations || []);
+    } catch (err: unknown) {
+      console.error(err);
+      const message =
+        err instanceof Error ? err.message : 'Không thể tải danh sách học viên tham gia';
+      setParticipantsError(message);
+      if (!silent) {
+        toast.error(message);
+      }
+    } finally {
+      if (!silent) {
+        setParticipantsLoading(false);
+      }
+    }
+  };
+
   useEffect(() => {
     if (activeTab === 'history' && autoRefresh) {
       void fetchHistory();
@@ -330,6 +380,22 @@ export default function TeacherQRPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, autoRefresh]);
 
+  useEffect(() => {
+    void refreshParticipants();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedActivity]);
+
+  useEffect(() => {
+    if (!selectedActivity) return;
+
+    const interval = setInterval(() => {
+      void refreshParticipants(true);
+    }, 5000);
+
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedActivity]);
+
   const fetchBulkScans = async () => {
     try {
       setBulkLoading(true);
@@ -340,6 +406,7 @@ export default function TeacherQRPage() {
       if (!res.ok) throw new Error('Không thể tải dữ liệu quét');
       const json = await res.json();
       setBulkScans(json.scans || json.data?.scans || []);
+      void refreshParticipants(true);
     } catch (err: unknown) {
       console.error(err);
       toast.error(err instanceof Error ? err.message : 'Không thể tải dữ liệu quét');
@@ -985,6 +1052,15 @@ export default function TeacherQRPage() {
                 </div>
               )}
             </div>
+          )}
+
+          {selectedActivity && (
+            <PendingAttendanceRoster
+              participants={participants}
+              loading={participantsLoading}
+              error={participantsError}
+              title={`Học viên chưa điểm danh - ${selectedActivityTitle}`}
+            />
           )}
         </div>
       </section>

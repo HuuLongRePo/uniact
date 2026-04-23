@@ -291,31 +291,60 @@ describe('TeacherFaceAttendancePage', () => {
   });
 
   it('submits face attendance after candidate preview is ready', async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          data: {
-            candidate_embedding: [0.1, 0.2, 0.3],
-            quality_score: 75,
-            liveness_score: 0.91,
-            verification_method: 'candidate_embedding',
-            upstream_verified: false,
-          },
-        }),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          data: {
-            recorded: true,
-            verification_source: 'runtime_bridge',
-            verification_method: 'candidate_embedding',
-            runtime_mode: 'runtime_ready',
-          },
-        }),
-      }) as any;
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+
+      if (url === '/api/biometric/candidate-preview') {
+        return {
+          ok: true,
+          json: async () => ({
+            data: {
+              candidate_embedding: [0.1, 0.2, 0.3],
+              quality_score: 75,
+              liveness_score: 0.91,
+              verification_method: 'candidate_embedding',
+              upstream_verified: false,
+            },
+          }),
+        } as Response;
+      }
+
+      if (url === '/api/attendance/face') {
+        return {
+          ok: true,
+          json: async () => ({
+            data: {
+              recorded: true,
+              verification_source: 'runtime_bridge',
+              verification_method: 'candidate_embedding',
+              runtime_mode: 'runtime_ready',
+            },
+          }),
+        } as Response;
+      }
+
+      if (url === '/api/activities/94/participants') {
+        return {
+          ok: true,
+          json: async () => ({
+            data: {
+              participations: [
+                {
+                  id: 201,
+                  student_id: 3004,
+                  student_name: 'Nguyễn Văn C',
+                  student_code: 'HV004',
+                  class_name: 'B2',
+                  attendance_status: 'registered',
+                },
+              ],
+            },
+          }),
+        } as Response;
+      }
+
+      throw new Error(`Unexpected fetch: ${url}`);
+    }) as any;
 
     vi.stubGlobal('fetch', fetchMock);
     window.fetch = fetchMock as typeof fetch;
@@ -335,6 +364,11 @@ describe('TeacherFaceAttendancePage', () => {
 
     expect(screen.getByText(/verification_source/i)).toBeInTheDocument();
     expect(screen.getByText('Đã verify')).toBeInTheDocument();
-    expect(fetchMock).toHaveBeenCalledWith('/api/attendance/face', expect.objectContaining({ method: 'POST' }));
+    expect(await screen.findByTestId('pending-attendance-count')).toHaveTextContent('1');
+    expect(screen.getByText('Nguyễn Văn C')).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/attendance/face',
+      expect.objectContaining({ method: 'POST' })
+    );
   });
 });

@@ -1834,14 +1834,25 @@ Yeu cau:
 
 ### Viec can lam
 
-- [ ] Tai dung `GET /api/activities/[id]/participants` de loc `attendance_status = registered`.
-- [ ] Hien tong so chua diem danh + nhom theo lop + ten hoc vien + ma hoc vien.
-- [ ] Trigger refresh sau QR scan thanh cong va face attendance thanh cong.
-- [ ] Neu can, tach component roster dung chung cho QR/Face.
+- [x] Tai dung `GET /api/activities/[id]/participants` de loc `attendance_status = registered`.
+- [x] Hien tong so chua diem danh + nhom theo lop + ten hoc vien + ma hoc vien.
+- [x] Trigger refresh sau QR scan thanh cong va face attendance thanh cong.
+- [x] Tach component roster dung chung cho QR/Face:
+  - [x] `src/components/attendance/PendingAttendanceRoster.tsx`
+  - [x] `src/app/teacher/qr/page.tsx`
+  - [x] `src/app/teacher/attendance/face/page.tsx`
+  - [x] `test/teacher-qr-page.test.tsx`
+  - [x] `test/teacher-face-attendance-page.test.tsx`
 
 ### Risk / defer
 
-- [ ] Luong face hien tai van la pilot/QA page; can chot cach gan roster vao page nay hay tao teacher attendance workspace hop nhat.
+- [x] Luong face hien tai van la pilot/QA page; tam gan roster truc tiep len page hien tai de dong nhu cau release, defer viec hop nhat thanh teacher attendance workspace sau backbone.
+
+### Verification
+
+- [x] `npm.cmd test -- test/teacher-qr-page.test.tsx test/teacher-face-attendance-page.test.tsx` -> PASS (2 files / 14 tests, 2026-04-24)
+- [x] `npm.cmd run build` -> PASS (2026-04-24)
+- [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests, 2026-04-24)
 
 ## 9.45) Batch uu tien nong - persist explicit student scope khi tao hoat dong
 
