@@ -1586,6 +1586,33 @@ Yeu cau:
 - [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests)
 - [x] `npm.cmd run release:check:full` -> PASS (4/4 checks, lint warnings legacy scope khong block)
 
+## 9.34) Batch uu tien nong - UAT awards/notification stability hardening
+
+### Muc tieu
+
+- Sua flaky test UAT hoc vien nhan khen thuong/thong bao (`Request context disposed` khi request API sat timeout 30s).
+- Tang do on dinh actor smoke teacher QR + student awards-notifications de khong fail ngau nhien tren moi truong dev.
+- Giu nguyen contract nghiep vu, chi harden test strategy (timeout/polling) va bo sung verify release.
+
+### Viec can lam
+
+- [x] `test/uat/actor-student/04-awards-notifications.spec.ts`:
+  - [x] bo sung helper poll API co timeout/request-timeout ro rang de cho eventual consistency.
+  - [x] them timeout test 120s cho flow UAT awards/notification.
+  - [x] doi cac check thong bao/awards/history sang `waitForApiMatch(...)` de tranh fail race/disposed context.
+  - [x] them timeout cho cac API call core (`auth/me`, `award-types`, `awards/create`) de fail nhanh neu co su co.
+- [x] Verification:
+  - [x] re-run cum UAT tung fail: teacher QR + student awards-notifications.
+  - [x] chay lai build/backbone/full release checks de khoa xanh gate.
+
+### Verification
+
+- [x] `npm.cmd run lint -- --file "test/uat/actor-student/04-awards-notifications.spec.ts"` -> PASS (co warnings `any` legacy, khong block)
+- [x] `npx.cmd playwright test test/uat/actor-teacher/04-qr-refresh-close.spec.ts test/uat/actor-student/04-awards-notifications.spec.ts --reporter=dot` -> PASS (2 tests)
+- [x] `npm.cmd run build` -> PASS
+- [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests)
+- [x] `npm.cmd run release:check:full` -> PASS (4/4 checks, lint warnings legacy scope khong block)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix
@@ -1623,6 +1650,7 @@ Yeu cau:
 - [x] Commit 30: QR decoder fallback cross-browser (batch 9.31)
 - [x] Commit 31: dark button contrast hardening + teacher QR fullscreen fallback (batch 9.32) (`d194fa8`)
 - [x] Commit 32: realtime notification dedupe persistence across reconnect/mount (batch 9.33) (`9040610`)
+- [x] Commit 33: UAT awards/notification stability hardening (batch 9.34) (`82fd139`)
 
 ---
 
