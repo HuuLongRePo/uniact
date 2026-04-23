@@ -23,7 +23,9 @@ describe('dark theme link contrast guards', () => {
       css.match(/\.landing-action-primary:hover\s*{[\s\S]*?}/)?.[0] ?? '';
 
     expect(primaryActionRule).toContain('color: var(--app-action-primary-text) !important;');
-    expect(primaryActionRule).toContain('-webkit-text-fill-color: var(--app-action-primary-text);');
+    expect(primaryActionRule).toContain(
+      '-webkit-text-fill-color: var(--app-action-primary-text) !important;'
+    );
     expect(primaryActionHoverRule).toContain('color: var(--app-action-primary-text) !important;');
   });
 

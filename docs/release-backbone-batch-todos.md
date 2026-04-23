@@ -1,6 +1,6 @@
 # RELEASE BACKBONE TODOS (BATCH PLAN)
 
-Ngay cap nhat: 2026-04-22
+Ngay cap nhat: 2026-04-23
 Muc tieu: Release he thong theo duong xuong song, sua loi va mo rong tinh nang theo tung batch nho, tranh qua tai context.
 
 ## 1) Nguyen tac van hanh (bat buoc)
@@ -1661,6 +1661,30 @@ Yeu cau:
 - [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests)
 - [x] `npm.cmd run release:check:full` -> PASS (4/4 checks, lint warnings legacy scope khong block)
 - [x] `npx.cmd playwright test test/uat/actor-admin/02-activity-approval.spec.ts test/uat/actor-teacher/04-qr-refresh-close.spec.ts test/uat/actor-student/02-qr-checkin.spec.ts --reporter=dot` -> PASS (3 tests)
+
+## 9.37) Batch uu tien nong - landing CTA contrast + gray disabled mapping (dark/system)
+
+### Muc tieu
+
+- Fix truong hop 2 nut CTA "Dang nhap" tren landing bi mo/nham mau trong dark/system dark (dac biet tren Windows) do xung dot `-webkit-text-fill-color`/specificity.
+- Quet nhanh va bo sung mapping dark mode cho nhom `bg-gray-300/400/500` + `hover:bg-gray-*` + `disabled:bg-gray-*` de tranh chu bi chim (xuat hien nhieu trong nut secondary/disabled).
+
+### Viec can lam
+
+- [x] `src/app/globals.css`:
+  - [x] harden `landing-action-primary` text fill (add `!important` + pin `opacity: 1`).
+  - [x] mo rong mapping dark cho `bg-gray-300/400/500`, `hover:bg-gray-300/400/500`, `disabled:bg-gray-100/200/300/400/500`.
+
+### Verification
+
+- [x] `npm.cmd run build` -> PASS (2026-04-23)
+- [x] `npm.cmd test -- test/theme-link-contrast-guard.test.ts` -> PASS (1 file / 4 tests, 2026-04-23)
+- [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests, 2026-04-23)
+
+### P0 Todo tiep theo (uu tien truoc cac batch UI lon)
+
+- [ ] Camera/QR cross-browser re-verify tren dien thoai:
+  - [ ] Neu trinh duyet/OS khong cap quyen camera hoac khong ho tro, phai hien thong diep ro rang + huong dan (cap quyen, doi trinh duyet) va fallback (upload anh QR / nhap ma).
 
 ## 10) Ke hoach commit de xuat
 
