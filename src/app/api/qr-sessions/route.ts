@@ -210,6 +210,7 @@ export async function POST(request: NextRequest) {
           actorId: Number((user as User).id),
           priority: 'high',
           ttlSeconds: 10,
+          dedupeWithinSeconds: 45,
           actionButtons: [
             {
               id: 'open_checkin',

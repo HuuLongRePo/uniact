@@ -27,9 +27,9 @@ function normalizeRecipientRole(rawRole: unknown): NotificationRecipientRole {
 }
 
 function isAttendanceNotification(type: string) {
-  return ['attendance', 'success', 'attendance_qr_started', 'face_attendance_recorded'].includes(
-    type
-  );
+  // Only notification types that should offer "Điểm danh" / "Mở điểm danh" actions.
+  // "success" is a post-attendance confirmation and must not suggest checking-in again.
+  return ['attendance', 'attendance_qr_started'].includes(type);
 }
 
 function getAttendancePrimaryPath(role: NotificationRecipientRole, activityId: number) {

@@ -235,6 +235,7 @@ export async function POST(request: NextRequest) {
         message: `Bạn đã được ghi nhận tham gia bằng face attendance cho hoạt động "${activity.title}"`,
         relatedTable: 'activities',
         relatedId: activityId,
+        dedupeWithinSeconds: 45,
       });
     } catch (notificationError) {
       console.error('Failed to create face attendance notification:', notificationError);

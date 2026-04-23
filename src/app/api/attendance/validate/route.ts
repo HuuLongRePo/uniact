@@ -329,11 +329,12 @@ export async function POST(request: NextRequest) {
     try {
       await sendDatabaseNotification({
         userId: Number(student.id),
-        type: 'attendance',
+        type: 'success',
         title: 'Điểm danh thành công',
         message: 'Bạn đã điểm danh hoạt động thành công qua mã QR.',
         relatedTable: 'activities',
         relatedId: Number(session.activity_id),
+        dedupeWithinSeconds: 45,
       });
     } catch (notifyErr) {
       console.warn('Attendance notification error:', notifyErr);

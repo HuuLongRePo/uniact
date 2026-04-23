@@ -63,4 +63,16 @@ describe('resolveNotificationActionButtons', () => {
       '/student/activities/77',
     ]);
   });
+
+  it('does not offer a check-in action for post-attendance success notifications', () => {
+    const buttons = resolveNotificationActionButtons({
+      type: 'success',
+      related_table: 'activities',
+      related_id: 88,
+      recipient_role: 'student',
+    });
+
+    expect(buttons).toHaveLength(1);
+    expect(buttons[0].href).toBe('/student/activities/88');
+  });
 });

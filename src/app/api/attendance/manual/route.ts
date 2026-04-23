@@ -106,6 +106,7 @@ export async function POST(request: NextRequest) {
             message: `Bạn đã được điểm danh cho hoạt động "${activity.title}" (Điểm danh thủ công)`,
             relatedTable: 'activities',
             relatedId: Number(activity_id),
+            dedupeWithinSeconds: 45,
           });
         } catch (notificationError) {
           console.error(

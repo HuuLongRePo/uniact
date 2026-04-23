@@ -1725,6 +1725,28 @@ Yeu cau:
 - [x] `npm.cmd test -- test/student-qr-scanner-playback-gesture.test.tsx` -> PASS (1 file / 1 test, 2026-04-23)
 - [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests, 2026-04-23)
 
+## 9.40) Batch uu tien nong - notification CTA + dedupe attendance/QR pushes
+
+### Muc tieu
+
+- Tranh nham lan: thong bao "Diem danh thanh cong" khong duoc goi y nut "Diem danh" nua.
+- Giam tinh trang thong bao day lap (QR started / attendance success) khi request retry / reconnect.
+
+### Viec can lam
+
+- [x] `src/lib/notification-actions.ts`: bo `success` khoi nhom attendance-CTA.
+- [x] Add `dedupeWithinSeconds: 45` cho:
+  - [x] `src/app/api/qr-sessions/route.ts` (attendance_qr_started).
+  - [x] `src/app/api/attendance/validate/route.ts` (QR success -> type `success`).
+  - [x] `src/app/api/attendance/manual/route.ts` (manual success).
+  - [x] `src/app/api/attendance/face/route.ts` (face success).
+- [x] `test/notification-actions.test.ts`: them regression `success` khong tao check-in CTA.
+
+### Verification
+
+- [x] `npm.cmd test -- test/notification-actions.test.ts` -> PASS (1 file / 5 tests, 2026-04-23)
+- [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests, 2026-04-23)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix
