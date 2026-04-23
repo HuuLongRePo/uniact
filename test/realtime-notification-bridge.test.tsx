@@ -53,6 +53,7 @@ describe('RealtimeNotificationBridge', () => {
     toastDismissMock.mockReset();
     MockEventSource.instances = [];
     authState.user = { id: 7, role: 'student' };
+    window.sessionStorage.clear();
 
     vi.stubGlobal('EventSource', MockEventSource as unknown as typeof EventSource);
 
@@ -80,7 +81,9 @@ describe('RealtimeNotificationBridge', () => {
       target_user_ids: [7],
       priority: 'high',
       ttl_seconds: 10,
-      action_buttons: [{ id: 'join', label: 'Tham gia', action: 'join', href: '/student/activities' }],
+      action_buttons: [
+        { id: 'join', label: 'Tham gia', action: 'join', href: '/student/activities' },
+      ],
       notification: {
         id: 555,
         type: 'system',
@@ -134,7 +137,9 @@ describe('RealtimeNotificationBridge', () => {
       expect(toastCustomMock).toHaveBeenCalled();
     });
 
-    const renderFn = toastCustomMock.mock.calls[0][0] as (toastItem: { id: string }) => React.ReactNode;
+    const renderFn = toastCustomMock.mock.calls[0][0] as (toastItem: {
+      id: string;
+    }) => React.ReactNode;
     render(<>{renderFn({ id: 'toast-1' })}</>);
 
     expect(screen.getByText('Xem chi tiết')).toBeInTheDocument();
@@ -179,7 +184,9 @@ describe('RealtimeNotificationBridge', () => {
       expect(toastCustomMock).toHaveBeenCalled();
     });
 
-    const renderFn = toastCustomMock.mock.calls[0][0] as (toastItem: { id: string }) => React.ReactNode;
+    const renderFn = toastCustomMock.mock.calls[0][0] as (toastItem: {
+      id: string;
+    }) => React.ReactNode;
     render(<>{renderFn({ id: 'toast-attendance' })}</>);
 
     expect(screen.getByText('Điểm danh')).toBeInTheDocument();
@@ -271,6 +278,54 @@ describe('RealtimeNotificationBridge', () => {
 
     await waitFor(() => {
       expect(toastCustomMock).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('hydrates last_event_id from sessionStorage when reconnecting stream', async () => {
+    window.sessionStorage.setItem('realtime:last_event_id:7', '245');
+    const Bridge = (await import('../src/components/realtime/RealtimeNotificationBridge'))
+      .RealtimeNotificationBridge;
+
+    render(<Bridge />);
+
+    expect(MockEventSource.instances).toHaveLength(1);
+    const source = MockEventSource.instances[0];
+    expect(source.url).toBe('/api/notifications/stream?last_event_id=245');
+  });
+
+  it('suppresses already-shown notification ids restored from sessionStorage', async () => {
+    window.sessionStorage.setItem(
+      'realtime:shown_toast_keys:7',
+      JSON.stringify([{ key: 'notification:777', timestamp: Date.now() }])
+    );
+    const Bridge = (await import('../src/components/realtime/RealtimeNotificationBridge'))
+      .RealtimeNotificationBridge;
+
+    render(<Bridge />);
+    const source = MockEventSource.instances[0];
+
+    source.emit('notification', {
+      event_id: 510,
+      event_type: 'attendance_qr_started',
+      actor_id: 12,
+      target_user_ids: [7],
+      priority: 'high',
+      ttl_seconds: 8,
+      action_buttons: [],
+      notification: {
+        id: 777,
+        type: 'attendance',
+        title: 'Thông báo trùng',
+        message: 'Thông báo này đã hiển thị trước đó',
+        related_table: 'activities',
+        related_id: 92,
+        created_at: '2026-04-22T11:00:00.000Z',
+      },
+      created_at: '2026-04-22T11:00:00.000Z',
+    });
+
+    await waitFor(() => {
+      expect(toastCustomMock).toHaveBeenCalledTimes(0);
     });
   });
 

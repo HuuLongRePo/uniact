@@ -29,6 +29,73 @@ type ApiNotificationItem = {
 
 const POLLING_INTERVAL_MS = 15000;
 const CONTENT_DEDUPE_WINDOW_MS = 45000;
+const PERSISTED_TOAST_KEY_MAX_AGE_MS = 6 * 60 * 60 * 1000;
+
+function getLastEventStorageKey(userId: number) {
+  return `realtime:last_event_id:${userId}`;
+}
+
+function getToastDedupeStorageKey(userId: number) {
+  return `realtime:shown_toast_keys:${userId}`;
+}
+
+function pruneExpiredEntries(map: Map<string, number>, maxAgeMs: number, now = Date.now()) {
+  for (const [key, timestamp] of map.entries()) {
+    if (now - timestamp > maxAgeMs) {
+      map.delete(key);
+    }
+  }
+}
+
+function loadPersistedToastKeys(userId: number) {
+  if (typeof window === 'undefined' || userId <= 0) return new Map<string, number>();
+
+  const storageKey = getToastDedupeStorageKey(userId);
+  const raw = window.sessionStorage.getItem(storageKey);
+  if (!raw) return new Map<string, number>();
+
+  try {
+    const parsed = JSON.parse(raw) as Array<{ key?: unknown; timestamp?: unknown }>;
+    if (!Array.isArray(parsed)) {
+      return new Map<string, number>();
+    }
+
+    const entries = parsed
+      .map((item) => ({
+        key: String(item?.key || '').trim(),
+        timestamp: Number(item?.timestamp || 0),
+      }))
+      .filter((item) => item.key && Number.isFinite(item.timestamp))
+      .map((item) => [item.key, item.timestamp] as const);
+
+    const map = new Map<string, number>(entries);
+    pruneExpiredEntries(map, PERSISTED_TOAST_KEY_MAX_AGE_MS);
+    return map;
+  } catch {
+    return new Map<string, number>();
+  }
+}
+
+function persistToastKeys(userId: number, keyMap: Map<string, number>) {
+  if (typeof window === 'undefined' || userId <= 0) return;
+
+  const storageKey = getToastDedupeStorageKey(userId);
+  const payload = Array.from(keyMap.entries()).map(([key, timestamp]) => ({ key, timestamp }));
+  window.sessionStorage.setItem(storageKey, JSON.stringify(payload.slice(-400)));
+}
+
+function loadPersistedLastEventId(userId: number) {
+  if (typeof window === 'undefined' || userId <= 0) return 0;
+
+  const raw = window.sessionStorage.getItem(getLastEventStorageKey(userId));
+  const parsed = Number(raw || 0);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+}
+
+function persistLastEventId(userId: number, eventId: number) {
+  if (typeof window === 'undefined' || eventId <= 0) return;
+  window.sessionStorage.setItem(getLastEventStorageKey(userId), String(eventId));
+}
 
 function toSafeInteger(value: unknown, fallback = 0) {
   const parsed = Number(value);
@@ -106,6 +173,7 @@ export function RealtimeNotificationBridge() {
   const activeRef = useRef(false);
   const knownNotificationIdsRef = useRef<Set<number>>(new Set());
   const shownToastKeysRef = useRef<Set<string>>(new Set());
+  const persistedToastKeysRef = useRef<Map<string, number>>(new Map());
   const recentContentDedupeRef = useRef<Map<string, number>>(new Map());
   const lastEventIdRef = useRef(0);
 
@@ -148,11 +216,19 @@ export function RealtimeNotificationBridge() {
     if (shownToastKeysRef.current.has(dedupeKey)) {
       return;
     }
+    const persistedSeenAt = persistedToastKeysRef.current.get(dedupeKey);
+    if (persistedSeenAt && now - persistedSeenAt <= PERSISTED_TOAST_KEY_MAX_AGE_MS) {
+      shownToastKeysRef.current.add(dedupeKey);
+      return;
+    }
     const previousTimestamp = recentContentDedupeRef.current.get(contentDedupeKey);
     if (previousTimestamp && now - previousTimestamp < CONTENT_DEDUPE_WINDOW_MS) {
       return;
     }
     shownToastKeysRef.current.add(dedupeKey);
+    persistedToastKeysRef.current.set(dedupeKey, now);
+    pruneExpiredEntries(persistedToastKeysRef.current, PERSISTED_TOAST_KEY_MAX_AGE_MS, now);
+    persistToastKeys(Number(user?.id || 0), persistedToastKeysRef.current);
     recentContentDedupeRef.current.set(contentDedupeKey, now);
 
     const buttons = resolveToastActionButtons(event, recipientRole);
@@ -289,6 +365,7 @@ export function RealtimeNotificationBridge() {
         const eventId = toSafeInteger(payload.event_id, 0);
         if (eventId > 0) {
           lastEventIdRef.current = Math.max(lastEventIdRef.current, eventId);
+          persistLastEventId(Number(user?.id || 0), lastEventIdRef.current);
         }
 
         const notificationId = toSafeInteger(payload.notification?.id, 0);
@@ -324,8 +401,9 @@ export function RealtimeNotificationBridge() {
     stopPolling();
     knownNotificationIdsRef.current = new Set();
     shownToastKeysRef.current = new Set();
+    persistedToastKeysRef.current = loadPersistedToastKeys(Number(user.id));
     recentContentDedupeRef.current = new Map();
-    lastEventIdRef.current = 0;
+    lastEventIdRef.current = loadPersistedLastEventId(Number(user.id));
 
     void fetchNotificationsForPolling(true).catch(() => undefined);
     connectEventStream();

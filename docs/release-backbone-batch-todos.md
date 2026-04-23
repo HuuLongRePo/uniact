@@ -1559,6 +1559,33 @@ Yeu cau:
 - [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests)
 - [x] `npm.cmd run release:check:full` -> PASS (4/4 checks, lint warnings legacy scope khong block)
 
+## 9.33) Batch uu tien nong - dedupe push notification xuyen reconnect/mount
+
+### Muc tieu
+
+- Sua loi cung 1 thong bao day co the lap lai nhieu lan khi SSE reconnect hoac user doi trang (component remount).
+- Giu logic dedupe hien tai trong phien runtime, bo sung dedupe persist theo user de khong toast lai notification/event da hien.
+- Bao toan contract action button notification va khong anh huong flow Attendance -> Notification.
+
+### Viec can lam
+
+- [x] `src/components/realtime/RealtimeNotificationBridge.tsx`:
+  - [x] persist `last_event_id` theo user trong `sessionStorage` va tai lai khi connect stream.
+  - [x] persist dedupe key toast (`notification:<id>` / `event:<id>`) theo user, co TTL 6h va prune.
+  - [x] tiep tuc dedupe content window 45s nhu cu, ket hop dedupe persist de chan replay backlog.
+- [x] `test/realtime-notification-bridge.test.tsx`:
+  - [x] them regression assert stream reconnect dung cursor tu `sessionStorage`.
+  - [x] them regression assert khong toast lai notification da duoc ghi nhan trong dedupe store.
+
+### Verification
+
+- [x] `npm.cmd run lint -- --file "src/components/realtime/RealtimeNotificationBridge.tsx" --file "test/realtime-notification-bridge.test.tsx"` -> PASS
+- [x] `npm.cmd test -- test/realtime-notification-bridge.test.tsx` -> PASS (1 file / 10 tests)
+- [x] `npm.cmd test -- test/notification-inbox.test.tsx test/notification-actions.test.ts test/realtime-notification-bridge.test.tsx` -> PASS (3 files / 17 tests)
+- [x] `npm.cmd run build` -> PASS
+- [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests)
+- [x] `npm.cmd run release:check:full` -> PASS (4/4 checks, lint warnings legacy scope khong block)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix
@@ -1595,6 +1622,7 @@ Yeu cau:
 - [x] Commit 29: UAT login rate-limit unblock + dark button text-white guard v3 (batch 9.30)
 - [x] Commit 30: QR decoder fallback cross-browser (batch 9.31)
 - [x] Commit 31: dark button contrast hardening + teacher QR fullscreen fallback (batch 9.32) (`d194fa8`)
+- [ ] Commit 32: realtime notification dedupe persistence across reconnect/mount (batch 9.33)
 
 ---
 
