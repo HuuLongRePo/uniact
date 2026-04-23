@@ -110,6 +110,27 @@ describe('Admin activities page', () => {
         } as Response;
       }
 
+      if (url.includes('/api/qr-sessions/active')) {
+        const parsed = new URL(url, 'http://localhost');
+        const activityId = parsed.searchParams.get('activity_id') ?? '';
+
+        return {
+          ok: true,
+          json: async () => ({
+            data: {
+              session:
+                activityId === '3'
+                  ? {
+                      id: 9001,
+                      session_id: 9001,
+                      expires_at: '2099-01-01T09:00:00.000Z',
+                    }
+                  : null,
+            },
+          }),
+        } as Response;
+      }
+
       throw new Error(`Unhandled fetch: ${url}`);
     }) as any;
   });
@@ -165,7 +186,11 @@ describe('Admin activities page', () => {
     fireEvent.click(screen.getByRole('button', { name: /Làm mới/i }));
 
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledTimes(2);
+      const calls = (global.fetch as any).mock.calls as Array<[RequestInfo | URL]>;
+      const activityCalls = calls.filter(([input]) =>
+        String(input).includes('/api/admin/activities')
+      );
+      expect(activityCalls).toHaveLength(2);
     });
   });
 
@@ -195,5 +220,17 @@ describe('Admin activities page', () => {
       expect(screen.queryByText('Pending Activity')).not.toBeInTheDocument();
       expect(screen.getByText('Rejected Activity')).toBeInTheDocument();
     });
+  });
+
+  it('shows attendance shortcut when a published activity has an active QR session', async () => {
+    const Page = (await import('../src/app/admin/activities/page')).default;
+    render(<Page />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Approved Published Activity')).toBeInTheDocument();
+    });
+
+    const links = await screen.findAllByLabelText('Điểm danh');
+    expect(links.some((link) => (link as HTMLAnchorElement).getAttribute('href') === '/admin/attendance?activityId=3')).toBeTruthy();
   });
 });

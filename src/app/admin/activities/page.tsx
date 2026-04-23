@@ -14,6 +14,11 @@ import ActivityTable from './ActivityTable';
 import { Activity } from './types';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
+type ActiveQrSessionSummary = {
+  session_id: number;
+  expires_at: string;
+};
+
 export default function AdminActivitiesPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
@@ -23,6 +28,9 @@ export default function AdminActivitiesPage() {
   const [workflowFilter, setWorkflowFilter] = useState<string>('all');
   const [reviewFilter, setReviewFilter] = useState<string>('all');
   const [deleteActivity, setDeleteActivity] = useState<Activity | null>(null);
+  const [activeQrSessions, setActiveQrSessions] = useState<Record<number, ActiveQrSessionSummary>>(
+    {}
+  );
 
   const debouncedSearch = useDebounce(search, 400);
   const effectiveSearch = debouncedSearch.trim().toLowerCase();
@@ -47,6 +55,74 @@ export default function AdminActivitiesPage() {
 
     return () => window.clearInterval(intervalId);
   }, [user]);
+
+  useEffect(() => {
+    if (!user || user.role !== 'admin') return;
+    if (activities.length === 0) {
+      setActiveQrSessions({});
+      return;
+    }
+
+    let cancelled = false;
+    const now = Date.now();
+
+    const candidates = activities
+      .filter(
+        (activity) => activity.status === 'published' && activity.approval_status === 'approved'
+      )
+      .map((activity) => {
+        const date = new Date(activity.date_time).getTime();
+        return { activity, date, distance: Math.abs(date - now) };
+      })
+      .filter(({ date }) => Number.isFinite(date))
+      .sort((a, b) => a.distance - b.distance)
+      .slice(0, 30)
+      .map(({ activity }) => activity);
+
+    if (candidates.length === 0) {
+      setActiveQrSessions({});
+      return;
+    }
+
+    const fetchActiveSessions = async () => {
+      const entries = await Promise.all(
+        candidates.map(async (activity) => {
+          try {
+            const response = await fetch(`/api/qr-sessions/active?activity_id=${activity.id}`);
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok) return null;
+
+            const session = payload?.data?.session ?? payload?.session;
+            if (!session) return null;
+
+            const sessionId = Number(session?.session_id ?? session?.id ?? 0);
+            const expiresAt = String(session?.expires_at ?? '');
+            if (!Number.isFinite(sessionId) || sessionId <= 0 || !expiresAt) return null;
+
+            return [activity.id, { session_id: sessionId, expires_at: expiresAt }] as const;
+          } catch {
+            return null;
+          }
+        })
+      );
+
+      if (cancelled) return;
+
+      const nextSessions: Record<number, ActiveQrSessionSummary> = {};
+      for (const entry of entries) {
+        if (!entry) continue;
+        nextSessions[entry[0]] = entry[1];
+      }
+
+      setActiveQrSessions(nextSessions);
+    };
+
+    void fetchActiveSessions();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activities, user]);
 
   const fetchActivities = async () => {
     try {
@@ -149,6 +225,7 @@ export default function AdminActivitiesPage() {
           activities={filteredActivities}
           loading={isListLoading}
           onDelete={(activity) => setDeleteActivity(activity)}
+          activeQrSessions={activeQrSessions}
         />
 
         {/* Total count */}

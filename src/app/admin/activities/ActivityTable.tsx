@@ -1,17 +1,28 @@
 'use client';
 
 import Link from 'next/link';
-import { CheckCircle, Eye, Edit, Trash2, XCircle } from 'lucide-react';
+import { CheckCircle, Eye, Edit, Trash2, XCircle, QrCode } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { Activity } from './types';
+
+type ActiveQrSessionSummary = {
+  session_id: number;
+  expires_at: string;
+};
 
 interface ActivityTableProps {
   activities: Activity[];
   loading: boolean;
   onDelete: (activity: Activity) => void;
+  activeQrSessions?: Record<number, ActiveQrSessionSummary>;
 }
 
-export default function ActivityTable({ activities, loading, onDelete }: ActivityTableProps) {
+export default function ActivityTable({
+  activities,
+  loading,
+  onDelete,
+  activeQrSessions = {},
+}: ActivityTableProps) {
   const now = Date.now();
 
   const getStatusBadge = (status: string) => {
@@ -145,6 +156,16 @@ export default function ActivityTable({ activities, loading, onDelete }: Activit
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
+                        {activeQrSessions[activity.id] && (
+                          <Link
+                            href={`/admin/attendance?activityId=${activity.id}`}
+                            className="p-2 text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors"
+                            title="Điểm danh"
+                            aria-label="Điểm danh"
+                          >
+                            <QrCode className="w-4 h-4" />
+                          </Link>
+                        )}
                         <Link
                           href={`/admin/activities/${activity.id}`}
                           className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
