@@ -40,6 +40,7 @@ interface CreatedQrSession {
   sessionId: number;
   token: string;
   payload: string;
+  expiresAt?: string | null;
 }
 
 interface BulkScanRecord {
@@ -73,6 +74,25 @@ function parseQrSessionOptions(raw: unknown): { single_use?: boolean; max_scans?
     return raw as { single_use?: boolean; max_scans?: number | null };
   }
   return {};
+}
+
+function buildStudentCheckInLink(sessionId: number, token: string) {
+  // Embed a clickable URL in the QR so students can scan using any camera app,
+  // then open the page and auto-check-in after logging in.
+  if (typeof window === 'undefined') {
+    return JSON.stringify({ s: sessionId, t: token });
+  }
+
+  const origin = window.location.origin;
+  const safeToken = encodeURIComponent(token);
+  return `${origin}/student/check-in?s=${sessionId}&t=${safeToken}`;
+}
+
+function formatCountdown(totalSeconds: number) {
+  const clamped = Math.max(0, Math.floor(totalSeconds));
+  const minutes = Math.floor(clamped / 60);
+  const seconds = clamped % 60;
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 }
 
 async function loadActivityOption(activityId: number): Promise<Activity | null> {
@@ -113,6 +133,7 @@ export default function TeacherQRPage() {
   const [fullscreenAutoRequestBlocked, setFullscreenAutoRequestBlocked] = useState(false);
   const projectorRef = useRef<HTMLDivElement | null>(null);
   const projectorAutoOpenedRef = useRef(false);
+  const [nowMs, setNowMs] = useState(() => Date.now());
 
   const activeBulkSessionId = selectedBulkSession ?? history[0]?.id ?? null;
   const autoProjectorRequested =
@@ -239,7 +260,8 @@ export default function TeacherQRPage() {
         setCreatedSession({
           sessionId: nextSessionId,
           token: nextToken,
-          payload: JSON.stringify({ s: nextSessionId, t: nextToken }),
+          payload: buildStudentCheckInLink(nextSessionId, nextToken),
+          expiresAt: session?.expires_at ? String(session.expires_at) : null,
         });
         setOptions(session?.options || null);
       } catch (err) {
@@ -253,6 +275,23 @@ export default function TeacherQRPage() {
       cancelled = true;
     };
   }, [selectedActivity]);
+
+  useEffect(() => {
+    if (!createdSession?.expiresAt) {
+      return;
+    }
+
+    const interval = setInterval(() => setNowMs(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, [createdSession?.expiresAt]);
+
+  const expiresInSeconds = (() => {
+    const expiresAt = createdSession?.expiresAt;
+    if (!expiresAt) return null;
+    const expiresMs = new Date(expiresAt).getTime();
+    if (!Number.isFinite(expiresMs)) return null;
+    return Math.max(0, Math.floor((expiresMs - nowMs) / 1000));
+  })();
 
   const fetchHistory = async () => {
     try {
@@ -439,7 +478,8 @@ export default function TeacherQRPage() {
       setCreatedSession({
         sessionId: nextSessionId,
         token: nextToken,
-        payload: JSON.stringify({ s: nextSessionId, t: nextToken }),
+        payload: buildStudentCheckInLink(nextSessionId, nextToken),
+        expiresAt: data?.expires_at ? String(data.expires_at) : null,
       });
       setOptions(data?.options || null);
       toast.success(
@@ -627,6 +667,11 @@ export default function TeacherQRPage() {
                       <span className="font-semibold text-gray-900">
                         {createdSession.sessionId}
                       </span>
+                      {expiresInSeconds !== null && (
+                        <span className="ml-2 text-gray-500">
+                          • Còn hiệu lực: <span className="font-semibold">{formatCountdown(expiresInSeconds)}</span>
+                        </span>
+                      )}
                     </span>
                   )}
                 </div>
@@ -672,7 +717,7 @@ export default function TeacherQRPage() {
                       Chiếu mã QR toàn màn hình
                     </button>
                     <div className="text-xs leading-5 text-gray-600">
-                      Dữ liệu QR:{' '}
+                      Liên kết điểm danh:{' '}
                       <code className="rounded bg-gray-100 px-1 py-0.5">
                         {createdSession.payload}
                       </code>
@@ -984,15 +1029,18 @@ export default function TeacherQRPage() {
             )}
 
             <div className="mt-5 flex flex-1 items-center justify-center">
-              <div className="rounded-3xl bg-white p-5 shadow-2xl sm:p-8">
-                <div className="w-[min(86vw,860px)]">
+              <div className="rounded-3xl bg-white p-4 shadow-2xl sm:p-6">
+                <div className="w-[min(95vmin,1100px)]">
                   <QrCodeSvg value={createdSession.payload} />
                 </div>
               </div>
             </div>
 
             <div className="mx-auto mt-4 max-w-4xl rounded-xl border border-slate-700 bg-slate-900/90 px-4 py-3 text-center text-xs text-slate-200 sm:text-sm">
-              Phiên #{createdSession.sessionId} • Mã phiên: {createdSession.token}
+              Phiên #{createdSession.sessionId} • Mã: {createdSession.token}
+              {expiresInSeconds !== null && (
+                <span> • Còn lại: {formatCountdown(expiresInSeconds)}</span>
+              )}
             </div>
           </div>
         </div>

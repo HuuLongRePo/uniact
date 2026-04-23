@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSubmit } from '@/lib/use-submit-hook';
@@ -12,6 +12,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, login } = useAuth(); // Sử dụng login từ AuthContext
 
   const showDemoAccounts =
@@ -34,10 +35,13 @@ export default function LoginPage() {
   // Redirect nếu đã login
   useEffect(() => {
     if (user) {
-      console.warn('✅ Đã login, redirect đến dashboard');
-      router.push('/dashboard');
+      const nextPath = searchParams.get('next');
+      const safeNext =
+        nextPath && nextPath.startsWith('/') && !nextPath.startsWith('//') ? nextPath : null;
+      console.warn('✅ Đã login, redirect');
+      router.push(safeNext || '/dashboard');
     }
-  }, [user, router]);
+  }, [user, router, searchParams]);
 
   // useSubmit hook để ngăn double submit
   const { handleSubmit: submitLogin, state } = useSubmit(

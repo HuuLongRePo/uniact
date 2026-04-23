@@ -78,9 +78,19 @@ export async function decodeQrValueFromSource({
     return null;
   }
 
-  const jsQrResult = jsQrDecoder(imageData.data, imageData.width, imageData.height, {
+  // Some QR codes (especially screenshots/printed) may require inversion attempts.
+  const directResult = jsQrDecoder(imageData.data, imageData.width, imageData.height, {
     inversionAttempts: 'dontInvert',
   });
 
-  return normalizeDecodedValue(jsQrResult?.data);
+  const directValue = normalizeDecodedValue(directResult?.data);
+  if (directValue) {
+    return directValue;
+  }
+
+  const fallbackResult = jsQrDecoder(imageData.data, imageData.width, imageData.height, {
+    inversionAttempts: 'attemptBoth',
+  });
+
+  return normalizeDecodedValue(fallbackResult?.data);
 }

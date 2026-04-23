@@ -1683,8 +1683,8 @@ Yeu cau:
 
 ### P0 Todo tiep theo (uu tien truoc cac batch UI lon)
 
-- [ ] Camera/QR cross-browser re-verify tren dien thoai:
-  - [ ] Neu trinh duyet/OS khong cap quyen camera hoac khong ho tro, phai hien thong diep ro rang + huong dan (cap quyen, doi trinh duyet) va fallback (upload anh QR / nhap ma).
+- [x] Camera/QR cross-browser re-verify tren dien thoai:
+  - [x] Neu trinh duyet/OS khong cap quyen camera hoac khong ho tro, phai hien thong diep ro rang + huong dan (cap quyen, doi trinh duyet) va fallback (upload anh QR / nhap ma / quet bang app khac mo link).
 
 ## 9.38) Batch uu tien nong - sidebar clarity (QR vs scan, notify labels)
 
@@ -1746,6 +1746,33 @@ Yeu cau:
 
 - [x] `npm.cmd test -- test/notification-actions.test.ts` -> PASS (1 file / 5 tests, 2026-04-23)
 - [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests, 2026-04-23)
+
+## 9.41) Batch uu tien nong - QR deep link check-in (khong can camera web) + harden doc QR tu anh + login redirect
+
+### Muc tieu
+
+- Giam phu thuoc camera `getUserMedia` khi test tren LAN `http://10.x` (insecure context) hoac trinh duyet khong cap quyen camera:
+  - Giang vien chi QR theo dang DUONG LINK `/student/check-in?s=...&t=...` de hoc vien co the quet bang app camera bat ky, mo link va diem danh.
+  - Trang hoc vien tu dong diem danh khi mo dung link (sau khi dang nhap).
+- Tang do ben doc QR tu anh (jsQR inversion attempts), giam false-negative "Khong doc duoc ma QR tu anh".
+- Login ton trong `?next=` de bao toan deep-link flow.
+
+### Viec can lam
+
+- [x] `src/app/teacher/qr/page.tsx`:
+  - [x] QR payload = link `/student/check-in?s=<sessionId>&t=<token>` (thay cho JSON thuan).
+  - [x] Them dem nguoc het han cho phien QR (mm:ss) + phong to QR projector ~95% vmin.
+- [x] `src/app/student/check-in/page.tsx`:
+  - [x] Parse duoc URL QR + tu dong goi `/api/attendance/validate` neu co `s/t` tren query.
+- [x] `src/app/login/page.tsx`:
+  - [x] Neu co `next`, redirect ve `next` sau khi dang nhap (chi chap nhan path bat dau bang `/`).
+- [x] `src/lib/qr-scan-decoder.ts`:
+  - [x] jsQR fallback inversion `attemptBoth` neu `dontInvert` fail.
+
+### Verification
+
+- [x] `npm.cmd run build` -> PASS (2026-04-24)
+- [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests, 2026-04-24)
 
 ## 10) Ke hoach commit de xuat
 
