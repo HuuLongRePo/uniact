@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { toast } from '@/lib/toast';
+import { formatDate } from '@/lib/formatters';
 
 interface Participation {
   id: number;
@@ -291,7 +292,7 @@ export default function ParticipantsPage() {
         <div className="bg-white rounded-lg shadow p-4">
           <h2 className="text-xl font-semibold mb-2">{activity.title}</h2>
           <div className="flex gap-4 text-sm text-gray-600">
-            <span>📅 {new Date(activity.date_time).toLocaleString('vi-VN')}</span>
+            <span>📅 {formatDate(activity.date_time)}</span>
             <span>📍 {activity.location}</span>
           </div>
         </div>

@@ -1,12 +1,13 @@
 import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { formatVietnamDateTime, formatVietnamWithOptions } from '@/lib/timezone';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
 export function formatDate(date: string): string {
-  return new Date(date).toLocaleDateString('vi-VN', {
+  return formatVietnamWithOptions(date, {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
@@ -17,10 +18,7 @@ export function formatDate(date: string): string {
 }
 
 export function formatTime(date: string): string {
-  return new Date(date).toLocaleTimeString('vi-VN', {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  return formatVietnamDateTime(date, 'time');
 }
 
 export function getPlantStage(growth: number): string {

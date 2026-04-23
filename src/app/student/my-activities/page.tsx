@@ -6,6 +6,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import toast from 'react-hot-toast';
+import { formatDate } from '@/lib/formatters';
+import { parseVietnamDate } from '@/lib/timezone';
 
 interface Registration {
   id: number;
@@ -74,7 +76,8 @@ export default function MyActivitiesPage() {
         // Check for upcoming activities (within 24 hours)
         const now = new Date();
         const upcoming24h = nextRegistrations.upcoming.filter((reg: Registration) => {
-          const activityTime = new Date(reg.date_time);
+          const activityTime = parseVietnamDate(reg.date_time);
+          if (!activityTime) return false;
           const hoursUntil = (activityTime.getTime() - now.getTime()) / (1000 * 60 * 60);
           return hoursUntil > 0 && hoursUntil <= 24;
         });
@@ -83,14 +86,16 @@ export default function MyActivitiesPage() {
 
         // Show toast for very soon activities (within 2 hours)
         const verySoon = upcoming24h.filter((reg: Registration) => {
-          const activityTime = new Date(reg.date_time);
+          const activityTime = parseVietnamDate(reg.date_time);
+          if (!activityTime) return false;
           const hoursUntil = (activityTime.getTime() - now.getTime()) / (1000 * 60 * 60);
           return hoursUntil <= 2;
         });
 
         if (verySoon.length > 0) {
           verySoon.forEach((reg: Registration) => {
-            const activityTime = new Date(reg.date_time);
+            const activityTime = parseVietnamDate(reg.date_time);
+            if (!activityTime) return;
             const minutesUntil = Math.round((activityTime.getTime() - now.getTime()) / (1000 * 60));
             toast(`⏰ Hoạt động "${reg.title}" sẽ diễn ra sau ${minutesUntil} phút!`, {
               duration: 8000,
@@ -144,8 +149,8 @@ export default function MyActivitiesPage() {
 
     filtered.sort((a, b) => {
       if (sortBy === 'title') return a.title.localeCompare(b.title, 'vi');
-      const timeA = new Date(a.date_time).getTime();
-      const timeB = new Date(b.date_time).getTime();
+      const timeA = parseVietnamDate(a.date_time)?.getTime() ?? 0;
+      const timeB = parseVietnamDate(b.date_time)?.getTime() ?? 0;
       return sortBy === 'date_asc' ? timeA - timeB : timeB - timeA;
     });
 
@@ -259,11 +264,12 @@ export default function MyActivitiesPage() {
       ) : (
         <div className="space-y-4">
           {currentList.map((reg) => {
-            const activityDate = new Date(reg.date_time);
+            const activityDate = parseVietnamDate(reg.date_time);
+            const activityTimestamp = activityDate?.getTime() ?? Number.NaN;
             const canCancel =
-              tab === 'upcoming' && (activityDate.getTime() - Date.now()) / (1000 * 60 * 60) >= 24;
+              tab === 'upcoming' && (activityTimestamp - Date.now()) / (1000 * 60 * 60) >= 24;
             const isSoon = upcomingReminders.includes(reg.activity_id);
-            const hoursUntil = (activityDate.getTime() - Date.now()) / (1000 * 60 * 60);
+            const hoursUntil = (activityTimestamp - Date.now()) / (1000 * 60 * 60);
 
             return (
               <div
@@ -292,7 +298,7 @@ export default function MyActivitiesPage() {
                       </div>
                       <div className="flex items-center gap-2">
                         <span>📅</span>
-                        <span>{activityDate.toLocaleString('vi-VN')}</span>
+                        <span>{formatDate(reg.date_time)}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <span>📍</span>
@@ -372,7 +378,7 @@ export default function MyActivitiesPage() {
                 )}
 
                 <div className="text-xs text-gray-400 mt-4">
-                  Đăng ký lúc: {new Date(reg.registered_at).toLocaleString('vi-VN')}
+                  Đăng ký lúc: {formatDate(reg.registered_at)}
                 </div>
               </div>
             );

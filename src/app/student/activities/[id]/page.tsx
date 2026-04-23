@@ -9,8 +9,9 @@ import Countdown from '@/components/Countdown';
 import ConfirmationModal from '@/components/ConfirmationModal';
 import { toast } from '@/lib/toast';
 import { AlertTriangle } from 'lucide-react';
-import { formatDate } from '@/lib/utils';
+import { formatDate } from '@/lib/formatters';
 import { resolveClientFetchUrl } from '@/lib/client-fetch-url';
+import { formatVietnamWithOptions, parseVietnamDate } from '@/lib/timezone';
 
 interface ActivityDetail {
   id: number;
@@ -172,12 +173,13 @@ export default function StudentActivityDetailPage() {
     );
   }
 
-  const activityDate = new Date(activity.date_time);
+  const activityDate = parseVietnamDate(activity.date_time);
   const registrationDeadline = activity.registration_deadline
-    ? new Date(activity.registration_deadline)
+    ? parseVietnamDate(activity.registration_deadline)
     : null;
   const now = new Date();
-  const isPast = activityDate.getTime() <= now.getTime();
+  const activityTimestamp = activityDate?.getTime() ?? Number.NaN;
+  const isPast = activityTimestamp <= now.getTime();
   const isFull =
     activity.max_participants !== null && activity.participant_count >= activity.max_participants;
   const isRegistrationClosed =
@@ -289,7 +291,7 @@ export default function StudentActivityDetailPage() {
               <div>
                 <div className="text-sm text-gray-600 mb-1">📅 Thời gian diễn ra</div>
                 <div className="font-semibold">
-                  {activityDate.toLocaleString('vi-VN', {
+                  {formatVietnamWithOptions(activity.date_time, {
                     year: 'numeric',
                     month: 'long',
                     day: 'numeric',
@@ -526,9 +528,7 @@ export default function StudentActivityDetailPage() {
                     className="rounded border border-amber-200 bg-amber-50 p-3"
                   >
                     <div className="font-medium text-gray-900">{conflict.title}</div>
-                    <div className="text-gray-600">
-                      {new Date(conflict.date_time).toLocaleString('vi-VN')}
-                    </div>
+                    <div className="text-gray-600">{formatDate(conflict.date_time)}</div>
                     <div className="text-gray-600">{conflict.location}</div>
                   </div>
                 ))}

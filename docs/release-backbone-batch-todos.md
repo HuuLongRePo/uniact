@@ -1910,6 +1910,43 @@ Yeu cau:
 - [x] `npm.cmd test -- test/teacher-create-activity-page.test.tsx test/teacher-create-activity-preview.test.tsx` -> PASS (2 files / 4 tests, 2026-04-24)
 - [x] `npm.cmd run build` -> PASS (2026-04-24)
 
+## 9.47) Batch uu tien nong - timezone VN audit hot surfaces (teacher/student/inbox)
+
+### Muc tieu
+
+- Giam cac diem user-facing con parse/format ngay gio theo mui gio may khach.
+- Chuan hoa cac so sanh va hien thi thoi gian tren surface backbone teacher/student/notification ve helper `Asia/Ho_Chi_Minh`.
+
+### Viec can lam
+
+- [x] `src/lib/timezone.ts`:
+  - [x] export helper parse/format co timezone Vietnam de tai su dung cho logic va UI.
+- [x] `src/shared/utils/index.ts`:
+  - [x] bo `new Date(...).toLocale*('vi-VN')` truc tiep, chuyen qua helper dung chung.
+- [x] Audit hot surfaces:
+  - [x] `src/app/activities/[id]/page.tsx`
+  - [x] `src/components/notifications/NotificationInbox.tsx`
+  - [x] `src/components/activity/StudentActivityCard.tsx`
+  - [x] `src/app/teacher/activities/page.tsx`
+  - [x] `src/app/teacher/activities/[id]/page.tsx`
+  - [x] `src/app/teacher/activities/[id]/participants/page.tsx`
+  - [x] `src/app/teacher/activities/[id]/attendance/history/page.tsx`
+  - [x] `src/app/student/my-activities/page.tsx`
+  - [x] `src/app/student/history/page.tsx`
+  - [x] `src/app/student/activities/[id]/page.tsx`
+- [x] `test/formatters-timezone.test.ts`:
+  - [x] bo sung regression cho parse naive datetime + formatter option helper.
+
+### Risk / defer
+
+- [ ] Van con nhieu diem `toLocaleString('vi-VN')` ngoai hot surfaces backbone; tiep tuc audit theo cum admin/report/export o batch sau.
+
+### Verification
+
+- [x] `npm.cmd test -- test/formatters-timezone.test.ts test/notification-inbox.test.tsx test/student-activity-detail-page.test.tsx test/student-my-activities-page.test.tsx test/student-history-page.test.tsx test/teacher-activities-page.test.tsx` -> PASS (6 files / 19 tests, 2026-04-24)
+- [x] `npm.cmd run build` -> PASS (2026-04-24)
+- [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests, 2026-04-24)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix

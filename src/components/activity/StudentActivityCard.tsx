@@ -1,5 +1,6 @@
 import React from 'react';
 import type { StudentActivitySummary } from './student-activity-types';
+import { formatDate } from '@/lib/formatters';
 
 interface StudentActivityCardProps {
   activity: StudentActivitySummary;
@@ -74,7 +75,7 @@ export default function StudentActivityCard({
         </div>
         <div className="flex items-center gap-2">
           <span>📅</span>
-          <span>{new Date(activity.date_time).toLocaleString('vi-VN')}</span>
+          <span>{formatDate(activity.date_time)}</span>
         </div>
         <div className="flex items-center gap-2">
           <span>📍</span>

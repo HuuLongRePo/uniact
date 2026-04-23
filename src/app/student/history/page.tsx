@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { Download, Calendar, Trophy, Award } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { formatDate } from '@/lib/formatters';
+import { parseVietnamDate } from '@/lib/timezone';
 
 interface HistoryItem {
   participation_id: number;
@@ -88,7 +90,8 @@ export default function StudentHistoryPage() {
     .filter((item) => {
       if (dateRange === 'all') return true;
       const now = new Date();
-      const itemDate = new Date(item.date_time);
+      const itemDate = parseVietnamDate(item.date_time);
+      if (!itemDate) return false;
 
       if (dateRange === 'this-month') {
         return (
@@ -107,7 +110,10 @@ export default function StudentHistoryPage() {
     })
     .sort((a, b) => {
       if (sortBy === 'points') return (b.points_earned || 0) - (a.points_earned || 0);
-      return new Date(b.date_time).getTime() - new Date(a.date_time).getTime();
+      return (
+        (parseVietnamDate(b.date_time)?.getTime() ?? 0) -
+        (parseVietnamDate(a.date_time)?.getTime() ?? 0)
+      );
     });
 
   const exportToCSV = () => {
@@ -133,8 +139,8 @@ export default function StudentHistoryPage() {
       item.title,
       item.activity_type,
       item.organization_level,
-      new Date(item.date_time).toLocaleString('vi-VN'),
-      new Date(item.end_time).toLocaleString('vi-VN'),
+      formatDate(item.date_time),
+      formatDate(item.end_time),
       item.location,
       item.attended === 1 ? 'Đã tham gia' : 'Chờ điểm danh',
       item.achievement_level || 'Chưa đánh giá',
@@ -303,18 +309,18 @@ export default function StudentHistoryPage() {
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm text-gray-600">
                     <div>
                       <span className="font-medium">📅 Bắt đầu:</span>{' '}
-                      {new Date(item.date_time).toLocaleString('vi-VN')}
+                      {formatDate(item.date_time)}
                     </div>
                     <div>
                       <span className="font-medium">🏁 Kết thúc:</span>{' '}
-                      {new Date(item.end_time).toLocaleString('vi-VN')}
+                      {formatDate(item.end_time)}
                     </div>
                     <div>
                       <span className="font-medium">📍 Địa điểm:</span> {item.location}
                     </div>
                     <div>
                       <span className="font-medium">📝 Đăng ký:</span>{' '}
-                      {new Date(item.registered_at).toLocaleString('vi-VN')}
+                      {formatDate(item.registered_at)}
                     </div>
                   </div>
 

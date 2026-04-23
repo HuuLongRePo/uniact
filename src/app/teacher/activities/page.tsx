@@ -28,6 +28,8 @@ import {
   SlidersHorizontal,
 } from 'lucide-react';
 import { type ActivityDisplayStatus } from '@/lib/activity-workflow';
+import { formatDate } from '@/lib/formatters';
+import { parseVietnamDate } from '@/lib/timezone';
 
 interface Activity {
   id: number;
@@ -379,31 +381,33 @@ export default function TeacherActivitiesPage() {
   const isPublished = (activity: Activity) => getDisplayStatus(activity) === 'published';
   const isCompletedOrCancelled = (activity: Activity) =>
     getDisplayStatus(activity) === 'completed' || getDisplayStatus(activity) === 'cancelled';
+  const getActivityTimestamp = (activity: Activity) =>
+    parseVietnamDate(activity.date_time)?.getTime() ?? Number.NaN;
 
   const sortedActivities = [...activities].sort((a, b) => {
     if (sortBy === 'title') {
       return a.title.localeCompare(b.title, 'vi');
     }
 
-    const timeA = new Date(a.date_time).getTime();
-    const timeB = new Date(b.date_time).getTime();
+    const timeA = getActivityTimestamp(a);
+    const timeB = getActivityTimestamp(b);
     return sortBy === 'oldest' ? timeA - timeB : timeB - timeA;
   });
 
   const upcomingActivities = sortedActivities.filter((activity) => {
-    const activityTime = new Date(activity.date_time).getTime();
+    const activityTime = getActivityTimestamp(activity);
     return isPublished(activity) && Number.isFinite(activityTime) && activityTime > now;
   });
 
   const archivedActivities = sortedActivities.filter((activity) => {
-    const activityTime = new Date(activity.date_time).getTime();
+    const activityTime = getActivityTimestamp(activity);
     const isPastPublished =
       isPublished(activity) && Number.isFinite(activityTime) && activityTime <= now;
     return isPastPublished || isCompletedOrCancelled(activity);
   });
 
   const remainingActivities = sortedActivities.filter((activity) => {
-    const activityTime = new Date(activity.date_time).getTime();
+    const activityTime = getActivityTimestamp(activity);
     const isUpcomingPublished =
       isPublished(activity) && Number.isFinite(activityTime) && activityTime > now;
     const isArchived =
@@ -541,7 +545,7 @@ export default function TeacherActivitiesPage() {
                             </div>
                             <div className="mt-1 text-sm text-gray-600">{activity.location}</div>
                             <div className="mt-1 text-sm text-gray-500">
-                              {new Date(activity.date_time).toLocaleString('vi-VN')}
+                              {formatDate(activity.date_time)}
                             </div>
                           </div>
                           {getStatusBadge(getDisplayStatus(activity))}
@@ -599,7 +603,7 @@ export default function TeacherActivitiesPage() {
                 </div>
                 <div className="space-y-3">
                   {archivedActivities.map((activity) => {
-                    const activityTime = new Date(activity.date_time).getTime();
+                    const activityTime = getActivityTimestamp(activity);
                     const isStalePublished =
                       isPublished(activity) && Number.isFinite(activityTime) && activityTime <= now;
 
@@ -615,7 +619,7 @@ export default function TeacherActivitiesPage() {
                             </div>
                             <div className="mt-1 text-sm text-gray-600">{activity.location}</div>
                             <div className="mt-1 text-sm text-gray-500">
-                              {new Date(activity.date_time).toLocaleString('vi-VN')}
+                              {formatDate(activity.date_time)}
                             </div>
                             <div className="mt-2 text-xs font-medium text-slate-600">
                               {isStalePublished
@@ -641,7 +645,7 @@ export default function TeacherActivitiesPage() {
                   getDisplayStatus(activity) === 'rejected';
                 const canCancelPublished =
                   getDisplayStatus(activity) === 'published' &&
-                  (new Date(activity.date_time).getTime() - Date.now()) / (1000 * 60 * 60) > 0;
+                  (getActivityTimestamp(activity) - Date.now()) / (1000 * 60 * 60) > 0;
                 const activeQrSession = activeQrSessions[activity.id];
 
                 return (
@@ -675,7 +679,7 @@ export default function TeacherActivitiesPage() {
                           Thời gian:
                         </span>
                         <div className="font-medium text-gray-800">
-                          {new Date(activity.date_time).toLocaleString('vi-VN')}
+                          {formatDate(activity.date_time)}
                         </div>
                       </div>
                       <div>

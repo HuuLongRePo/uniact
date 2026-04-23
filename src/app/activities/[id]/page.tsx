@@ -7,6 +7,8 @@ import LoadingSpinner from '@/components/LoadingSpinner';
 import AttachmentUploader from '@/components/AttachmentUploader';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
+import { formatDate } from '@/lib/formatters';
+import { parseVietnamDate } from '@/lib/timezone';
 
 interface Activity {
   id: number;
@@ -69,7 +71,8 @@ export default function ActivityDetailPage() {
   }
 
   const canManage = user?.role === 'admin' || user?.role === 'teacher';
-  const isPast = new Date(activity.date_time) < new Date();
+  const activityTime = parseVietnamDate(activity.date_time);
+  const isPast = activityTime ? activityTime.getTime() < Date.now() : false;
 
   return (
     <div className="container mx-auto p-6 max-w-5xl">
@@ -127,7 +130,7 @@ export default function ActivityDetailPage() {
           <div>
             <div className="text-sm text-gray-600">📅 Thời gian</div>
             <div className="font-medium">
-              {new Date(activity.date_time).toLocaleString('vi-VN')}
+              {formatDate(activity.date_time)}
             </div>
           </div>
           <div>

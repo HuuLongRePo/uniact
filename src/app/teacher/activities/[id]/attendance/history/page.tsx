@@ -15,6 +15,8 @@ import {
   Clock,
   AlertCircle,
 } from 'lucide-react';
+import { formatDate } from '@/lib/formatters';
+import { parseVietnamDate } from '@/lib/timezone';
 
 type AttendanceStatus = 'present' | 'absent' | 'late' | 'excused';
 
@@ -134,8 +136,8 @@ export default function AttendanceHistoryPage() {
         aVal = a.student_name.toLowerCase();
         bVal = b.student_name.toLowerCase();
       } else if (sortBy === 'time') {
-        aVal = new Date(a.check_in_time).getTime();
-        bVal = new Date(b.check_in_time).getTime();
+        aVal = parseVietnamDate(a.check_in_time)?.getTime() ?? 0;
+        bVal = parseVietnamDate(b.check_in_time)?.getTime() ?? 0;
       } else {
         aVal = a.status;
         bVal = b.status;
@@ -239,7 +241,7 @@ export default function AttendanceHistoryPage() {
                 </h1>
                 <p className="text-gray-600 mt-2">{activity.title}</p>
                 <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
-                  <span>📅 {new Date(activity.date_time).toLocaleDateString('vi-VN')}</span>
+                  <span>📅 {formatDate(activity.date_time, 'date')}</span>
                   <span>📍 {activity.location}</span>
                 </div>
               </div>
@@ -412,13 +414,7 @@ export default function AttendanceHistoryPage() {
                         </td>
                         <td className="px-4 py-4">{getStatusBadge(record.status)}</td>
                         <td className="px-4 py-4 text-sm text-gray-600">
-                          {new Date(record.check_in_time).toLocaleString('vi-VN', {
-                            year: 'numeric',
-                            month: '2-digit',
-                            day: '2-digit',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
+                          {formatDate(record.check_in_time)}
                         </td>
                         <td className="px-4 py-4 text-sm text-gray-600">{record.notes || '-'}</td>
                       </tr>

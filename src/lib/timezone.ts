@@ -28,6 +28,10 @@ function parseDateLike(date: string | Date | null | undefined): Date | null {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
+export function parseVietnamDate(date: string | Date | null | undefined): Date | null {
+  return parseDateLike(date);
+}
+
 function formatParts(date: string | Date, options: Intl.DateTimeFormatOptions) {
   const parsed = parseDateLike(date);
   if (!parsed) return null;
@@ -58,6 +62,20 @@ export function toVietnamDatetimeLocalValue(date: string | Date | null | undefin
   if (!parts) return '';
 
   return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`;
+}
+
+export function formatVietnamWithOptions(
+  date: string | Date | null | undefined,
+  options: Intl.DateTimeFormatOptions,
+  locale = 'vi-VN'
+): string {
+  const parsed = parseDateLike(date);
+  if (!parsed) return '-';
+
+  return new Intl.DateTimeFormat(locale, {
+    timeZone: VIETNAM_TIME_ZONE,
+    ...options,
+  }).format(parsed);
 }
 
 export function formatVietnamDateTime(

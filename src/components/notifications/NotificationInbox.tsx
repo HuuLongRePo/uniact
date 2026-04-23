@@ -20,6 +20,8 @@ import {
   resolveNotificationActionButtons,
 } from '@/lib/notification-actions';
 import { RealtimeNotificationActionButton } from '@/lib/realtime-notification-model';
+import { formatDate as formatDateVN } from '@/lib/formatters';
+import { parseVietnamDate } from '@/lib/timezone';
 
 interface NotificationItem {
   id: number;
@@ -294,8 +296,9 @@ export default function NotificationInbox({
     }
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
+  const formatRelativeDate = (dateString: string) => {
+    const date = parseVietnamDate(dateString);
+    if (!date) return '-';
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
     const diffMins = Math.floor(diffMs / 60000);
@@ -305,7 +308,7 @@ export default function NotificationInbox({
     if (diffMins < 60) return `${Math.max(0, diffMins)} phút trước`;
     if (diffHours < 24) return `${diffHours} giờ trước`;
     if (diffDays < 7) return `${diffDays} ngày trước`;
-    return date.toLocaleDateString('vi-VN');
+    return formatDateVN(dateString, 'date');
   };
 
   const hasAnyUnreadOnPage = useMemo(
@@ -489,7 +492,7 @@ export default function NotificationInbox({
                       </div>
                       <p className="mt-1 text-sm text-gray-700">{notification.message}</p>
                       <p className="mt-2 text-xs text-gray-500">
-                        {formatDate(notification.created_at)}
+                        {formatRelativeDate(notification.created_at)}
                       </p>
 
                       {actionButtons.length > 0 && (

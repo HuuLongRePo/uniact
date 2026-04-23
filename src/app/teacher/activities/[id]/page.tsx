@@ -7,6 +7,7 @@ import { useParams, useRouter } from 'next/navigation';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { ArrowLeft, Users, ClipboardCheck, FileText, QrCode, Pencil, History } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { formatDate } from '@/lib/formatters';
 
 type Activity = {
   id: number;
@@ -103,7 +104,7 @@ export default function TeacherActivityOverviewPage() {
           <div className="text-2xl font-bold text-gray-900">{title}</div>
           {activity.date_time && (
             <div className="text-sm text-gray-600 mt-2">
-              Thời gian: {new Date(activity.date_time).toLocaleString('vi-VN')}
+              Thời gian: {formatDate(activity.date_time)}
             </div>
           )}
         </div>
