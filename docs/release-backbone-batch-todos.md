@@ -1622,7 +1622,7 @@ Yeu cau:
 - [x] Commit 29: UAT login rate-limit unblock + dark button text-white guard v3 (batch 9.30)
 - [x] Commit 30: QR decoder fallback cross-browser (batch 9.31)
 - [x] Commit 31: dark button contrast hardening + teacher QR fullscreen fallback (batch 9.32) (`d194fa8`)
-- [ ] Commit 32: realtime notification dedupe persistence across reconnect/mount (batch 9.33)
+- [x] Commit 32: realtime notification dedupe persistence across reconnect/mount (batch 9.33) (`9040610`)
 
 ---
 
