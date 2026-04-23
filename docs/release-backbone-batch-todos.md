@@ -1872,6 +1872,44 @@ Yeu cau:
 - [x] `npm.cmd test -- test/activities-create-route.test.ts` -> PASS (1 file / 1 test, 2026-04-24)
 - [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests, 2026-04-24)
 
+## 9.46) Batch uu tien nong - tao hoat dong: scope lop/hoc vien linh hoat hon
+
+### Muc tieu
+
+- Giam phu thuoc vao multi-select kieu desktop khi giao vien chon hoc vien truc tiep.
+- Cho phep de trong toan bo scope va he thong tu hieu la mo cho tat ca hoc vien.
+- Them thao tac nhanh de chon hoc vien theo bo loc va theo nhom lop da chon.
+
+### Source tham khao
+
+- [x] `docs/activity-scope-selection-batch-prompt.md`
+- [x] `docs/teacher-activity-scope-and-ux-next-batches.md`
+- [x] `docs/teacher-activity-form-followup-tasks.md`
+- [x] `docs/activity-business-reanalysis-and-actor-crud-impact-matrix.md`
+
+### Viec can lam
+
+- [x] `src/app/teacher/activities/new/page.tsx`:
+  - [x] bo validation chan submit khi khong chon lop/hoc vien; map thanh `applies_to_all_students = true`.
+  - [x] giu checkbox clear nhanh "mo cho tat ca hoc vien".
+  - [x] bo sung thao tac nhanh cho hoc vien truc tiep:
+    - [x] chon tat ca hoc vien dang loc vao nhom bat buoc / duoc dang ky.
+    - [x] lay hoc vien tu nhom lop bat buoc / lop duoc dang ky.
+    - [x] xoa nhanh tung nhom hoc vien truc tiep.
+- [x] `test/teacher-create-activity-page.test.tsx`:
+  - [x] them regression cho empty scope -> open for all.
+  - [x] them regression cho bulk-pick hoc vien truc tiep vao nhom bat buoc.
+
+### Decision gate / defer
+
+- [ ] Mo rong quyen de teacher thay tat ca lop/tat ca hoc vien hay chi tap du lieu backend hien cho phep.
+  - Khuyen nghi hien tai: giu nguyen backend scope, chi cai tien UX create form trong batch nay.
+
+### Verification
+
+- [x] `npm.cmd test -- test/teacher-create-activity-page.test.tsx test/teacher-create-activity-preview.test.tsx` -> PASS (2 files / 4 tests, 2026-04-24)
+- [x] `npm.cmd run build` -> PASS (2026-04-24)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix

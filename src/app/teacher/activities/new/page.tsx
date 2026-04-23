@@ -72,6 +72,100 @@ interface ParticipationPreview {
   direct_students?: ParticipationPreviewStudent[];
 }
 
+type SelectionChecklistItem = {
+  id: number;
+  label: string;
+  meta?: string;
+  disabled?: boolean;
+};
+
+type SelectionChecklistProps = {
+  title: string;
+  description: string;
+  tone: 'mandatory' | 'voluntary';
+  items: SelectionChecklistItem[];
+  selectedIds: number[];
+  onToggle: (id: number) => void;
+  actions?: React.ReactNode;
+  emptyText: string;
+};
+
+function SelectionChecklist({
+  title,
+  description,
+  tone,
+  items,
+  selectedIds,
+  onToggle,
+  actions,
+  emptyText,
+}: SelectionChecklistProps) {
+  const selectedSet = new Set(selectedIds);
+  const palette =
+    tone === 'mandatory'
+      ? {
+          border: 'border-orange-200',
+          bg: 'bg-orange-50',
+          title: 'text-orange-900',
+          text: 'text-orange-700',
+          accent: 'accent-orange-600',
+        }
+      : {
+          border: 'border-sky-200',
+          bg: 'bg-sky-50',
+          title: 'text-sky-900',
+          text: 'text-sky-700',
+          accent: 'accent-sky-600',
+        };
+
+  return (
+    <section className={`rounded-xl border ${palette.border} ${palette.bg} p-4`}>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h3 className={`text-sm font-semibold ${palette.title}`}>{title}</h3>
+          <p className={`mt-1 text-xs ${palette.text}`}>{description}</p>
+        </div>
+        <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-gray-700">
+          {selectedIds.length} đã chọn
+        </span>
+      </div>
+
+      {actions ? <div className="mt-3 flex flex-wrap gap-2">{actions}</div> : null}
+
+      {items.length === 0 ? (
+        <div className="mt-3 rounded-lg border border-dashed border-gray-300 bg-white/80 px-3 py-4 text-sm text-gray-500">
+          {emptyText}
+        </div>
+      ) : (
+        <div className="mt-3 max-h-64 space-y-2 overflow-y-auto pr-1">
+          {items.map((item) => (
+            <label
+              key={`${tone}-${item.id}`}
+              className={`flex cursor-pointer items-start gap-3 rounded-lg border border-white/80 bg-white px-3 py-2 shadow-sm transition hover:border-gray-200 ${
+                item.disabled ? 'cursor-not-allowed opacity-60' : ''
+              }`}
+            >
+              <input
+                type="checkbox"
+                checked={selectedSet.has(item.id)}
+                disabled={item.disabled}
+                onChange={() => onToggle(item.id)}
+                className={`mt-1 h-4 w-4 ${palette.accent}`}
+              />
+              <span className="min-w-0">
+                <span className="block text-sm font-medium text-gray-900">{item.label}</span>
+                {item.meta ? (
+                  <span className="block text-xs text-gray-500">{item.meta}</span>
+                ) : null}
+              </span>
+            </label>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
 export default function CreateActivityPage() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -123,13 +217,29 @@ export default function CreateActivityPage() {
       return haystack.includes(keyword);
     });
   }, [studentOptions, studentSearch]);
-  const mandatorySelectedStudents = useMemo(
-    () => studentOptions.filter((student) => mandatoryStudentIds.includes(student.id)),
-    [studentOptions, mandatoryStudentIds]
+  const effectiveAppliesToAllStudents =
+    appliesToAllStudents ||
+    (selectedClasses.length === 0 &&
+      mandatoryStudentIds.length === 0 &&
+      voluntaryStudentIds.length === 0);
+  const mandatoryStudentItems = useMemo(
+    () =>
+      filteredStudentOptions.map((student) => ({
+        id: student.id,
+        label: student.name,
+        meta: [student.class_name, student.email].filter(Boolean).join(' • ') || 'Chưa có thông tin lớp',
+      })),
+    [filteredStudentOptions]
   );
-  const voluntarySelectedStudents = useMemo(
-    () => studentOptions.filter((student) => voluntaryStudentIds.includes(student.id)),
-    [studentOptions, voluntaryStudentIds]
+  const voluntaryStudentItems = useMemo(
+    () =>
+      filteredStudentOptions.map((student) => ({
+        id: student.id,
+        label: student.name,
+        meta: [student.class_name, student.email].filter(Boolean).join(' • ') || 'Chưa có thông tin lớp',
+        disabled: mandatoryStudentIds.includes(student.id),
+      })),
+    [filteredStudentOptions, mandatoryStudentIds]
   );
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -218,7 +328,7 @@ export default function CreateActivityPage() {
   useEffect(() => {
     if (!showPreview) return;
 
-    if (appliesToAllStudents || selectedClasses.length === 0) {
+    if (effectiveAppliesToAllStudents) {
       setParticipationPreview(null);
       setPreviewError(null);
       return;
@@ -273,7 +383,7 @@ export default function CreateActivityPage() {
     voluntaryClassIds,
     mandatoryStudentIds,
     voluntaryStudentIds,
-    appliesToAllStudents,
+    effectiveAppliesToAllStudents,
   ]);
 
   // Drag & drop file reorder
@@ -316,27 +426,62 @@ export default function CreateActivityPage() {
     setVoluntaryClassIds(values);
   };
 
-  const handleMandatoryStudentSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const values = Array.from(e.target.selectedOptions).map((opt) => Number(opt.value));
-    setMandatoryStudentIds(values);
-    setVoluntaryStudentIds((current) => current.filter((studentId) => !values.includes(studentId)));
+  const toggleStudentSelection = (scope: 'mandatory' | 'voluntary', studentId: number) => {
+    if (scope === 'mandatory') {
+      setMandatoryStudentIds((current) =>
+        current.includes(studentId)
+          ? current.filter((id) => id !== studentId)
+          : [...current, studentId]
+      );
+      setVoluntaryStudentIds((current) => current.filter((id) => id !== studentId));
+      return;
+    }
+
+    if (mandatoryStudentIds.includes(studentId)) {
+      return;
+    }
+
+    setVoluntaryStudentIds((current) =>
+      current.includes(studentId)
+        ? current.filter((id) => id !== studentId)
+        : [...current, studentId]
+    );
   };
 
-  const handleVoluntaryStudentSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const values = Array.from(e.target.selectedOptions)
-      .map((opt) => Number(opt.value))
-      .filter((studentId) => !mandatoryStudentIds.includes(studentId));
-    setVoluntaryStudentIds(values);
+  const applyStudentSelection = (scope: 'mandatory' | 'voluntary', studentIds: number[]) => {
+    if (studentIds.length === 0) return;
+
+    if (scope === 'mandatory') {
+      setMandatoryStudentIds((current) => Array.from(new Set([...current, ...studentIds])));
+      setVoluntaryStudentIds((current) => current.filter((id) => !studentIds.includes(id)));
+      return;
+    }
+
+    const allowedStudentIds = studentIds.filter((id) => !mandatoryStudentIds.includes(id));
+    setVoluntaryStudentIds((current) => Array.from(new Set([...current, ...allowedStudentIds])));
+  };
+
+  const clearStudentSelection = (scope: 'mandatory' | 'voluntary') => {
+    if (scope === 'mandatory') {
+      setMandatoryStudentIds([]);
+      return;
+    }
+
+    setVoluntaryStudentIds([]);
+  };
+
+  const addStudentsFromClassScope = (scope: 'mandatory' | 'voluntary') => {
+    const sourceClassIds = scope === 'mandatory' ? mandatoryClassIds : voluntaryClassIds;
+    const sourceStudentIds = studentOptions
+      .filter((student) => sourceClassIds.includes(Number(student.class_id)))
+      .map((student) => student.id);
+
+    applyStudentSelection(scope, sourceStudentIds);
   };
 
   const handleSubmit = async (e: React.FormEvent, mode: 'draft' | 'submit') => {
     e.preventDefault();
-    if (
-      !title.trim() ||
-      !date ||
-      !location.trim() ||
-      (!appliesToAllStudents && selectedClasses.length === 0)
-    ) {
+    if (!title.trim() || !date || !location.trim()) {
       toast.error('Vui lòng nhập đầy đủ thông tin bắt buộc');
       return;
     }
@@ -350,12 +495,12 @@ export default function CreateActivityPage() {
         ...(endTime ? { end_time: `${date}T${endTime}` } : {}),
         location: location.trim(),
         max_participants: maxParticipants ? Number(maxParticipants) : 30,
-        class_ids: appliesToAllStudents ? [] : selectedClasses,
-        mandatory_class_ids: appliesToAllStudents ? [] : mandatoryClassIds,
-        voluntary_class_ids: appliesToAllStudents ? [] : voluntaryClassIds,
-        mandatory_student_ids: appliesToAllStudents ? [] : mandatoryStudentIds,
-        voluntary_student_ids: appliesToAllStudents ? [] : voluntaryStudentIds,
-        applies_to_all_students: appliesToAllStudents,
+        class_ids: effectiveAppliesToAllStudents ? [] : selectedClasses,
+        mandatory_class_ids: effectiveAppliesToAllStudents ? [] : mandatoryClassIds,
+        voluntary_class_ids: effectiveAppliesToAllStudents ? [] : voluntaryClassIds,
+        mandatory_student_ids: effectiveAppliesToAllStudents ? [] : mandatoryStudentIds,
+        voluntary_student_ids: effectiveAppliesToAllStudents ? [] : voluntaryStudentIds,
+        applies_to_all_students: effectiveAppliesToAllStudents,
         ...(activityTypeId ? { activity_type_id: Number(activityTypeId) } : {}),
         ...(organizationLevelId ? { organization_level_id: Number(organizationLevelId) } : {}),
       };
@@ -631,7 +776,7 @@ export default function CreateActivityPage() {
                     <div>
                       <label className="block font-medium mb-1">
                         <UsersIcon className="w-4 h-4 inline mr-1" />
-                        Phạm vi lớp áp dụng <span className="text-red-500">*</span>
+                        Phạm vi lớp áp dụng
                       </label>
                       <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
                         <label className="mb-3 flex items-start gap-3 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-emerald-900">
@@ -653,27 +798,23 @@ export default function CreateActivityPage() {
                             className="mt-1"
                           />
                           <span>
-                            <span className="block font-medium">
-                              Mở đăng ký cho tất cả học viên
-                            </span>
+                            <span className="block font-medium">Mở đăng ký cho tất cả học viên</span>
                             <span className="block text-xs text-emerald-800">
-                              Khi bật, hoạt động sẽ không giới hạn theo lớp và sinh viên đủ điều
-                              kiện có thể nhìn thấy để đăng ký.
+                              Khi bật, hoạt động sẽ không giới hạn theo lớp hay học viên.
                             </span>
                           </span>
                         </label>
                         <p className="font-medium">
-                          {appliesToAllStudents
-                            ? 'Hoạt động này đang mở cho tất cả học viên, không cần chọn lớp áp dụng.'
-                            : 'Nếu không chọn lớp nào, bạn chưa thể lưu hoạt động.'}
+                          {effectiveAppliesToAllStudents
+                            ? 'Không chọn lớp hay học viên nào cũng hợp lệ và sẽ được hiểu là mở cho tất cả học viên.'
+                            : 'Bạn có thể phối hợp lớp bắt buộc, lớp được đăng ký và học viên chỉ định trong cùng một hoạt động.'}
                         </p>
                         <ul className="mt-2 list-disc space-y-1 pl-5 text-amber-800">
                           <li>
-                            <strong>Bắt buộc:</strong> sinh viên trong lớp sẽ được áp dụng bắt buộc,
-                            không cần tự đăng ký.
+                            <strong>Bắt buộc:</strong> học viên trong lớp sẽ được áp dụng bắt buộc, không cần tự đăng ký.
                           </li>
                           <li>
-                            <strong>Tự nguyện:</strong> sinh viên trong lớp được phép tự đăng ký.
+                            <strong>Được đăng ký:</strong> học viên trong lớp được phép tự đăng ký tham gia.
                           </li>
                           <li>
                             Nếu một lớp xuất hiện ở cả hai nhóm, hệ thống sẽ ưu tiên{' '}
@@ -691,7 +832,6 @@ export default function CreateActivityPage() {
                             className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-200 h-32"
                             value={mandatoryClassIds.map(String)}
                             onChange={handleMandatoryClassSelect}
-                            required={!appliesToAllStudents && selectedClasses.length === 0}
                             disabled={submitting || appliesToAllStudents}
                           >
                             {classes.map((cls: any) => (
@@ -758,7 +898,7 @@ export default function CreateActivityPage() {
                               <p className="mt-2 text-xs text-blue-800">
                                 Đã nạp {studentOptions.length} học viên. Đang chọn{' '}
                                 {mandatoryStudentIds.length} bắt buộc và{' '}
-                                {voluntaryStudentIds.length} tự nguyện.
+                                {voluntaryStudentIds.length} được đăng ký.
                               </p>
                               <div className="mt-3">
                                 <input
@@ -774,93 +914,90 @@ export default function CreateActivityPage() {
                                 </p>
                               </div>
                               <div className="mt-3 grid grid-cols-1 gap-4 lg:grid-cols-2">
-                                <div>
-                                  {mandatorySelectedStudents.length > 0 ? (
-                                    <div className="mb-2 flex flex-wrap gap-2">
-                                      {mandatorySelectedStudents.map((student) => (
-                                        <button
-                                          key={`mandatory-chip-${student.id}`}
-                                          type="button"
-                                          onClick={() =>
-                                            setMandatoryStudentIds((current) =>
-                                              current.filter((id) => id !== student.id)
-                                            )
-                                          }
-                                          className="rounded-full bg-orange-100 px-2 py-1 text-xs text-orange-800 hover:bg-orange-200"
-                                        >
-                                          {student.name} ×
-                                        </button>
-                                      ))}
-                                    </div>
-                                  ) : null}
-                                  <label className="mb-1 block text-sm font-medium text-orange-700">
-                                    Học viên bắt buộc
-                                  </label>
-                                  <select
-                                    multiple
-                                    className="h-32 w-full rounded-lg border px-3 py-2 focus:ring-2 focus:ring-blue-200"
-                                    value={mandatoryStudentIds.map(String)}
-                                    onChange={handleMandatoryStudentSelect}
-                                    disabled={submitting}
-                                  >
-                                    {filteredStudentOptions.map((student) => (
-                                      <option
-                                        key={`mandatory-student-${student.id}`}
-                                        value={student.id}
+                                <SelectionChecklist
+                                  title="Học viên bắt buộc"
+                                  description="Chọn vài học viên của nhiều lớp hoặc dùng thao tác nhanh để lấy theo lớp bắt buộc."
+                                  tone="mandatory"
+                                  items={mandatoryStudentItems}
+                                  selectedIds={mandatoryStudentIds}
+                                  onToggle={(studentId) => toggleStudentSelection('mandatory', studentId)}
+                                  emptyText="Không có học viên nào khớp bộ lọc hiện tại."
+                                  actions={
+                                    <>
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          applyStudentSelection(
+                                            'mandatory',
+                                            filteredStudentOptions.map((student) => student.id)
+                                          )
+                                        }
+                                        className="rounded-lg border border-orange-200 bg-white px-3 py-1.5 text-xs font-medium text-orange-700 hover:bg-orange-100"
                                       >
-                                        {student.name}
-                                        {student.class_name ? ` - ${student.class_name}` : ''}
-                                      </option>
-                                    ))}
-                                  </select>
-                                </div>
-                                <div>
-                                  {voluntarySelectedStudents.length > 0 ? (
-                                    <div className="mb-2 flex flex-wrap gap-2">
-                                      {voluntarySelectedStudents.map((student) => (
-                                        <button
-                                          key={`voluntary-chip-${student.id}`}
-                                          type="button"
-                                          onClick={() =>
-                                            setVoluntaryStudentIds((current) =>
-                                              current.filter((id) => id !== student.id)
-                                            )
-                                          }
-                                          className="rounded-full bg-sky-100 px-2 py-1 text-xs text-sky-800 hover:bg-sky-200"
-                                        >
-                                          {student.name} ×
-                                        </button>
-                                      ))}
-                                    </div>
-                                  ) : null}
-                                  <label className="mb-1 block text-sm font-medium text-sky-700">
-                                    Học viên tự nguyện
-                                  </label>
-                                  <select
-                                    multiple
-                                    className="h-32 w-full rounded-lg border px-3 py-2 focus:ring-2 focus:ring-blue-200"
-                                    value={voluntaryStudentIds.map(String)}
-                                    onChange={handleVoluntaryStudentSelect}
-                                    disabled={submitting}
-                                  >
-                                    {filteredStudentOptions.map((student) => (
-                                      <option
-                                        key={`voluntary-student-${student.id}`}
-                                        value={student.id}
-                                        disabled={mandatoryStudentIds.includes(student.id)}
+                                        Chọn tất cả đang lọc
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => addStudentsFromClassScope('mandatory')}
+                                        className="rounded-lg border border-orange-200 bg-white px-3 py-1.5 text-xs font-medium text-orange-700 hover:bg-orange-100"
                                       >
-                                        {student.name}
-                                        {student.class_name ? ` - ${student.class_name}` : ''}
-                                      </option>
-                                    ))}
-                                  </select>
-                                </div>
+                                        Lấy từ lớp bắt buộc
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => clearStudentSelection('mandatory')}
+                                        className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-100"
+                                      >
+                                        Xóa chọn
+                                      </button>
+                                    </>
+                                  }
+                                />
+                                <SelectionChecklist
+                                  title="Học viên được đăng ký"
+                                  description="Chọn học viên được phép đăng ký nhưng không bị bắt buộc tham gia."
+                                  tone="voluntary"
+                                  items={voluntaryStudentItems}
+                                  selectedIds={voluntaryStudentIds}
+                                  onToggle={(studentId) => toggleStudentSelection('voluntary', studentId)}
+                                  emptyText="Không có học viên nào khớp bộ lọc hiện tại."
+                                  actions={
+                                    <>
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          applyStudentSelection(
+                                            'voluntary',
+                                            filteredStudentOptions.map((student) => student.id)
+                                          )
+                                        }
+                                        className="rounded-lg border border-sky-200 bg-white px-3 py-1.5 text-xs font-medium text-sky-700 hover:bg-sky-100"
+                                      >
+                                        Chọn tất cả đang lọc
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => addStudentsFromClassScope('voluntary')}
+                                        className="rounded-lg border border-sky-200 bg-white px-3 py-1.5 text-xs font-medium text-sky-700 hover:bg-sky-100"
+                                      >
+                                        Lấy từ lớp được đăng ký
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => clearStudentSelection('voluntary')}
+                                        className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-100"
+                                      >
+                                        Xóa chọn
+                                      </button>
+                                    </>
+                                  }
+                                />
                               </div>
                             </>
                           ) : null}
                         </div>
                       )}
-                      {!appliesToAllStudents && showPreview && (
+                      {!effectiveAppliesToAllStudents && showPreview && (
                         <div className="mt-4 rounded-lg border border-blue-200 bg-blue-50 p-4">
                           <div className="mb-2 text-sm font-semibold text-blue-900">
                             Xem trước danh sách tham gia hiện tại
@@ -969,7 +1106,7 @@ export default function CreateActivityPage() {
                         </div>
                       )}
                       <div className="text-xs text-gray-500 mt-1">
-                        💡 Giữ Ctrl (Windows) hoặc Cmd (Mac) để chọn nhiều lớp
+                        Gợi ý: chọn lớp trước, sau đó dùng bộ lọc và thao tác nhanh để thêm đúng vài học viên của nhiều lớp khi cần.
                       </div>
                     </div>
                   </>
