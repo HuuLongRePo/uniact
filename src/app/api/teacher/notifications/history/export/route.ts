@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromToken } from '@/lib/auth';
 import { dbAll, dbReady, dbRun } from '@/lib/database';
 import { ApiError, errorResponse } from '@/lib/api-response';
+import { formatDate } from '@/lib/formatters';
+import { parseVietnamDate } from '@/lib/timezone';
 
 async function ensureBroadcastTables() {
   await dbRun(`
@@ -78,13 +80,15 @@ export async function POST(request: NextRequest) {
       if (filters.classId && String(row.class_name || '') !== String(filters.classId)) return false;
       if (
         filters.dateStart &&
-        new Date(String(row.sent_at || '')) < new Date(String(filters.dateStart))
+        (parseVietnamDate(String(row.sent_at || ''))?.getTime() ?? Number.NEGATIVE_INFINITY) <
+          (parseVietnamDate(String(filters.dateStart))?.getTime() ?? Number.NEGATIVE_INFINITY)
       ) {
         return false;
       }
       if (
         filters.dateEnd &&
-        new Date(String(row.sent_at || '')) > new Date(String(filters.dateEnd))
+        (parseVietnamDate(String(row.sent_at || ''))?.getTime() ?? Number.POSITIVE_INFINITY) >
+          (parseVietnamDate(String(filters.dateEnd))?.getTime() ?? Number.POSITIVE_INFINITY)
       ) {
         return false;
       }
@@ -97,7 +101,7 @@ export async function POST(request: NextRequest) {
         String(row.student_name || ''),
         String(row.class_name || ''),
         String(row.notification_title || ''),
-        row.sent_at ? new Date(String(row.sent_at)).toLocaleString('vi-VN') : '',
+        row.sent_at ? formatDate(String(row.sent_at)) : '',
         Number(row.is_read) ? 'Đã đọc' : 'Chưa đọc',
         'Không theo dõi',
       ]),

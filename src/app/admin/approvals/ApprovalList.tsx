@@ -1,6 +1,7 @@
 'use client';
 
 import { Activity } from './types';
+import { formatDate } from '@/lib/formatters';
 
 interface ApprovalListProps {
   activities: Activity[];
@@ -51,7 +52,7 @@ export default function ApprovalList({
               <p className="text-sm text-gray-600">{activity.description}</p>
               <div className="grid grid-cols-2 gap-2 text-sm text-gray-600 mt-2">
                 <div>📍 {activity.location}</div>
-                <div>📅 {new Date(activity.date_time).toLocaleDateString('vi-VN')}</div>
+                <div>📅 {formatDate(activity.date_time, 'date')}</div>
                 <div>👤 {activity.teacher_name || activity.creator_name || 'N/A'}</div>
                 <div>👥 Tối đa {activity.max_participants} người</div>
               </div>

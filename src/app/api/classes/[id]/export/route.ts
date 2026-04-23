@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { dbAll, dbGet } from '@/lib/database';
 import { requireAuth } from '@/lib/guards';
 import { ApiError, errorResponse } from '@/lib/api-response';
+import { formatDate } from '@/lib/formatters';
+import { toVietnamDatetimeLocalValue } from '@/lib/timezone';
 
 // GET /api/classes/:id/export - Export danh sách học viên lớp ra CSV
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -105,7 +107,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         student.attended_activities,
         attendanceRate,
         student.awards_count,
-        new Date(student.created_at).toLocaleDateString('vi-VN'),
+        formatDate(student.created_at, 'date'),
       ];
       csvRows.push(row.join(','));
     });
@@ -117,10 +119,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     csvRows.push(`"Năm học:","${(classInfo as any).academic_year || ''}"`);
     csvRows.push(`"Giảng viên chủ nhiệm:","${classInfo.teacher_name || ''}"`);
     csvRows.push(`"Tổng số học viên:",${students.length}`);
-    csvRows.push(`"Ngày xuất:",${new Date().toLocaleString('vi-VN')}`);
+    csvRows.push(`"Ngày xuất:",${formatDate(new Date())}`);
 
     const csv = BOM + csvRows.join('\n');
-    const fileName = `Danh-sach-lop-${classInfo.name.replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]}.csv`;
+    const fileName = `Danh-sach-lop-${classInfo.name.replace(/\s+/g, '-')}-${toVietnamDatetimeLocalValue(new Date()).slice(0, 10)}.csv`;
 
     return new NextResponse(csv, {
       headers: {

@@ -24,6 +24,8 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { formatDate } from '@/lib/formatters';
+import { toVietnamDatetimeLocalValue } from '@/lib/timezone';
 
 interface Activity {
   id: number;
@@ -241,7 +243,7 @@ export default function AdminActivityDetailPage() {
           p.user_name,
           p.user_email,
           p.class_name || '-',
-          new Date(p.registered_at).toLocaleDateString('vi-VN'),
+          formatDate(p.registered_at, 'date'),
           p.attendance_status === 'present'
             ? 'Có mặt'
             : p.attendance_status === 'absent'
@@ -257,7 +259,7 @@ export default function AdminActivityDetailPage() {
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `hoat-dong-${activityId}-nguoi-tham-gia-${new Date().toISOString().split('T')[0]}.csv`;
+    link.download = `hoat-dong-${activityId}-nguoi-tham-gia-${toVietnamDatetimeLocalValue(new Date()).slice(0, 10)}.csv`;
     link.click();
     window.URL.revokeObjectURL(url);
     toast.success(`Đã xuất ${participants.length} người tham gia`);
@@ -469,8 +471,7 @@ export default function AdminActivityDetailPage() {
                     Thời gian
                   </label>
                   <p className="text-gray-900">
-                    {new Date(activity.date_time).toLocaleString('vi-VN')} -{' '}
-                    {new Date(activity.end_time).toLocaleString('vi-VN')}
+                    {formatDate(activity.date_time)} - {formatDate(activity.end_time)}
                   </p>
                 </div>
 
@@ -509,9 +510,7 @@ export default function AdminActivityDetailPage() {
                     <Clock className="w-4 h-4 inline mr-2" />
                     Ngày tạo
                   </label>
-                  <p className="text-gray-900">
-                    {new Date(activity.created_at).toLocaleDateString('vi-VN')}
-                  </p>
+                  <p className="text-gray-900">{formatDate(activity.created_at, 'date')}</p>
                 </div>
               </div>
 
@@ -644,7 +643,7 @@ export default function AdminActivityDetailPage() {
                                   {p.class_name || '-'}
                                 </td>
                                 <td className="px-4 py-3 text-sm text-gray-600">
-                                  {new Date(p.registered_at).toLocaleDateString('vi-VN')}
+                                  {formatDate(p.registered_at, 'date')}
                                 </td>
                                 <td className="px-4 py-3">
                                   {p.attendance_status === 'present' ? (
@@ -736,7 +735,7 @@ export default function AdminActivityDetailPage() {
                         </span>
                       </div>
                       <p className="text-sm text-gray-600">
-                        Bởi: {h.changed_by_name} | {new Date(h.changed_at).toLocaleString('vi-VN')}
+                        Bởi: {h.changed_by_name} | {formatDate(h.changed_at)}
                       </p>
                       {h.notes && (
                         <p className="text-sm text-gray-700 mt-2 bg-gray-50 p-2 rounded">

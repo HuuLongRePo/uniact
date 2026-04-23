@@ -10,6 +10,8 @@ import { dbAll, dbGet, dbReady } from '@/lib/database';
 import { getUserFromRequest } from '@/lib/guards';
 import Papa from 'papaparse';
 import { ApiError, errorResponse } from '@/lib/api-response';
+import { formatDate } from '@/lib/formatters';
+import { toVietnamDatetimeLocalValue } from '@/lib/timezone';
 
 export async function GET(request: NextRequest) {
   try {
@@ -103,7 +105,7 @@ export async function GET(request: NextRequest) {
     return new NextResponse(csvWithBOM, {
       headers: {
         'Content-Type': 'text/csv; charset=utf-8',
-        'Content-Disposition': `attachment; filename="activity-${activityId}-participants-${new Date().toISOString().split('T')[0]}.csv"`,
+        'Content-Disposition': `attachment; filename="activity-${activityId}-participants-${toVietnamDatetimeLocalValue(new Date()).slice(0, 10)}.csv"`,
       },
     });
   } catch (error: any) {
@@ -130,13 +132,4 @@ function getAchievementLabel(level: string | null): string {
     participated: 'Tham gia',
   };
   return labels[level] || level;
-}
-
-function formatDate(dateStr: string | null): string {
-  if (!dateStr) return '';
-  try {
-    return new Date(dateStr).toLocaleString('vi-VN');
-  } catch {
-    return dateStr;
-  }
 }

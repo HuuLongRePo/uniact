@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { dbAll } from '@/lib/database';
 import { requireApiRole } from '@/lib/guards';
 import { ApiError, errorResponse } from '@/lib/api-response';
+import { formatDate } from '@/lib/formatters';
 
 type ActivityStatisticsRow = {
   id: number;
@@ -205,7 +206,7 @@ export async function GET(request: NextRequest) {
         ],
         ...activities.map((activity) => [
           activity.title,
-          new Date(activity.date_time).toLocaleString('vi-VN'),
+          formatDate(activity.date_time),
           activity.location || '',
           activity.organizer_name || '',
           activity.activity_type || '',

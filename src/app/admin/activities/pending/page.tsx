@@ -8,6 +8,7 @@ import { Calendar, MapPin, User, AlertCircle, CheckCircle, XCircle } from 'lucid
 import toast from 'react-hot-toast';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import RejectReasonDialog from './RejectReasonDialog';
+import { formatDate } from '@/lib/formatters';
 
 interface Activity {
   id: number;
@@ -130,8 +131,8 @@ export default function PendingActivitiesPage() {
                         <div className="flex items-center gap-2 text-sm text-gray-600">
                           <Calendar className="w-4 h-4" />
                           <span>
-                            {new Date(activity.date_time).toLocaleDateString('vi-VN')} -{' '}
-                            {new Date(activity.end_time).toLocaleDateString('vi-VN')}
+                            {formatDate(activity.date_time, 'date')} -{' '}
+                            {formatDate(activity.end_time, 'date')}
                           </span>
                         </div>
                         <div className="flex items-center gap-2 text-sm text-gray-600">

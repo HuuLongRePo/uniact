@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { getUserFromSession } from '@/lib/auth';
 import { dbAll } from '@/lib/database';
 import { apiHandler, ApiError, successResponse } from '@/lib/api-response';
+import { formatDate } from '@/lib/formatters';
 
 type StudentAlert = {
   id: number;
@@ -86,8 +87,8 @@ export const GET = apiHandler(async (request: NextRequest) => {
       type: 'deadline',
       title: hasRegistrationDeadline ? 'Hạn đăng ký sắp hết' : 'Hoạt động sắp diễn ra',
       message: hasRegistrationDeadline
-        ? `Hạn đăng ký hoạt động "${activity.title}" sẽ kết thúc vào ${new Date(alertDate).toLocaleString('vi-VN')}.`
-        : `Hoạt động "${activity.title}" sẽ diễn ra vào ${new Date(alertDate).toLocaleString('vi-VN')}.`,
+        ? `Hạn đăng ký hoạt động "${activity.title}" sẽ kết thúc vào ${formatDate(alertDate)}.`
+        : `Hoạt động "${activity.title}" sẽ diễn ra vào ${formatDate(alertDate)}.`,
       severity: 'info',
       created_at: nowIso,
     });

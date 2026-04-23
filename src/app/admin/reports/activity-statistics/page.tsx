@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { useAuth } from '@/contexts/AuthContext';
+import { formatDate } from '@/lib/formatters';
 import {
   buildActivityStatisticsUrl,
   EMPTY_ACTIVITY_INSIGHTS,
@@ -405,7 +406,7 @@ export default function ActivityStatisticsPage() {
                       </div>
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-600">
-                      {new Date(activity.date_time).toLocaleDateString('vi-VN')}
+                      {formatDate(activity.date_time, 'date')}
                     </td>
                     <td className="px-4 py-3 text-sm">
                       <div className="font-medium text-blue-600">{activity.total_participants}</div>

@@ -1947,6 +1947,38 @@ Yeu cau:
 - [x] `npm.cmd run build` -> PASS (2026-04-24)
 - [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests, 2026-04-24)
 
+## 9.48) Batch uu tien nong - timezone VN admin/report/export cluster
+
+### Muc tieu
+
+- Chuan hoa tiep ngay gio user-facing va export/report o cum admin + alert/export routes.
+- Loai bo tiep cac diem le thuoc vao timezone may khach trong CSV, lich su phat thong bao va trang admin hoat dong.
+
+### Viec can lam
+
+- [x] API/export routes:
+  - [x] `src/app/api/export/activity-participation/route.ts`
+  - [x] `src/app/api/classes/[id]/export/route.ts`
+  - [x] `src/app/api/teacher/notifications/history/export/route.ts`
+  - [x] `src/app/api/admin/reports/activity-statistics/route.ts`
+  - [x] `src/app/api/student/alerts/route.ts`
+- [x] Admin surfaces:
+  - [x] `src/app/admin/activities/[id]/page.tsx`
+  - [x] `src/app/admin/activities/pending/page.tsx`
+  - [x] `src/app/admin/reports/activity-statistics/page.tsx`
+  - [x] `src/app/admin/approvals/ApprovalList.tsx`
+- [x] Dong bo ten file export theo ngay Viet Nam cho cac luong vua sua.
+
+### Risk / defer
+
+- [ ] Van con nhieu diem `toLocaleString('vi-VN')` o cac module admin/teacher/student ngoai cum release nay; tiep tuc audit theo trang ho so, ghi chu, thong bao, diem va backup o batch sau.
+
+### Verification
+
+- [x] `npm.cmd test -- test/export.test.ts test/teacher-notification-history-export-route.test.ts test/admin-report-routes.test.ts test/alerts.test.ts test/admin-activity-statistics-page.test.tsx` -> PASS (5 files / 22 tests, 2026-04-24)
+- [x] `npm.cmd run build` -> PASS (2026-04-24)
+- [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests, 2026-04-24)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix
