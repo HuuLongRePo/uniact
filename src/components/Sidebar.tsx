@@ -203,8 +203,8 @@ export default function Sidebar() {
       title: 'Thông báo và tương tác',
       items: [
         { label: 'Thông báo', href: '/teacher/notifications', icon: Bell, badge: unreadCount },
-        { label: 'Gửi thông báo', href: '/teacher/notify-students', icon: Bell },
-        { label: 'Broadcast thông báo', href: '/teacher/notifications/broadcast', icon: Bell },
+        { label: 'Gửi theo học viên', href: '/teacher/notify-students', icon: Bell },
+        { label: 'Gửi theo lớp/khối', href: '/teacher/notifications/broadcast', icon: Bell },
         { label: 'Lịch sử gửi', href: '/teacher/notifications/history', icon: Clock },
         { label: 'Cài đặt thông báo', href: '/teacher/notifications/settings', icon: Settings },
         { label: 'Khảo sát', href: '/teacher/polls', icon: ClipboardCheck },
@@ -225,7 +225,7 @@ export default function Sidebar() {
       title: 'Điểm danh và đánh giá',
       items: [
         { label: 'Điểm danh', href: '/teacher/attendance', icon: UserCheck },
-        { label: 'Điểm danh QR', href: '/teacher/qr', icon: QrCode },
+        { label: 'Mở QR điểm danh', href: '/teacher/qr', icon: QrCode },
         { label: 'Điểm danh khuôn mặt', href: '/teacher/attendance/face', icon: ScanFace },
         { label: 'Chính sách điểm danh', href: '/teacher/attendance/policy', icon: Sliders },
         { label: 'Sinh trắc học', href: '/teacher/biometrics', icon: ScanFace },

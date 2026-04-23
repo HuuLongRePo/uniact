@@ -1686,6 +1686,25 @@ Yeu cau:
 - [ ] Camera/QR cross-browser re-verify tren dien thoai:
   - [ ] Neu trinh duyet/OS khong cap quyen camera hoac khong ho tro, phai hien thong diep ro rang + huong dan (cap quyen, doi trinh duyet) va fallback (upload anh QR / nhap ma).
 
+## 9.38) Batch uu tien nong - sidebar clarity (QR vs scan, notify labels)
+
+### Muc tieu
+
+- Lam ro vai tro QR:
+  - Giang vien: mo/tao QR diem danh.
+  - Hoc vien: quet QR diem danh.
+- Tranh nham lan giua 2 flow gui thong bao cua giang vien (chon hoc vien vs theo lop/khoi).
+
+### Viec can lam
+
+- [x] `src/components/Sidebar.tsx`:
+  - [x] doi label `Diem danh QR` -> `Mo QR diem danh` (teacher).
+  - [x] doi label `Gui thong bao`/`Broadcast thong bao` -> `Gui theo hoc vien`/`Gui theo lop/khoi`.
+
+### Verification
+
+- [x] `npm.cmd test -- test/sidebar-teacher-links.test.tsx` -> PASS (1 file / 5 tests, 2026-04-23)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix
