@@ -1594,7 +1594,7 @@ Yeu cau:
 - [x] Commit 28: browser camera fallback for student QR scan (batch 9.29) (`f0c5e21`)
 - [x] Commit 29: UAT login rate-limit unblock + dark button text-white guard v3 (batch 9.30)
 - [x] Commit 30: QR decoder fallback cross-browser (batch 9.31)
-- [ ] Commit 31: dark button contrast hardening + teacher QR fullscreen fallback (batch 9.32)
+- [x] Commit 31: dark button contrast hardening + teacher QR fullscreen fallback (batch 9.32) (`d194fa8`)
 
 ---
 
