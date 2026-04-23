@@ -1660,6 +1660,7 @@ Yeu cau:
 - [x] `npm.cmd run build` -> PASS
 - [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests)
 - [x] `npm.cmd run release:check:full` -> PASS (4/4 checks, lint warnings legacy scope khong block)
+- [x] `npx.cmd playwright test test/uat/actor-admin/02-activity-approval.spec.ts test/uat/actor-teacher/04-qr-refresh-close.spec.ts test/uat/actor-student/02-qr-checkin.spec.ts --reporter=dot` -> PASS (3 tests)
 
 ## 10) Ke hoach commit de xuat
 
