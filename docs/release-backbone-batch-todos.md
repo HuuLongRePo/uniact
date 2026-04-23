@@ -1460,6 +1460,42 @@ Yeu cau:
 - [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests)
 - [x] `npm.cmd run release:check:full` -> PASS (4/4 checks, lint warnings legacy scope khong block)
 
+## 9.30) Batch uu tien nong - UAT login rate-limit unblock + dark button text-white guard v3
+
+### Muc tieu
+
+- Go blocker UAT login bi khoa sau nhieu lan test local, khong phu thuoc env startup dev server.
+- Chan triet de loi chu nut bi mo/xanh trong dark mode voi pattern `text-white` tren button/link.
+- Dong bo regression test cho auth-route UAT bypass va helper login UAT headers.
+
+### Viec can lam
+
+- [x] `src/app/api/auth/login/route.ts`:
+  - [x] bo sung UAT bypass qua request headers `x-uat-e2e` / `x-playwright-test`.
+  - [x] gioi han bypass chi trong non-production (`NODE_ENV !== 'production'`) de khong mo rong rui ro runtime production.
+- [x] `test/uat/helpers/login.helper.ts`:
+  - [x] login API request them headers UAT (`x-uat-e2e`, `x-playwright-test`) de chay on dinh khi server dev khong set env.
+- [x] `test/auth-routes.test.ts`:
+  - [x] them regression: bypass rate-limit khi non-production + UAT header.
+  - [x] them regression: production van giu rate-limit du co UAT header.
+- [x] `test/login-helper-routes.test.ts`:
+  - [x] assert helper login gui headers UAT dung contract.
+- [x] `src/app/globals.css`:
+  - [x] nang dark guard tu `bg-* + text-white` len tat ca `a/button/[role='button']` co class `text-white`.
+- [x] `test/theme-link-contrast-guard.test.ts`:
+  - [x] cap nhat regression theo guard `text-white` tong quat.
+- [x] UAT smoke replay:
+  - [x] chay lai bo test tung bi fail do lockout: admin approval + teacher QR + student QR.
+
+### Verification
+
+- [x] `npm.cmd run lint -- --file "src/app/api/auth/login/route.ts" --file "test/uat/helpers/login.helper.ts" --file "test/auth-routes.test.ts" --file "test/login-helper-routes.test.ts" --file "test/theme-link-contrast-guard.test.ts"` -> PASS (co warnings `any` legacy, khong block)
+- [x] `npm.cmd test -- test/auth-routes.test.ts test/login-helper-routes.test.ts test/theme-link-contrast-guard.test.ts` -> PASS (3 files / 12 tests)
+- [x] `npx.cmd playwright test test/uat/actor-admin/02-activity-approval.spec.ts test/uat/actor-teacher/04-qr-refresh-close.spec.ts test/uat/actor-student/02-qr-checkin.spec.ts --reporter=dot` -> PASS (3 tests / 3.1m)
+- [x] `npm.cmd run build` -> PASS
+- [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests)
+- [x] `npm.cmd run release:check:full` -> PASS (4/4 checks, lint warnings legacy scope khong block)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix
@@ -1493,6 +1529,7 @@ Yeu cau:
 - [x] Commit 26: dark mode action button readability guard v2 (batch 9.27) (`50e386d`)
 - [x] Commit 27: teacher attendance history/bulk hardening (batch 9.28) (`d431b0b`)
 - [x] Commit 28: browser camera fallback for student QR scan (batch 9.29) (`f0c5e21`)
+- [x] Commit 29: UAT login rate-limit unblock + dark button text-white guard v3 (batch 9.30)
 
 ---
 

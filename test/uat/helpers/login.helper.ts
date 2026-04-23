@@ -45,7 +45,9 @@ export async function loginAs(page: Page, role: 'admin' | 'teacher' | 'student')
       const response = await page.request.post(`${BASE_URL}/api/auth/login`, {
         timeout: 15000,
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'x-uat-e2e': '1',
+          'x-playwright-test': '1',
         },
         data: {
           email: account.email,

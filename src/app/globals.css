@@ -470,9 +470,9 @@ button:disabled,
   color: var(--app-action-primary-text) !important;
 }
 
-:root[data-theme='dark'] a[class*='bg-'][class*='text-white'],
-:root[data-theme='dark'] button[class*='bg-'][class*='text-white'],
-:root[data-theme='dark'] [role='button'][class*='bg-'][class*='text-white'] {
+:root[data-theme='dark'] a[class*='text-white'],
+:root[data-theme='dark'] button[class*='text-white'],
+:root[data-theme='dark'] [role='button'][class*='text-white'] {
   color: var(--app-action-primary-text) !important;
 }
 

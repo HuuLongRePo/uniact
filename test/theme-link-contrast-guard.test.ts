@@ -31,10 +31,8 @@ describe('dark theme link contrast guards', () => {
 
     expect(css).toContain(":root[data-theme='dark'] a.landing-action-primary,");
     expect(css).toContain(":root[data-theme='dark'] a.landing-action-primary:visited,");
-    expect(css).toContain(":root[data-theme='dark'] a[class*='bg-'][class*='text-white'],");
-    expect(css).toContain(":root[data-theme='dark'] button[class*='bg-'][class*='text-white'],");
-    expect(css).toContain(
-      ":root[data-theme='dark'] [role='button'][class*='bg-'][class*='text-white'] {",
-    );
+    expect(css).toContain(":root[data-theme='dark'] a[class*='text-white'],");
+    expect(css).toContain(":root[data-theme='dark'] button[class*='text-white'],");
+    expect(css).toContain(":root[data-theme='dark'] [role='button'][class*='text-white'] {");
   });
 });

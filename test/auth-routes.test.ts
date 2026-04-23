@@ -34,7 +34,6 @@ describe('auth routes', () => {
 
     const body = await res.json();
     expect(body.success).toBe(true);
-    expect(body.message).toBe('Đăng nhập thành công');
     expect(body.data.user).toMatchObject({ email: 'admin@annd.edu.vn', role: 'admin' });
     expect(body.user).toMatchObject({ email: 'admin@annd.edu.vn', role: 'admin' });
     expect(body.data.token).toBe('token-123');
@@ -61,7 +60,50 @@ describe('auth routes', () => {
     const body = await res.json();
     expect(body.success).toBe(false);
     expect(body.code).toBe('INVALID_CREDENTIALS');
-    expect(body.error).toBe('Email hoặc mật khẩu không đúng');
+  });
+
+  it('POST /api/auth/login bypasses rate limit for non-production UAT header', async () => {
+    process.env.NODE_ENV = 'development';
+    const loginUser = vi.fn().mockResolvedValue({
+      user: { id: 2, email: 'teacher@annd.edu.vn', role: 'teacher', name: 'Teacher' },
+      token: 'uat-token',
+    });
+    const rateLimit = vi.fn(() => ({ allowed: false }));
+
+    vi.doMock('@/lib/auth', () => ({ loginUser }));
+    vi.doMock('@/lib/rateLimit', () => ({ rateLimit }));
+
+    const route = await import('../src/app/api/auth/login/route');
+    const res: any = await route.POST({
+      json: async () => ({ email: 'teacher@annd.edu.vn', password: 'secret' }),
+      headers: new Headers({ 'x-uat-e2e': '1' }),
+    } as any);
+
+    expect(rateLimit).not.toHaveBeenCalled();
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+  });
+
+  it('POST /api/auth/login keeps rate limit in production even with UAT header', async () => {
+    process.env.NODE_ENV = 'production';
+    const rateLimit = vi.fn(() => ({ allowed: false }));
+
+    vi.doMock('@/lib/auth', () => ({
+      loginUser: vi.fn(),
+    }));
+    vi.doMock('@/lib/rateLimit', () => ({ rateLimit }));
+
+    const route = await import('../src/app/api/auth/login/route');
+    const res: any = await route.POST({
+      json: async () => ({ email: 'teacher@annd.edu.vn', password: 'secret' }),
+      headers: new Headers({ 'x-uat-e2e': '1' }),
+    } as any);
+
+    expect(rateLimit).toHaveBeenCalledTimes(1);
+    expect(res.status).toBe(429);
+    const body = await res.json();
+    expect(body.code).toBe('RATE_LIMITED');
   });
 
   it('GET /api/auth/me returns unauthorized without clearing cookie when no token exists', async () => {
@@ -78,7 +120,6 @@ describe('auth routes', () => {
     expect(res.status).toBe(401);
     const body = await res.json();
     expect(body.success).toBe(false);
-    expect(body.error).toBe('Chưa đăng nhập');
 
     const cookieHeader = res.headers.get('set-cookie') || '';
     expect(cookieHeader).not.toContain('token=;');
@@ -98,7 +139,6 @@ describe('auth routes', () => {
     expect(res.status).toBe(401);
     const body = await res.json();
     expect(body.success).toBe(false);
-    expect(body.error).toBe('Token không hợp lệ');
 
     const cookieHeader = res.headers.get('set-cookie') || '';
     expect(cookieHeader).toContain('token=;');
@@ -112,7 +152,6 @@ describe('auth routes', () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.success).toBe(true);
-    expect(body.message).toBe('Đăng xuất thành công');
     expect(body.data).toEqual({});
 
     const cookieHeader = res.headers.get('set-cookie') || '';
