@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { Button } from '@/components/ui/Button';
+import { formatVietnamDateTime } from '@/lib/timezone';
 
 type StudentProfileResponse = {
   success: boolean;
@@ -164,7 +165,7 @@ export default function AdminStudentDetailPage() {
             <div>
               <div className="text-sm text-gray-600">Ngày tạo</div>
               <div className="font-semibold">
-                {new Date(student.created_at).toLocaleDateString('vi-VN')}
+                {formatVietnamDateTime(student.created_at, 'date')}
               </div>
             </div>
           </div>
@@ -222,7 +223,7 @@ export default function AdminStudentDetailPage() {
                         </div>
                       </td>
                       <td className="py-2 pr-3 whitespace-nowrap">
-                        {a.date_time ? new Date(a.date_time).toLocaleString('vi-VN') : '-'}
+                        {a.date_time ? formatVietnamDateTime(a.date_time) : '-'}
                       </td>
                       <td className="py-2 pr-3 whitespace-nowrap">{a.attendance_status || '-'}</td>
                       <td className="py-2 pr-3 text-right whitespace-nowrap">
@@ -249,7 +250,7 @@ export default function AdminStudentDetailPage() {
                   <div className="font-semibold">{a.award_type || 'Khen thưởng'}</div>
                   {a.reason && <div className="text-sm text-gray-700 mt-1">{a.reason}</div>}
                   <div className="text-xs text-gray-500 mt-2">
-                    {a.awarded_date ? new Date(a.awarded_date).toLocaleDateString('vi-VN') : '-'}
+                    {a.awarded_date ? formatVietnamDateTime(a.awarded_date, 'date') : '-'}
                     {a.awarded_by_name ? ` • bởi ${a.awarded_by_name}` : ''}
                   </div>
                 </div>
@@ -298,7 +299,7 @@ export default function AdminStudentDetailPage() {
                 <div key={n.id} className="border rounded p-3">
                   <div className="text-sm text-gray-700">{n.content}</div>
                   <div className="text-xs text-gray-500 mt-2">
-                    {new Date(n.created_at).toLocaleString('vi-VN')}
+                    {formatVietnamDateTime(n.created_at)}
                     {n.created_by_name ? ` • ${n.created_by_name}` : ''}
                   </div>
                 </div>

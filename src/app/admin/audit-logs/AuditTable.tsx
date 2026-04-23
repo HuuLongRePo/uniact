@@ -1,6 +1,7 @@
 'use client';
 
 import { AuditLog } from './types';
+import { formatVietnamDateTime } from '@/lib/timezone';
 
 interface AuditTableProps {
   logs: AuditLog[];
@@ -64,7 +65,7 @@ export default function AuditTable({ logs, onViewDetails }: AuditTableProps) {
               <tr key={log.id} className="hover:bg-gray-50">
                 <td className="px-4 py-3 text-sm text-gray-500">#{log.id}</td>
                 <td className="px-4 py-3 text-sm text-gray-600">
-                  {new Date(log.created_at).toLocaleString('vi-VN')}
+                  {formatVietnamDateTime(log.created_at)}
                 </td>
                 <td className="px-4 py-3">
                   <div>

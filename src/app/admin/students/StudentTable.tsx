@@ -1,6 +1,7 @@
 'use client';
 
 import { User } from './types';
+import { formatVietnamDateTime } from '@/lib/timezone';
 
 interface StudentTableProps {
   students: User[];
@@ -80,7 +81,7 @@ export default function StudentTable({
                 {student.total_points || 0}
               </td>
               <td className="border px-4 py-2 text-sm text-gray-600">
-                {new Date(student.created_at).toLocaleDateString('vi-VN')}
+                {formatVietnamDateTime(student.created_at, 'date')}
               </td>
               <td className="border px-4 py-2 text-center">
                 <div className="flex gap-1 justify-center flex-wrap">

@@ -2,6 +2,7 @@
 
 import { User } from './types';
 import { getRoleBadgeClass, getRoleLabel } from './roles';
+import { formatVietnamDateTime } from '@/lib/timezone';
 
 interface UserTableProps {
   users: User[];
@@ -80,7 +81,7 @@ export default function UserTable({
                 {user.role === 'teacher' ? user.teaching_class_name || '-' : user.class_name || '-'}
               </td>
               <td className="border px-4 py-2 text-sm text-gray-600">
-                {new Date(user.created_at).toLocaleDateString('vi-VN')}
+                {formatVietnamDateTime(user.created_at, 'date')}
               </td>
               <td className="border px-4 py-2 text-center">
                 <div className="flex gap-1 justify-center flex-wrap">

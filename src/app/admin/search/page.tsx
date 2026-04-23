@@ -17,6 +17,7 @@ import {
   Star,
 } from 'lucide-react';
 import { ROLE_OPTIONS, getRoleBadgeClass, getRoleLabel } from '../users/roles';
+import { formatVietnamDateTime } from '@/lib/timezone';
 
 interface SavedSearch {
   id: string;
@@ -525,7 +526,7 @@ export default function AdvancedSearchPage() {
                           </div>
                           <div className="text-sm text-gray-600 mb-2 space-y-1">
                             <div>📍 {activity.location}</div>
-                            <div>📅 {new Date(activity.date).toLocaleDateString('vi-VN')}</div>
+                            <div>📅 {formatVietnamDateTime(activity.date, 'date')}</div>
                           </div>
                           <div className="flex flex-wrap gap-2">
                             <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full font-medium">
@@ -602,7 +603,7 @@ export default function AdvancedSearchPage() {
                           </span>
                           <span>
                             Trao bởi: {award.awarded_by_name} •{' '}
-                            {new Date(award.awarded_at).toLocaleDateString('vi-VN')}
+                            {formatVietnamDateTime(award.awarded_at, 'date')}
                           </span>
                         </div>
                       </div>

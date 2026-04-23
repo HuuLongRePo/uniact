@@ -13,6 +13,7 @@ import UserDialog from './UserDialog';
 import { User } from './types';
 import { useDebounce } from '@/lib/debounce-hooks';
 import { getRoleBadgeClass, getRoleLabel } from './roles';
+import { formatVietnamDateTime, toVietnamDatetimeLocalValue } from '@/lib/timezone';
 
 /**
  * UNIFIED USER MANAGEMENT (Phase 7):
@@ -197,7 +198,7 @@ export default function AdminUsersPage() {
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = `users-export-${new Date().toISOString().split('T')[0]}.csv`;
+    link.download = `users-export-${toVietnamDatetimeLocalValue(new Date()).slice(0, 10)}.csv`;
     link.click();
 
     toast.success(`Đã xuất ${selectedUsers.size} người dùng`);
@@ -547,7 +548,7 @@ export default function AdminUsersPage() {
                   <div>
                     <span className="text-sm text-gray-600">Ngày Tạo:</span>
                     <p className="font-medium">
-                      {new Date(userToView.created_at).toLocaleDateString('vi-VN')}
+                      {formatVietnamDateTime(userToView.created_at, 'date')}
                     </p>
                   </div>
                 </div>

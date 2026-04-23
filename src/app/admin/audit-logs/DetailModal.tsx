@@ -2,6 +2,7 @@
 
 import { AuditLog } from './types';
 import { Button } from '@/components/ui/Button';
+import { formatVietnamDateTime } from '@/lib/timezone';
 
 interface DetailModalProps {
   log: AuditLog | null;
@@ -34,7 +35,7 @@ export default function DetailModal({ log, onClose }: DetailModalProps) {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <div className="text-sm font-medium text-gray-500">Time</div>
-              <div className="text-sm">{new Date(log.created_at).toLocaleString('vi-VN')}</div>
+              <div className="text-sm">{formatVietnamDateTime(log.created_at)}</div>
             </div>
             <div>
               <div className="text-sm font-medium text-gray-500">Actor</div>

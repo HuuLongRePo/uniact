@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { formatVietnamDateTime, toVietnamDatetimeLocalValue } from '@/lib/timezone';
 
 type Audit = {
   id: number;
@@ -108,7 +109,7 @@ export default function AdminAuditPage() {
               const url = URL.createObjectURL(blob);
               const a = document.createElement('a');
               a.href = url;
-              a.download = `audit-export-${new Date().toISOString()}.csv`;
+              a.download = `audit-export-${toVietnamDatetimeLocalValue(new Date()).slice(0, 10)}.csv`;
               document.body.appendChild(a);
               a.click();
               a.remove();
@@ -125,7 +126,7 @@ export default function AdminAuditPage() {
           {logs.map((l) => (
             <div key={l.id} className="p-3 border rounded">
               <div className="text-sm text-gray-600">
-                {l.created_at} • Người thực hiện: {l.actor_id || 'hệ thống'}
+                {l.created_at ? formatVietnamDateTime(l.created_at) : '-'} • Người thực hiện: {l.actor_id || 'hệ thống'}
               </div>
               <div className="font-medium break-words">{l.action}</div>
               {l.details && <div className="text-sm text-gray-700 mt-1">{l.details}</div>}

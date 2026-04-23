@@ -2038,6 +2038,39 @@ Yeu cau:
 - [x] `npm.cmd run build` -> PASS (2026-04-24)
 - [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests, 2026-04-24)
 
+## 9.51) Batch uu tien nong - timezone VN admin search/audit/users/students cluster
+
+### Muc tieu
+
+- Don tiep cum admin con lai van hien ngay gio theo timezone may khach trong search, audit logs, users va students.
+- Dong bo filename export audit/users theo ngay Viet Nam.
+- Giu batch an toan: khong doi logic CRUD, chi sua formatter va recovery 5 file bi hu trong luc thay the co hoc roi patch lai dung helper.
+
+### Viec can lam
+
+- [x] Search / audit:
+  - [x] `src/app/admin/search/page.tsx`
+  - [x] `src/app/admin/audit/page.tsx`
+  - [x] `src/app/admin/audit-logs/AuditTable.tsx`
+  - [x] `src/app/admin/audit-logs/DetailModal.tsx`
+- [x] Users / students:
+  - [x] `src/app/admin/users/page.tsx`
+  - [x] `src/app/admin/users/UserTable.tsx`
+  - [x] `src/app/admin/users/[id]/activities/page.tsx`
+  - [x] `src/app/admin/students/StudentTable.tsx`
+  - [x] `src/app/admin/students/[id]/page.tsx`
+- [x] Recovery an toan 5 file bi token corruption trong luc thay the co hoc, sau do re-apply patch bang cach thu cong.
+
+### Risk / defer
+
+- [ ] Con cum `admin awards/bonus`, `classes`, `polls`, `search savedAt/localStorage` va mot so export filename ngoai backbone chua audit het timezone VN.
+- [ ] Van con mot so trang cu co mojibake/noi dung chua duoc chuan hoa text; batch nay uu tien on dinh formatter va build xanh.
+
+### Verification
+
+- [x] `npm.cmd test -- test/audit.test.ts test/admin-users-route.test.ts` -> PASS (2 files / 5 tests, 2026-04-24)
+- [x] `npm.cmd run build` -> PASS (2026-04-24)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix

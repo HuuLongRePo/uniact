@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import toast from 'react-hot-toast';
 import { Button } from '@/components/ui/Button';
+import { formatVietnamDateTime } from '@/lib/timezone';
 
 type AdminUser = {
   id: number;
@@ -162,7 +163,7 @@ export default function AdminUserActivitiesPage() {
                       </div>
                     </td>
                     <td className="py-2 pr-3 whitespace-nowrap">
-                      {new Date(a.date_time).toLocaleString('vi-VN')}
+                      {formatVietnamDateTime(a.date_time)}
                     </td>
                     <td className="py-2 pr-3 whitespace-nowrap">{a.attendance_status || '-'}</td>
                     <td className="py-2 pr-3 text-right whitespace-nowrap">
@@ -201,7 +202,7 @@ export default function AdminUserActivitiesPage() {
                   <tr key={a.id} className="border-b last:border-b-0">
                     <td className="py-2 pr-3 font-medium">{a.title}</td>
                     <td className="py-2 pr-3 whitespace-nowrap">
-                      {a.date_time ? new Date(a.date_time).toLocaleString('vi-VN') : '-'}
+                      {a.date_time ? formatVietnamDateTime(a.date_time) : '-'}
                     </td>
                     <td className="py-2 pr-3 whitespace-nowrap">{a.status}</td>
                     <td className="py-2 pr-3 text-right whitespace-nowrap">
