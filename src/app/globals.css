@@ -491,6 +491,28 @@ button:disabled,
   opacity: 1;
 }
 
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) a.landing-action-primary,
+  :root:not([data-theme='light']) a.landing-action-primary:visited,
+  :root:not([data-theme='light']) a.landing-action-primary:hover,
+  :root:not([data-theme='light']) a.landing-action-primary:active,
+  :root:not([data-theme='light']) a.landing-action-primary:focus-visible {
+    color: var(--app-action-primary-text) !important;
+    -webkit-text-fill-color: var(--app-action-primary-text);
+    opacity: 1;
+  }
+
+  :root:not([data-theme='light']) a[class*='text-white'],
+  :root:not([data-theme='light']) button[class*='text-white']:not(:disabled),
+  :root:not([data-theme='light'])
+    [role='button'][class*='text-white']:not([aria-disabled='true']) {
+    color: var(--app-action-primary-text) !important;
+    -webkit-text-fill-color: var(--app-action-primary-text);
+    text-shadow: 0 1px 0 rgba(2, 6, 23, 0.28);
+    opacity: 1;
+  }
+}
+
 :root[data-theme='dark'] .bg-white {
   background-color: var(--app-surface-base) !important;
 }

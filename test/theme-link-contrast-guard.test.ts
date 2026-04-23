@@ -38,4 +38,20 @@ describe('dark theme link contrast guards', () => {
       ":root[data-theme='dark'] [role='button'][class*='text-white']:not([aria-disabled='true']) {"
     );
   });
+
+  it('keeps the same readable guard when only system dark mode is active', () => {
+    const css = loadGlobalCss();
+
+    expect(css).toContain('@media (prefers-color-scheme: dark)');
+    expect(css).toContain(":root:not([data-theme='light']) a.landing-action-primary,");
+    expect(css).toContain(":root:not([data-theme='light']) a.landing-action-primary:visited,");
+    expect(css).toContain(":root:not([data-theme='light']) a[class*='text-white'],");
+    expect(css).toContain(
+      ":root:not([data-theme='light']) button[class*='text-white']:not(:disabled),"
+    );
+    expect(css).toContain(":root:not([data-theme='light'])");
+    expect(css).toContain(
+      "[role='button'][class*='text-white']:not([aria-disabled='true']) {"
+    );
+  });
 });
