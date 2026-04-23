@@ -1843,6 +1843,24 @@ Yeu cau:
 
 - [ ] Luong face hien tai van la pilot/QA page; can chot cach gan roster vao page nay hay tao teacher attendance workspace hop nhat.
 
+## 9.45) Batch uu tien nong - persist explicit student scope khi tao hoat dong
+
+### Muc tieu
+
+- Sua loi tao hoat dong co `mandatory_student_ids` / `voluntary_student_ids` nhung API create khong truyen scope xuong DB helper, lam mat hoc vien chi dinh ngay tu luc tao.
+
+### Viec can lam
+
+- [x] `src/app/api/activities/route.ts`:
+  - [x] POST create phai truyen day du `mandatory_student_ids`, `voluntary_student_ids`, `applies_to_all_students` vao `dbHelpers.createActivity(...)`.
+- [x] `test/activities-create-route.test.ts`:
+  - [x] them regression assert explicit student scopes duoc persist khi tao activity.
+
+### Verification
+
+- [x] `npm.cmd test -- test/activities-create-route.test.ts` -> PASS (1 file / 1 test, 2026-04-24)
+- [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests, 2026-04-24)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix
