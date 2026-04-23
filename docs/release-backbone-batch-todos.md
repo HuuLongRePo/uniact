@@ -1979,6 +1979,35 @@ Yeu cau:
 - [x] `npm.cmd run build` -> PASS (2026-04-24)
 - [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests, 2026-04-24)
 
+## 9.49) Batch uu tien nong - timezone VN student score/award/device + teacher dashboard/attendance
+
+### Muc tieu
+
+- Don tiep cac surface hoc vien/giang vien su dung thuong xuyen van hien ngay gio theo timezone may khach.
+- Dong bo CSV ten file va cac timestamp user-facing trong score/award/device/alert/dashboard/attendance ve helper Vietnam timezone.
+
+### Viec can lam
+
+- [x] Student surfaces:
+  - [x] `src/app/student/scores/page.tsx`
+  - [x] `src/app/student/points/page.tsx`
+  - [x] `src/app/student/awards/page.tsx`
+  - [x] `src/app/student/devices/page.tsx`
+  - [x] `src/app/student/alerts/page.tsx`
+- [x] Teacher surfaces:
+  - [x] `src/app/teacher/dashboard/page.tsx`
+  - [x] `src/app/teacher/attendance/page.tsx`
+- [x] Dong bo filename export bang diem theo ngay Viet Nam.
+
+### Risk / defer
+
+- [ ] Con cum `teacher students/notes`, `polls/notifications`, `admin backup/system-health`, `search/audit/users/students` chua duoc audit timezone.
+
+### Verification
+
+- [x] `npm.cmd test -- test/student-scores-page.test.tsx test/student-points-page.test.tsx test/teacher-attendance-page.test.tsx` -> PASS (3 files / 5 tests, 2026-04-24)
+- [x] `npm.cmd run build` -> PASS (2026-04-24)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix

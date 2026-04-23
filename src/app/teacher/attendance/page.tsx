@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import toast from 'react-hot-toast';
+import { formatDate } from '@/lib/formatters';
 
 interface Activity {
   id: number;
@@ -190,7 +191,7 @@ export default function TeacherManualAttendancePage() {
               >
                 <div className="font-medium">{activity.title}</div>
                 <div className="text-sm text-gray-600 mt-1">
-                  📅 {new Date(activity.date_time).toLocaleDateString('vi-VN')}
+                  📅 {formatDate(activity.date_time, 'date')}
                 </div>
                 <div className="text-sm text-gray-600">📍 {activity.location}</div>
                 <div className="mt-1">

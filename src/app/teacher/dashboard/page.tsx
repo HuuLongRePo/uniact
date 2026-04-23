@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { formatDate } from '@/lib/formatters';
 
 interface Summary {
   total_activities: number;
@@ -260,7 +261,7 @@ export default function TeacherDashboardPage() {
                   {a.title}
                 </Link>
                 <div className="text-sm text-gray-600 mt-1">
-                  {new Date(a.date_time).toLocaleDateString('vi-VN')} •{' '}
+                  {formatDate(a.date_time, 'date')} •{' '}
                   {a.status === 'published' && (
                     <span className="text-green-600">✅ Đã phát hành</span>
                   )}

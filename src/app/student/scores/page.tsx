@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { toast } from '@/lib/toast';
 import { Button } from '@/components/ui/Button';
+import { formatDate } from '@/lib/formatters';
+import { toVietnamDatetimeLocalValue } from '@/lib/timezone';
 
 interface ScoreRecord {
   participation_id: number;
@@ -140,7 +142,7 @@ export default function StudentScoresPage() {
         score.bonus_points,
         score.penalty_points,
         score.total_points.toFixed(2),
-        score.evaluated_at ? new Date(score.evaluated_at).toLocaleDateString('vi-VN') : '',
+        score.evaluated_at ? formatDate(score.evaluated_at, 'date') : '',
       ].join(',')
     );
 
@@ -148,7 +150,7 @@ export default function StudentScoresPage() {
     const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = `bang-diem-${new Date().toISOString().split('T')[0]}.csv`;
+    link.download = `bang-diem-${toVietnamDatetimeLocalValue(new Date()).slice(0, 10)}.csv`;
     link.click();
 
     toast.success('Đã xuất file CSV thành công!');
@@ -252,9 +254,7 @@ export default function StudentScoresPage() {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                    {score.evaluated_at
-                      ? new Date(score.evaluated_at).toLocaleDateString('vi-VN')
-                      : '-'}
+                    {score.evaluated_at ? formatDate(score.evaluated_at, 'date') : '-'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
                     <button
@@ -380,7 +380,7 @@ export default function StudentScoresPage() {
 
               {/* Timestamp */}
               <div className="text-xs text-gray-500 text-center">
-                Tính toán lúc: {new Date(selectedScore.calculated_at).toLocaleString('vi-VN')}
+                Tính toán lúc: {formatDate(selectedScore.calculated_at)}
               </div>
             </div>
 

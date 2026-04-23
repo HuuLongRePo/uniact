@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import toast from 'react-hot-toast';
+import { formatDate } from '@/lib/formatters';
 
 type TabKey = 'activities' | 'types' | 'levels' | 'achievements' | 'awards';
 
@@ -188,7 +189,7 @@ export default function StudentPointsBreakdownPage() {
                       <div>
                         <h3 className="font-semibold">{activity.title}</h3>
                         <div className="text-sm text-gray-600">
-                          {new Date(activity.date_time).toLocaleDateString('vi-VN')} •
+                          {formatDate(activity.date_time, 'date')} •
                           {activity.activity_type} • {activity.organization_level}
                         </div>
                       </div>
@@ -311,7 +312,7 @@ export default function StudentPointsBreakdownPage() {
                           {award.reason}
                         </div>
                         <div className="text-xs text-gray-500 mt-1">
-                          Phê duyệt: {new Date(award.approved_at).toLocaleDateString('vi-VN')} bởi{' '}
+                          Phê duyệt: {award.approved_at ? formatDate(award.approved_at, 'date') : '-'} bởi{' '}
                           {award.approved_by_name}
                         </div>
                       </div>

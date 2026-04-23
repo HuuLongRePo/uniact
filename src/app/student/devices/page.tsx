@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import toast from 'react-hot-toast';
+import { formatDate } from '@/lib/formatters';
 
 interface Device {
   id: number;
@@ -110,13 +111,11 @@ export default function DeviceManagementPage() {
                     <div className="flex gap-4 text-xs text-gray-500 ml-11">
                       <div>
                         <span className="font-medium">Lần truy cập cuối:</span>{' '}
-                        {device.last_seen
-                          ? new Date(device.last_seen).toLocaleString('vi-VN')
-                          : 'Chưa có'}
+                        {device.last_seen ? formatDate(device.last_seen) : 'Chưa có'}
                       </div>
                       <div>
                         <span className="font-medium">Đăng ký:</span>{' '}
-                        {new Date(device.created_at).toLocaleDateString('vi-VN')}
+                        {formatDate(device.created_at, 'date')}
                       </div>
                     </div>
                     <div className="mt-2 ml-11">

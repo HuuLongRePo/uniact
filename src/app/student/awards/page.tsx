@@ -5,6 +5,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { toast } from '@/lib/toast';
+import { formatDate } from '@/lib/formatters';
+import { formatVietnamWithOptions } from '@/lib/timezone';
 
 interface Award {
   id: number;
@@ -161,8 +163,8 @@ export default function StudentAwardsPage() {
                   <div className="text-2xl font-bold text-yellow-600">{s.total_awards}</div>
                 </div>
                 <div className="text-xs text-gray-600">
-                  <div>Lần đầu: {new Date(s.first_awarded_at).toLocaleDateString('vi-VN')}</div>
-                  <div>Lần cuối: {new Date(s.last_awarded_at).toLocaleDateString('vi-VN')}</div>
+                  <div>Lần đầu: {formatDate(s.first_awarded_at, 'date')}</div>
+                  <div>Lần cuối: {formatDate(s.last_awarded_at, 'date')}</div>
                 </div>
               </div>
             ))}
@@ -206,7 +208,7 @@ export default function StudentAwardsPage() {
                     <div className="flex items-center gap-4 text-xs text-gray-500 pl-12">
                       <div>
                         <span className="font-medium">Ngày trao:</span>{' '}
-                        {new Date(award.awarded_at).toLocaleDateString('vi-VN', {
+                        {formatVietnamWithOptions(award.awarded_at, {
                           year: 'numeric',
                           month: 'long',
                           day: 'numeric',

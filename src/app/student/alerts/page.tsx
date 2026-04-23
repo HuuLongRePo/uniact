@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { AlertTriangle, Clock, CheckCircle } from 'lucide-react';
+import { formatDate } from '@/lib/formatters';
 
 interface Alert {
   id: number;
@@ -74,9 +75,7 @@ export default function StudentAlertsPage() {
                   <div className="flex-1">
                     <h3 className="font-semibold text-gray-900 mb-2">{alert.title}</h3>
                     <p className="text-gray-600">{alert.message}</p>
-                    <p className="text-xs text-gray-500 mt-2">
-                      {new Date(alert.created_at).toLocaleString('vi-VN')}
-                    </p>
+                    <p className="text-xs text-gray-500 mt-2">{formatDate(alert.created_at)}</p>
                   </div>
                 </div>
               </div>
