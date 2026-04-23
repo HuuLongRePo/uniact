@@ -8,40 +8,18 @@ import {
   getCameraTroubleshootingSteps,
   requestPreferredCameraStream,
 } from '@/lib/camera-stream';
+import {
+  createBarcodeDetectorInstance,
+  decodeQrValueFromSource,
+  loadJsQrDecoder,
+  type BarcodeDetectorInstance,
+  type JsQrDecoder,
+} from '@/lib/qr-scan-decoder';
 
 type ScanState = 'idle' | 'scanning' | 'success' | 'error';
 
-type BarcodeDetectorResult = {
-  rawValue?: string;
-};
-
-type BarcodeDetectorInstance = {
-  detect: (source: ImageBitmapSource) => Promise<BarcodeDetectorResult[]>;
-};
-
-type BarcodeDetectorConstructor = new (options?: { formats?: string[] }) => BarcodeDetectorInstance;
-
 interface Props {
   onScan: (rawValue: string) => Promise<void>;
-}
-
-function createBarcodeDetector(): BarcodeDetectorInstance | null {
-  if (typeof window === 'undefined') return null;
-
-  const DetectorCtor = (window as unknown as { BarcodeDetector?: BarcodeDetectorConstructor })
-    .BarcodeDetector;
-
-  if (!DetectorCtor) return null;
-
-  try {
-    return new DetectorCtor({ formats: ['qr_code'] });
-  } catch {
-    try {
-      return new DetectorCtor();
-    } catch {
-      return null;
-    }
-  }
 }
 
 export function StudentQRScanner({ onScan }: Props) {
@@ -49,6 +27,8 @@ export function StudentQRScanner({ onScan }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const frameRequest = useRef<number | undefined>(undefined);
   const detectorRef = useRef<BarcodeDetectorInstance | null>(null);
+  const jsQrDecoderRef = useRef<JsQrDecoder | null>(null);
+  const decoderInitPromiseRef = useRef<Promise<void> | null>(null);
   const submittingRef = useRef(false);
   const processingFrameRef = useRef(false);
   const lastDecodeAtRef = useRef(0);
@@ -77,18 +57,40 @@ export function StudentQRScanner({ onScan }: Props) {
     setScanState(nextState);
   }
 
-  useEffect(() => {
-    detectorRef.current = createBarcodeDetector();
-    setAutoScanSupported(Boolean(detectorRef.current));
+  async function ensureDecoderReady() {
+    if (!decoderInitPromiseRef.current) {
+      decoderInitPromiseRef.current = (async () => {
+        detectorRef.current = createBarcodeDetectorInstance();
+        if (!detectorRef.current) {
+          jsQrDecoderRef.current = await loadJsQrDecoder();
+        }
 
-    void startScan();
+        setAutoScanSupported(Boolean(detectorRef.current || jsQrDecoderRef.current));
+      })();
+    }
+
+    await decoderInitPromiseRef.current;
+  }
+
+  useEffect(() => {
+    let mounted = true;
+
+    void ensureDecoderReady().then(() => {
+      if (mounted) {
+        void startScan();
+      }
+    });
+
     return () => {
+      mounted = false;
       stopScan();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function startScan() {
+    await ensureDecoderReady();
+
     stopScan('idle');
     setError(null);
     setScanState('scanning');
@@ -104,7 +106,7 @@ export function StudentQRScanner({ onScan }: Props) {
         videoRef.current.srcObject = mediaStream;
         await videoRef.current.play().catch(() => undefined);
 
-        if (detectorRef.current) {
+        if (detectorRef.current || jsQrDecoderRef.current) {
           frameRequest.current = requestAnimationFrame(tick);
         }
       }
@@ -116,22 +118,22 @@ export function StudentQRScanner({ onScan }: Props) {
   }
 
   function tick() {
-    if (!videoRef.current || !canvasRef.current || !detectorRef.current) {
+    if (!videoRef.current || !canvasRef.current) {
       frameRequest.current = requestAnimationFrame(tick);
       return;
     }
 
     const video = videoRef.current;
     const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-    if (!ctx || video.readyState !== 4) {
+    const context = canvas.getContext('2d');
+    if (!context || video.readyState !== 4) {
       frameRequest.current = requestAnimationFrame(tick);
       return;
     }
 
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
     const now = Date.now();
     const shouldDecode = now - lastDecodeAtRef.current >= 240;
@@ -140,10 +142,20 @@ export function StudentQRScanner({ onScan }: Props) {
       lastDecodeAtRef.current = now;
       processingFrameRef.current = true;
 
-      void detectorRef.current
-        .detect(canvas)
-        .then(async (results) => {
-          const firstValue = String(results?.[0]?.rawValue || '').trim();
+      void decodeQrValueFromSource({
+        source: canvas,
+        barcodeDetector: detectorRef.current,
+        jsQrDecoder: jsQrDecoderRef.current,
+        getFallbackImageData: () => {
+          try {
+            return context.getImageData(0, 0, canvas.width, canvas.height);
+          } catch {
+            return null;
+          }
+        },
+      })
+        .then(async (decodedValue) => {
+          const firstValue = String(decodedValue || '').trim();
           if (!firstValue || firstValue === lastScannedRawRef.current) {
             return;
           }
@@ -160,12 +172,13 @@ export function StudentQRScanner({ onScan }: Props) {
     frameRequest.current = requestAnimationFrame(tick);
   }
 
-  async function handleManualSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleManualSubmit(event: React.FormEvent) {
+    event.preventDefault();
     if (!manualToken.trim()) {
       toast.error('Nhập dữ liệu mã QR');
       return;
     }
+
     await submitRawValue(manualToken.trim());
   }
 
@@ -177,20 +190,52 @@ export function StudentQRScanner({ onScan }: Props) {
       return;
     }
 
-    if (!detectorRef.current || typeof window.createImageBitmap !== 'function') {
+    await ensureDecoderReady();
+
+    if (
+      (!detectorRef.current && !jsQrDecoderRef.current) ||
+      typeof window.createImageBitmap !== 'function'
+    ) {
       toast.error('Trình duyệt không hỗ trợ quét QR từ ảnh. Hãy dùng nhập thủ công.');
       return;
     }
+
+    let imageBitmap: ImageBitmap | null = null;
 
     try {
       setError(null);
       setScanState('scanning');
 
-      const imageBitmap = await window.createImageBitmap(file);
-      const results = await detectorRef.current.detect(imageBitmap);
-      imageBitmap.close();
+      imageBitmap = await window.createImageBitmap(file);
+      const decodedValue = await decodeQrValueFromSource({
+        source: imageBitmap,
+        barcodeDetector: detectorRef.current,
+        jsQrDecoder: jsQrDecoderRef.current,
+        getFallbackImageData: () => {
+          if (!imageBitmap) {
+            return null;
+          }
 
-      const firstValue = String(results?.[0]?.rawValue || '').trim();
+          const canvas = document.createElement('canvas');
+          canvas.width = imageBitmap.width;
+          canvas.height = imageBitmap.height;
+
+          const context = canvas.getContext('2d');
+          if (!context) {
+            return null;
+          }
+
+          context.drawImage(imageBitmap, 0, 0, canvas.width, canvas.height);
+
+          try {
+            return context.getImageData(0, 0, canvas.width, canvas.height);
+          } catch {
+            return null;
+          }
+        },
+      });
+
+      const firstValue = String(decodedValue || '').trim();
       if (!firstValue) {
         throw new Error('Không đọc được mã QR từ ảnh.');
       }
@@ -200,6 +245,8 @@ export function StudentQRScanner({ onScan }: Props) {
       setScanState('error');
       setError(err instanceof Error ? err.message : 'Không thể quét mã QR từ ảnh');
       toast.error('Không thể quét mã QR từ ảnh');
+    } finally {
+      imageBitmap?.close();
     }
   }
 

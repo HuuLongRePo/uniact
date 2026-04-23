@@ -1496,6 +1496,39 @@ Yeu cau:
 - [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests)
 - [x] `npm.cmd run release:check:full` -> PASS (4/4 checks, lint warnings legacy scope khong block)
 
+## 9.31) Batch uu tien nong - QR decoder fallback cross-browser (BarcodeDetector -> jsQR)
+
+### Muc tieu
+
+- Giam phu thuoc vao `BarcodeDetector` (khong on dinh tren mot so browser mobile/in-app).
+- Dam bao hoc vien van quet duoc QR tu camera va tu anh upload khi browser khong expose `BarcodeDetector`.
+- Bo sung regression test cho QR decoder pipeline de chan tai phat.
+
+### Viec can lam
+
+- [x] `package.json` + `package-lock.json`:
+  - [x] them dependency runtime `jsqr` cho fallback decode QR.
+- [x] `src/lib/qr-scan-decoder.ts` (moi):
+  - [x] helper tao `BarcodeDetector` neu co.
+  - [x] helper load `jsQR` (cache import) va decode fallback tu `ImageData`.
+  - [x] resolver `decodeQrValueFromSource(...)` uu tien detector, fallback jsQR khi detector khong co/that bai/tra rong.
+- [x] `src/components/StudentQRScanner.tsx`:
+  - [x] refactor scanner sang pipeline decoder moi (camera frame + image upload deu dung chung).
+  - [x] giu nguyen nghiep vu diem danh, giu fallback nhap QR thu cong.
+  - [x] auto-scan support tinh theo ca `BarcodeDetector` hoac `jsQR`.
+- [x] `test/qr-scan-decoder.test.ts` (moi):
+  - [x] assert uu tien BarcodeDetector.
+  - [x] assert fallback jsQR khi detector rong/throw.
+  - [x] assert null khi khong decoder nao decode duoc.
+
+### Verification
+
+- [x] `npm.cmd run lint -- --file "src/lib/qr-scan-decoder.ts" --file "src/components/StudentQRScanner.tsx" --file "test/qr-scan-decoder.test.ts"` -> PASS (0 warning)
+- [x] `npm.cmd test -- test/qr-scan-decoder.test.ts` -> PASS (1 file / 4 tests)
+- [x] `npm.cmd run build` -> PASS
+- [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests)
+- [x] `npm.cmd run release:check:full` -> PASS (4/4 checks, lint warnings legacy scope khong block)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix
@@ -1530,6 +1563,7 @@ Yeu cau:
 - [x] Commit 27: teacher attendance history/bulk hardening (batch 9.28) (`d431b0b`)
 - [x] Commit 28: browser camera fallback for student QR scan (batch 9.29) (`f0c5e21`)
 - [x] Commit 29: UAT login rate-limit unblock + dark button text-white guard v3 (batch 9.30)
+- [x] Commit 30: QR decoder fallback cross-browser (batch 9.31)
 
 ---
 
