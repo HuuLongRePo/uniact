@@ -1613,6 +1613,54 @@ Yeu cau:
 - [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests)
 - [x] `npm.cmd run release:check:full` -> PASS (4/4 checks, lint warnings legacy scope khong block)
 
+## 9.35) Batch uu tien nong - system dark mode button-link contrast guard
+
+### Muc tieu
+
+- Fix triet de truong hop Windows/system dark mode (prefers-color-scheme) lam mo chu tren `Link` style nhu button khi `data-theme` chua kip gan (FOUC/hydration gap).
+- Quet va bao ve nhom `a/button/[role='button']` co `text-white` de khong bi nham thanh "disabled" o dark mode.
+- Giup landing va cac CTA quan trong luon doc duoc, khong phu thuoc vao state theme preference.
+
+### Viec can lam
+
+- [x] `src/app/globals.css`:
+  - [x] bo sung guard tuong duong cho `@media (prefers-color-scheme: dark)` + `:root:not([data-theme='light'])` (landing-action-primary + pattern `text-white`).
+- [x] `test/theme-link-contrast-guard.test.ts`:
+  - [x] them regression assert cho prefer-color-scheme dark guard.
+
+### Verification
+
+- [x] `npm.cmd test -- test/theme-link-contrast-guard.test.ts` -> PASS (1 file / 4 tests)
+- [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests)
+- [x] `npm.cmd run release:check:full` -> PASS (4/4 checks, lint warnings legacy scope khong block)
+
+## 9.36) Batch uu tien nong - admin activities attendance shortcut + attendance UI vi
+
+### Muc tieu
+
+- Trong trang quan ly hoat dong (admin), neu hoat dong dang co phien QR active thi hien nut vao diem danh ngay.
+- Trang admin quan ly diem danh co the deep-link theo `activityId` va dong bo ngon ngu Viet de de thao tac nhanh.
+
+### Viec can lam
+
+- [x] `src/app/admin/activities/page.tsx`:
+  - [x] fetch tom tat phien QR active cho mot nhom hoat dong published/approved (cap 30 theo do gan hien tai) va pass xuong table.
+- [x] `src/app/admin/activities/ActivityTable.tsx`:
+  - [x] neu co session active thi them CTA `Diem danh` dan den `/admin/attendance?activityId=<id>`.
+- [x] `src/app/admin/attendance/page.tsx`:
+  - [x] ho tro filter theo `activityId` query param.
+  - [x] Viet hoa/ngon ngu UI Viet (header/stats/table/actions) + mapping trang thai (Co mat/Vang/Muon).
+- [x] `test/admin-activities-page.test.tsx`:
+  - [x] mock them `/api/qr-sessions/active` va them regression assert CTA `Diem danh` xuat hien khi session active.
+  - [x] harden expectation so lan fetch `/api/admin/activities` (khong dem fetch active sessions).
+
+### Verification
+
+- [x] `npm.cmd test -- test/admin-activities-page.test.tsx` -> PASS (1 file / 5 tests)
+- [x] `npm.cmd run build` -> PASS
+- [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests)
+- [x] `npm.cmd run release:check:full` -> PASS (4/4 checks, lint warnings legacy scope khong block)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix
@@ -1651,6 +1699,9 @@ Yeu cau:
 - [x] Commit 31: dark button contrast hardening + teacher QR fullscreen fallback (batch 9.32) (`d194fa8`)
 - [x] Commit 32: realtime notification dedupe persistence across reconnect/mount (batch 9.33) (`9040610`)
 - [x] Commit 33: UAT awards/notification stability hardening (batch 9.34) (`82fd139`)
+- [x] Commit 34: system dark mode contrast guard (batch 9.35) (`1d97aa8`)
+- [x] Commit 35: admin attendance shortcut + attendance UI vi (batch 9.36) (`0ee3b07`)
+- [ ] Commit 36: docs record batch 9.35-9.36
 
 ---
 
