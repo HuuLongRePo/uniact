@@ -1529,6 +1529,36 @@ Yeu cau:
 - [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests)
 - [x] `npm.cmd run release:check:full` -> PASS (4/4 checks, lint warnings legacy scope khong block)
 
+## 9.32) Batch uu tien nong - dark button contrast hardening + teacher QR fullscreen fallback
+
+### Muc tieu
+
+- Sua dut diem hien thi mo/nhu disabled cua 2 nut dang nhap tren landing dark mode va chan tai phat tren he thong.
+- Hoan tat luong "bấm la chieu QR toan man hinh" cho giang vien, co fallback khi trinh duyet chan auto fullscreen.
+- Giu uu tien camera cross-browser da dong o 9.29-9.31 (khong lui task), tiep tuc track nhu mot gate on dinh.
+
+### Viec can lam
+
+- [x] `src/app/globals.css`:
+  - [x] bo sung guard dark mode cho interactive `text-white` o trang thai non-disabled.
+  - [x] them `-webkit-text-fill-color` + `text-shadow` cho action button de dam bao do tuong phan tren mot so browser/OS.
+  - [x] khoa rieng `landing-action-primary` de khong bi mo chu o cac state (`visited/hover/active/focus`).
+- [x] `src/app/teacher/qr/page.tsx`:
+  - [x] bo sung helper fullscreen cross-browser (`requestFullscreen`/`webkitRequestFullscreen`, `exitFullscreen`/`webkitExitFullscreen`).
+  - [x] giu overlay projector khi auto fullscreen fail, khong dong nham view.
+  - [x] them CTA `Bat toan man hinh` + thong diep huong dan khi browser chan auto fullscreen.
+- [x] Tests:
+  - [x] `test/theme-link-contrast-guard.test.ts` cap nhat regression theo guard moi.
+  - [x] `test/teacher-qr-page.test.tsx` them case fullscreen bi chan van hien projector + CTA thu cong.
+
+### Verification
+
+- [x] `npm.cmd run lint -- --file "src/app/teacher/qr/page.tsx" --file "test/teacher-qr-page.test.tsx" --file "test/theme-link-contrast-guard.test.ts"` -> PASS
+- [x] `npm.cmd test -- test/theme-link-contrast-guard.test.ts test/teacher-qr-page.test.tsx` -> PASS (2 files / 7 tests)
+- [x] `npm.cmd run build` -> PASS
+- [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests)
+- [x] `npm.cmd run release:check:full` -> PASS (4/4 checks, lint warnings legacy scope khong block)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix
@@ -1564,6 +1594,7 @@ Yeu cau:
 - [x] Commit 28: browser camera fallback for student QR scan (batch 9.29) (`f0c5e21`)
 - [x] Commit 29: UAT login rate-limit unblock + dark button text-white guard v3 (batch 9.30)
 - [x] Commit 30: QR decoder fallback cross-browser (batch 9.31)
+- [ ] Commit 31: dark button contrast hardening + teacher QR fullscreen fallback (batch 9.32)
 
 ---
 

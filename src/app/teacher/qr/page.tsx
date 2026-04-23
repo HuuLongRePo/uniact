@@ -51,6 +51,15 @@ interface BulkScanRecord {
 
 type TeacherQrTab = 'create' | 'history' | 'bulk' | 'analytics';
 
+type FullscreenCapableElement = HTMLElement & {
+  webkitRequestFullscreen?: () => Promise<void> | void;
+};
+
+type FullscreenCapableDocument = Document & {
+  webkitExitFullscreen?: () => Promise<void> | void;
+  webkitFullscreenElement?: Element | null;
+};
+
 function parseQrSessionOptions(raw: unknown): { single_use?: boolean; max_scans?: number | null } {
   if (!raw) return {};
   if (typeof raw === 'string') {
@@ -100,12 +109,54 @@ export default function TeacherQRPage() {
   const [bulkLoading, setBulkLoading] = useState(false);
   const [selectedBulkSession, setSelectedBulkSession] = useState<number | null>(null);
   const [showQrProjector, setShowQrProjector] = useState(false);
+  const [isProjectorFullscreen, setIsProjectorFullscreen] = useState(false);
+  const [fullscreenAutoRequestBlocked, setFullscreenAutoRequestBlocked] = useState(false);
   const projectorRef = useRef<HTMLDivElement | null>(null);
   const projectorAutoOpenedRef = useRef(false);
 
   const activeBulkSessionId = selectedBulkSession ?? history[0]?.id ?? null;
   const autoProjectorRequested =
     searchParams.get('projector') === '1' || searchParams.get('fullscreen') === '1';
+
+  const getFullscreenElement = () => {
+    const fullscreenDocument = document as FullscreenCapableDocument;
+    return (
+      fullscreenDocument.fullscreenElement ?? fullscreenDocument.webkitFullscreenElement ?? null
+    );
+  };
+
+  const requestProjectorFullscreen = async () => {
+    const element = projectorRef.current as FullscreenCapableElement | null;
+    if (!element) return;
+
+    try {
+      if (typeof element.requestFullscreen === 'function') {
+        await element.requestFullscreen();
+      } else if (typeof element.webkitRequestFullscreen === 'function') {
+        await element.webkitRequestFullscreen();
+      } else {
+        setFullscreenAutoRequestBlocked(true);
+        return;
+      }
+      setFullscreenAutoRequestBlocked(false);
+    } catch {
+      setFullscreenAutoRequestBlocked(true);
+    }
+  };
+
+  const exitProjectorFullscreen = async () => {
+    const fullscreenDocument = document as FullscreenCapableDocument;
+
+    try {
+      if (typeof fullscreenDocument.exitFullscreen === 'function') {
+        await fullscreenDocument.exitFullscreen();
+      } else if (typeof fullscreenDocument.webkitExitFullscreen === 'function') {
+        await fullscreenDocument.webkitExitFullscreen();
+      }
+    } catch {
+      // Ignore exit errors; projector overlay can still be closed safely.
+    }
+  };
 
   useEffect(() => {
     const load = async () => {
@@ -266,23 +317,26 @@ export default function TeacherQRPage() {
 
   useEffect(() => {
     const handleFullscreenChange = () => {
-      if (!document.fullscreenElement) {
-        setShowQrProjector(false);
+      setIsProjectorFullscreen(Boolean(getFullscreenElement()));
+      if (getFullscreenElement()) {
+        setFullscreenAutoRequestBlocked(false);
       }
     };
 
     document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange as EventListener);
     return () => {
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener(
+        'webkitfullscreenchange',
+        handleFullscreenChange as EventListener
+      );
     };
   }, []);
 
   useEffect(() => {
     if (!showQrProjector) return;
-    const element = projectorRef.current;
-    if (!element?.requestFullscreen) return;
-
-    void element.requestFullscreen().catch(() => undefined);
+    void requestProjectorFullscreen();
   }, [showQrProjector]);
 
   useEffect(() => {
@@ -304,6 +358,12 @@ export default function TeacherQRPage() {
     projectorAutoOpenedRef.current = false;
   }, [autoProjectorRequested]);
 
+  useEffect(() => {
+    if (showQrProjector) return;
+    setIsProjectorFullscreen(false);
+    setFullscreenAutoRequestBlocked(false);
+  }, [showQrProjector]);
+
   const handleTabChange = (tab: TeacherQrTab) => {
     setActiveTab(tab);
     if (tab === 'bulk' || tab === 'analytics') {
@@ -318,13 +378,16 @@ export default function TeacherQRPage() {
 
   const openQrProjector = () => {
     if (!createdSession) return;
+    setFullscreenAutoRequestBlocked(false);
     setShowQrProjector(true);
   };
 
   const closeQrProjector = () => {
     setShowQrProjector(false);
-    if (document.fullscreenElement) {
-      void document.exitFullscreen().catch(() => undefined);
+    setFullscreenAutoRequestBlocked(false);
+    setIsProjectorFullscreen(false);
+    if (getFullscreenElement()) {
+      void exitProjectorFullscreen();
     }
   };
 
@@ -900,6 +963,25 @@ export default function TeacherQRPage() {
                 Đóng
               </button>
             </div>
+
+            {!isProjectorFullscreen && (
+              <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl border border-slate-700 bg-slate-900/85 px-3 py-2 text-xs text-slate-200 sm:text-sm">
+                <button
+                  type="button"
+                  onClick={() => void requestProjectorFullscreen()}
+                  data-testid="projector-fullscreen-cta"
+                  className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-blue-700 sm:text-sm"
+                >
+                  <Maximize2 className="h-3.5 w-3.5" />
+                  Bật toàn màn hình
+                </button>
+                <span className="text-slate-300" data-testid="projector-fullscreen-hint">
+                  {fullscreenAutoRequestBlocked
+                    ? 'Trình duyệt đã chặn tự động toàn màn hình. Hãy bấm nút trên để tiếp tục.'
+                    : 'Nếu chưa vào toàn màn hình, hãy bấm nút trên để chiếu QR.'}
+                </span>
+              </div>
+            )}
 
             <div className="mt-5 flex flex-1 items-center justify-center">
               <div className="rounded-3xl bg-white p-5 shadow-2xl sm:p-8">

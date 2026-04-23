@@ -57,7 +57,23 @@ describe('TeacherQRPage', () => {
       if (url === '/api/qr-sessions') {
         return {
           ok: true,
-          json: async () => ({ data: { sessions: [{ id: 11, activity_id: 1, session_token: 'token', created_at: '2026-01-01', expires_at: '2026-01-01', metadata: '{}', activity_title: 'QR Activity', activity_date: '2026-01-01', attendance_count: 3 }] } }),
+          json: async () => ({
+            data: {
+              sessions: [
+                {
+                  id: 11,
+                  activity_id: 1,
+                  session_token: 'token',
+                  created_at: '2026-01-01',
+                  expires_at: '2026-01-01',
+                  metadata: '{}',
+                  activity_title: 'QR Activity',
+                  activity_date: '2026-01-01',
+                  attendance_count: 3,
+                },
+              ],
+            },
+          }),
         } as Response;
       }
 
@@ -141,5 +157,78 @@ describe('TeacherQRPage', () => {
     expect(await screen.findByText('Trình chiếu QR')).toBeInTheDocument();
     expect(screen.getByText('Giảng viên chiếu mã để học viên quét')).toBeInTheDocument();
   });
-});
 
+  it('keeps projector visible and shows manual fullscreen CTA when auto fullscreen is blocked', async () => {
+    searchParamsValue = 'activity_id=1&projector=1';
+
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+
+      if (url === '/api/activities?scope=operational&status=ongoing') {
+        return {
+          ok: true,
+          json: async () => ({ data: { activities: [{ id: 1, title: 'QR Activity' }] } }),
+        } as Response;
+      }
+
+      if (url === '/api/qr-sessions/active?activity_id=1') {
+        return {
+          ok: true,
+          json: async () => ({
+            data: {
+              session: {
+                session_id: 11,
+                session_token: 'reuse-token-11',
+                options: { single_use: false, max_scans: null },
+              },
+            },
+          }),
+        } as Response;
+      }
+
+      if (url === '/api/qr-sessions') {
+        return {
+          ok: true,
+          json: async () => ({ data: { sessions: [] } }),
+        } as Response;
+      }
+
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
+
+    const requestFullscreenMock = vi.fn(async () => {
+      throw new Error('fullscreen blocked');
+    });
+    const previousDescriptor = Object.getOwnPropertyDescriptor(
+      HTMLDivElement.prototype,
+      'requestFullscreen'
+    );
+    Object.defineProperty(HTMLDivElement.prototype, 'requestFullscreen', {
+      configurable: true,
+      value: requestFullscreenMock,
+    });
+
+    vi.stubGlobal('fetch', fetchMock);
+    window.fetch = fetchMock as typeof fetch;
+
+    try {
+      const Page = (await import('../src/app/teacher/qr/page')).default;
+      render(<Page />);
+
+      expect(await screen.findByText('Trình chiếu QR')).toBeInTheDocument();
+      await waitFor(() => {
+        expect(requestFullscreenMock).toHaveBeenCalled();
+      });
+      expect(screen.getByTestId('projector-fullscreen-cta')).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByTestId('projector-fullscreen-hint').textContent).toContain('chặn');
+      });
+    } finally {
+      if (previousDescriptor) {
+        Object.defineProperty(HTMLDivElement.prototype, 'requestFullscreen', previousDescriptor);
+      } else {
+        delete (HTMLDivElement.prototype as { requestFullscreen?: unknown }).requestFullscreen;
+      }
+    }
+  });
+});

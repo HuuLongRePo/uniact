@@ -113,10 +113,15 @@
   --landing-metric-bg: rgba(255, 255, 255, 0.86);
   --landing-surface-shadow: 0 24px 56px rgba(15, 23, 42, 0.12);
   --landing-panel-shadow: 0 24px 52px rgba(15, 23, 42, 0.14);
-  --landing-panel-outline-border: color-mix(in srgb, var(--app-link) 30%, var(--app-border-default));
+  --landing-panel-outline-border: color-mix(
+    in srgb,
+    var(--app-link) 30%,
+    var(--app-border-default)
+  );
   --landing-panel-outline-bg: color-mix(in srgb, var(--app-link) 9%, transparent);
   --landing-skeleton-bg: color-mix(in srgb, var(--app-link) 30%, transparent);
-  --landing-action-shadow: 0 12px 28px color-mix(in srgb, var(--app-action-primary-bg) 26%, transparent);
+  --landing-action-shadow: 0 12px 28px
+    color-mix(in srgb, var(--app-action-primary-bg) 26%, transparent);
 }
 
 @theme inline {
@@ -242,7 +247,11 @@
     --landing-metric-bg: rgba(15, 23, 42, 0.82);
     --landing-surface-shadow: 0 24px 60px rgba(2, 6, 23, 0.54);
     --landing-panel-shadow: 0 24px 60px rgba(2, 6, 23, 0.54);
-    --landing-panel-outline-border: color-mix(in srgb, var(--app-link) 45%, var(--app-border-default));
+    --landing-panel-outline-border: color-mix(
+      in srgb,
+      var(--app-link) 45%,
+      var(--app-border-default)
+    );
     --landing-panel-outline-bg: color-mix(in srgb, var(--app-link) 15%, transparent);
     --landing-skeleton-bg: color-mix(in srgb, var(--app-link) 42%, transparent);
     --landing-action-shadow: 0 12px 28px color-mix(in srgb, #2563eb 40%, transparent);
@@ -353,20 +362,21 @@
   --landing-nav-bg: rgba(2, 6, 23, 0.86);
   --landing-surface-border: color-mix(in srgb, var(--app-border-default) 88%, transparent);
   --landing-surface-glass:
-    linear-gradient(175deg, rgba(15, 23, 42, 0.97), rgba(17, 24, 39, 0.92)),
-    var(--app-surface-base);
+    linear-gradient(175deg, rgba(15, 23, 42, 0.97), rgba(17, 24, 39, 0.92)), var(--app-surface-base);
   --landing-panel-glass:
-    linear-gradient(165deg, rgba(15, 23, 42, 0.97), rgba(17, 24, 39, 0.92)),
-    var(--app-surface-base);
+    linear-gradient(165deg, rgba(15, 23, 42, 0.97), rgba(17, 24, 39, 0.92)), var(--app-surface-base);
   --landing-feature-glass:
-    linear-gradient(180deg, rgba(15, 23, 42, 0.9), rgba(17, 24, 39, 0.84)),
-    var(--app-surface-base);
+    linear-gradient(180deg, rgba(15, 23, 42, 0.9), rgba(17, 24, 39, 0.84)), var(--app-surface-base);
   --landing-card-bg: rgba(15, 23, 42, 0.88);
   --landing-card-hover-bg: rgba(15, 23, 42, 0.96);
   --landing-metric-bg: rgba(15, 23, 42, 0.82);
   --landing-surface-shadow: 0 24px 60px rgba(2, 6, 23, 0.54);
   --landing-panel-shadow: 0 24px 60px rgba(2, 6, 23, 0.54);
-  --landing-panel-outline-border: color-mix(in srgb, var(--app-link) 45%, var(--app-border-default));
+  --landing-panel-outline-border: color-mix(
+    in srgb,
+    var(--app-link) 45%,
+    var(--app-border-default)
+  );
   --landing-panel-outline-bg: color-mix(in srgb, var(--app-link) 15%, transparent);
   --landing-skeleton-bg: color-mix(in srgb, var(--app-link) 42%, transparent);
   --landing-action-shadow: 0 12px 28px color-mix(in srgb, #2563eb 40%, transparent);
@@ -468,12 +478,17 @@ button:disabled,
 :root[data-theme='dark'] a.landing-action-primary:active,
 :root[data-theme='dark'] a.landing-action-primary:focus-visible {
   color: var(--app-action-primary-text) !important;
+  -webkit-text-fill-color: var(--app-action-primary-text);
+  opacity: 1;
 }
 
 :root[data-theme='dark'] a[class*='text-white'],
-:root[data-theme='dark'] button[class*='text-white'],
-:root[data-theme='dark'] [role='button'][class*='text-white'] {
+:root[data-theme='dark'] button[class*='text-white']:not(:disabled),
+:root[data-theme='dark'] [role='button'][class*='text-white']:not([aria-disabled='true']) {
   color: var(--app-action-primary-text) !important;
+  -webkit-text-fill-color: var(--app-action-primary-text);
+  text-shadow: 0 1px 0 rgba(2, 6, 23, 0.28);
+  opacity: 1;
 }
 
 :root[data-theme='dark'] .bg-white {
@@ -1039,6 +1054,8 @@ button:disabled,
     color-mix(in srgb, var(--app-action-primary-bg) 82%, #2563eb) 100%
   );
   color: var(--app-action-primary-text) !important;
+  -webkit-text-fill-color: var(--app-action-primary-text);
+  text-shadow: 0 1px 0 rgba(2, 6, 23, 0.25);
   box-shadow: var(--landing-action-shadow);
 }
 
@@ -1049,6 +1066,7 @@ button:disabled,
     color-mix(in srgb, var(--app-action-primary-bg-hover) 82%, #1d4ed8) 100%
   );
   color: var(--app-action-primary-text) !important;
+  -webkit-text-fill-color: var(--app-action-primary-text);
 }
 
 .landing-text-strong {

@@ -23,6 +23,7 @@ describe('dark theme link contrast guards', () => {
       css.match(/\.landing-action-primary:hover\s*{[\s\S]*?}/)?.[0] ?? '';
 
     expect(primaryActionRule).toContain('color: var(--app-action-primary-text) !important;');
+    expect(primaryActionRule).toContain('-webkit-text-fill-color: var(--app-action-primary-text);');
     expect(primaryActionHoverRule).toContain('color: var(--app-action-primary-text) !important;');
   });
 
@@ -32,7 +33,9 @@ describe('dark theme link contrast guards', () => {
     expect(css).toContain(":root[data-theme='dark'] a.landing-action-primary,");
     expect(css).toContain(":root[data-theme='dark'] a.landing-action-primary:visited,");
     expect(css).toContain(":root[data-theme='dark'] a[class*='text-white'],");
-    expect(css).toContain(":root[data-theme='dark'] button[class*='text-white'],");
-    expect(css).toContain(":root[data-theme='dark'] [role='button'][class*='text-white'] {");
+    expect(css).toContain(":root[data-theme='dark'] button[class*='text-white']:not(:disabled),");
+    expect(css).toContain(
+      ":root[data-theme='dark'] [role='button'][class*='text-white']:not([aria-disabled='true']) {"
+    );
   });
 });
