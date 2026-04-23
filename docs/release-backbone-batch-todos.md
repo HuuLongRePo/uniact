@@ -1701,7 +1701,7 @@ Yeu cau:
 - [x] Commit 33: UAT awards/notification stability hardening (batch 9.34) (`82fd139`)
 - [x] Commit 34: system dark mode contrast guard (batch 9.35) (`1d97aa8`)
 - [x] Commit 35: admin attendance shortcut + attendance UI vi (batch 9.36) (`0ee3b07`)
-- [ ] Commit 36: docs record batch 9.35-9.36
+- [x] Commit 36: docs record batch 9.35-9.36 (`8bb6b97`)
 
 ---
 
