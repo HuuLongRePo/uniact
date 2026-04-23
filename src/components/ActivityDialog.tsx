@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { X, Upload, FileText, Loader2, Eye, Save, Send, GripVertical } from 'lucide-react';
 import { toast } from '@/lib/toast';
+import { formatVietnamDateTime, toVietnamDatetimeLocalValue } from '@/lib/timezone';
 import LoadingSpinner, { FullScreenLoader } from './LoadingSpinner';
 import {
   ActivityTemplateSelector,
@@ -152,15 +153,11 @@ export default function ActivityDialog({
       setFormData({
         title: activity.title || '',
         description: activity.description || '',
-        date_time: activity.date_time
-          ? new Date(activity.date_time).toISOString().slice(0, 16)
-          : '',
-        end_time: activity.end_time ? new Date(activity.end_time).toISOString().slice(0, 16) : '',
+        date_time: toVietnamDatetimeLocalValue(activity.date_time),
+        end_time: toVietnamDatetimeLocalValue(activity.end_time),
         location: activity.location || '',
         max_participants: activity.max_participants || 30,
-        registration_deadline: activity.registration_deadline
-          ? new Date(activity.registration_deadline).toISOString().slice(0, 16)
-          : '',
+        registration_deadline: toVietnamDatetimeLocalValue(activity.registration_deadline),
         base_points: activity.base_points || 0,
         activity_type_id: activity.activity_type_id || null,
         organization_level_id: activity.organization_level_id || null,
@@ -647,9 +644,8 @@ export default function ActivityDialog({
                             <li key={index}>
                               • <strong>{conflict.title}</strong> ({conflict.teacher_name})
                               <br />
-                              &nbsp;&nbsp;{new Date(conflict.date_time).toLocaleString(
-                                'vi-VN'
-                              )} - {conflict.location}
+                              &nbsp;&nbsp;{formatVietnamDateTime(conflict.date_time)} -{' '}
+                              {conflict.location}
                             </li>
                           ))}
                         </ul>
@@ -669,7 +665,7 @@ export default function ActivityDialog({
                             <li key={index}>
                               • <strong>{warning.title}</strong>
                               <br />
-                              &nbsp;&nbsp;{new Date(warning.date_time).toLocaleString('vi-VN')} (
+                              &nbsp;&nbsp;{formatVietnamDateTime(warning.date_time)} (
                               {warning.time_diff_minutes} phút)
                             </li>
                           ))}

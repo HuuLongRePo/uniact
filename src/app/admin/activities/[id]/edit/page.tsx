@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import toast from 'react-hot-toast';
 import { AlertCircle, CheckCircle, X } from 'lucide-react';
+import { toVietnamDatetimeLocalValue } from '@/lib/timezone';
 
 interface Activity {
   id: number;
@@ -63,7 +64,7 @@ export default function AdminEditActivityPage() {
         setFormData({
           title: resolvedActivity.title,
           description: resolvedActivity.description,
-          date_time: resolvedActivity.date_time,
+          date_time: toVietnamDatetimeLocalValue(resolvedActivity.date_time),
           location: resolvedActivity.location,
           activity_type_id: resolvedActivity.activity_type_id || 1,
           organization_level_id: resolvedActivity.organization_level_id || 1,
@@ -101,7 +102,9 @@ export default function AdminEditActivityPage() {
     if (newFormData.description !== activity?.description) {
       newChanges.description = newFormData.description;
     }
-    if (newFormData.date_time !== activity?.date_time) newChanges.date_time = newFormData.date_time;
+    if (newFormData.date_time !== toVietnamDatetimeLocalValue(activity?.date_time)) {
+      newChanges.date_time = newFormData.date_time;
+    }
     if (newFormData.location !== activity?.location) newChanges.location = newFormData.location;
     if (newFormData.activity_type_id !== activity?.activity_type_id) {
       newChanges.activity_type_id = newFormData.activity_type_id;

@@ -7,6 +7,7 @@
 
 import { dbRun, dbGet, dbAll, dbHelpers } from './database';
 import { createRealtimeEventForUser, recordRealtimeMetric } from '@/lib/realtime-notifications';
+import { formatDate } from '@/lib/formatters';
 import {
   RealtimeNotificationActionButton,
   RealtimeNotificationPriority,
@@ -392,7 +393,7 @@ export class ActivityRegistrationNotification extends NotificationBuilder {
   }
 
   protected buildMessage(data: { activity_title: string; date_time: string }): string {
-    return `Bạn đã đăng ký hoạt động "${data.activity_title}" thành công. Thời gian: ${new Date(data.date_time).toLocaleString('vi-VN')}`;
+    return `Bạn đã đăng ký hoạt động "${data.activity_title}" thành công. Thời gian: ${formatDate(data.date_time)}`;
   }
 
   protected buildRelatedInfo(data: { activity_id: number }) {

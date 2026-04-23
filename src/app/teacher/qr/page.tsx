@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Button } from '@/components/ui/Button';
+import { formatDate } from '@/lib/formatters';
 
 const QrCodeSvg = dynamic(() => import('react-qr-code'), { ssr: false });
 
@@ -777,8 +778,8 @@ export default function TeacherQRPage() {
                               {session.activity_title}
                             </h3>
                             <p className="mt-1 text-xs text-gray-500">
-                              Tạo lúc {new Date(session.created_at).toLocaleString('vi-VN')} • Hết
-                              hạn {new Date(session.expires_at).toLocaleString('vi-VN')}
+                              Tạo lúc {formatDate(session.created_at)} • Hết hạn{' '}
+                              {formatDate(session.expires_at)}
                             </p>
                             <p className="mt-2 text-sm text-gray-700">
                               Mã phiên:{' '}
@@ -840,8 +841,7 @@ export default function TeacherQRPage() {
                     <option value="">-- Chọn phiên --</option>
                     {history.map((session) => (
                       <option key={session.id} value={session.id}>
-                        {session.activity_title} -{' '}
-                        {new Date(session.created_at).toLocaleString('vi-VN')}
+                        {session.activity_title} - {formatDate(session.created_at)}
                       </option>
                     ))}
                   </select>
@@ -900,7 +900,7 @@ export default function TeacherQRPage() {
                             </td>
                             <td className="px-4 py-3 text-sm text-gray-700">{scan.class_name}</td>
                             <td className="px-4 py-3 text-sm text-gray-600">
-                              {new Date(scan.scanned_at).toLocaleString('vi-VN')}
+                              {formatDate(scan.scanned_at)}
                             </td>
                           </tr>
                         ))}

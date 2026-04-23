@@ -1774,6 +1774,75 @@ Yeu cau:
 - [x] `npm.cmd run build` -> PASS (2026-04-24)
 - [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests, 2026-04-24)
 
+## 9.42) Batch uu tien nong - timezone VN backbone hotfix
+
+### Muc tieu
+
+- Chuan hoa mui gio Viet Nam (`Asia/Ho_Chi_Minh`) cho luong nong: create/edit activity, QR expiry/history, thong bao, attendance display.
+- Chan bug lech gio do:
+  - `new Date(...).toISOString().slice(0, 16)` khi load vao `datetime-local`
+  - `new Date(...).toLocaleString('vi-VN')` rải rác khong co timezone source of truth
+  - chuoi datetime khong timezone bi dien giai theo locale may khach.
+
+### Viec can lam
+
+- [x] Tao helper timezone dung chung:
+  - [x] `src/lib/timezone.ts`
+  - [x] `src/lib/formatters.ts` chuyen sang formatter theo VN timezone.
+- [x] Hotfix luong nong:
+  - [x] `src/components/ActivityDialog.tsx` load `datetime-local` theo gio Viet Nam, khong dung `toISOString().slice(0,16)`.
+  - [x] `src/app/admin/activities/[id]/edit/page.tsx` load/sosanh `datetime-local` theo gio Viet Nam.
+  - [x] `src/app/teacher/qr/page.tsx` hien thi lich su/scan time qua formatter chung.
+  - [x] `src/lib/notifications.ts` thong bao dang ky dung formatter chung.
+- [ ] Audit mo rong toan he thong cac diem `new Date(...).toLocaleString('vi-VN')` con lai.
+
+### Verification
+
+- [x] `npm.cmd test -- test/formatters-timezone.test.ts` -> PASS (1 file / 3 tests, 2026-04-24)
+- [x] `npm.cmd run build` -> PASS (2026-04-24)
+- [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests, 2026-04-24)
+
+## 9.43) Batch uu tien nong - attendance operator guides + scope clarification
+
+### Muc tieu
+
+- Co tai lieu A-Z cho QR attendance va face attendance.
+- Tra loi ro rang cho van hanh:
+  - co ho tro multi-face attendance khong
+  - sau moi luot diem danh co roster chua diem danh ngay khong
+  - fallback nao dung duoc khi camera web bi chan.
+
+### Viec can lam
+
+- [x] Them docs:
+  - [x] `docs/attendance-operator-guides.md`
+  - [x] `docs/attendance-timezone-face-closeout-prompt.md`
+- [x] Chot ro hien trang:
+  - [x] QR deep link fallback la kenh uu tien khi camera web bi chan.
+  - [x] Face attendance hien tai la pilot/QA flow, chua ho tro nhieu khuon mat cung luc.
+  - [x] Face page hien tai chua hien roster realtime `chua diem danh` ngay tren cung man hinh.
+
+### Verification
+
+- [x] Review tai lieu + doi chieu code hien tai (2026-04-24)
+
+## 9.44) Batch uu tien nong - roster chua diem danh theo lop sau QR/Face
+
+### Muc tieu
+
+- Sau moi luot QR/Face success, giang vien thay ngay danh sach hoc vien chua diem danh, co `class_name` de doc ten va tim nguoi.
+
+### Viec can lam
+
+- [ ] Tai dung `GET /api/activities/[id]/participants` de loc `attendance_status = registered`.
+- [ ] Hien tong so chua diem danh + nhom theo lop + ten hoc vien + ma hoc vien.
+- [ ] Trigger refresh sau QR scan thanh cong va face attendance thanh cong.
+- [ ] Neu can, tach component roster dung chung cho QR/Face.
+
+### Risk / defer
+
+- [ ] Luong face hien tai van la pilot/QA page; can chot cach gan roster vao page nay hay tao teacher attendance workspace hop nhat.
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix

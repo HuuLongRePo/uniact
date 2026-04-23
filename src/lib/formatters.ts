@@ -1,3 +1,5 @@
+import { formatVietnamDateTime } from '@/lib/timezone';
+
 /**
  * Formatters - Utilities for formatting database values to display format
  * Contains shared formatting logic used across API routes and components
@@ -83,26 +85,7 @@ export function formatDateVN(
   date: string | Date,
   format: 'date' | 'time' | 'datetime' = 'datetime'
 ): string {
-  if (!date) return '-';
-
-  const d = typeof date === 'string' ? new Date(date) : date;
-  if (isNaN(d.getTime())) return '-';
-
-  const day = d.getDate();
-  const month = d.getMonth() + 1;
-  const year = d.getFullYear();
-  const hours = String(d.getHours()).padStart(2, '0');
-  const minutes = String(d.getMinutes()).padStart(2, '0');
-
-  switch (format) {
-    case 'date':
-      return `${day}/${month}/${year}`;
-    case 'time':
-      return `${hours}:${minutes}`;
-    case 'datetime':
-    default:
-      return `${day}/${month}/${year} ${hours}:${minutes}`;
-  }
+  return formatVietnamDateTime(date, format);
 }
 
 /**
