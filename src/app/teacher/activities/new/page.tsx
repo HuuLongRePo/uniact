@@ -20,6 +20,7 @@ import {
   Award,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { formatVietnamDateTime } from '@/lib/timezone';
 
 interface Class {
   id: number;
@@ -1400,7 +1401,7 @@ export default function CreateActivityPage() {
                       <div className="flex items-center gap-2 text-gray-700">
                         <Calendar className="w-4 h-4 text-blue-500" />
                         <span>
-                          {new Date(date).toLocaleDateString('vi-VN')}
+                          {formatVietnamDateTime(`${date}T00:00`, 'date')}
                           {time && ` lúc ${time}`}
                         </span>
                       </div>

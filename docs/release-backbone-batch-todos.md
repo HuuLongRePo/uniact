@@ -2215,6 +2215,46 @@ Yeu cau:
 - [x] `npm.cmd run build` -> PASS (2026-04-24)
 - [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests, 2026-04-24)
 
+## 9.56) Batch uu tien nong - dark mode button contrast guard + timezone VN residual surfaces
+
+### Muc tieu
+
+- Sua loi UI 2 nut `Dang nhap` tren landing bi mo/nhat mau o dark mode va chot guard tong quat cho nhom nut primary xanh co `text-white`.
+- Quet va fix tiep cum timezone VN con dang do theo may client trong teacher/student surfaces dang trong vong su dung nong.
+
+### Viec can lam
+
+- [x] Dark mode contrast guard:
+  - [x] `src/app/globals.css`
+    - Tang selector uu tien cho `.landing-action-primary` (them `:link`, giu `:visited/:hover/:active/:focus-visible`) va khoa `opacity: 1 !important`.
+    - Them guard cho nhom `a/button/[role='button']` co class `bg-blue-*` + `text-white` de chu nut khong bi chim trong dark mode.
+    - Mirror day du cho ca 2 che do: `data-theme='dark'` va `prefers-color-scheme: dark` khi user de `system`.
+  - [x] `test/theme-link-contrast-guard.test.ts`
+    - Cap nhat assertion theo selector guard moi (`:link` + `bg-blue-* text-white`).
+- [x] Timezone VN residual teacher/student:
+  - [x] `src/app/teacher/approvals/page.tsx`
+  - [x] `src/app/teacher/awards/suggestions/page.tsx`
+  - [x] `src/app/teacher/reports/participation/page.tsx`
+  - [x] `src/app/teacher/activities/[id]/files/page.tsx`
+  - [x] `src/app/teacher/reports/attendance/page.tsx`
+  - [x] `src/app/teacher/attendance/[id]/evaluate/page.tsx`
+  - [x] `src/app/teacher/activities/new/page.tsx`
+  - [x] `src/app/student/profile/page.tsx`
+  - [x] `src/app/student/recommendations/page.tsx`
+  - [x] Chuyen cac diem `new Date(...).toLocale*('vi-VN')` va compare/filter date local sang helper `formatVietnamDateTime` / `parseVietnamDate`.
+
+### Risk / defer
+
+- [ ] Van con mot so surface cu co mojibake/noi dung Viet chua sach va can dot refactor rieng de tranh va cham logic release.
+- [ ] Van con cum timezone phu tro ngoai backbone (mot so tools page, exports/page cu) chua audit het.
+- [ ] Camera tren HTTP LAN (khong localhost/HTTPS) van bi browser chan theo secure-context policy; he thong da co fallback upload/link, khong the bypass bang code frontend.
+
+### Verification
+
+- [x] `npm.cmd test -- test/theme-link-contrast-guard.test.ts test/teacher-approvals-page.test.tsx test/teacher-participation-page.test.tsx test/teacher-attendance-report-page.test.tsx test/teacher-create-activity-page.test.tsx test/teacher-create-activity-preview.test.tsx test/student-history-page.test.tsx` -> PASS (7 files / 15 tests, 2026-04-24)
+- [x] `npm.cmd run build` -> PASS (2026-04-24)
+- [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests, 2026-04-24)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix

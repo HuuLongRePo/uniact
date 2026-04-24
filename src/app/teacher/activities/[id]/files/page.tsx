@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { FileText, Download, Trash2, Plus, Image as ImageIcon, File, Eye } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { formatVietnamDateTime } from '@/lib/timezone';
 
 interface ActivityFile {
   id: number;
@@ -191,7 +192,7 @@ export default function ActivityFilesPage({ params }: { params: Promise<{ id: st
                     <h3 className="font-medium text-gray-900">{file.file_name}</h3>
                     <div className="flex gap-4 text-sm text-gray-600 mt-1">
                       <span>{formatFileSize(file.file_size)}</span>
-                      <span>{new Date(file.uploaded_at).toLocaleDateString('vi-VN')}</span>
+                      <span>{formatVietnamDateTime(file.uploaded_at, 'date')}</span>
                       <span>Bởi {file.uploaded_by}</span>
                     </div>
                   </div>

@@ -14,6 +14,7 @@ import {
   XCircle,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { formatVietnamDateTime } from '@/lib/timezone';
 
 interface Activity {
   id: number;
@@ -35,11 +36,8 @@ interface Activity {
 
 function formatDateTime(value: string | null) {
   if (!value) return null;
-
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return null;
-
-  return parsed.toLocaleString('vi-VN');
+  const formatted = formatVietnamDateTime(value);
+  return formatted === '-' ? null : formatted;
 }
 
 function statusBadge(status: Activity['status']) {
@@ -203,7 +201,7 @@ export default function ApprovalsPage() {
                     <div className="grid grid-cols-2 gap-3 text-sm md:grid-cols-4">
                       <div className="flex items-center gap-2 text-gray-700">
                         <Calendar className="h-4 w-4 text-gray-500" />
-                        {new Date(activity.date_time).toLocaleDateString('vi-VN')}
+                        {formatVietnamDateTime(activity.date_time, 'date')}
                       </div>
                       <div className="flex items-center gap-2 text-gray-700">
                         <MapPin className="h-4 w-4 text-gray-500" />

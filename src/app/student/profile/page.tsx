@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import toast from 'react-hot-toast';
+import { formatVietnamDateTime } from '@/lib/timezone';
 
 interface UserProfile {
   id: number;
@@ -239,7 +240,7 @@ export default function StudentProfilePage() {
                       Ngày sinh
                     </label>
                     <div className="text-lg">
-                      {new Date(profile.date_of_birth).toLocaleDateString('vi-VN')}
+                      {formatVietnamDateTime(profile.date_of_birth, 'date')}
                     </div>
                   </div>
                 )}
@@ -265,7 +266,7 @@ export default function StudentProfilePage() {
                     Ngày tham gia
                   </label>
                   <div className="text-lg">
-                    {new Date(profile.created_at).toLocaleDateString('vi-VN')}
+                    {formatVietnamDateTime(profile.created_at, 'date')}
                   </div>
                 </div>
               </div>

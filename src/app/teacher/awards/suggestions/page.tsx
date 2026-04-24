@@ -5,6 +5,7 @@ import { useEffectEventCompat } from '@/lib/useEffectEventCompat';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Trash2, Send, Award, CheckCircle, Clock, X } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { formatVietnamDateTime } from '@/lib/timezone';
 
 interface AwardSuggestion {
   id: number;
@@ -365,7 +366,7 @@ export default function AwardSuggestionsPage() {
 
                 <div className="text-xs text-gray-500 border-t pt-3 flex justify-between">
                   <span>Đề xuất bởi: {suggestion.suggested_by}</span>
-                  <span>{new Date(suggestion.suggested_at).toLocaleString('vi-VN')}</span>
+                  <span>{formatVietnamDateTime(suggestion.suggested_at)}</span>
                 </div>
 
                 {suggestion.status === 'rejected' && suggestion.rejection_reason && (

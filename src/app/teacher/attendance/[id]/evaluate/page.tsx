@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { toast } from '@/lib/toast';
+import { formatVietnamDateTime } from '@/lib/timezone';
 
 interface Participation {
   id: number;
@@ -221,7 +222,7 @@ export default function EvaluateParticipationPage() {
         {participation.evaluated_at && (
           <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded">
             <p className="text-sm text-yellow-800">
-              ⚠️ Đã đánh giá lúc {new Date(participation.evaluated_at).toLocaleString('vi-VN')}
+              ⚠️ Đã đánh giá lúc {formatVietnamDateTime(participation.evaluated_at)}
               bởi {participation.evaluator_name || 'N/A'}
             </p>
           </div>

@@ -6,6 +6,7 @@ import { toast } from 'react-hot-toast';
 import { Activity, ArrowLeft, Download, Filter, Search } from 'lucide-react';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { useAuth } from '@/contexts/AuthContext';
+import { formatVietnamDateTime, parseVietnamDate } from '@/lib/timezone';
 
 interface ClassOption {
   id: number;
@@ -232,11 +233,21 @@ export default function ParticipationReportsPage() {
     }
 
     if (filters.dateStart) {
-      filtered = filtered.filter((record) => new Date(record.date) >= new Date(filters.dateStart));
+      const startDate = parseVietnamDate(`${filters.dateStart}T00:00`);
+      if (startDate) {
+        filtered = filtered.filter(
+          (record) => (parseVietnamDate(record.date)?.getTime() ?? Number.NEGATIVE_INFINITY) >= startDate.getTime()
+        );
+      }
     }
 
     if (filters.dateEnd) {
-      filtered = filtered.filter((record) => new Date(record.date) <= new Date(filters.dateEnd));
+      const endDate = parseVietnamDate(`${filters.dateEnd}T23:59:59`);
+      if (endDate) {
+        filtered = filtered.filter(
+          (record) => (parseVietnamDate(record.date)?.getTime() ?? Number.POSITIVE_INFINITY) <= endDate.getTime()
+        );
+      }
     }
 
     if (searchTerm) {
@@ -253,8 +264,8 @@ export default function ParticipationReportsPage() {
       let rightValue: string | number = '';
 
       if (sortBy === 'date') {
-        leftValue = new Date(left.date).getTime();
-        rightValue = new Date(right.date).getTime();
+        leftValue = parseVietnamDate(left.date)?.getTime() ?? 0;
+        rightValue = parseVietnamDate(right.date)?.getTime() ?? 0;
       } else if (sortBy === 'student') {
         leftValue = left.student_name;
         rightValue = right.student_name;
@@ -629,7 +640,7 @@ export default function ParticipationReportsPage() {
                             {record.activity_type}
                           </td>
                           <td className="px-4 py-4 text-sm text-gray-600">
-                            {new Date(record.date).toLocaleDateString('vi-VN')}
+                            {formatVietnamDateTime(record.date, 'date')}
                           </td>
                           <td className="px-4 py-4">{getStatusBadge(record.status)}</td>
                           <td className="px-4 py-4 text-sm font-semibold text-blue-600">

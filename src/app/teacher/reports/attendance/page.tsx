@@ -27,6 +27,7 @@ import {
   type ClassOption,
   type StudentAttendanceSummary,
 } from '@/features/reports/attendance-report-helpers';
+import { formatVietnamDateTime, parseVietnamDate } from '@/lib/timezone';
 
 type AttendanceSortKey = 'date' | 'student' | 'status' | 'method';
 type SortDirection = 'asc' | 'desc';
@@ -204,15 +205,25 @@ export default function AttendanceReportsPage() {
     }
 
     if (filters.dateStart) {
-      filtered = filtered.filter(
-        (record) => new Date(record.activity_date) >= new Date(filters.dateStart)
-      );
+      const startDate = parseVietnamDate(`${filters.dateStart}T00:00`);
+      if (startDate) {
+        filtered = filtered.filter(
+          (record) =>
+            (parseVietnamDate(record.activity_date)?.getTime() ?? Number.NEGATIVE_INFINITY) >=
+            startDate.getTime()
+        );
+      }
     }
 
     if (filters.dateEnd) {
-      filtered = filtered.filter(
-        (record) => new Date(record.activity_date) <= new Date(filters.dateEnd)
-      );
+      const endDate = parseVietnamDate(`${filters.dateEnd}T23:59:59`);
+      if (endDate) {
+        filtered = filtered.filter(
+          (record) =>
+            (parseVietnamDate(record.activity_date)?.getTime() ?? Number.POSITIVE_INFINITY) <=
+            endDate.getTime()
+        );
+      }
     }
 
     if (searchTerm) {
@@ -229,8 +240,8 @@ export default function AttendanceReportsPage() {
       let rightValue: string | number = '';
 
       if (sortBy === 'date') {
-        leftValue = new Date(left.activity_date).getTime();
-        rightValue = new Date(right.activity_date).getTime();
+        leftValue = parseVietnamDate(left.activity_date)?.getTime() ?? 0;
+        rightValue = parseVietnamDate(right.activity_date)?.getTime() ?? 0;
       } else if (sortBy === 'student') {
         leftValue = left.student_name;
         rightValue = right.student_name;
@@ -731,14 +742,16 @@ export default function AttendanceReportsPage() {
                             {record.activity_name}
                           </td>
                           <td className="px-4 py-4 text-sm text-gray-600">
-                            {new Date(record.activity_date).toLocaleDateString('vi-VN')}
+                            {formatVietnamDateTime(record.activity_date, 'date')}
                           </td>
                           <td className="px-4 py-4">{getStatusBadge(record.status)}</td>
                           <td className="px-4 py-4" data-testid="attendance-method-cell">
                             {getMethodBadge(record.method)}
                           </td>
                           <td className="px-4 py-4 text-sm text-gray-600">
-                            {record.check_in_time || '-'}
+                            {record.check_in_time
+                              ? formatVietnamDateTime(record.check_in_time)
+                              : '-'}
                           </td>
                           <td className="px-4 py-4 text-sm text-gray-600">{record.notes || '-'}</td>
                         </tr>

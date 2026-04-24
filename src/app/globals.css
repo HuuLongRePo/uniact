@@ -473,13 +473,24 @@ button:disabled,
 }
 
 :root[data-theme='dark'] a.landing-action-primary,
+:root[data-theme='dark'] a.landing-action-primary:link,
 :root[data-theme='dark'] a.landing-action-primary:visited,
 :root[data-theme='dark'] a.landing-action-primary:hover,
 :root[data-theme='dark'] a.landing-action-primary:active,
 :root[data-theme='dark'] a.landing-action-primary:focus-visible {
   color: var(--app-action-primary-text) !important;
   -webkit-text-fill-color: var(--app-action-primary-text) !important;
-  opacity: 1;
+  opacity: 1 !important;
+}
+
+:root[data-theme='dark'] a[class*='bg-blue-'][class*='text-white'],
+:root[data-theme='dark'] button[class*='bg-blue-'][class*='text-white']:not(:disabled),
+:root[data-theme='dark']
+  [role='button'][class*='bg-blue-'][class*='text-white']:not([aria-disabled='true']) {
+  color: var(--app-action-primary-text) !important;
+  -webkit-text-fill-color: var(--app-action-primary-text) !important;
+  opacity: 1 !important;
+  text-shadow: 0 1px 0 rgba(2, 6, 23, 0.28);
 }
 
 :root[data-theme='dark'] a[class*='text-white'],
@@ -488,18 +499,29 @@ button:disabled,
   color: var(--app-action-primary-text) !important;
   -webkit-text-fill-color: var(--app-action-primary-text) !important;
   text-shadow: 0 1px 0 rgba(2, 6, 23, 0.28);
-  opacity: 1;
+  opacity: 1 !important;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) a.landing-action-primary,
+  :root:not([data-theme='light']) a.landing-action-primary:link,
   :root:not([data-theme='light']) a.landing-action-primary:visited,
   :root:not([data-theme='light']) a.landing-action-primary:hover,
   :root:not([data-theme='light']) a.landing-action-primary:active,
   :root:not([data-theme='light']) a.landing-action-primary:focus-visible {
     color: var(--app-action-primary-text) !important;
     -webkit-text-fill-color: var(--app-action-primary-text) !important;
-    opacity: 1;
+    opacity: 1 !important;
+  }
+
+  :root:not([data-theme='light']) a[class*='bg-blue-'][class*='text-white'],
+  :root:not([data-theme='light']) button[class*='bg-blue-'][class*='text-white']:not(:disabled),
+  :root:not([data-theme='light'])
+    [role='button'][class*='bg-blue-'][class*='text-white']:not([aria-disabled='true']) {
+    color: var(--app-action-primary-text) !important;
+    -webkit-text-fill-color: var(--app-action-primary-text) !important;
+    opacity: 1 !important;
+    text-shadow: 0 1px 0 rgba(2, 6, 23, 0.28);
   }
 
   :root:not([data-theme='light']) a[class*='text-white'],
@@ -509,7 +531,7 @@ button:disabled,
     color: var(--app-action-primary-text) !important;
     -webkit-text-fill-color: var(--app-action-primary-text) !important;
     text-shadow: 0 1px 0 rgba(2, 6, 23, 0.28);
-    opacity: 1;
+    opacity: 1 !important;
   }
 }
 
@@ -1090,6 +1112,7 @@ button:disabled,
 }
 
 .landing-action-primary,
+.landing-action-primary:link,
 .landing-action-primary:visited,
 .landing-action-primary:active,
 .landing-action-primary:focus-visible {
@@ -1103,7 +1126,7 @@ button:disabled,
   text-shadow: 0 1px 0 rgba(2, 6, 23, 0.25);
   border: 1px solid color-mix(in srgb, var(--app-action-primary-bg-hover) 30%, transparent);
   box-shadow: var(--landing-action-shadow);
-  opacity: 1;
+  opacity: 1 !important;
 }
 
 .landing-action-primary:hover {
@@ -1114,7 +1137,7 @@ button:disabled,
   );
   color: var(--app-action-primary-text) !important;
   -webkit-text-fill-color: var(--app-action-primary-text) !important;
-  opacity: 1;
+  opacity: 1 !important;
 }
 
 .landing-text-strong {

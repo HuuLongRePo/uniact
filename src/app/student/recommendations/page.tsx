@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { Sparkles, Calendar, MapPin, Users } from 'lucide-react';
+import { formatVietnamDateTime } from '@/lib/timezone';
 
 interface RecommendationActivity {
   id: number;
@@ -78,7 +79,7 @@ export default function RecommendationsPage() {
                 <div className="space-y-2 text-sm text-gray-600">
                   <div className="flex items-center gap-2">
                     <Calendar className="w-4 h-4" />
-                    <span>{new Date(activity.date_time).toLocaleDateString('vi-VN')}</span>
+                    <span>{formatVietnamDateTime(activity.date_time, 'date')}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <MapPin className="w-4 h-4" />
