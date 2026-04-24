@@ -6,7 +6,9 @@ import { useSearchParams } from 'next/navigation';
 import {
   BarChart3,
   Clock,
+  Copy,
   Download,
+  ExternalLink,
   History,
   Maximize2,
   QrCode as QrCodeIcon,
@@ -489,6 +491,26 @@ export default function TeacherQRPage() {
     setShowQrProjector(true);
   };
 
+  const handleCopyCheckInLink = async () => {
+    if (!createdSession) return;
+
+    try {
+      if (typeof navigator === 'undefined' || typeof navigator.clipboard?.writeText !== 'function') {
+        throw new Error('Clipboard API not available');
+      }
+
+      await navigator.clipboard.writeText(createdSession.payload);
+      toast.success('Đã sao chép liên kết điểm danh');
+    } catch {
+      toast.error('Không thể sao chép tự động. Hãy sao chép liên kết ở phần bên dưới.');
+    }
+  };
+
+  const handleOpenCheckInLink = () => {
+    if (!createdSession) return;
+    window.open(createdSession.payload, '_blank', 'noopener,noreferrer');
+  };
+
   const closeQrProjector = () => {
     setShowQrProjector(false);
     setFullscreenAutoRequestBlocked(false);
@@ -784,6 +806,24 @@ export default function TeacherQRPage() {
                       <Maximize2 className="h-3.5 w-3.5" />
                       Chiếu mã QR toàn màn hình
                     </button>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => void handleCopyCheckInLink()}
+                        className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-xs font-semibold text-gray-700 transition-colors hover:bg-gray-100"
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                        {'Sao ch\u00e9p link \u0111i\u1ec3m danh'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleOpenCheckInLink}
+                        className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-100"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" />
+                        {'M\u1edf link ki\u1ec3m tra'}
+                      </button>
+                    </div>
                     <div className="text-xs leading-5 text-gray-600">
                       Liên kết điểm danh:{' '}
                       <code className="rounded bg-gray-100 px-1 py-0.5">

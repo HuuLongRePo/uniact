@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const toastErrorMock = vi.fn();
@@ -26,6 +26,11 @@ describe('TeacherQRPage', () => {
     toastErrorMock.mockReset();
     toastSuccessMock.mockReset();
     searchParamsValue = '';
+    Object.assign(navigator, {
+      clipboard: {
+        writeText: vi.fn().mockResolvedValue(undefined),
+      },
+    });
   });
 
   it('reads canonical payload and hydrates active qr session for selected activity', async () => {
@@ -282,6 +287,83 @@ describe('TeacherQRPage', () => {
       } else {
         delete (HTMLDivElement.prototype as { requestFullscreen?: unknown }).requestFullscreen;
       }
+    }
+  });
+
+  it('offers quick actions to copy and open the student check-in link', async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+
+      if (url === '/api/activities?scope=operational&status=ongoing') {
+        return {
+          ok: true,
+          json: async () => ({ data: { activities: [{ id: 1, title: 'QR Activity' }] } }),
+        } as Response;
+      }
+
+      if (url === '/api/qr-sessions/active?activity_id=1') {
+        return {
+          ok: true,
+          json: async () => ({
+            data: {
+              session: {
+                session_id: 11,
+                session_token: 'reuse-token-11',
+                options: { single_use: false, max_scans: null },
+              },
+            },
+          }),
+        } as Response;
+      }
+
+      if (url === '/api/activities/1/participants') {
+        return {
+          ok: true,
+          json: async () => ({ data: { participations: [] } }),
+        } as Response;
+      }
+
+      if (url === '/api/qr-sessions') {
+        return {
+          ok: true,
+          json: async () => ({ data: { sessions: [] } }),
+        } as Response;
+      }
+
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
+
+    vi.stubGlobal('fetch', fetchMock);
+    window.fetch = fetchMock as typeof fetch;
+
+    const windowOpenMock = vi.fn();
+    const previousWindowOpen = window.open;
+    window.open = windowOpenMock as typeof window.open;
+
+    try {
+      const Page = (await import('../src/app/teacher/qr/page')).default;
+      render(<Page />);
+
+      const expectedCheckInLink =
+        `${window.location.origin}/student/check-in?s=11&t=reuse-token-11`;
+
+      const copyButton = await screen.findByRole('button', {
+        name: /sao ch.+p link/i,
+      });
+      const openButton = screen.getByRole('button', {
+        name: /ki.+m tra/i,
+      });
+
+      fireEvent.click(copyButton);
+      await waitFor(() => {
+        expect(navigator.clipboard.writeText).toHaveBeenCalledWith(expectedCheckInLink);
+      });
+      expect(toastSuccessMock).toHaveBeenCalled();
+
+      fireEvent.click(openButton);
+      expect(windowOpenMock).toHaveBeenCalledWith(expectedCheckInLink, '_blank', 'noopener,noreferrer');
+    } finally {
+      window.open = previousWindowOpen;
     }
   });
 });

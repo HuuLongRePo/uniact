@@ -2429,6 +2429,32 @@ Yeu cau:
 - [x] `npm.cmd run build` -> PASS (2026-04-24)
 - [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests, 2026-04-24)
 
+## 9.63) Batch uu tien nong - teacher QR quick actions cho deep-link diem danh
+
+### Muc tieu
+
+- Giam thao tac tay cua giang vien khi kiem tra link check-in tren dien thoai/may khac.
+- Chot nhanh bo action tai cho: chieu QR, sao chep link, mo link check-in truc tiep.
+
+### Viec can lam
+
+- [x] `src/app/teacher/qr/page.tsx`
+  - [x] bo sung quick actions `copy` va `open` ben canh nut chieu QR.
+  - [x] giu nguyen deep-link student check-in dang duoc embed trong ma QR.
+- [x] `test/teacher-qr-page.test.tsx`
+  - [x] them regression test cho copy clipboard va mo tab moi bang deep-link check-in.
+
+### Risk / defer
+
+- [ ] Chua them e2e mobile cross-device cho thao tac teacher copy/open -> student login -> auto-checkin.
+- [ ] Van con batch lon pending cho camera HTTP fallback UX, wizard chon lop/hoc vien bat buoc, va audit timezone toan he thong.
+
+### Verification
+
+- [x] `npm.cmd test -- test/teacher-qr-page.test.tsx` -> PASS (1 file / 5 tests, 2026-04-24)
+- [x] `npm.cmd run build` -> PASS (2026-04-24)
+- [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests, 2026-04-24)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix
