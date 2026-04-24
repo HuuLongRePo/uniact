@@ -6,6 +6,7 @@ import {
   Upload,
   Loader2,
   X,
+  AlertTriangle,
   CheckCircle2,
   FileText,
   FileImage,
@@ -71,6 +72,17 @@ interface ParticipationPreview {
   conflict_count: number;
   groups: ParticipationPreviewGroup[];
   direct_students?: ParticipationPreviewStudent[];
+}
+
+interface ClassScheduleConflict {
+  activity_id: number;
+  title: string;
+  teacher_name?: string | null;
+  date_time: string;
+  end_time?: string | null;
+  class_id: number;
+  class_name: string;
+  overlap_minutes: number;
 }
 
 type SelectionChecklistItem = {
@@ -203,6 +215,9 @@ export default function CreateActivityPage() {
   );
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
+  const [classScheduleConflicts, setClassScheduleConflicts] = useState<ClassScheduleConflict[]>([]);
+  const [checkingClassScheduleConflict, setCheckingClassScheduleConflict] = useState(false);
+  const [classScheduleConflictError, setClassScheduleConflictError] = useState<string | null>(null);
   const selectedClasses = useMemo(
     () => Array.from(new Set([...mandatoryClassIds, ...voluntaryClassIds])),
     [mandatoryClassIds, voluntaryClassIds]
@@ -230,6 +245,7 @@ export default function CreateActivityPage() {
     (selectedClasses.length === 0 &&
       mandatoryStudentIds.length === 0 &&
       voluntaryStudentIds.length === 0);
+  const hasBlockingClassScheduleConflict = classScheduleConflicts.length > 0;
   const mandatoryClassItems = useMemo(
     () =>
       filteredClasses.map((classItem) => ({
@@ -415,6 +431,72 @@ export default function CreateActivityPage() {
     effectiveAppliesToAllStudents,
   ]);
 
+  useEffect(() => {
+    const hasScopedClasses = !effectiveAppliesToAllStudents && selectedClasses.length > 0;
+    if (!date || !hasScopedClasses) {
+      setClassScheduleConflicts([]);
+      setClassScheduleConflictError(null);
+      setCheckingClassScheduleConflict(false);
+      return;
+    }
+
+    let active = true;
+    const controller = new AbortController();
+    const scheduleCheck = window.setTimeout(async () => {
+      try {
+        setCheckingClassScheduleConflict(true);
+        setClassScheduleConflictError(null);
+
+        const response = await fetch('/api/activities/check-conflicts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          signal: controller.signal,
+          body: JSON.stringify({
+            date_time: time ? `${date}T${time}` : `${date}T00:00`,
+            ...(endTime ? { end_time: `${date}T${endTime}` } : {}),
+            class_ids: selectedClasses,
+            mandatory_class_ids: mandatoryClassIds,
+            voluntary_class_ids: voluntaryClassIds,
+            applies_to_all_students: effectiveAppliesToAllStudents,
+          }),
+        });
+
+        const data = await response.json().catch(() => null);
+        if (!active) return;
+
+        if (!response.ok) {
+          throw new Error(data?.error || 'Không thể kiểm tra xung đột lịch lớp');
+        }
+
+        const conflicts =
+          data?.class_schedule_conflicts || data?.data?.class_schedule_conflicts || [];
+        setClassScheduleConflicts(Array.isArray(conflicts) ? conflicts : []);
+      } catch (error: any) {
+        if (!active || controller.signal.aborted) return;
+        setClassScheduleConflicts([]);
+        setClassScheduleConflictError(error?.message || 'Không thể kiểm tra xung đột lịch lớp');
+      } finally {
+        if (active) {
+          setCheckingClassScheduleConflict(false);
+        }
+      }
+    }, 250);
+
+    return () => {
+      active = false;
+      controller.abort();
+      window.clearTimeout(scheduleCheck);
+    };
+  }, [
+    date,
+    time,
+    endTime,
+    selectedClasses,
+    mandatoryClassIds,
+    voluntaryClassIds,
+    effectiveAppliesToAllStudents,
+  ]);
+
   // Drag & drop file reorder
   const handleDragStart = (idx: number) => setDraggedIdx(idx);
   const handleDragOver = (idx: number, e: React.DragEvent) => {
@@ -541,6 +623,10 @@ export default function CreateActivityPage() {
       toast.error('Vui lòng nhập đầy đủ thông tin bắt buộc');
       return;
     }
+    if (hasBlockingClassScheduleConflict) {
+      toast.error('Lớp đã có hoạt động trùng giờ. Vui lòng xử lý xung đột trước khi lưu.');
+      return;
+    }
     setSubmitting(true);
     setSuccess(false);
     try {
@@ -569,6 +655,13 @@ export default function CreateActivityPage() {
 
       const createData = await createRes.json().catch(() => null);
       if (!createRes.ok) {
+        if (createRes.status === 409 && createData?.code === 'CLASS_SCHEDULE_CONFLICT') {
+          const serverConflicts = createData?.details?.class_schedule_conflicts;
+          setClassScheduleConflicts(Array.isArray(serverConflicts) ? serverConflicts : []);
+          setClassScheduleConflictError(
+            createData?.error || 'Lớp đã có hoạt động trùng giờ. Vui lòng đổi thời gian hoặc phạm vi lớp.'
+          );
+        }
         throw new Error(createData?.error || 'Tạo hoạt động thất bại');
       }
 
@@ -618,6 +711,8 @@ export default function CreateActivityPage() {
       setMaxParticipants('');
       setMandatoryClassIds([]);
       setVoluntaryClassIds([]);
+      setClassScheduleConflicts([]);
+      setClassScheduleConflictError(null);
       setActivityTypeId('');
       setOrganizationLevelId('');
       setFiles([]);
@@ -1441,6 +1536,40 @@ export default function CreateActivityPage() {
                   </button>
                 </div>
 
+                {!effectiveAppliesToAllStudents && selectedClasses.length > 0 && (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                    <div className="flex items-start gap-2">
+                      <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                      <div className="space-y-1">
+                        <p className="font-semibold">Kiểm tra trùng lịch lớp</p>
+                        {checkingClassScheduleConflict ? (
+                          <p>Đang kiểm tra xung đột lịch với các hoạt động đã công bố...</p>
+                        ) : classScheduleConflictError ? (
+                          <p className="text-red-700">{classScheduleConflictError}</p>
+                        ) : hasBlockingClassScheduleConflict ? (
+                          <>
+                            <p>
+                              Có {classScheduleConflicts.length} xung đột lớp. Bạn cần đổi thời gian
+                              hoặc bỏ lớp bị xung đột trước khi lưu.
+                            </p>
+                            <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-amber-900">
+                              {classScheduleConflicts.slice(0, 5).map((conflict) => (
+                                <li key={`${conflict.activity_id}-${conflict.class_id}`}>
+                                  {conflict.class_name}: "{conflict.title}" lúc{' '}
+                                  {formatVietnamDateTime(conflict.date_time)} (
+                                  {conflict.overlap_minutes} phút trùng)
+                                </li>
+                              ))}
+                            </ul>
+                          </>
+                        ) : (
+                          <p className="text-emerald-700">Không có xung đột lịch lớp.</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Action Buttons */}
                 <div className="flex gap-3 border-t border-gray-200 bg-white pt-6">
                   <button
@@ -1450,7 +1579,12 @@ export default function CreateActivityPage() {
                       handleSubmit(e as any, 'draft');
                     }}
                     className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-semibold disabled:opacity-60 transition-all shadow-md"
-                    disabled={submitting || uploading || currentTab !== 'files'}
+                    disabled={
+                      submitting ||
+                      uploading ||
+                      currentTab !== 'files' ||
+                      hasBlockingClassScheduleConflict
+                    }
                   >
                     {submitting ? (
                       <Loader2 className="animate-spin w-5 h-5" />
@@ -1470,7 +1604,12 @@ export default function CreateActivityPage() {
                       handleSubmit(e as any, 'submit');
                     }}
                     className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg font-semibold disabled:opacity-60 transition-all shadow-lg"
-                    disabled={submitting || uploading || currentTab !== 'files'}
+                    disabled={
+                      submitting ||
+                      uploading ||
+                      currentTab !== 'files' ||
+                      hasBlockingClassScheduleConflict
+                    }
                   >
                     {submitting ? (
                       <Loader2 className="animate-spin w-5 h-5" />

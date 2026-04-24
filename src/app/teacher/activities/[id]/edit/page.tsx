@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { AlertCircle, ArrowLeft, Lock, Save, Send, X } from 'lucide-react';
+import { AlertCircle, AlertTriangle, ArrowLeft, Lock, Save, Send, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface ActivityType {
@@ -54,6 +54,17 @@ interface ParticipationPreview {
   conflict_count: number;
   groups: ParticipationPreviewGroup[];
   direct_students?: ParticipationPreviewStudent[];
+}
+
+interface ClassScheduleConflict {
+  activity_id: number;
+  title: string;
+  teacher_name?: string | null;
+  date_time: string;
+  end_time?: string | null;
+  class_id: number;
+  class_name: string;
+  overlap_minutes: number;
 }
 
 type SelectionChecklistItem = {
@@ -220,11 +231,15 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
   );
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
+  const [classScheduleConflicts, setClassScheduleConflicts] = useState<ClassScheduleConflict[]>([]);
+  const [checkingClassScheduleConflict, setCheckingClassScheduleConflict] = useState(false);
+  const [classScheduleConflictError, setClassScheduleConflictError] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState<'basic' | 'scope' | 'submit'>('basic');
   const selectedClasses = useMemo(
     () => Array.from(new Set([...mandatoryClassIds, ...voluntaryClassIds])),
     [mandatoryClassIds, voluntaryClassIds]
   );
+  const hasBlockingClassScheduleConflict = classScheduleConflicts.length > 0;
   const filteredStudentOptions = useMemo(() => {
     const keyword = studentSearch.trim().toLowerCase();
     if (!keyword) return studentOptions;
@@ -469,6 +484,73 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
     appliesToAllStudents,
   ]);
 
+  useEffect(() => {
+    const hasScopedClasses = !appliesToAllStudents && selectedClasses.length > 0;
+    if (!date || !hasScopedClasses) {
+      setClassScheduleConflicts([]);
+      setClassScheduleConflictError(null);
+      setCheckingClassScheduleConflict(false);
+      return;
+    }
+
+    let active = true;
+    const controller = new AbortController();
+    const scheduleCheck = window.setTimeout(async () => {
+      try {
+        setCheckingClassScheduleConflict(true);
+        setClassScheduleConflictError(null);
+
+        const response = await fetch('/api/activities/check-conflicts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          signal: controller.signal,
+          body: JSON.stringify({
+            date_time: time ? `${date}T${time}` : `${date}T00:00`,
+            ...(endTime ? { end_time: `${date}T${endTime}` } : {}),
+            class_ids: selectedClasses,
+            mandatory_class_ids: mandatoryClassIds,
+            voluntary_class_ids: voluntaryClassIds,
+            applies_to_all_students: appliesToAllStudents,
+            exclude_activity_id: Number(id),
+          }),
+        });
+        const data = await response.json().catch(() => null);
+
+        if (!active) return;
+        if (!response.ok) {
+          throw new Error(data?.error || 'Không thể kiểm tra xung đột lịch lớp');
+        }
+
+        const conflicts =
+          data?.class_schedule_conflicts || data?.data?.class_schedule_conflicts || [];
+        setClassScheduleConflicts(Array.isArray(conflicts) ? conflicts : []);
+      } catch (error) {
+        if (!active || controller.signal.aborted) return;
+        setClassScheduleConflicts([]);
+        setClassScheduleConflictError(getErrorMessage(error, 'Không thể kiểm tra xung đột lịch lớp'));
+      } finally {
+        if (active) {
+          setCheckingClassScheduleConflict(false);
+        }
+      }
+    }, 250);
+
+    return () => {
+      active = false;
+      controller.abort();
+      window.clearTimeout(scheduleCheck);
+    };
+  }, [
+    id,
+    date,
+    time,
+    endTime,
+    selectedClasses,
+    mandatoryClassIds,
+    voluntaryClassIds,
+    appliesToAllStudents,
+  ]);
+
   const fetchAllData = async () => {
     try {
       setLoading(true);
@@ -593,6 +675,11 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
       return;
     }
 
+    if (hasBlockingClassScheduleConflict) {
+      toast.error('Lớp đã có hoạt động trùng giờ. Vui lòng xử lý xung đột trước khi lưu.');
+      return;
+    }
+
     try {
       setSubmitting(true);
 
@@ -621,6 +708,13 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
       const updateData = await updateRes.json().catch(() => null);
 
       if (!updateRes.ok) {
+        if (updateRes.status === 409 && updateData?.code === 'CLASS_SCHEDULE_CONFLICT') {
+          const serverConflicts = updateData?.details?.class_schedule_conflicts;
+          setClassScheduleConflicts(Array.isArray(serverConflicts) ? serverConflicts : []);
+          setClassScheduleConflictError(
+            updateData?.error || 'Lớp đã có hoạt động trùng giờ. Vui lòng đổi thời gian hoặc phạm vi lớp.'
+          );
+        }
         throw new Error(updateData?.message || updateData?.error || 'Không thể cập nhật hoạt động');
       }
 
@@ -1350,12 +1444,49 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
             )}
           </div>
 
+          {canEdit && !appliesToAllStudents && selectedClasses.length > 0 && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                <div className="space-y-1">
+                  <p className="font-semibold">Kiểm tra trùng lịch lớp</p>
+                  {checkingClassScheduleConflict ? (
+                    <p>Đang kiểm tra xung đột lịch với các hoạt động đã công bố...</p>
+                  ) : classScheduleConflictError ? (
+                    <p className="text-red-700">{classScheduleConflictError}</p>
+                  ) : hasBlockingClassScheduleConflict ? (
+                    <>
+                      <p>
+                        Có {classScheduleConflicts.length} xung đột lớp. Bạn cần đổi thời gian hoặc
+                        bỏ lớp bị xung đột trước khi lưu.
+                      </p>
+                      <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-amber-900">
+                        {classScheduleConflicts.slice(0, 5).map((conflict) => (
+                          <li key={`${conflict.activity_id}-${conflict.class_id}`}>
+                            {conflict.class_name}: "{conflict.title}" ({conflict.overlap_minutes}{' '}
+                            phút trùng)
+                          </li>
+                        ))}
+                      </ul>
+                    </>
+                  ) : (
+                    <p className="text-emerald-700">Không có xung đột lịch lớp.</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
           {canEdit && (
             <div className="sticky bottom-0 z-10 flex gap-3 rounded-lg border border-gray-200 bg-white p-3 shadow">
               <button
                 type="button"
                 onClick={() => void submitActivity('draft')}
-                disabled={submitting || currentStep !== 'submit'}
+                disabled={
+                  submitting ||
+                  currentStep !== 'submit' ||
+                  hasBlockingClassScheduleConflict
+                }
                 className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-gray-200 px-6 py-3 font-bold text-gray-700 transition hover:bg-gray-300 disabled:opacity-50"
               >
                 <Save className="h-5 w-5" />
@@ -1364,7 +1495,11 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
               <button
                 type="button"
                 onClick={() => void submitActivity('submit')}
-                disabled={submitting || currentStep !== 'submit'}
+                disabled={
+                  submitting ||
+                  currentStep !== 'submit' ||
+                  hasBlockingClassScheduleConflict
+                }
                 className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-blue-600 px-6 py-3 font-bold text-white transition hover:bg-blue-700 disabled:opacity-50"
               >
                 <Send className="h-5 w-5" />

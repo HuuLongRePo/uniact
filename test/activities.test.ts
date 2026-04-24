@@ -12,6 +12,8 @@ const mocks = vi.hoisted(() => ({
   mockDbRun: vi.fn(),
   mockInvalidatePrefix: vi.fn(),
   mockSendDatabaseNotification: vi.fn(),
+  mockFindClassScheduleConflicts: vi.fn(),
+  mockResolveActivityTimeWindow: vi.fn(),
 }));
 
 const teacherUser = { id: 1, role: 'teacher', class_id: 1 };
@@ -78,6 +80,21 @@ vi.mock('@/lib/notifications', () => ({
   sendDatabaseNotification: mocks.mockSendDatabaseNotification,
 }));
 
+vi.mock('@/lib/activity-schedule-conflicts', () => ({
+  extractScopedClassIds: vi.fn((source: any) => {
+    const classIds = Array.isArray(source?.class_ids) ? source.class_ids : [];
+    const mandatoryClassIds = Array.isArray(source?.mandatory_class_ids)
+      ? source.mandatory_class_ids
+      : [];
+    const voluntaryClassIds = Array.isArray(source?.voluntary_class_ids)
+      ? source.voluntary_class_ids
+      : [];
+    return Array.from(new Set([...classIds, ...mandatoryClassIds, ...voluntaryClassIds]));
+  }),
+  findClassScheduleConflicts: mocks.mockFindClassScheduleConflicts,
+  resolveActivityTimeWindow: mocks.mockResolveActivityTimeWindow,
+}));
+
 import * as activitiesRoute from '../src/app/api/activities/[id]/route';
 
 function makePutReq(body: unknown) {
@@ -101,6 +118,19 @@ beforeEach(() => {
   mocks.mockDbRun.mockResolvedValue({ changes: 1 });
   mocks.mockInvalidatePrefix.mockImplementation(() => undefined);
   mocks.mockSendDatabaseNotification.mockResolvedValue(undefined);
+  mocks.mockFindClassScheduleConflicts.mockResolvedValue({
+    conflicts: [],
+    window: {
+      start_time: '2026-04-10T08:00:00.000Z',
+      end_time: '2026-04-10T10:00:00.000Z',
+      duration_minutes: 120,
+    },
+  });
+  mocks.mockResolveActivityTimeWindow.mockReturnValue({
+    start_time: '2026-04-10T08:00:00.000Z',
+    end_time: '2026-04-10T10:00:00.000Z',
+    duration_minutes: 120,
+  });
 
   mocks.mockGetActivityById.mockImplementation(async (id: number) => {
     if (id === 1) return existingActivity;
@@ -146,6 +176,53 @@ describe('Activities API (unit)', () => {
       mandatory_student_ids: [],
       voluntary_student_ids: [],
     });
+  });
+
+  it('PUT blocks update when selected classes overlap another published activity', async () => {
+    mocks.mockGetAllClasses.mockResolvedValue([{ id: 2 }]);
+    mocks.mockFindClassScheduleConflicts.mockResolvedValueOnce({
+      conflicts: [
+        {
+          activity_id: 7,
+          title: 'Existing Published Activity',
+          teacher_name: 'Teacher B',
+          date_time: '2026-04-10T08:30:00.000Z',
+          end_time: '2026-04-10T09:30:00.000Z',
+          location: 'Hall A',
+          class_id: 2,
+          class_name: 'Class 2A',
+          overlap_minutes: 60,
+        },
+      ],
+      window: {
+        start_time: '2026-04-10T08:00:00.000Z',
+        end_time: '2026-04-10T10:00:00.000Z',
+        duration_minutes: 120,
+      },
+    });
+
+    const res = await activitiesRoute.PUT(
+      makePutReq({
+        date_time: '2026-04-10T08:00',
+        class_ids: [2],
+        mandatory_class_ids: [2],
+        voluntary_class_ids: [],
+        applies_to_all_students: false,
+      }),
+      {
+        params: Promise.resolve({ id: '1' }),
+      }
+    );
+
+    expect(res.status).toBe(409);
+    const body = await res.json();
+    expect(body.code).toBe('CLASS_SCHEDULE_CONFLICT');
+    expect(mocks.mockFindClassScheduleConflicts).toHaveBeenCalledWith(
+      expect.objectContaining({
+        excludeActivityId: 1,
+      })
+    );
+    expect(mocks.mockUpdateActivity).not.toHaveBeenCalled();
   });
 
   it('PUT returns 404 when the activity does not exist', async () => {

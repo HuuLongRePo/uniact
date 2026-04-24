@@ -2616,6 +2616,132 @@ Yeu cau:
 - [x] `npm.cmd run build` -> PASS (2026-04-24)
 - [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests, 2026-04-24)
 
+## 9.69) Batch uu tien nong - timezone VN residual export filenames (participants/history/admin)
+
+### Muc tieu
+
+- Xu ly tiep residual export filename user-facing con dung `Date.now()` hoac ngay UTC.
+- Dong bo moc ngay/ten file theo helper timezone VN cho cum participants/history/admin CSV export.
+- Bo sung regression test cho `Content-Disposition` de chan tai phat drift timezone filename.
+
+### Viec can lam
+
+- [x] `src/app/api/admin/scores/route.ts`
+- [x] `src/app/api/admin/reports/activity-statistics/route.ts`
+- [x] `src/app/api/export/attendance/route.ts`
+- [x] `src/app/api/activities/[id]/participants/export/route.ts`
+- [x] `src/app/api/qr-sessions/[id]/scans/export/route.ts`
+- [x] `src/app/api/teacher/reports/participation/export/route.ts`
+  - [x] doi filename export sang `toVietnamFileTimestamp(new Date())`/`toVietnamDateStamp(...)` theo tung route.
+- [x] Test hardening:
+  - [x] `test/admin-scores-route.test.ts`
+  - [x] `test/admin-report-routes.test.ts`
+  - [x] `test/export.test.ts`
+  - [x] `test/teacher-participation-export-route.test.ts`
+  - [x] `test/timezone-export-filenames-route.test.ts` (moi)
+
+### Risk / defer
+
+- [ ] Van con mot so filename noi bo (backup/upload temp) dung `Date.now()` de unique key; khong thuoc scope user-facing export batch nay.
+- [ ] Chua audit toan bo custom export filename ngoai backbone flow (se tiep tuc o timezone residual batch sau).
+
+### Verification
+
+- [x] `npm.cmd test -- test/admin-scores-route.test.ts test/admin-report-routes.test.ts test/export.test.ts test/teacher-participation-export-route.test.ts test/timezone-export-filenames-route.test.ts` -> PASS (5 files / 23 tests, 2026-04-24)
+- [x] `npm.cmd run build` -> PASS (2026-04-24)
+- [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests, 2026-04-24)
+
+## 9.70) Batch nghien cuu uu tien - chan trung gio theo lop khi teacher tao/sua hoat dong
+
+### Muc tieu
+
+- Khi teacher chon lop cho activity, neu lop do da co activity khac trung khung gio thi he thong phai canh bao ro va chan submit.
+- Dong bo logic conflict giua UI preview, API check-conflicts va API create/update de tranh lech nghiep vu.
+- Chot ro policy conflict theo status hoat dong de khong xung dot voi workflow duyet/publish hien tai.
+
+### Nghiep vu can lam ro truoc khi code
+
+- [x] Pham vi conflict:
+  - [x] Chi tinh tren class scope (`mandatory_class_ids` + `voluntary_class_ids` + union `class_ids`), khong tinh direct-student scope.
+  - [x] Conflict tinh theo class (khong tinh theo tung hoc vien trong class).
+- [x] Moc thoi gian overlap:
+  - [x] Chot cong thuc overlap interval theo nguyen tac giao nhau thuc te (`start < other_end` va `end > other_start`, tuong duong `[start, end)`).
+  - [x] Chot cach tinh `end_time` (uu tien truong `end_time`, fallback `duration`, fallback mac dinh 120').
+- [x] Status duoc xem la conflict de chan:
+  - [x] `published` (bat buoc chan).
+  - [x] Chua mo rong hard-block cho `requested/approved/registration/in_progress` trong batch nay.
+  - [x] Bo qua `cancelled/completed/draft`.
+- [x] Rule update:
+  - [x] Exclude current activity khi edit.
+  - [x] Neu doi gio hoac doi class thi conflict tinh lai ngay tren server-side.
+- [x] Rule block:
+  - [x] Teacher bi chan hard khi conflict.
+  - [x] Admin hien tai cung bi chan, chua co override flow.
+- [x] UX:
+  - [x] Hien danh sach class conflict + activity conflict (title, time, overlap minutes).
+  - [x] Disable nut submit va show thong diep huong dan cach xu ly.
+
+### Viec can lam (implementation batch sau khi chot nghiep vu)
+
+- [x] Tao helper/service conflict schedule theo class (tai su dung duoc cho create + edit + check route).
+- [x] Cap nhat `POST /api/activities/check-conflicts`:
+  - [x] bo sung class schedule conflict payload theo selected class IDs.
+  - [x] tra ve summary tong hop conflict/warning.
+- [x] Cap nhat `POST /api/activities` va `PUT /api/activities/[id]`:
+  - [x] enforce server-side hard block neu class conflict.
+  - [x] tra ve canonical error code `CLASS_SCHEDULE_CONFLICT`.
+- [x] Cap nhat teacher create/edit page:
+  - [x] trigger conflict check khi doi date/time/duration/class scope.
+  - [x] render panel conflict ro rang va chan submit.
+- [x] Test:
+  - [x] route tests cho create/update/check-conflicts.
+  - [x] page tests cho create/edit UX block.
+  - [x] regression cho case edit exclude current activity.
+
+### Risk / defer
+
+- [x] Da tach helper conflict dung chung (`src/lib/activity-schedule-conflicts.ts`) de giam duplicate logic route-level.
+- [x] Da enforce server-side guard cho create/update de chan race condition FE-check-pass nhung state doi.
+- [ ] Chua mo admin override + audit override trong batch nay; se can Decision Gate neu mo rong sau.
+
+### Verification
+
+- [x] `cmd /c npx vitest run test/activity-check-conflicts-route.test.ts test/activities-create-route.test.ts test/activities.test.ts test/teacher-create-activity-page.test.tsx test/teacher-create-activity-preview.test.tsx test/teacher-edit-activity-page.test.tsx test/teacher-edit-activity-preview.test.tsx` -> PASS (7 files / 22 tests, 2026-04-24)
+
+### Prompt bo sung (copy de chay batch nay)
+
+```text
+Ban dong vai Senior Fullstack Release Engineer trong repo UniAct.
+Muc tieu batch nay: teacher tao/sua activity neu chon class bi trung gio voi activity khac cua class do thi phai CANH BAO + CHAN submit.
+
+Yeu cau nghiep vu:
+1) Conflict theo class schedule:
+- Kiem tra overlap khung gio giua activity dang tao/sua va cac activity da ton tai cua cac class duoc chon.
+- Exclude current activity khi edit.
+- Chot va document ro status nao gay block (toi thieu: published), status nao chi warning, status nao bo qua.
+2) Enforcement:
+- FE chi de UX; BE phai enforce hard-block (khong tin FE).
+- Tra canonical API error code: CLASS_SCHEDULE_CONFLICT, kem danh sach conflict chi tiet de FE hien thi.
+3) UX:
+- Teacher create/edit page hien panel conflict (class, activity title, time, overlap) va disable submit khi co conflict block.
+- Message ro, ngan gon, huong den hanh dong sua ngay/doi class.
+4) Technical:
+- Tach helper conflict check tai su dung cho check route + create + update.
+- Khong duplicate business logic o nhieu noi.
+5) Tests:
+- Them route tests cho check-conflicts/create/update.
+- Them page tests cho create/edit block UX.
+- Cover case edit exclude current activity.
+
+Truoc khi code:
+- Liet ke file se sua.
+- Chot ro overlap formula + status policy bang comment nguyen tac trong patch.
+
+Sau khi code:
+- Chay test cum lien quan.
+- Cap nhat docs/release-backbone-batch-todos.md (section 9.70) voi ket qua va risk/defer.
+```
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix

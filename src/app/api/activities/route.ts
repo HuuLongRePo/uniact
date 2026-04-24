@@ -5,6 +5,10 @@ import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
 import { requireApiAuth, requireApiRole } from '@/lib/guards';
 import { validateCreateActivityBody } from '@/lib/activity-validation';
 import { getActivityDisplayStatus } from '@/lib/activity-workflow';
+import {
+  findClassScheduleConflicts,
+  resolveActivityTimeWindow,
+} from '@/lib/activity-schedule-conflicts';
 
 type StudentActivitySummaryRecord = {
   id: number;
@@ -205,6 +209,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const requestBody = body as Record<string, unknown>;
     const {
       title,
       description,
@@ -238,6 +243,38 @@ export async function POST(request: NextRequest) {
           ApiError.validation('Lớp được chọn không hợp lệ', {
             class_ids: `ID lớp không tồn tại: ${invalidClassIds.join(', ')}`,
           })
+        );
+      }
+    }
+
+    if (!applies_to_all_students && scopedClassIds.length > 0) {
+      const classConflictResult = await findClassScheduleConflicts({
+        classIds: scopedClassIds,
+        dateTime: date_time,
+        endTime: requestBody.end_time,
+        durationMinutes: requestBody.duration,
+      });
+
+      if (classConflictResult.conflicts.length > 0) {
+        const timeWindow =
+          classConflictResult.window ||
+          resolveActivityTimeWindow({
+            dateTime: date_time,
+            endTime: requestBody.end_time,
+            durationMinutes: requestBody.duration,
+          });
+
+        return errorResponse(
+          new ApiError(
+            'CLASS_SCHEDULE_CONFLICT',
+            'Lớp đã có hoạt động trùng khung giờ. Vui lòng đổi thời gian hoặc bỏ lớp bị xung đột.',
+            409,
+            {
+              class_schedule_conflicts: classConflictResult.conflicts,
+              total_conflicts: classConflictResult.conflicts.length,
+              window: timeWindow,
+            }
+          )
         );
       }
     }

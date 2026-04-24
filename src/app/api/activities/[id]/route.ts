@@ -14,6 +14,11 @@ import { validateUpdateActivityBody } from '@/lib/activity-validation';
 import { validateTransition, type ActivityStatus } from '@/lib/activity-workflow';
 import { teacherCanAccessActivity } from '@/lib/activity-access';
 import { sendDatabaseNotification } from '@/lib/notifications';
+import {
+  extractScopedClassIds,
+  findClassScheduleConflicts,
+  resolveActivityTimeWindow,
+} from '@/lib/activity-schedule-conflicts';
 
 type ActivityDetailRecord = {
   id: number;
@@ -220,6 +225,88 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
             class_ids: `ID lớp không tồn tại: ${invalidClassIds.join(', ')}`,
           })
         );
+      }
+    }
+
+    const hasClassScopeInput =
+      Object.prototype.hasOwnProperty.call(requestBody, 'class_ids') ||
+      Object.prototype.hasOwnProperty.call(requestBody, 'mandatory_class_ids') ||
+      Object.prototype.hasOwnProperty.call(requestBody, 'voluntary_class_ids') ||
+      Object.prototype.hasOwnProperty.call(requestBody, 'applies_to_all_students');
+    const hasTimeInput =
+      Object.prototype.hasOwnProperty.call(requestBody, 'date_time') ||
+      Object.prototype.hasOwnProperty.call(requestBody, 'end_time') ||
+      Object.prototype.hasOwnProperty.call(requestBody, 'duration');
+
+    if (hasClassScopeInput || hasTimeInput) {
+      const requestedClassIds = extractScopedClassIds({
+        class_ids: updatePayload.class_ids,
+        mandatory_class_ids: updatePayload.mandatory_class_ids,
+        voluntary_class_ids: updatePayload.voluntary_class_ids,
+        applies_to_all_students: updatePayload.applies_to_all_students,
+      });
+      const existingClassRows = (await dbAll(
+        'SELECT class_id FROM activity_classes WHERE activity_id = ?',
+        [activityId]
+      )) as Array<{ class_id: number | string }>;
+      const existingClassIds = Array.from(
+        new Set(
+          (existingClassRows || [])
+            .map((row) => Number(row.class_id))
+            .filter((classId) => Number.isFinite(classId) && classId > 0)
+        )
+      );
+      const effectiveAppliesToAll = Object.prototype.hasOwnProperty.call(
+        requestBody,
+        'applies_to_all_students'
+      )
+        ? Boolean(updatePayload.applies_to_all_students)
+        : existingClassIds.length === 0;
+      const effectiveClassIds = hasClassScopeInput ? requestedClassIds : existingClassIds;
+      const targetDateTime =
+        typeof updatePayload.date_time === 'string'
+          ? updatePayload.date_time
+          : typeof existingActivity.date_time === 'string'
+            ? existingActivity.date_time
+            : null;
+
+      if (!effectiveAppliesToAll && effectiveClassIds.length > 0 && targetDateTime) {
+        const targetEndTime = Object.prototype.hasOwnProperty.call(requestBody, 'end_time')
+          ? requestBody.end_time
+          : (existingActivity as Record<string, unknown>).end_time;
+        const targetDuration = Object.prototype.hasOwnProperty.call(requestBody, 'duration')
+          ? requestBody.duration
+          : undefined;
+        const classConflictResult = await findClassScheduleConflicts({
+          classIds: effectiveClassIds,
+          dateTime: targetDateTime,
+          endTime: targetEndTime,
+          durationMinutes: targetDuration,
+          excludeActivityId: activityId,
+        });
+
+        if (classConflictResult.conflicts.length > 0) {
+          const timeWindow =
+            classConflictResult.window ||
+            resolveActivityTimeWindow({
+              dateTime: targetDateTime,
+              endTime: targetEndTime,
+              durationMinutes: targetDuration,
+            });
+
+          return errorResponse(
+            new ApiError(
+              'CLASS_SCHEDULE_CONFLICT',
+              'Lá»›p Ä‘Ã£ cÃ³ hoáº¡t Ä‘á»™ng trÃ¹ng khung giá». Vui lÃ²ng Ä‘á»•i thá»i gian hoáº·c bá» lá»›p bá»‹ xung Ä‘á»™t.',
+              409,
+              {
+                class_schedule_conflicts: classConflictResult.conflicts,
+                total_conflicts: classConflictResult.conflicts.length,
+                window: timeWindow,
+              }
+            )
+          );
+        }
       }
     }
 

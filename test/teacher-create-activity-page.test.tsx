@@ -37,6 +37,13 @@ describe('CreateActivityPage', () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
 
+      if (url === '/api/activities/check-conflicts' && init?.method === 'POST') {
+        return jsonResponse({
+          has_class_schedule_conflict: false,
+          class_schedule_conflicts: [],
+        });
+      }
+
       if (url === '/api/classes') {
         return jsonResponse({ classes: [{ id: 1, name: 'CNTT K18A' }] });
       }
@@ -130,9 +137,88 @@ describe('CreateActivityPage', () => {
     ).toBe(true);
   });
 
+  it('blocks submit actions when class schedule conflicts are detected', async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+
+      if (url === '/api/activities/check-conflicts' && init?.method === 'POST') {
+        return jsonResponse({
+          has_class_schedule_conflict: true,
+          class_schedule_conflicts: [
+            {
+              activity_id: 10,
+              title: 'Hoáº¡t Ä‘á»™ng trÃ¹ng lá»‹ch',
+              class_id: 1,
+              class_name: 'CNTT K18A',
+              date_time: '2026-04-20T08:30:00.000Z',
+              overlap_minutes: 60,
+            },
+          ],
+        });
+      }
+
+      if (url === '/api/classes') {
+        return jsonResponse({ classes: [{ id: 1, name: 'CNTT K18A' }] });
+      }
+
+      if (url === '/api/activity-types') {
+        return jsonResponse({ types: [] });
+      }
+
+      if (url === '/api/organization-levels') {
+        return jsonResponse({ levels: [] });
+      }
+
+      if (url === '/api/activities' && init?.method === 'POST') {
+        throw new Error('Create API must not be called when conflicts exist');
+      }
+
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
+
+    vi.stubGlobal('fetch', fetchMock);
+    window.fetch = fetchMock as typeof fetch;
+
+    const { container } = render(React.createElement(CreateActivityPage));
+
+    expect((await screen.findAllByText('CNTT K18A')).length).toBeGreaterThan(0);
+
+    const textInputs = container.querySelectorAll('input[type="text"]');
+    fireEvent.change(textInputs[0] as HTMLInputElement, { target: { value: 'Hoáº¡t Ä‘á»™ng má»›i' } });
+    fireEvent.change(container.querySelector('input[type="date"]') as HTMLInputElement, {
+      target: { value: '2026-04-20' },
+    });
+    const timeInputs = container.querySelectorAll('input[type="time"]');
+    fireEvent.change(timeInputs[0] as HTMLInputElement, {
+      target: { value: '08:30' },
+    });
+    fireEvent.change(textInputs[1] as HTMLInputElement, { target: { value: 'PhÃ²ng 101' } });
+
+    fireEvent.click(screen.getAllByRole('button', { name: /Chọn tất cả đang lọc/i })[0]);
+    fireEvent.click(screen.getByRole('button', { name: /Bước 3: Tài liệu và gửi/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Lưu nháp/i })).toBeDisabled();
+      expect(screen.getByRole('button', { name: /Gửi duyệt/i })).toBeDisabled();
+    });
+
+    expect(
+      fetchMock.mock.calls.some(
+        ([url, init]) => String(url) === '/api/activities' && init?.method === 'POST'
+      )
+    ).toBe(false);
+  });
+
   it('treats an empty scope as open for all students when creating an activity', async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
+
+      if (url === '/api/activities/check-conflicts' && init?.method === 'POST') {
+        return jsonResponse({
+          has_class_schedule_conflict: false,
+          class_schedule_conflicts: [],
+        });
+      }
 
       if (url === '/api/classes') return jsonResponse({ classes: [{ id: 1, name: 'CNTT K18A' }] });
       if (url === '/api/activity-types') return jsonResponse({ types: [] });
@@ -185,6 +271,13 @@ describe('CreateActivityPage', () => {
   it('supports checklist-based class filtering and quick-pick for mandatory scope', async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
+
+      if (url === '/api/activities/check-conflicts' && init?.method === 'POST') {
+        return jsonResponse({
+          has_class_schedule_conflict: false,
+          class_schedule_conflicts: [],
+        });
+      }
 
       if (url === '/api/classes') {
         return jsonResponse({
@@ -253,6 +346,13 @@ describe('CreateActivityPage', () => {
   it('allows bulk-picking filtered direct students into the mandatory bucket', async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
+
+      if (url === '/api/activities/check-conflicts' && init?.method === 'POST') {
+        return jsonResponse({
+          has_class_schedule_conflict: false,
+          class_schedule_conflicts: [],
+        });
+      }
 
       if (url === '/api/classes') return jsonResponse({ classes: [{ id: 1, name: 'CNTT K18A' }] });
       if (url === '/api/activity-types') return jsonResponse({ types: [] });

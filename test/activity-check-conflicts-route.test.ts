@@ -39,4 +39,57 @@ describe('activity check-conflicts route', () => {
     expect(secondQuery).toContain("a.status = 'published'");
     expect(secondQuery).not.toContain("'pending'");
   });
+
+  it('returns class schedule conflicts when selected classes overlap an existing published activity', async () => {
+    const dbAll = vi.fn(async (sql: string) => {
+      if (sql.includes('INNER JOIN activity_classes')) {
+        return [
+          {
+            activity_id: 99,
+            title: 'Overlap Activity',
+            date_time: '2026-04-20T08:30:00.000Z',
+            end_time: '2026-04-20T10:00:00.000Z',
+            location: 'Hall B',
+            teacher_name: 'Teacher B',
+            class_id: 3,
+            class_name: 'CNTT K18A',
+            overlap_minutes: 60,
+          },
+        ];
+      }
+
+      return [];
+    });
+
+    vi.doMock('@/lib/database', () => ({
+      dbAll,
+    }));
+
+    vi.doMock('@/lib/guards', () => ({
+      requireAuth: async () => ({ id: 77, role: 'teacher', name: 'Teacher A' }),
+    }));
+
+    const route = await import('../src/app/api/activities/check-conflicts/route');
+    const req = {
+      json: async () => ({
+        date_time: '2026-04-20T08:00:00.000Z',
+        class_ids: [3],
+        mandatory_class_ids: [3],
+        voluntary_class_ids: [],
+        applies_to_all_students: false,
+      }),
+    } as any;
+
+    const res: any = await route.POST(req);
+    expect(res.status).toBe(200);
+
+    const body = await res.json();
+    const conflicts = body.class_schedule_conflicts || body.data?.class_schedule_conflicts || [];
+    expect(conflicts).toHaveLength(1);
+    expect(conflicts[0]).toMatchObject({
+      activity_id: 99,
+      class_id: 3,
+      class_name: 'CNTT K18A',
+    });
+  });
 });

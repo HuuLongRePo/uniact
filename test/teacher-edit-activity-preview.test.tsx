@@ -52,6 +52,13 @@ describe('EditActivityPage participation preview', () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
 
+      if (url === '/api/activities/check-conflicts' && init?.method === 'POST') {
+        return jsonResponse({
+          has_class_schedule_conflict: false,
+          class_schedule_conflicts: [],
+        });
+      }
+
       if (url === '/api/activities/55' && !init?.method) {
         return jsonResponse({
           activity: {
