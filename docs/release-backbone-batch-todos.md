@@ -2310,6 +2310,33 @@ Yeu cau:
 - [x] `npm.cmd run build` -> PASS (2026-04-24)
 - [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests, 2026-04-24)
 
+## 9.59) Batch uu tien nong - dark button contrast guard v5 (fix 2 landing CTA + white-alpha variants)
+
+### Muc tieu
+
+- Xu ly tiep loi 2 nut CTA landing van bi mo/nhat mau tren dark mode mot so may test.
+- Quet va khoa them nhom button/link dung `text-white/..` (alpha variant) de tranh mat chu tren nen primary.
+
+### Viec can lam
+
+- [x] `src/app/globals.css`
+  - [x] doi dark-mode text guard sang gia tri mau co dinh `#f8fafc` cho nhom CTA/primary action.
+  - [x] them bao phu cho selector `text-white/` tren `a/button/[role='button']`.
+  - [x] them `filter: none` + `mix-blend-mode: normal` de tranh case text bi extension/auto-dark lam mo.
+- [x] `test/theme-link-contrast-guard.test.ts`
+  - [x] cap nhat assertion cho `text-white/` va guard styling moi.
+
+### Risk / defer
+
+- [ ] Neu may nguoi dung bat extension dark-mode can thiep manh, van co kha nang bi override CSS ngoai app; batch nay da tang do uu tien de giam toi da.
+- [ ] Chua co visual regression e2e screenshot cho tat ca actor pages; hien tai dang dung CSS guard + unit regression.
+
+### Verification
+
+- [x] `npm.cmd test -- test/theme-link-contrast-guard.test.ts` -> PASS (1 file / 4 tests, 2026-04-24)
+- [x] `npm.cmd run build` -> PASS (2026-04-24)
+- [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests, 2026-04-24)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix

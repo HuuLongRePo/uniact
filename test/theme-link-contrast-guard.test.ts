@@ -26,9 +26,9 @@ describe('dark theme link contrast guards', () => {
       css.match(/\.landing-action-primary:hover\s*{[\s\S]*?}/)?.[0] ?? '';
 
     expect(primaryActionRule).toContain('.landing-action-primary:link,');
-    expect(primaryActionRule).toContain('color: var(--app-action-primary-text) !important;');
-    expect(primaryActionRule).toContain(
-      '-webkit-text-fill-color: var(--app-action-primary-text) !important;'
+    expect(primaryActionRule).toMatch(/color:\s*(var\(--app-action-primary-text\)|#f8fafc)\s*!important;/);
+    expect(primaryActionRule).toMatch(
+      /-webkit-text-fill-color:\s*(var\(--app-action-primary-text\)|#f8fafc)\s*!important;/
     );
     expect(primaryActionHoverRule).toContain('color: var(--app-action-primary-text) !important;');
   });
@@ -44,10 +44,14 @@ describe('dark theme link contrast guards', () => {
       ":root[data-theme='dark'] button[class*='bg-blue-'][class*='text-white']:not(:disabled),"
     );
     expect(css).toContain(":root[data-theme='dark'] a[class*='text-white'],");
+    expect(css).toContain(":root[data-theme='dark'] a[class*='text-white/'],");
     expect(css).toContain(":root[data-theme='dark'] button[class*='text-white']:not(:disabled),");
+    expect(css).toContain(":root[data-theme='dark'] button[class*='text-white/']:not(:disabled),");
     expect(css).toContain(
       ":root[data-theme='dark'] [role='button'][class*='text-white']:not([aria-disabled='true']) {"
     );
+    expect(css).toContain('filter: none !important;');
+    expect(css).toContain('mix-blend-mode: normal !important;');
   });
 
   it('keeps the same readable guard when only system dark mode is active', () => {
@@ -64,8 +68,12 @@ describe('dark theme link contrast guards', () => {
       ":root:not([data-theme='light']) button[class*='bg-blue-'][class*='text-white']:not(:disabled),"
     );
     expect(css).toContain(":root:not([data-theme='light']) a[class*='text-white'],");
+    expect(css).toContain(":root:not([data-theme='light']) a[class*='text-white/'],");
     expect(css).toContain(
       ":root:not([data-theme='light']) button[class*='text-white']:not(:disabled),"
+    );
+    expect(css).toContain(
+      ":root:not([data-theme='light']) button[class*='text-white/']:not(:disabled),"
     );
     expect(css).toContain(":root:not([data-theme='light'])");
     expect(css).toContain(

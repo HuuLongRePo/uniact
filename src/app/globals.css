@@ -478,28 +478,36 @@ button:disabled,
 :root[data-theme='dark'] a.landing-action-primary:hover,
 :root[data-theme='dark'] a.landing-action-primary:active,
 :root[data-theme='dark'] a.landing-action-primary:focus-visible {
-  color: var(--app-action-primary-text) !important;
-  -webkit-text-fill-color: var(--app-action-primary-text) !important;
+  color: #f8fafc !important;
+  -webkit-text-fill-color: #f8fafc !important;
   opacity: 1 !important;
+  filter: none !important;
+  mix-blend-mode: normal !important;
 }
 
 :root[data-theme='dark'] a[class*='bg-blue-'][class*='text-white'],
 :root[data-theme='dark'] button[class*='bg-blue-'][class*='text-white']:not(:disabled),
 :root[data-theme='dark']
   [role='button'][class*='bg-blue-'][class*='text-white']:not([aria-disabled='true']) {
-  color: var(--app-action-primary-text) !important;
-  -webkit-text-fill-color: var(--app-action-primary-text) !important;
+  color: #f8fafc !important;
+  -webkit-text-fill-color: #f8fafc !important;
   opacity: 1 !important;
   text-shadow: 0 1px 0 rgba(2, 6, 23, 0.28);
+  filter: none !important;
+  mix-blend-mode: normal !important;
 }
 
 :root[data-theme='dark'] a[class*='text-white'],
+:root[data-theme='dark'] a[class*='text-white/'],
 :root[data-theme='dark'] button[class*='text-white']:not(:disabled),
+:root[data-theme='dark'] button[class*='text-white/']:not(:disabled),
 :root[data-theme='dark'] [role='button'][class*='text-white']:not([aria-disabled='true']) {
-  color: var(--app-action-primary-text) !important;
-  -webkit-text-fill-color: var(--app-action-primary-text) !important;
+  color: #f8fafc !important;
+  -webkit-text-fill-color: #f8fafc !important;
   text-shadow: 0 1px 0 rgba(2, 6, 23, 0.28);
   opacity: 1 !important;
+  filter: none !important;
+  mix-blend-mode: normal !important;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -509,29 +517,37 @@ button:disabled,
   :root:not([data-theme='light']) a.landing-action-primary:hover,
   :root:not([data-theme='light']) a.landing-action-primary:active,
   :root:not([data-theme='light']) a.landing-action-primary:focus-visible {
-    color: var(--app-action-primary-text) !important;
-    -webkit-text-fill-color: var(--app-action-primary-text) !important;
+    color: #f8fafc !important;
+    -webkit-text-fill-color: #f8fafc !important;
     opacity: 1 !important;
+    filter: none !important;
+    mix-blend-mode: normal !important;
   }
 
   :root:not([data-theme='light']) a[class*='bg-blue-'][class*='text-white'],
   :root:not([data-theme='light']) button[class*='bg-blue-'][class*='text-white']:not(:disabled),
   :root:not([data-theme='light'])
     [role='button'][class*='bg-blue-'][class*='text-white']:not([aria-disabled='true']) {
-    color: var(--app-action-primary-text) !important;
-    -webkit-text-fill-color: var(--app-action-primary-text) !important;
+    color: #f8fafc !important;
+    -webkit-text-fill-color: #f8fafc !important;
     opacity: 1 !important;
     text-shadow: 0 1px 0 rgba(2, 6, 23, 0.28);
+    filter: none !important;
+    mix-blend-mode: normal !important;
   }
 
   :root:not([data-theme='light']) a[class*='text-white'],
+  :root:not([data-theme='light']) a[class*='text-white/'],
   :root:not([data-theme='light']) button[class*='text-white']:not(:disabled),
+  :root:not([data-theme='light']) button[class*='text-white/']:not(:disabled),
   :root:not([data-theme='light'])
     [role='button'][class*='text-white']:not([aria-disabled='true']) {
-    color: var(--app-action-primary-text) !important;
-    -webkit-text-fill-color: var(--app-action-primary-text) !important;
+    color: #f8fafc !important;
+    -webkit-text-fill-color: #f8fafc !important;
     text-shadow: 0 1px 0 rgba(2, 6, 23, 0.28);
     opacity: 1 !important;
+    filter: none !important;
+    mix-blend-mode: normal !important;
   }
 }
 
