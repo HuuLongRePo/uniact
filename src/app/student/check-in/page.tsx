@@ -10,6 +10,16 @@ interface ParsedQrPayload {
   session_id: number;
 }
 
+class AttendanceValidationError extends Error {
+  status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = 'AttendanceValidationError';
+    this.status = status;
+  }
+}
+
 function parseQrPayload(rawValue: string): ParsedQrPayload {
   const trimmed = rawValue.trim();
 
@@ -71,7 +81,7 @@ async function validateAttendance(payload: ParsedQrPayload) {
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    throw new Error(data?.message || 'Xác thực thất bại');
+    throw new AttendanceValidationError(data?.message || 'Xác thực thất bại', res.status);
   }
   return data;
 }
@@ -122,9 +132,17 @@ export default function StudentCheckInPage() {
         if (cancelled) return;
 
         const message = err instanceof Error ? err.message : 'Xác thực thất bại';
+        const status = err instanceof AttendanceValidationError ? err.status : null;
         const normalized = message.toLowerCase();
 
+        if (status === 403) {
+          setAutoCheckinState('error');
+          setAutoCheckinError('Tài khoản hiện tại không đủ quyền điểm danh phiên QR này.');
+          return;
+        }
+
         if (
+          status === 401 ||
           normalized.includes('không có quyền') ||
           normalized.includes('unauthorized') ||
           normalized.includes('forbidden') ||

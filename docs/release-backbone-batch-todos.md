@@ -2337,6 +2337,35 @@ Yeu cau:
 - [x] `npm.cmd run build` -> PASS (2026-04-24)
 - [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests, 2026-04-24)
 
+## 9.60) Batch uu tien nong - deep-link check-in auth gate (401 redirect, 403 dung loop)
+
+### Muc tieu
+
+- Dam bao luong hoc vien quet QR bang app ngoai -> mo link check-in -> dang nhap -> tu diem danh chay on dinh.
+- Loai bo vong lap redirect login khi da dang nhap nhung sai tai khoan duoc phep diem danh.
+
+### Viec can lam
+
+- [x] `src/app/student/check-in/page.tsx`
+  - [x] bo sung `AttendanceValidationError` co `status` tu API `/api/attendance/validate`.
+  - [x] xu ly ro 401: redirect `/login?next=...` de dang nhap roi quay lai auto-checkin.
+  - [x] xu ly ro 403: hien loi "sai tai khoan/khong du quyen" va KHONG redirect tiep.
+- [x] `test/student-check-in-page.test.tsx` (moi)
+  - [x] regression case auto-checkin deep-link thanh cong.
+  - [x] regression case 401 redirect login voi `next` canonical.
+  - [x] regression case 403 hien loi va khong redirect loop.
+
+### Risk / defer
+
+- [ ] Camera tren HTTP LAN (khong localhost/HTTPS) van bi secure-context policy chan, batch nay chi bao dam fallback link/login hoat dong on dinh.
+- [ ] Chua co e2e thuc te tren dien thoai cho scenario app camera ngoai -> browser mobile -> login -> auto check-in.
+
+### Verification
+
+- [x] `npm.cmd test -- test/student-check-in-page.test.tsx test/student-qr-scanner-playback-gesture.test.tsx test/camera-stream.test.ts` -> PASS (3 files / 12 tests, 2026-04-24)
+- [x] `npm.cmd run build` -> PASS (2026-04-24)
+- [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests, 2026-04-24)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix
