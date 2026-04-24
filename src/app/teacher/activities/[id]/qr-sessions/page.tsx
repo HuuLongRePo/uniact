@@ -280,12 +280,7 @@ export default function QRSessionsPage() {
                             <div>
                               <div className="text-xs text-gray-500">Bắt đầu</div>
                               <div className="text-sm font-medium text-gray-900">
-                                {new Date(session.date_time).toLocaleString('vi-VN', {
-                                  hour: '2-digit',
-                                  minute: '2-digit',
-                                  day: '2-digit',
-                                  month: '2-digit',
-                                })}
+                                {formatVietnamDateTime(session.date_time)}
                               </div>
                             </div>
                           </div>
@@ -296,12 +291,7 @@ export default function QRSessionsPage() {
                               <div>
                                 <div className="text-xs text-gray-500">Kết thúc</div>
                                 <div className="text-sm font-medium text-gray-900">
-                                  {new Date(session.end_time).toLocaleString('vi-VN', {
-                                    hour: '2-digit',
-                                    minute: '2-digit',
-                                    day: '2-digit',
-                                    month: '2-digit',
-                                  })}
+                                  {formatVietnamDateTime(session.end_time)}
                                 </div>
                               </div>
                             </div>

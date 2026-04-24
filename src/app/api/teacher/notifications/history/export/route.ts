@@ -3,7 +3,7 @@ import { getUserFromToken } from '@/lib/auth';
 import { dbAll, dbReady, dbRun } from '@/lib/database';
 import { ApiError, errorResponse } from '@/lib/api-response';
 import { formatDate } from '@/lib/formatters';
-import { parseVietnamDate } from '@/lib/timezone';
+import { parseVietnamDate, toVietnamFileTimestamp } from '@/lib/timezone';
 
 async function ensureBroadcastTables() {
   await dbRun(`
@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
     return new NextResponse(csv, {
       headers: {
         'Content-Type': 'text/csv; charset=utf-8',
-        'Content-Disposition': `attachment; filename="notification-history-${Date.now()}.csv"`,
+        'Content-Disposition': `attachment; filename="notification-history-${toVietnamFileTimestamp(new Date())}.csv"`,
       },
     });
   } catch (error) {

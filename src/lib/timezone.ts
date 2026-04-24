@@ -68,6 +68,13 @@ export function toVietnamDateStamp(date: string | Date | null | undefined): stri
   return toVietnamDatetimeLocalValue(date).slice(0, 10);
 }
 
+export function toVietnamFileTimestamp(date: string | Date | null | undefined): string {
+  const value = toVietnamDatetimeLocalValue(date);
+  if (!value) return '';
+
+  return value.replace(/:/g, '-').replace('T', '_');
+}
+
 export function formatVietnamWithOptions(
   date: string | Date | null | undefined,
   options: Intl.DateTimeFormatOptions,

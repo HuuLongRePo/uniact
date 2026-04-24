@@ -2548,6 +2548,46 @@ Yeu cau:
 - [x] `npm.cmd run build` -> PASS (2026-04-24)
 - [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests, 2026-04-24)
 
+## 9.67) Batch uu tien nong - camera HTTP fallback UX + huong dan QR/FaceID + timezone residuals
+
+### Muc tieu
+
+- Lam ro ngay tren UI hoc vien cach diem danh khi camera web bi chan tren HTTP/LAN.
+- Bo sung huong dan QR/FaceID tu A-Z, tra loi ro gioi han "1 khuon mat / 1 luot" va roster chua diem danh theo lop.
+- Don mot phan timezone residuals/user-facing filename o surface thong bao va lich su QR.
+
+### Viec can lam
+
+- [x] `src/components/StudentQRScanner.tsx`
+  - [x] them khung huong dan deep-link check-in ro hon cho insecure context.
+  - [x] lam ro scanner chap nhan ca QR data hoac nguyen duong link check-in.
+- [x] `src/app/student/check-in/page.tsx`
+  - [x] bo sung mo ta auto check-in khi hoc vien mo deep link dung tai khoan.
+- [x] `src/app/teacher/attendance/face/page.tsx`
+  - [x] them note van hanh ve gioi han mot khuon mat moi luot va roster chua diem danh.
+- [x] `src/app/teacher/activities/[id]/qr-sessions/page.tsx`
+  - [x] chuyen hien thi bat dau/ket thuc sang helper timezone VN.
+- [x] `src/app/teacher/notifications/history/page.tsx`
+  - [x] doi ten file export tren client sang timestamp Viet Nam.
+- [x] `src/app/api/teacher/notifications/history/export/route.ts`
+  - [x] doi `Content-Disposition` sang timestamp Viet Nam.
+- [x] `src/lib/timezone.ts`
+  - [x] bo sung helper file timestamp theo Viet Nam.
+- [x] `docs/attendance-qr-face-guide.md`
+  - [x] tao huong dan QR/FaceID A-Z va FAQ van hanh.
+
+### Risk / defer
+
+- [ ] Van con nhieu file export/filename user-facing ngoai cum nay dang dung `Date.now()`; can audit tiep theo batch timezone residuals lon hon.
+- [ ] Huong dan da co trong docs va inline UI, nhung chua co link entrypoint tu navbar/help center.
+- [ ] Chua co E2E that tren dien thoai cho scenario app camera ngoai -> mo deep link -> login -> auto check-in.
+
+### Verification
+
+- [x] `npm.cmd test -- test/student-qr-scanner-playback-gesture.test.tsx test/student-check-in-page.test.tsx` -> PASS (2 files / 5 tests, 2026-04-24)
+- [x] `npm.cmd run build` -> PASS (2026-04-24)
+- [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests, 2026-04-24)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix

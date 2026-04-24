@@ -222,6 +222,11 @@ export default function StudentCheckInPage() {
               Nếu báo hết hạn, phiên QR đã đóng hoặc đã đổi mã mới. Hãy liên hệ giảng viên để mở lại
               phiên điểm danh.
             </p>
+            <p>
+              Khi học viên quét bằng app camera/QR bên ngoài và mở đúng link
+              <code> /student/check-in?s=...&t=...</code>, trang này sẽ tự động điểm danh ngay sau
+              khi đăng nhập đúng tài khoản thuộc phạm vi phiên QR.
+            </p>
           </section>
         </div>
       </section>

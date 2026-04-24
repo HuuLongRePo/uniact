@@ -82,6 +82,12 @@ export function StudentQRScanner({ onScan }: Props) {
   const [cameraTips, setCameraTips] = useState<string[]>(() => getCameraTroubleshootingSteps());
   const [autoScanSupported, setAutoScanSupported] = useState(false);
   const [insecureContext, setInsecureContext] = useState(false);
+  const insecureContextSteps = [
+    'Giảng viên mở mã QR hoặc đường link điểm danh trên màn hình lớp.',
+    'Học viên dùng app camera/QR bất kỳ để quét mã nếu trình duyệt web không bật được camera.',
+    'Mở link /student/check-in?s=...&t=... vừa quét được và đăng nhập đúng tài khoản học viên.',
+    'Hệ thống sẽ tự xác thực và điểm danh, không cần quét lại trong web.',
+  ];
 
   function stopScan(nextState: ScanState = 'idle') {
     if (frameRequest.current) {
@@ -392,10 +398,23 @@ export function StudentQRScanner({ onScan }: Props) {
           )}
 
           {insecureContext && (
-            <div className="rounded-2xl border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-              Camera có thể bị chặn trên HTTP. Nếu không bật được camera, hãy quét QR bằng app khác,
-              mở link <code>/student/check-in?s=...&t=...</code> rồi đăng nhập; hệ thống sẽ tự động
-              điểm danh.
+            <div
+              className="rounded-2xl border border-amber-300 bg-amber-50 px-3 py-3 text-sm text-amber-900"
+              data-testid="qr-insecure-context-guide"
+            >
+              <div className="font-semibold">Camera web có thể bị chặn trên HTTP/LAN</div>
+              <p className="mt-1 text-xs leading-5">
+                Nếu địa chỉ đang là <code>http://10.x</code>, <code>http://192.168.x.x</code> hoặc
+                trình duyệt nhúng, hãy ưu tiên quét QR bằng app camera khác rồi mở đường link điểm
+                danh. Link này hỗ trợ tự điểm danh sau khi đăng nhập đúng tài khoản.
+              </p>
+              <ol className="mt-2 space-y-1 text-xs leading-5">
+                {insecureContextSteps.map((step, index) => (
+                  <li key={step}>
+                    {index + 1}. {step}
+                  </li>
+                ))}
+              </ol>
             </div>
           )}
 
@@ -489,6 +508,11 @@ export function StudentQRScanner({ onScan }: Props) {
             Điểm danh thủ công
           </button>
         </form>
+        <div className="mt-4 rounded-2xl border border-gray-200 bg-gray-50 px-3 py-3 text-xs text-gray-700">
+          QR hợp lệ có thể là JSON ngắn, query string hoặc nguyên đường link
+          <code className="mx-1">/student/check-in?s=...&t=...</code>. Nếu giảng viên chiếu QR ở
+          chế độ link, học viên chỉ cần mở đúng link đó là đủ.
+        </div>
       </section>
     </div>
   );

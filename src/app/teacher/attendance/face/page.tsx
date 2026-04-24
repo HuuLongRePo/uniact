@@ -302,6 +302,18 @@ export default function TeacherFaceAttendancePage() {
         </p>
       </div>
 
+      <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
+        <div className="font-semibold">Lưu ý vận hành FaceID</div>
+        <ul className="mt-2 list-disc space-y-1 pl-5 text-xs leading-5 text-blue-900">
+          <li>Luồng này chỉ nhận diện một khuôn mặt cho mỗi lượt chụp hoặc verify.</li>
+          <li>Nếu trong khung hình có nhiều người, hệ thống sẽ yêu cầu giữ lại một người duy nhất.</li>
+          <li>
+            Khối "Học viên chưa điểm danh" bên dưới đang gom theo lớp và tự làm mới định kỳ để giảng
+            viên đọc tên, gọi lại các học viên chưa được nhận diện.
+          </li>
+        </ul>
+      </div>
+
       <div className="rounded-lg bg-white shadow p-6 space-y-4">
         <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 space-y-3">
           <div>

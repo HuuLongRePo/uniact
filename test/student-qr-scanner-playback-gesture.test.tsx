@@ -47,4 +47,29 @@ describe('StudentQRScanner mobile playback fallback', () => {
       HTMLMediaElement.prototype.play = originalPlay;
     }
   });
+
+  it('shows deep-link guidance when running in an insecure context', async () => {
+    const originalDescriptor = Object.getOwnPropertyDescriptor(window, 'isSecureContext');
+    Object.defineProperty(window, 'isSecureContext', {
+      configurable: true,
+      value: false,
+    });
+
+    try {
+      render(<StudentQRScanner onScan={vi.fn(async () => undefined)} />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('qr-insecure-context-guide')).toBeInTheDocument();
+      });
+
+      expect(screen.getByText(/camera web có thể bị chặn trên HTTP\/LAN/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/\/student\/check-in\?s=\.\.\.&t=\.\.\./i).length).toBeGreaterThan(0);
+    } finally {
+      if (originalDescriptor) {
+        Object.defineProperty(window, 'isSecureContext', originalDescriptor);
+      } else {
+        delete (window as Window & { isSecureContext?: boolean }).isSecureContext;
+      }
+    }
+  });
 });
