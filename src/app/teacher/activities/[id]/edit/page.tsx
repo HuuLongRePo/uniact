@@ -56,6 +56,24 @@ interface ParticipationPreview {
   direct_students?: ParticipationPreviewStudent[];
 }
 
+type SelectionChecklistItem = {
+  id: number;
+  label: string;
+  meta?: string;
+  disabled?: boolean;
+};
+
+type SelectionChecklistProps = {
+  title: string;
+  description: string;
+  tone: 'mandatory' | 'voluntary';
+  items: SelectionChecklistItem[];
+  selectedIds: number[];
+  onToggle: (id: number) => void;
+  actions?: React.ReactNode;
+  emptyText: string;
+};
+
 interface Activity {
   id: number;
   title: string;
@@ -71,6 +89,9 @@ interface Activity {
   class_ids?: number[];
   mandatory_class_ids?: number[];
   voluntary_class_ids?: number[];
+  mandatory_student_ids?: number[];
+  voluntary_student_ids?: number[];
+  applies_to_all_students?: boolean;
   classes?: Array<Class & { participation_mode?: 'mandatory' | 'voluntary' }>;
 }
 
@@ -84,6 +105,82 @@ function canEditActivity(activity: Activity): boolean {
 
 function getErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
+}
+
+function SelectionChecklist({
+  title,
+  description,
+  tone,
+  items,
+  selectedIds,
+  onToggle,
+  actions,
+  emptyText,
+}: SelectionChecklistProps) {
+  const selectedSet = new Set(selectedIds);
+  const palette =
+    tone === 'mandatory'
+      ? {
+          border: 'border-orange-200',
+          bg: 'bg-orange-50',
+          titleClass: 'text-orange-900',
+          textClass: 'text-orange-700',
+          accent: 'accent-orange-600',
+        }
+      : {
+          border: 'border-sky-200',
+          bg: 'bg-sky-50',
+          titleClass: 'text-sky-900',
+          textClass: 'text-sky-700',
+          accent: 'accent-sky-600',
+        };
+
+  return (
+    <section className={`rounded-xl border ${palette.border} ${palette.bg} p-4`}>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h3 className={`text-sm font-semibold ${palette.titleClass}`}>{title}</h3>
+          <p className={`mt-1 text-xs ${palette.textClass}`}>{description}</p>
+        </div>
+        <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-gray-700">
+          {selectedIds.length} đã chọn
+        </span>
+      </div>
+
+      {actions ? <div className="mt-3 flex flex-wrap gap-2">{actions}</div> : null}
+
+      {items.length === 0 ? (
+        <div className="mt-3 rounded-lg border border-dashed border-gray-300 bg-white/80 px-3 py-4 text-sm text-gray-500">
+          {emptyText}
+        </div>
+      ) : (
+        <div className="mt-3 max-h-64 space-y-2 overflow-y-auto pr-1">
+          {items.map((item) => (
+            <label
+              key={`${tone}-${item.id}`}
+              className={`flex cursor-pointer items-start gap-3 rounded-lg border border-white/80 bg-white px-3 py-2 shadow-sm transition hover:border-gray-200 ${
+                item.disabled ? 'cursor-not-allowed opacity-60' : ''
+              }`}
+            >
+              <input
+                type="checkbox"
+                checked={selectedSet.has(item.id)}
+                disabled={item.disabled}
+                onChange={() => onToggle(item.id)}
+                className={`mt-1 h-4 w-4 ${palette.accent}`}
+              />
+              <span className="min-w-0">
+                <span className="block text-sm font-medium text-gray-900">{item.label}</span>
+                {item.meta ? (
+                  <span className="block text-xs text-gray-500">{item.meta}</span>
+                ) : null}
+              </span>
+            </label>
+          ))}
+        </div>
+      )}
+    </section>
+  );
 }
 
 export default function EditActivityPage({ params }: { params: Promise<{ id: string }> }) {
@@ -109,6 +206,7 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
   const [voluntaryStudentIds, setVoluntaryStudentIds] = useState<number[]>([]);
   const [studentOptions, setStudentOptions] = useState<StudentOption[]>([]);
   const [studentSearch, setStudentSearch] = useState('');
+  const [classSearch, setClassSearch] = useState('');
   const [studentsLoaded, setStudentsLoaded] = useState(false);
   const [studentsLoading, setStudentsLoading] = useState(false);
   const [appliesToAllStudents, setAppliesToAllStudents] = useState(false);
@@ -139,33 +237,151 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
       return haystack.includes(keyword);
     });
   }, [studentOptions, studentSearch]);
-  const mandatorySelectedStudents = useMemo(
-    () => studentOptions.filter((student) => mandatoryStudentIds.includes(student.id)),
-    [studentOptions, mandatoryStudentIds]
-  );
-  const voluntarySelectedStudents = useMemo(
-    () => studentOptions.filter((student) => voluntaryStudentIds.includes(student.id)),
-    [studentOptions, voluntaryStudentIds]
-  );
+  const filteredClasses = useMemo(() => {
+    const keyword = classSearch.trim().toLowerCase();
+    if (!keyword) return classes;
 
-  const handleMandatoryStudentSelect = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const values = Array.from(event.target.selectedOptions).map((option) =>
-      parseInt(option.value, 10)
-    );
-    setMandatoryStudentIds(values);
-    setVoluntaryStudentIds((current) => current.filter((studentId) => !values.includes(studentId)));
-  };
-
-  const handleVoluntaryStudentSelect = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const values = Array.from(event.target.selectedOptions)
-      .map((option) => parseInt(option.value, 10))
-      .filter((studentId) => !mandatoryStudentIds.includes(studentId));
-    setVoluntaryStudentIds(values);
-  };
+    return classes.filter((classItem) => classItem.name.toLowerCase().includes(keyword));
+  }, [classSearch, classes]);
+  const mandatoryClassItems = useMemo(
+    () =>
+      filteredClasses.map((classItem) => ({
+        id: classItem.id,
+        label: classItem.name,
+        meta: 'Gán bắt buộc cho toàn bộ học viên trong lớp này',
+      })),
+    [filteredClasses]
+  );
+  const voluntaryClassItems = useMemo(
+    () =>
+      filteredClasses.map((classItem) => ({
+        id: classItem.id,
+        label: classItem.name,
+        meta: mandatoryClassIds.includes(classItem.id)
+          ? 'Đã thuộc nhóm bắt buộc nên không thể đồng thời ở nhóm đăng ký'
+          : 'Cho phép học viên lớp này tự đăng ký tham gia',
+        disabled: mandatoryClassIds.includes(classItem.id),
+      })),
+    [filteredClasses, mandatoryClassIds]
+  );
+  const mandatoryStudentItems = useMemo(
+    () =>
+      filteredStudentOptions.map((student) => ({
+        id: student.id,
+        label: student.name,
+        meta:
+          [student.class_name, student.email].filter(Boolean).join(' • ') || 'Chưa có thông tin lớp',
+      })),
+    [filteredStudentOptions]
+  );
+  const voluntaryStudentItems = useMemo(
+    () =>
+      filteredStudentOptions.map((student) => ({
+        id: student.id,
+        label: student.name,
+        meta:
+          [student.class_name, student.email].filter(Boolean).join(' • ') || 'Chưa có thông tin lớp',
+        disabled: mandatoryStudentIds.includes(student.id),
+      })),
+    [filteredStudentOptions, mandatoryStudentIds]
+  );
 
   useEffect(() => {
     void fetchAllData();
   }, [id]);
+
+  const toggleClassSelection = (scope: 'mandatory' | 'voluntary', classId: number) => {
+    if (scope === 'mandatory') {
+      setMandatoryClassIds((current) =>
+        current.includes(classId) ? current.filter((id) => id !== classId) : [...current, classId]
+      );
+      setVoluntaryClassIds((current) => current.filter((id) => id !== classId));
+      return;
+    }
+
+    if (mandatoryClassIds.includes(classId)) {
+      return;
+    }
+
+    setVoluntaryClassIds((current) =>
+      current.includes(classId) ? current.filter((id) => id !== classId) : [...current, classId]
+    );
+  };
+
+  const applyClassSelection = (scope: 'mandatory' | 'voluntary', classIds: number[]) => {
+    if (classIds.length === 0) return;
+
+    if (scope === 'mandatory') {
+      setMandatoryClassIds((current) => Array.from(new Set([...current, ...classIds])));
+      setVoluntaryClassIds((current) => current.filter((id) => !classIds.includes(id)));
+      return;
+    }
+
+    const allowedClassIds = classIds.filter((id) => !mandatoryClassIds.includes(id));
+    setVoluntaryClassIds((current) => Array.from(new Set([...current, ...allowedClassIds])));
+  };
+
+  const clearClassSelection = (scope: 'mandatory' | 'voluntary') => {
+    if (scope === 'mandatory') {
+      setMandatoryClassIds([]);
+      return;
+    }
+
+    setVoluntaryClassIds([]);
+  };
+
+  const toggleStudentSelection = (scope: 'mandatory' | 'voluntary', studentId: number) => {
+    if (scope === 'mandatory') {
+      setMandatoryStudentIds((current) =>
+        current.includes(studentId)
+          ? current.filter((id) => id !== studentId)
+          : [...current, studentId]
+      );
+      setVoluntaryStudentIds((current) => current.filter((id) => id !== studentId));
+      return;
+    }
+
+    if (mandatoryStudentIds.includes(studentId)) {
+      return;
+    }
+
+    setVoluntaryStudentIds((current) =>
+      current.includes(studentId)
+        ? current.filter((id) => id !== studentId)
+        : [...current, studentId]
+    );
+  };
+
+  const applyStudentSelection = (scope: 'mandatory' | 'voluntary', studentIds: number[]) => {
+    if (studentIds.length === 0) return;
+
+    if (scope === 'mandatory') {
+      setMandatoryStudentIds((current) => Array.from(new Set([...current, ...studentIds])));
+      setVoluntaryStudentIds((current) => current.filter((id) => !studentIds.includes(id)));
+      return;
+    }
+
+    const allowedStudentIds = studentIds.filter((id) => !mandatoryStudentIds.includes(id));
+    setVoluntaryStudentIds((current) => Array.from(new Set([...current, ...allowedStudentIds])));
+  };
+
+  const clearStudentSelection = (scope: 'mandatory' | 'voluntary') => {
+    if (scope === 'mandatory') {
+      setMandatoryStudentIds([]);
+      return;
+    }
+
+    setVoluntaryStudentIds([]);
+  };
+
+  const addStudentsFromClassScope = (scope: 'mandatory' | 'voluntary') => {
+    const sourceClassIds = scope === 'mandatory' ? mandatoryClassIds : voluntaryClassIds;
+    const sourceStudentIds = studentOptions
+      .filter((student) => sourceClassIds.includes(Number(student.class_id)))
+      .map((student) => student.id);
+
+    applyStudentSelection(scope, sourceStudentIds);
+  };
 
   const ensureStudentOptionsLoaded = async () => {
     if (studentsLoaded || studentsLoading) return;
@@ -190,7 +406,12 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
   useEffect(() => {
     if (!showParticipationPreview) return;
 
-    if (appliesToAllStudents || selectedClasses.length === 0) {
+    if (
+      appliesToAllStudents ||
+      (selectedClasses.length === 0 &&
+        mandatoryStudentIds.length === 0 &&
+        voluntaryStudentIds.length === 0)
+    ) {
       setParticipationPreview(null);
       setPreviewError(null);
       return;
@@ -304,9 +525,14 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
         [];
       setMandatoryClassIds(fetchedMandatoryClassIds);
       setVoluntaryClassIds(fetchedVoluntaryClassIds);
+      setMandatoryStudentIds(nextActivity.mandatory_student_ids || []);
+      setVoluntaryStudentIds(nextActivity.voluntary_student_ids || []);
       setAppliesToAllStudents(
-        Boolean((nextActivity as any).applies_to_all_students) ||
-          (fetchedMandatoryClassIds.length === 0 && fetchedVoluntaryClassIds.length === 0)
+        Boolean(nextActivity.applies_to_all_students) ||
+          (fetchedMandatoryClassIds.length === 0 &&
+            fetchedVoluntaryClassIds.length === 0 &&
+            (nextActivity.mandatory_student_ids || []).length === 0 &&
+            (nextActivity.voluntary_student_ids || []).length === 0)
       );
 
       if (classesRes.ok) {
@@ -357,8 +583,13 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
       return;
     }
 
-    if (!appliesToAllStudents && selectedClasses.length === 0) {
-      toast.error('Vui lòng chọn ít nhất một lớp hoặc bật mở đăng ký cho tất cả học viên');
+    if (
+      !appliesToAllStudents &&
+      selectedClasses.length === 0 &&
+      mandatoryStudentIds.length === 0 &&
+      voluntaryStudentIds.length === 0
+    ) {
+      toast.error('Vui lòng chọn ít nhất một lớp hoặc học viên trực tiếp, hoặc bật mở cho tất cả học viên');
       return;
     }
 
@@ -786,7 +1017,7 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
               </ul>
             </div>
 
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="hidden">
               <div>
                 <label className="mb-2 block text-sm font-medium text-orange-700">
                   Lớp bắt buộc
@@ -846,6 +1077,111 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
                 </p>
               </div>
             </div>
+            <div className="rounded-xl border border-gray-200 bg-white p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-900">
+                    {'Ch\u1ecdn l\u1edbp theo checklist'}
+                  </h3>
+                  <p className="mt-1 text-xs text-gray-500">
+                    {
+                      'Kh\u00f4ng c\u00f2n ph\u1ee5 thu\u1ed9c Ctrl/Cmd multi-select. C\u00f3 th\u1ec3 l\u1ecdc, ch\u1ecdn nhanh v\u00e0 ph\u1ed1i h\u1ee3p nhi\u1ec1u l\u1edbp b\u1eaft bu\u1ed9c/\u0111\u01b0\u1ee3c \u0111\u0103ng k\u00fd.'
+                    }
+                  </p>
+                </div>
+                <div className="text-xs font-medium text-gray-500">
+                  {`T\u1ed5ng ${selectedClasses.length}/${classes.length} l\u1edbp trong ph\u1ea1m vi`}
+                </div>
+              </div>
+              <div className="mt-3">
+                <input
+                  type="text"
+                  value={classSearch}
+                  onChange={(event) => setClassSearch(event.target.value)}
+                  placeholder={'L\u1ecdc theo t\u00ean l\u1edbp'}
+                  disabled={!canEdit || appliesToAllStudents}
+                  className="w-full rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:ring-blue-200 disabled:bg-gray-100"
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  {`Hi\u1ec3n th\u1ecb ${filteredClasses.length}/${classes.length} l\u1edbp ph\u00f9 h\u1ee3p.`}
+                </p>
+              </div>
+              <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+                <SelectionChecklist
+                  title={'L\u1edbp b\u1eaft bu\u1ed9c'}
+                  description={
+                    'C\u00e1c l\u1edbp n\u00e0y s\u1ebd \u0111\u01b0\u1ee3c g\u00e1n di\u1ec7n b\u1eaft bu\u1ed9c tham gia.'
+                  }
+                  tone="mandatory"
+                  items={mandatoryClassItems}
+                  selectedIds={mandatoryClassIds}
+                  onToggle={(classId) => toggleClassSelection('mandatory', classId)}
+                  emptyText={'Kh\u00f4ng c\u00f3 l\u1edbp n\u00e0o kh\u1edbp b\u1ed9 l\u1ecdc hi\u1ec7n t\u1ea1i.'}
+                  actions={
+                    <>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          applyClassSelection(
+                            'mandatory',
+                            filteredClasses.map((classItem) => classItem.id)
+                          )
+                        }
+                        disabled={!canEdit || appliesToAllStudents}
+                        className="rounded-lg border border-orange-200 bg-white px-3 py-1.5 text-xs font-medium text-orange-700 hover:bg-orange-100 disabled:opacity-50"
+                      >
+                        {'Ch\u1ecdn t\u1ea5t c\u1ea3 \u0111ang l\u1ecdc'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => clearClassSelection('mandatory')}
+                        disabled={!canEdit || appliesToAllStudents}
+                        className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+                      >
+                        {'X\u00f3a ch\u1ecdn'}
+                      </button>
+                    </>
+                  }
+                />
+                <SelectionChecklist
+                  title={'L\u1edbp \u0111\u01b0\u1ee3c \u0111\u0103ng k\u00fd'}
+                  description={
+                    'C\u00e1c l\u1edbp n\u00e0y c\u00f3 th\u1ec3 t\u1ef1 \u0111\u0103ng k\u00fd n\u1ebfu mu\u1ed1n tham gia.'
+                  }
+                  tone="voluntary"
+                  items={voluntaryClassItems}
+                  selectedIds={voluntaryClassIds}
+                  onToggle={(classId) => toggleClassSelection('voluntary', classId)}
+                  emptyText={'Kh\u00f4ng c\u00f3 l\u1edbp n\u00e0o kh\u1edbp b\u1ed9 l\u1ecdc hi\u1ec7n t\u1ea1i.'}
+                  actions={
+                    <>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          applyClassSelection(
+                            'voluntary',
+                            filteredClasses.map((classItem) => classItem.id)
+                          )
+                        }
+                        disabled={!canEdit || appliesToAllStudents}
+                        className="rounded-lg border border-sky-200 bg-white px-3 py-1.5 text-xs font-medium text-sky-700 hover:bg-sky-100 disabled:opacity-50"
+                      >
+                        {'Ch\u1ecdn t\u1ea5t c\u1ea3 \u0111ang l\u1ecdc'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => clearClassSelection('voluntary')}
+                        disabled={!canEdit || appliesToAllStudents}
+                        className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+                      >
+                        {'X\u00f3a ch\u1ecdn'}
+                      </button>
+                    </>
+                  }
+                />
+              </div>
+            </div>
+
             {!appliesToAllStudents && (
               <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
                 <div className="flex items-center justify-between gap-3">
@@ -872,9 +1208,8 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
                 {studentsLoaded ? (
                   <>
                     <p className="mt-2 text-xs text-blue-800">
-                      Đã nạp {studentOptions.length} học viên. Đang chọn{' '}
-                      {mandatoryStudentIds.length} bắt buộc và {voluntaryStudentIds.length} tự
-                      nguyện.
+                      Đã nạp {studentOptions.length} học viên. Đang chọn {mandatoryStudentIds.length}{' '}
+                      bắt buộc và {voluntaryStudentIds.length} được đăng ký.
                     </p>
                     <div className="mt-3">
                       <input
@@ -886,91 +1221,95 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
                         disabled={!canEdit}
                       />
                       <p className="mt-1 text-xs text-blue-800">
-                        Hiển thị {filteredStudentOptions.length}/{studentOptions.length} học viên
-                        phù hợp.
+                        Hiển thị {filteredStudentOptions.length}/{studentOptions.length} học viên phù
+                        hợp.
                       </p>
                     </div>
                     <div className="mt-3 grid grid-cols-1 gap-4 lg:grid-cols-2">
-                      <div>
-                        {mandatorySelectedStudents.length > 0 ? (
-                          <div className="mb-2 flex flex-wrap gap-2">
-                            {mandatorySelectedStudents.map((student) => (
-                              <button
-                                key={`mandatory-chip-${student.id}`}
-                                type="button"
-                                onClick={() =>
-                                  setMandatoryStudentIds((current) =>
-                                    current.filter((id) => id !== student.id)
-                                  )
-                                }
-                                disabled={!canEdit}
-                                className="rounded-full bg-orange-100 px-2 py-1 text-xs text-orange-800 hover:bg-orange-200 disabled:opacity-60"
-                              >
-                                {student.name} ×
-                              </button>
-                            ))}
-                          </div>
-                        ) : null}
-                        <label className="mb-1 block text-sm font-medium text-orange-700">
-                          Học viên bắt buộc
-                        </label>
-                        <select
-                          multiple
-                          className="h-32 w-full rounded-lg border px-3 py-2 focus:ring-2 focus:ring-blue-200"
-                          value={mandatoryStudentIds.map(String)}
-                          onChange={handleMandatoryStudentSelect}
-                          disabled={!canEdit}
-                        >
-                          {filteredStudentOptions.map((student) => (
-                            <option key={`mandatory-student-${student.id}`} value={student.id}>
-                              {student.name}
-                              {student.class_name ? ` - ${student.class_name}` : ''}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        {voluntarySelectedStudents.length > 0 ? (
-                          <div className="mb-2 flex flex-wrap gap-2">
-                            {voluntarySelectedStudents.map((student) => (
-                              <button
-                                key={`voluntary-chip-${student.id}`}
-                                type="button"
-                                onClick={() =>
-                                  setVoluntaryStudentIds((current) =>
-                                    current.filter((id) => id !== student.id)
-                                  )
-                                }
-                                disabled={!canEdit}
-                                className="rounded-full bg-sky-100 px-2 py-1 text-xs text-sky-800 hover:bg-sky-200 disabled:opacity-60"
-                              >
-                                {student.name} ×
-                              </button>
-                            ))}
-                          </div>
-                        ) : null}
-                        <label className="mb-1 block text-sm font-medium text-sky-700">
-                          Học viên tự nguyện
-                        </label>
-                        <select
-                          multiple
-                          className="h-32 w-full rounded-lg border px-3 py-2 focus:ring-2 focus:ring-blue-200"
-                          value={voluntaryStudentIds.map(String)}
-                          onChange={handleVoluntaryStudentSelect}
-                          disabled={!canEdit}
-                        >
-                          {filteredStudentOptions.map((student) => (
-                            <option
-                              key={`voluntary-student-${student.id}`}
-                              value={student.id}
-                              disabled={mandatoryStudentIds.includes(student.id)}
+                      <SelectionChecklist
+                        title="Học viên bắt buộc"
+                        description="Chọn vài học viên của nhiều lớp hoặc dùng thao tác nhanh để lấy theo lớp bắt buộc."
+                        tone="mandatory"
+                        items={mandatoryStudentItems}
+                        selectedIds={mandatoryStudentIds}
+                        onToggle={(studentId) => toggleStudentSelection('mandatory', studentId)}
+                        emptyText="Không có học viên nào khớp bộ lọc hiện tại."
+                        actions={
+                          <>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                applyStudentSelection(
+                                  'mandatory',
+                                  filteredStudentOptions.map((student) => student.id)
+                                )
+                              }
+                              disabled={!canEdit}
+                              className="rounded-lg border border-orange-200 bg-white px-3 py-1.5 text-xs font-medium text-orange-700 hover:bg-orange-100 disabled:opacity-60"
                             >
-                              {student.name}
-                              {student.class_name ? ` - ${student.class_name}` : ''}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
+                              Chọn tất cả đang lọc
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => addStudentsFromClassScope('mandatory')}
+                              disabled={!canEdit}
+                              className="rounded-lg border border-orange-200 bg-white px-3 py-1.5 text-xs font-medium text-orange-700 hover:bg-orange-100 disabled:opacity-60"
+                            >
+                              Lấy từ lớp bắt buộc
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => clearStudentSelection('mandatory')}
+                              disabled={!canEdit}
+                              className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-100 disabled:opacity-60"
+                            >
+                              Xóa chọn
+                            </button>
+                          </>
+                        }
+                      />
+                      <SelectionChecklist
+                        title="Học viên được đăng ký"
+                        description="Chọn học viên được phép đăng ký nhưng không bị bắt buộc tham gia."
+                        tone="voluntary"
+                        items={voluntaryStudentItems}
+                        selectedIds={voluntaryStudentIds}
+                        onToggle={(studentId) => toggleStudentSelection('voluntary', studentId)}
+                        emptyText="Không có học viên nào khớp bộ lọc hiện tại."
+                        actions={
+                          <>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                applyStudentSelection(
+                                  'voluntary',
+                                  filteredStudentOptions.map((student) => student.id)
+                                )
+                              }
+                              disabled={!canEdit}
+                              className="rounded-lg border border-sky-200 bg-white px-3 py-1.5 text-xs font-medium text-sky-700 hover:bg-sky-100 disabled:opacity-60"
+                            >
+                              Chọn tất cả đang lọc
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => addStudentsFromClassScope('voluntary')}
+                              disabled={!canEdit}
+                              className="rounded-lg border border-sky-200 bg-white px-3 py-1.5 text-xs font-medium text-sky-700 hover:bg-sky-100 disabled:opacity-60"
+                            >
+                              Lấy từ lớp được đăng ký
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => clearStudentSelection('voluntary')}
+                              disabled={!canEdit}
+                              className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-100 disabled:opacity-60"
+                            >
+                              Xóa chọn
+                            </button>
+                          </>
+                        }
+                      />
                     </div>
                   </>
                 ) : null}

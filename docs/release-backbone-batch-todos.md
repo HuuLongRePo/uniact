@@ -2488,6 +2488,38 @@ Yeu cau:
 - [x] `npm.cmd run build` -> PASS (2026-04-24)
 - [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests, 2026-04-24)
 
+## 9.65) Batch uu tien nong - parity checklist scope cho man sua hoat dong
+
+### Muc tieu
+
+- Dong parity create/edit cho wizard chon scope lop va hoc vien.
+- Cho phep man sua hoat dong doc + luu day du `mandatory_student_ids`, `voluntary_student_ids`, `applies_to_all_students`.
+- Loai bo diem gay compile do UI select cu van goi handler da duoc thay bang checklist.
+
+### Viec can lam
+
+- [x] `src/app/teacher/activities/[id]/edit/page.tsx`
+  - [x] bo sung checklist component + class filter cho scope lop bat buoc / duoc dang ky.
+  - [x] hydrate va submit du lieu hoc vien scope truc tiep khi sua hoat dong.
+  - [x] thay UI multi-select hoc vien bang checklist + thao tac nhanh theo lop scope.
+  - [x] mo rong preview/validation de cho phep chi chon hoc vien truc tiep ma van hop le.
+- [x] `test/teacher-edit-activity-page.test.tsx`
+  - [x] regression hien tai van xanh voi wizard edit sau khi thay scope UI.
+- [x] `test/teacher-edit-activity-preview.test.tsx`
+  - [x] regression preview edit van xanh voi payload scope hien tai.
+
+### Risk / defer
+
+- [ ] Markup select legacy trong man sua van dang bi an (`hidden`) de giam rui ro batch; can cleanup source khi tiep tuc batch refactor scope.
+- [ ] Chua dua parity scope moi sang cac man dialog/admin route khac neu con reuse form cu.
+- [ ] Van con batch lon pending cho camera HTTP fallback UX, audit timezone, huong dan QR/FaceID va dark mode dialog tao hoat dong.
+
+### Verification
+
+- [x] `npm.cmd test -- test/teacher-edit-activity-page.test.tsx test/teacher-edit-activity-preview.test.tsx` -> PASS (2 files / 2 tests, 2026-04-24)
+- [x] `npm.cmd run build` -> PASS (2026-04-24)
+- [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests, 2026-04-24)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix
