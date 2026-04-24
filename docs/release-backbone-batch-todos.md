@@ -2255,6 +2255,33 @@ Yeu cau:
 - [x] `npm.cmd run build` -> PASS (2026-04-24)
 - [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests, 2026-04-24)
 
+## 9.57) Batch uu tien nong - dong bo tao/sua hoat dong ve wizard day du (bo dialog cu)
+
+### Muc tieu
+
+- Xu ly nghen luong tao hoat dong tu trang danh sach giao vien: dialog cu khong day du tuy chon `lop bat buoc/lop duoc dang ky/hoc vien`.
+- Giam loi dark mode readability tren dialog cu bang cach dua luong chinh ve wizard create/edit da co token/theme va scope selection day du.
+
+### Viec can lam
+
+- [x] `src/app/teacher/activities/page.tsx`
+  - [x] bo import + state mo `ActivityDialog` tren surface danh sach giao vien.
+  - [x] nut `Tao hoat dong moi` chuyen thanh `Link` den `/teacher/activities/new`.
+  - [x] hanh dong `Chinh sua` (card + menu) chuyen thanh `Link` den `/teacher/activities/[id]/edit`.
+  - [x] giu nguyen cac luong xuong song khac (submit duyet, huy, clone, delete, diem danh/QR) khong doi contract.
+- [x] Khong doi API/create contract o batch nay; tan dung luong wizard create/edit da co cho mandatory/voluntary class+student.
+
+### Risk / defer
+
+- [ ] `ActivityDialog` cu van ton tai trong repo de tranh phat sinh side-effect ngoai scope batch; hien tai khong con duoc goi tu teacher activities list.
+- [ ] Can tiep tuc clean-up mojibake/noi dung cu trong mot so man legacy/doc cu o batch rieng.
+
+### Verification
+
+- [x] `npm.cmd test -- test/teacher-activities-page.test.tsx` -> PASS (1 file / 4 tests, 2026-04-24)
+- [x] `npm.cmd run build` -> PASS (2026-04-24)
+- [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests, 2026-04-24)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix

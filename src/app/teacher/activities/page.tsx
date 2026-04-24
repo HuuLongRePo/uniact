@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { useEffectEventCompat } from '@/lib/useEffectEventCompat';
 import Link from 'next/link';
 import { toast } from '@/lib/toast';
-import ActivityDialog from '@/components/ActivityDialog';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import ActivitySkeleton from '@/components/ActivitySkeleton';
 import EmptyState from '@/components/EmptyState';
@@ -86,8 +85,6 @@ export default function TeacherActivitiesPage() {
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'title'>('newest');
   const limit = 10;
 
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingActivityId, setEditingActivityId] = useState<number | null>(null);
   const [openMenuId, setOpenMenuId] = useState<number | null>(null);
   const [confirmAction, setConfirmAction] = useState<{
     type: ConfirmActionType;
@@ -278,21 +275,6 @@ export default function TeacherActivitiesPage() {
     }
   };
 
-  const handleEdit = (activityId: number) => {
-    setEditingActivityId(activityId);
-    setDialogOpen(true);
-    setOpenMenuId(null);
-  };
-
-  const handleCreateNew = () => {
-    setEditingActivityId(null);
-    setDialogOpen(true);
-  };
-
-  const handleDialogSuccess = () => {
-    fetchActivities();
-  };
-
   const openConfirmAction = (type: ConfirmActionType, activity: Pick<Activity, 'id' | 'title'>) => {
     setConfirmAction({ type, id: activity.id, title: activity.title });
     setOpenMenuId(null);
@@ -457,14 +439,14 @@ export default function TeacherActivitiesPage() {
               điểm danh đúng thời điểm.
             </p>
           </div>
-          <button
-            onClick={handleCreateNew}
+          <Link
+            href="/teacher/activities/new"
             className="inline-flex items-center gap-2 rounded-xl bg-green-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-green-700"
             data-testid="btn-create-activity"
           >
             <Plus className="h-4 w-4" />
             Tạo hoạt động mới
-          </button>
+          </Link>
         </div>
 
         <div className="content-card mb-6 space-y-4 rounded-2xl p-4 sm:p-5">
@@ -747,14 +729,13 @@ export default function TeacherActivitiesPage() {
 
                       {canEditAndResubmit && (
                         <>
-                          <button
-                            onClick={() => handleEdit(activity.id)}
-                            disabled={actionLoading.id === activity.id}
-                            className="inline-flex items-center gap-1 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-700 disabled:opacity-50"
+                          <Link
+                            href={`/teacher/activities/${activity.id}/edit`}
+                            className="inline-flex items-center gap-1 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-700"
                           >
                             <Edit className="w-4 h-4" />
                             Chỉnh sửa
-                          </button>
+                          </Link>
 
                           <button
                             onClick={() => handleSubmitApproval(activity)}
@@ -826,16 +807,14 @@ export default function TeacherActivitiesPage() {
 
                         {openMenuId === activity.id && (
                           <div className="absolute right-0 z-10 mt-2 w-48 rounded-xl border bg-white shadow-lg">
-                            <button
-                              onClick={() => handleEdit(activity.id)}
-                              disabled={
-                                actionLoading.id === activity.id && actionLoading.type !== null
-                              }
-                              className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm hover:bg-gray-50 disabled:opacity-50"
+                            <Link
+                              href={`/teacher/activities/${activity.id}/edit`}
+                              onClick={() => setOpenMenuId(null)}
+                              className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm hover:bg-gray-50"
                             >
                               <Edit className="w-4 h-4" />
                               Chỉnh sửa
-                            </button>
+                            </Link>
 
                             <button
                               onClick={() => handleClone(activity)}
@@ -926,16 +905,6 @@ export default function TeacherActivitiesPage() {
           </div>
         )}
       </section>
-
-      <ActivityDialog
-        isOpen={dialogOpen}
-        onClose={() => {
-          setDialogOpen(false);
-          setEditingActivityId(null);
-        }}
-        onSuccess={handleDialogSuccess}
-        activityId={editingActivityId}
-      />
 
       {confirmDialogConfig && (
         <ConfirmDialog
