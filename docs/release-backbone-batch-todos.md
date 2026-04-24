@@ -2850,6 +2850,7 @@ Sau khi code:
   - [x] `src/app/admin/bonus-approval/page.tsx`
   - [x] `src/app/admin/bonus-reports/page.tsx`
   - [x] `src/app/admin/reports/custom/page.tsx`
+  - [x] `src/app/admin/backup/page.tsx`
   - [x] dung `resolveDownloadFilename(...)` + fallback an toan theo context.
 - [x] Khong doi contract API trong batch nay; chi sync cach dat ten file tai FE.
 
@@ -2861,6 +2862,7 @@ Sau khi code:
 ### Verification
 
 - [x] `npm.cmd test -- test/teacher-participation-page.test.tsx test/teacher-class-stats-page.test.tsx test/teacher-notification-history-page.test.tsx test/download-filename.test.ts test/admin-scores-route.test.ts test/custom-report-page.test.tsx test/teacher-poll-responses-page.test.tsx test/bonus-reports.test.ts` -> PASS (8 files / 49 tests, 2026-04-24)
+- [x] `npm.cmd test -- test/admin-backup-and-rankings-routes.test.ts test/admin-database-ops-routes.test.ts test/download-filename.test.ts` -> PASS (3 files / 14 tests, 2026-04-24)
 - [x] `npm.cmd run build` -> PASS (2026-04-24)
 
 ## 10) Ke hoach commit de xuat

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { resolveDownloadFilename } from '@/lib/download-filename';
 import { formatVietnamDateTime } from '@/lib/timezone';
 import toast from 'react-hot-toast';
 import {
@@ -99,11 +100,18 @@ export default function BackupRestorePage() {
 
         // Download backup file
         const downloadResponse = await fetch(`/api/admin/database/download?file=${data.filename}`);
+        if (!downloadResponse.ok) {
+          toast.error('Không thể tải xuống file backup vừa tạo');
+          return;
+        }
         const blob = await downloadResponse.blob();
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = data.filename;
+        a.download = resolveDownloadFilename(
+          downloadResponse.headers?.get?.('Content-Disposition') ?? null,
+          data.filename
+        );
         document.body.appendChild(a);
         a.click();
         a.remove();
@@ -134,7 +142,10 @@ export default function BackupRestorePage() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = filename;
+      a.download = resolveDownloadFilename(
+        response.headers?.get?.('Content-Disposition') ?? null,
+        filename
+      );
       document.body.appendChild(a);
       a.click();
       a.remove();
