@@ -2140,6 +2140,45 @@ Yeu cau:
 - [x] `npm.cmd run build` -> PASS (2026-04-24)
 - [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests, 2026-04-24)
 
+## 9.54) Batch uu tien nong - camera fallback QR + dark CTA contrast guard
+
+### Muc tieu
+
+- Giam loi "khong dung duoc camera" tren HTTP LAN bang fallback thao tac ro rang de hoc vien van diem danh duoc.
+- Tang ty le decode QR tu anh upload (khi camera bi chan/khong ho tro) bang aggressive decode passes.
+- Khoa lai contrast CTA landing dark mode de tranh trang thai chu mo/xam tren nen xanh.
+
+### Viec can lam
+
+- [x] QR decoder hardening:
+  - [x] `src/lib/qr-scan-decoder.ts`:
+    - Them option `aggressive` cho decode pass.
+    - Bo sung pass high-contrast + upscale cho anh kho decode.
+- [x] Student scanner UX/fallback:
+  - [x] `src/components/StudentQRScanner.tsx`:
+    - Ho tro decode anh ca khi trinh duyet khong co `createImageBitmap`.
+    - Bat `aggressive` mode cho upload anh QR.
+    - Bo sung canh bao insecure-context + huong dan deep-link `/student/check-in?s=...&t=...`.
+    - Cap nhat label/placeholder nhap thu cong: chap nhan ca raw payload va full link.
+- [x] Camera troubleshooting guidance:
+  - [x] `src/lib/camera-stream.ts`: them tip fallback deep-link trong insecure context.
+- [x] Landing dark CTA contrast:
+  - [x] `src/app/globals.css`: harden `.landing-action-primary` cho visited/active/focus-visible + border contrast.
+- [x] Test cap nhat:
+  - [x] `test/qr-scan-decoder.test.ts`
+  - [x] `test/camera-stream.test.ts`
+
+### Risk / defer
+
+- [ ] Gioi han trinh duyet: camera tren origin HTTP (khong phai localhost) van bi browser chan theo secure-context policy; batch nay bo sung fallback de van diem danh duoc, khong the bypass policy.
+- [ ] Chua bo sung e2e test upload anh QR that trong browser that; hien tai moi co unit/integration decoder + scanner playback fallback.
+
+### Verification
+
+- [x] `npm.cmd test -- test/camera-stream.test.ts test/qr-scan-decoder.test.ts test/student-qr-scanner-playback-gesture.test.tsx` -> PASS (3 files / 14 tests, 2026-04-24)
+- [x] `npm.cmd run build` -> PASS (2026-04-24)
+- [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests, 2026-04-24)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix

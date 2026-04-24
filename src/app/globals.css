@@ -1089,7 +1089,10 @@ button:disabled,
   text-underline-offset: 0.14em;
 }
 
-.landing-action-primary {
+.landing-action-primary,
+.landing-action-primary:visited,
+.landing-action-primary:active,
+.landing-action-primary:focus-visible {
   background: linear-gradient(
     135deg,
     var(--app-action-primary-bg) 0%,
@@ -1098,6 +1101,7 @@ button:disabled,
   color: var(--app-action-primary-text) !important;
   -webkit-text-fill-color: var(--app-action-primary-text) !important;
   text-shadow: 0 1px 0 rgba(2, 6, 23, 0.25);
+  border: 1px solid color-mix(in srgb, var(--app-action-primary-bg-hover) 30%, transparent);
   box-shadow: var(--landing-action-shadow);
   opacity: 1;
 }

@@ -121,9 +121,13 @@ function getPermissionsPolicyCameraHint() {
 export function getCameraTroubleshootingSteps(error?: unknown) {
   const tips: string[] = [];
   const errorName = normalizeCameraErrorName(error);
+  const insecureContext = typeof window !== 'undefined' && !window.isSecureContext;
 
-  if (typeof window !== 'undefined' && !window.isSecureContext) {
+  if (insecureContext) {
     tips.push(getInsecureContextHint());
+    tips.push(
+      'Nếu không mở được camera, quét mã bằng app QR khác rồi mở link /student/check-in?s=...&t=... để hệ thống tự điểm danh sau khi đăng nhập.'
+    );
   }
 
   if (isLikelyEmbeddedBrowser()) {

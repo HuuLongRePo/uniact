@@ -76,4 +76,23 @@ describe('qr scan decoder', () => {
     expect(result).toBeNull();
     expect(getFallbackImageData).not.toHaveBeenCalled();
   });
+
+  it('uses aggressive jsQR passes for difficult image uploads', async () => {
+    const jsQrDecoder = vi
+      .fn()
+      .mockReturnValueOnce(null)
+      .mockReturnValueOnce(null)
+      .mockReturnValueOnce({ data: 'qr-from-aggressive-pass' }) as unknown as JsQrDecoder;
+
+    const result = await decodeQrValueFromSource({
+      source: fakeSource,
+      barcodeDetector: null,
+      jsQrDecoder,
+      getFallbackImageData: () => fakeImageData,
+      aggressive: true,
+    });
+
+    expect(result).toBe('qr-from-aggressive-pass');
+    expect(jsQrDecoder).toHaveBeenCalledTimes(3);
+  });
 });

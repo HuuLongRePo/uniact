@@ -22,6 +22,46 @@ interface Props {
   onScan: (rawValue: string) => Promise<void>;
 }
 
+type LoadedQrImageSource = {
+  source: ImageBitmapSource;
+  width: number;
+  height: number;
+  dispose: () => void;
+};
+
+async function loadQrImageSource(file: File): Promise<LoadedQrImageSource> {
+  if (typeof window.createImageBitmap === 'function') {
+    const bitmap = await window.createImageBitmap(file);
+    return {
+      source: bitmap,
+      width: bitmap.width,
+      height: bitmap.height,
+      dispose: () => bitmap.close(),
+    };
+  }
+
+  const objectUrl = URL.createObjectURL(file);
+
+  try {
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const nextImage = new Image();
+      nextImage.onload = () => resolve(nextImage);
+      nextImage.onerror = () => reject(new Error('Không thể mở ảnh QR từ tệp đã chọn.'));
+      nextImage.src = objectUrl;
+    });
+
+    return {
+      source: image,
+      width: image.naturalWidth || image.width,
+      height: image.naturalHeight || image.height,
+      dispose: () => URL.revokeObjectURL(objectUrl),
+    };
+  } catch (error) {
+    URL.revokeObjectURL(objectUrl);
+    throw error;
+  }
+}
+
 export function StudentQRScanner({ onScan }: Props) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -41,6 +81,7 @@ export function StudentQRScanner({ onScan }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [cameraTips, setCameraTips] = useState<string[]>(() => getCameraTroubleshootingSteps());
   const [autoScanSupported, setAutoScanSupported] = useState(false);
+  const [insecureContext, setInsecureContext] = useState(false);
 
   function stopScan(nextState: ScanState = 'idle') {
     if (frameRequest.current) {
@@ -73,6 +114,11 @@ export function StudentQRScanner({ onScan }: Props) {
 
     await decoderInitPromiseRef.current;
   }
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    setInsecureContext(!window.isSecureContext);
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -225,40 +271,38 @@ export function StudentQRScanner({ onScan }: Props) {
 
     await ensureDecoderReady();
 
-    if (
-      (!detectorRef.current && !jsQrDecoderRef.current) ||
-      typeof window.createImageBitmap !== 'function'
-    ) {
+    if (!detectorRef.current && !jsQrDecoderRef.current) {
       toast.error('Trình duyệt không hỗ trợ quét QR từ ảnh. Hãy dùng nhập thủ công.');
       return;
     }
 
-    let imageBitmap: ImageBitmap | null = null;
+    let loadedImage: LoadedQrImageSource | null = null;
 
     try {
       setError(null);
       setScanState('scanning');
 
-      imageBitmap = await window.createImageBitmap(file);
+      loadedImage = await loadQrImageSource(file);
       const decodedValue = await decodeQrValueFromSource({
-        source: imageBitmap,
+        source: loadedImage.source,
         barcodeDetector: detectorRef.current,
         jsQrDecoder: jsQrDecoderRef.current,
+        aggressive: true,
         getFallbackImageData: () => {
-          if (!imageBitmap) {
+          if (!loadedImage) {
             return null;
           }
 
           const canvas = document.createElement('canvas');
-          canvas.width = imageBitmap.width;
-          canvas.height = imageBitmap.height;
+          canvas.width = loadedImage.width;
+          canvas.height = loadedImage.height;
 
           const context = canvas.getContext('2d');
           if (!context) {
             return null;
           }
 
-          context.drawImage(imageBitmap, 0, 0, canvas.width, canvas.height);
+          context.drawImage(loadedImage.source as CanvasImageSource, 0, 0, canvas.width, canvas.height);
 
           try {
             return context.getImageData(0, 0, canvas.width, canvas.height);
@@ -270,7 +314,9 @@ export function StudentQRScanner({ onScan }: Props) {
 
       const firstValue = String(decodedValue || '').trim();
       if (!firstValue) {
-        throw new Error('Không đọc được mã QR từ ảnh.');
+        throw new Error(
+          'Không đọc được mã QR từ ảnh. Hãy chọn ảnh rõ nét hơn hoặc dán link/mã QR vào ô nhập thủ công.'
+        );
       }
 
       await submitRawValue(firstValue);
@@ -279,7 +325,7 @@ export function StudentQRScanner({ onScan }: Props) {
       setError(err instanceof Error ? err.message : 'Không thể quét mã QR từ ảnh');
       toast.error('Không thể quét mã QR từ ảnh');
     } finally {
-      imageBitmap?.close();
+      loadedImage?.dispose();
     }
   }
 
@@ -345,6 +391,14 @@ export function StudentQRScanner({ onScan }: Props) {
             </div>
           )}
 
+          {insecureContext && (
+            <div className="rounded-2xl border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+              Camera có thể bị chặn trên HTTP. Nếu không bật được camera, hãy quét QR bằng app khác,
+              mở link <code>/student/check-in?s=...&t=...</code> rồi đăng nhập; hệ thống sẽ tự động
+              điểm danh.
+            </div>
+          )}
+
           {scanState === 'success' && (
             <div className="rounded-2xl border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800">
               <div className="inline-flex items-center gap-2 font-medium">
@@ -388,7 +442,7 @@ export function StudentQRScanner({ onScan }: Props) {
             <div className="font-semibold">Không dùng được camera?</div>
             <p className="mt-1 text-xs leading-5">
               Bạn có thể tải ảnh chứa mã QR để hệ thống đọc thay cho camera, hoặc dán dữ liệu QR ở
-              khung nhập thủ công.
+              khung nhập thủ công. Nếu quét bằng app bên ngoài, dán nguyên link cũng được.
             </p>
             <label className="mt-2 inline-flex cursor-pointer items-center gap-2 rounded-xl border border-indigo-300 bg-white px-3.5 py-2 text-sm font-semibold text-indigo-700 transition-colors hover:bg-indigo-100">
               Tải ảnh QR
@@ -420,11 +474,11 @@ export function StudentQRScanner({ onScan }: Props) {
       <section className="content-card p-4 sm:p-5">
         <form onSubmit={handleManualSubmit} className="space-y-3">
           <label className="block text-sm font-medium text-gray-700">
-            Nhập dữ liệu thô từ mã QR
+            Nhập dữ liệu thô hoặc link từ mã QR
           </label>
           <textarea
             className="min-h-24 w-full rounded-2xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-transparent focus:ring-2 focus:ring-blue-500"
-            placeholder='Ví dụ: {"s":123,"t":"qr_token"}'
+            placeholder='Ví dụ: {"s":123,"t":"qr_token"} hoặc /student/check-in?s=123&t=qr_token'
             value={manualToken}
             onChange={(event) => setManualToken(event.target.value)}
           />

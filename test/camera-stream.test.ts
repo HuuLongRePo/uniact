@@ -89,6 +89,7 @@ describe('camera-stream helper', () => {
 
     expect(tips.join(' ')).toMatch(/HTTPS|localhost/i);
     expect(tips.join(' ')).toMatch(/Chrome|Safari|Edge/i);
+    expect(tips.join(' ')).toMatch(/student\/check-in/i);
   });
 
   it('returns permission and recovery tips when user denies camera', async () => {

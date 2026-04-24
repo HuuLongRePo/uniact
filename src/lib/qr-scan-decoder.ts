@@ -13,6 +13,7 @@ type BarcodeDetectorConstructor = new (options?: { formats?: string[] }) => Barc
 export type JsQrDecoder = typeof jsQR;
 
 let cachedJsQrDecoderPromise: Promise<JsQrDecoder | null> | null = null;
+type ImageDataLike = Pick<ImageData, 'data' | 'width' | 'height'>;
 
 function normalizeDecodedValue(rawValue: unknown): string | null {
   const value = typeof rawValue === 'string' ? rawValue.trim() : '';
@@ -46,16 +47,117 @@ export async function loadJsQrDecoder(): Promise<JsQrDecoder | null> {
   return cachedJsQrDecoderPromise;
 }
 
+function decodeWithJsQr(
+  jsQrDecoder: JsQrDecoder,
+  imageData: ImageDataLike,
+  inversionAttempts: 'dontInvert' | 'attemptBoth'
+) {
+  const result = jsQrDecoder(imageData.data, imageData.width, imageData.height, {
+    inversionAttempts,
+  });
+
+  return normalizeDecodedValue(result?.data);
+}
+
+function buildHighContrastImageData(imageData: ImageDataLike): ImageDataLike {
+  const next = new Uint8ClampedArray(imageData.data.length);
+  const source = imageData.data;
+  let luminanceTotal = 0;
+  let pixelCount = 0;
+
+  for (let index = 0; index < source.length; index += 4) {
+    const luminance = source[index] * 0.299 + source[index + 1] * 0.587 + source[index + 2] * 0.114;
+    luminanceTotal += luminance;
+    pixelCount += 1;
+  }
+
+  const threshold = pixelCount > 0 ? luminanceTotal / pixelCount : 128;
+
+  for (let index = 0; index < source.length; index += 4) {
+    const luminance = source[index] * 0.299 + source[index + 1] * 0.587 + source[index + 2] * 0.114;
+    const value = luminance >= threshold ? 255 : 0;
+    next[index] = value;
+    next[index + 1] = value;
+    next[index + 2] = value;
+    next[index + 3] = 255;
+  }
+
+  return {
+    data: next,
+    width: imageData.width,
+    height: imageData.height,
+  };
+}
+
+function buildResizedImageData(imageData: ImageDataLike, scale: number): ImageDataLike | null {
+  if (!(scale > 1)) {
+    return null;
+  }
+
+  const targetWidth = Math.min(2400, Math.floor(imageData.width * scale));
+  const targetHeight = Math.min(2400, Math.floor(imageData.height * scale));
+  if (targetWidth <= imageData.width || targetHeight <= imageData.height) {
+    return null;
+  }
+
+  const source = imageData.data;
+  const resized = new Uint8ClampedArray(targetWidth * targetHeight * 4);
+  const ratioX = imageData.width / targetWidth;
+  const ratioY = imageData.height / targetHeight;
+
+  for (let y = 0; y < targetHeight; y += 1) {
+    const sourceY = Math.min(imageData.height - 1, Math.floor(y * ratioY));
+    for (let x = 0; x < targetWidth; x += 1) {
+      const sourceX = Math.min(imageData.width - 1, Math.floor(x * ratioX));
+      const sourceOffset = (sourceY * imageData.width + sourceX) * 4;
+      const targetOffset = (y * targetWidth + x) * 4;
+      resized[targetOffset] = source[sourceOffset];
+      resized[targetOffset + 1] = source[sourceOffset + 1];
+      resized[targetOffset + 2] = source[sourceOffset + 2];
+      resized[targetOffset + 3] = source[sourceOffset + 3];
+    }
+  }
+
+  return {
+    data: resized,
+    width: targetWidth,
+    height: targetHeight,
+  };
+}
+
+function decodeAggressiveWithJsQr(jsQrDecoder: JsQrDecoder, imageData: ImageDataLike): string | null {
+  const candidates: ImageDataLike[] = [buildHighContrastImageData(imageData)];
+  const maxDimension = Math.max(imageData.width, imageData.height);
+  const resized = maxDimension <= 1200 ? buildResizedImageData(imageData, 2) : null;
+
+  if (resized) {
+    candidates.push(resized, buildHighContrastImageData(resized));
+  }
+
+  for (const candidate of candidates) {
+    const decoded =
+      decodeWithJsQr(jsQrDecoder, candidate, 'attemptBoth') ||
+      decodeWithJsQr(jsQrDecoder, candidate, 'dontInvert');
+    if (decoded) {
+      return decoded;
+    }
+  }
+
+  return null;
+}
+
 export async function decodeQrValueFromSource({
   source,
   barcodeDetector,
   jsQrDecoder,
   getFallbackImageData,
+  aggressive = false,
 }: {
   source: ImageBitmapSource;
   barcodeDetector: BarcodeDetectorInstance | null;
   jsQrDecoder: JsQrDecoder | null;
   getFallbackImageData?: () => ImageData | null;
+  aggressive?: boolean;
 }): Promise<string | null> {
   if (barcodeDetector) {
     try {
@@ -79,18 +181,19 @@ export async function decodeQrValueFromSource({
   }
 
   // Some QR codes (especially screenshots/printed) may require inversion attempts.
-  const directResult = jsQrDecoder(imageData.data, imageData.width, imageData.height, {
-    inversionAttempts: 'dontInvert',
-  });
-
-  const directValue = normalizeDecodedValue(directResult?.data);
+  const directValue = decodeWithJsQr(jsQrDecoder, imageData, 'dontInvert');
   if (directValue) {
     return directValue;
   }
 
-  const fallbackResult = jsQrDecoder(imageData.data, imageData.width, imageData.height, {
-    inversionAttempts: 'attemptBoth',
-  });
+  const fallbackValue = decodeWithJsQr(jsQrDecoder, imageData, 'attemptBoth');
+  if (fallbackValue) {
+    return fallbackValue;
+  }
 
-  return normalizeDecodedValue(fallbackResult?.data);
+  if (!aggressive) {
+    return null;
+  }
+
+  return decodeAggressiveWithJsQr(jsQrDecoder, imageData);
 }
