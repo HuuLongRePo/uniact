@@ -2801,6 +2801,31 @@ Sau khi code:
 
 - [x] `npm.cmd test -- test/participation-report-route.test.ts test/export-users-route.test.ts` -> PASS (2 files / 6 tests, 2026-04-24)
 
+## 9.73) Batch uu tien nong - timezone VN cho admin backup filename + FE sync header
+
+### Muc tieu
+
+- Dong bo ten file backup admin theo timestamp VN thay vi ISO UTC.
+- Cho trang admin advanced uu tien filename do API tra ve qua `Content-Disposition`.
+
+### Viec can lam
+
+- [x] `src/app/api/admin/backup/route.ts`
+  - [x] doi filename sang `uniact-${toVietnamFileTimestamp(new Date())}.db`.
+- [x] `src/app/admin/system-config/advanced/page.tsx`
+  - [x] parse `Content-Disposition` de lay filename server tra ve.
+  - [x] fallback filename theo helper VN `toVietnamFileTimestamp`.
+- [x] `test/admin-backup-and-rankings-routes.test.ts`
+  - [x] cap nhat assert regex filename backup theo format VN (`YYYY-MM-DD_HH-mm`).
+
+### Risk / defer
+
+- [ ] Van con cac route backup noi bo khac (khong user-facing export) su dung timestamp phuc vu unique key, khong doi trong batch nay.
+
+### Verification
+
+- [x] `npm.cmd test -- test/admin-backup-and-rankings-routes.test.ts` -> PASS (1 file / 4 tests, 2026-04-24)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix

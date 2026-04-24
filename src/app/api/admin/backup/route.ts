@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireApiRole } from '@/lib/guards';
 import { ApiError, errorResponse } from '@/lib/api-response';
+import { toVietnamFileTimestamp } from '@/lib/timezone';
 import fs from 'fs';
 import path from 'path';
 
@@ -19,8 +20,7 @@ export async function POST(request: NextRequest) {
     }
 
     const dbBuffer = fs.readFileSync(dbPath);
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const filename = `uniact-${timestamp}.db`;
+    const filename = `uniact-${toVietnamFileTimestamp(new Date())}.db`;
 
     return new NextResponse(dbBuffer, {
       headers: {

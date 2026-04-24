@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
+import { resolveDownloadFilename } from '@/lib/download-filename';
 import {
   Mail,
   Database,
@@ -19,7 +20,7 @@ import {
   Shield,
   ArrowLeft,
 } from 'lucide-react';
-
+import { formatVietnamDateTime, toVietnamFileTimestamp } from '@/lib/timezone';
 interface SystemStats {
   dbSize: string;
   dbPath: string;
@@ -155,7 +156,10 @@ export default function SystemConfigAdvancedPage() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `uniact-${new Date().toISOString().slice(0, 10)}.db`;
+      a.download = resolveDownloadFilename(
+        response.headers.get('Content-Disposition'),
+        `uniact-${toVietnamFileTimestamp(new Date())}.db`
+      );
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);

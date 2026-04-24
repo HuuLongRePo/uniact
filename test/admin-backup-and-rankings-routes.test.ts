@@ -66,7 +66,9 @@ describe('admin backup and rankings routes', () => {
     const response = await route.POST({} as any);
 
     expect(response.status).toBe(200);
-    expect(response.headers.get('Content-Disposition')).toContain('uniact-');
+    expect(response.headers.get('Content-Disposition')).toMatch(
+      /^attachment; filename="uniact-\d{4}-\d{2}-\d{2}_\d{2}-\d{2}\.db"$/
+    );
   });
 
   it('preserves forbidden errors for rankings route', async () => {
