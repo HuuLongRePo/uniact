@@ -199,6 +199,7 @@ export async function POST(request: NextRequest) {
       const targetUserIds = Array.from(new Set([...mandatoryIds, ...voluntaryRegisteredIds]));
 
       if (targetUserIds.length > 0) {
+        const createdSessionId = Number(result.lastID || 0);
         await sendBulkDatabaseNotifications({
           userIds: targetUserIds,
           type: 'attendance',
@@ -216,13 +217,13 @@ export async function POST(request: NextRequest) {
               id: 'open_checkin',
               label: 'Quet QR ngay',
               action: 'open_link',
-              href: `/student/check-in?activityId=${activityId}`,
+              href: `/student/check-in?s=${createdSessionId}&t=${encodeURIComponent(token)}&activityId=${activityId}`,
               variant: 'primary',
             },
           ],
           metadata: {
             activity_id: activityId,
-            qr_session_id: Number(result.lastID || 0),
+            qr_session_id: createdSessionId,
             mandatory_count: mandatoryIds.length,
             voluntary_registered_count: voluntaryRegisteredIds.length,
           },

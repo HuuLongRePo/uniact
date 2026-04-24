@@ -2366,6 +2366,32 @@ Yeu cau:
 - [x] `npm.cmd run build` -> PASS (2026-04-24)
 - [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests, 2026-04-24)
 
+## 9.61) Batch uu tien nong - notification CTA diem danh deep-link vao session QR
+
+### Muc tieu
+
+- Khi hoc vien bam nut hanh dong tu thong bao "bat dau diem danh", he thong mo dung link session QR dang hoat dong de auto-checkin ngay.
+- Giam buoc thao tac trung gian (vao trang check-in roi quet lai) trong tinh huong camera bi chan/khong dung duoc.
+
+### Viec can lam
+
+- [x] `src/app/api/qr-sessions/route.ts`
+  - [x] action button `open_checkin` doi sang href co du `s` + `t` + `activityId`.
+  - [x] metadata thong bao tiep tuc ghi nhan `qr_session_id` canonical.
+- [x] `test/qr-session-reuse-route.test.ts`
+  - [x] them regression check `actionButtons[0].href` dung mau deep-link `/student/check-in?s=...&t=...&activityId=...`.
+
+### Risk / defer
+
+- [ ] Token QR xuat hien trong link hanh dong thong bao (duoc gioi han theo TTL session + validation API), can tiep tuc theo doi UX khi thong bao het han.
+- [ ] Chua them e2e mobile push flow end-to-end cho notification tap -> login -> auto-checkin.
+
+### Verification
+
+- [x] `npm.cmd test -- test/qr-session-reuse-route.test.ts test/student-check-in-page.test.tsx test/notification-actions.test.ts test/realtime-notification-bridge.test.tsx` -> PASS (4 files / 22 tests, 2026-04-24)
+- [x] `npm.cmd run build` -> PASS (2026-04-24)
+- [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests, 2026-04-24)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix

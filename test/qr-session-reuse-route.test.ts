@@ -247,5 +247,11 @@ describe('qr session reuse routes', () => {
         relatedId: 42,
       })
     );
+
+    const payload = sendBulkDatabaseNotifications.mock.calls[0]?.[0];
+    expect(payload?.actionButtons?.[0]?.id).toBe('open_checkin');
+    expect(String(payload?.actionButtons?.[0]?.href || '')).toMatch(
+      /^\/student\/check-in\?s=\d+&t=[^&]+&activityId=42$/
+    );
   });
 });
