@@ -3,7 +3,7 @@ import { dbAll, dbGet } from '@/lib/database';
 import { requireAuth } from '@/lib/guards';
 import { ApiError, errorResponse } from '@/lib/api-response';
 import { formatDate } from '@/lib/formatters';
-import { toVietnamDatetimeLocalValue } from '@/lib/timezone';
+import { toVietnamDateStamp } from '@/lib/timezone';
 
 // GET /api/classes/:id/export - Export danh sách học viên lớp ra CSV
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -122,12 +122,15 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     csvRows.push(`"Ngày xuất:",${formatDate(new Date())}`);
 
     const csv = BOM + csvRows.join('\n');
-    const fileName = `Danh-sach-lop-${classInfo.name.replace(/\s+/g, '-')}-${toVietnamDatetimeLocalValue(new Date()).slice(0, 10)}.csv`;
+    const dateStamp = toVietnamDateStamp(new Date());
+    const fileName = `Danh-sach-lop-${classInfo.name.replace(/\s+/g, '-')}-${dateStamp}.csv`;
+    const fallbackFilename = `class-${classId}-${dateStamp}.csv`;
+    const encodedFileName = encodeURIComponent(fileName);
 
     return new NextResponse(csv, {
       headers: {
         'Content-Type': 'text/csv; charset=utf-8',
-        'Content-Disposition': `attachment; filename="${encodeURIComponent(fileName)}"`,
+        'Content-Disposition': `attachment; filename="${fallbackFilename}"; filename*=UTF-8''${encodedFileName}`,
       },
     });
   } catch (error) {

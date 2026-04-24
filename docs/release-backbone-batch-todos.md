@@ -2901,6 +2901,35 @@ Sau khi code:
 - [x] `npm.cmd test -- test/admin-activities-page.test.tsx test/student-history-page.test.tsx test/student-scores-page.test.tsx` -> PASS (3 files / 8 tests, 2026-04-24)
 - [x] `npm.cmd run build` -> PASS (2026-04-24)
 
+## 9.76) Batch uu tien nong - chuan hoa Content-Disposition UTF-8 cho class export route
+
+### Muc tieu
+
+- Chuan hoa header `Content-Disposition` cua `/api/classes/[id]/export` theo chuan UTF-8 (`filename*`) de trinh duyet/FE parse dung ten file co dau.
+- Giu fallback ASCII `filename=` de tuong thich trinh duyet cu.
+- Bo sung route regression test cho class export de khoa lai drift filename/header.
+
+### Viec can lam
+
+- [x] `src/app/api/classes/[id]/export/route.ts`
+  - [x] doi date stamp filename sang `toVietnamDateStamp(new Date())`.
+  - [x] doi `Content-Disposition` sang dang:
+    - [x] `filename="class-{id}-{date}.csv"` (ASCII fallback)
+    - [x] `filename*=UTF-8''{encoded}` (UTF-8 full filename)
+- [x] `test/class-export-route.test.ts` (moi)
+  - [x] cover admin success va assert header co ca fallback + `filename*`.
+  - [x] cover teacher out-of-scope bi chan.
+  - [x] cover validate class id khong hop le.
+
+### Risk / defer
+
+- [ ] Cac export route khac co ten file co dau dang dung `filename="..."` nhung chua bo sung `filename*` se audit tiep theo domain.
+
+### Verification
+
+- [x] `npm.cmd test -- test/class-export-route.test.ts test/download-filename.test.ts` -> PASS (2 files / 7 tests, 2026-04-24)
+- [x] `npm.cmd run build` -> PASS (2026-04-24)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix
