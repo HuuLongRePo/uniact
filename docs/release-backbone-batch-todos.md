@@ -2776,6 +2776,31 @@ Sau khi code:
 
 - [x] `npm.cmd test -- test/download-filename.test.ts test/timezone-export-filenames-route.test.ts` -> PASS (2 files / 7 tests, 2026-04-24)
 
+## 9.72) Batch uu tien nong - chuan hoa Content-Disposition cho residual export routes
+
+### Muc tieu
+
+- Chuan hoa `Content-Disposition` theo dang quoted filename de tranh parser sai ten tep tren mot so trinh duyet/tooling.
+- Khoa regression cho 2 route residual export con `filename=${filename}`.
+
+### Viec can lam
+
+- [x] `src/app/api/export/users/route.ts`
+  - [x] doi header thanh `attachment; filename=\"${filename}\"`.
+- [x] `src/app/api/reports/participation/route.ts`
+  - [x] doi header thanh `attachment; filename=\"${filename}\"`.
+- [x] Test hardening:
+  - [x] `test/participation-report-route.test.ts` bo sung assert `Content-Disposition`.
+  - [x] `test/export-users-route.test.ts` (moi) cover unauthorized + csv filename quoted.
+
+### Risk / defer
+
+- [ ] Van con cac route khong thuoc backbone export flow co the dung naming/header custom; can tiep tuc audit theo nhom domain.
+
+### Verification
+
+- [x] `npm.cmd test -- test/participation-report-route.test.ts test/export-users-route.test.ts` -> PASS (2 files / 6 tests, 2026-04-24)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix
