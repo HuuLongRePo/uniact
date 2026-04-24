@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromRequest } from '@/lib/guards';
 import { dbHelpers } from '@/lib/database';
 import { ApiError, errorResponse } from '@/lib/api-response';
+import { toVietnamFileTimestamp } from '@/lib/timezone';
 
 function toCsvValue(value: any): string {
   if (value === null || value === undefined) return '';
@@ -66,7 +67,7 @@ export async function GET(request: NextRequest) {
     );
 
     const csv = [header.join(','), ...rows].join('\n');
-    const filename = `attendance-export-${new Date().toISOString()}.csv`;
+    const filename = `attendance-export-${toVietnamFileTimestamp(new Date())}.csv`;
 
     return new NextResponse(csv, {
       status: 200,

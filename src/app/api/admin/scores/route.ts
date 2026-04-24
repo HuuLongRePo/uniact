@@ -3,6 +3,7 @@ import { dbAll } from '@/lib/database';
 import { requireApiRole } from '@/lib/guards';
 import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
 import { getFinalScoreLedgerByStudentIds } from '@/lib/score-ledger';
+import { toVietnamFileTimestamp } from '@/lib/timezone';
 
 type StudentScoreRow = {
   user_id: number;
@@ -224,7 +225,7 @@ export async function GET(request: NextRequest) {
       return new NextResponse(csv, {
         headers: {
           'Content-Type': 'text/csv; charset=utf-8',
-          'Content-Disposition': `attachment; filename="scores-${Date.now()}.csv"`,
+          'Content-Disposition': `attachment; filename="scores-${toVietnamFileTimestamp(new Date())}.csv"`,
         },
       });
     }

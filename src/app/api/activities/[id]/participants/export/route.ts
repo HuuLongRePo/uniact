@@ -3,6 +3,7 @@ import { dbAll, dbGet } from '@/lib/database';
 import { requireRole } from '@/lib/guards';
 import { ApiError, errorResponse } from '@/lib/api-response';
 import { teacherCanAccessActivity } from '@/lib/activity-access';
+import { toVietnamDateStamp } from '@/lib/timezone';
 
 function toCsvValue(value: any): string {
   if (value === null || value === undefined) return '';
@@ -83,7 +84,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     );
 
     const csv = [header.join(','), ...csvRows].join('\n');
-    const filename = `participants-${activityId}-${new Date().toISOString().slice(0, 10)}.csv`;
+    const filename = `participants-${activityId}-${toVietnamDateStamp(new Date())}.csv`;
 
     return new NextResponse(csv, {
       status: 200,

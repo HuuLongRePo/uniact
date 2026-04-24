@@ -41,4 +41,35 @@ describe('POST /api/teacher/reports/participation/export', () => {
     expect(body.code).toBe('FORBIDDEN');
     expect(body.error).toBe('Không có quyền truy cập');
   });
+
+  it('uses vietnam timestamp filename even when there is no accessible class', async () => {
+    vi.doMock('@/lib/guards', () => ({
+      requireApiRole: async () => ({ id: 12, role: 'teacher' }),
+    }));
+
+    vi.doMock('@/lib/database', () => ({
+      dbReady: async () => undefined,
+      dbAll: async () => [],
+    }));
+
+    vi.doMock('@/lib/reports/simple-pdf', () => ({
+      createSimplePdf: () => new Uint8Array([1, 2, 3]),
+    }));
+
+    vi.doMock('@/lib/calculations', () => ({
+      calculateParticipationRate: () => 0,
+    }));
+
+    vi.doMock('@/lib/formatters', () => ({
+      formatDate: () => '2026-04-18 14:00',
+    }));
+
+    const route = await import('../src/app/api/teacher/reports/participation/export/route');
+    const response = await route.POST({} as any);
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('Content-Disposition')).toMatch(
+      /^attachment; filename="participation-report-\d{4}-\d{2}-\d{2}_\d{2}-\d{2}\.pdf"$/
+    );
+  });
 });

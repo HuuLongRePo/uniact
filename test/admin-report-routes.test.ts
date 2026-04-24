@@ -238,6 +238,9 @@ describe('Admin report routes', () => {
 
     expect(response.status).toBe(200);
     expect(response.headers.get('Content-Type')).toContain('text/csv');
+    expect(response.headers.get('Content-Disposition')).toMatch(
+      /^attachment; filename="activity-statistics-\d{4}-\d{2}-\d{2}_\d{2}-\d{2}\.csv"$/
+    );
 
     const bytes = new Uint8Array(await response.arrayBuffer());
     const csv = new TextDecoder('utf-8').decode(bytes);

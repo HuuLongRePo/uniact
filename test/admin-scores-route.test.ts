@@ -197,6 +197,9 @@ describe('GET /api/admin/scores', () => {
 
     expect(response.status).toBe(200)
     expect(response.headers.get('Content-Type')).toContain('text/csv')
+    expect(response.headers.get('Content-Disposition')).toMatch(
+      /^attachment; filename="scores-\d{4}-\d{2}-\d{2}_\d{2}-\d{2}\.csv"$/
+    )
     const csv = await response.text()
     expect(csv).toContain('Điểm thưởng')
     expect(csv).toContain('Điều chỉnh cộng')

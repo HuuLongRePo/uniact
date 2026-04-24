@@ -3,6 +3,7 @@ import { dbAll, dbGet, dbHelpers } from '@/lib/database';
 import { requireApiRole } from '@/lib/guards';
 import { ApiError, errorResponse } from '@/lib/api-response';
 import { teacherCanAccessActivity } from '@/lib/activity-access';
+import { toVietnamDateStamp } from '@/lib/timezone';
 
 /**
  * Helper function to escape CSV values properly
@@ -142,7 +143,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     // 10. RETURN CSV FILE WITH PROPER HEADERS
-    const dateStr = timestamp.split('T')[0]; // YYYY-MM-DD format
+    const dateStr = toVietnamDateStamp(timestamp) || timestamp.split('T')[0];
     const filename = `diem-danh-${sessionId}-${dateStr}.csv`;
 
     return new NextResponse(csvContent, {

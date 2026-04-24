@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
         status: 200,
         headers: {
           'Content-Type': 'application/pdf',
-          'Content-Disposition': `attachment; filename="participation-report.pdf"`,
+          'Content-Disposition': `attachment; filename="participation-report-${toVietnamFileTimestamp(new Date())}.pdf"`,
         },
       });
     }

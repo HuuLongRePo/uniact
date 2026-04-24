@@ -3,6 +3,7 @@ import { dbAll } from '@/lib/database';
 import { requireApiRole } from '@/lib/guards';
 import { ApiError, errorResponse } from '@/lib/api-response';
 import { formatDate } from '@/lib/formatters';
+import { toVietnamFileTimestamp } from '@/lib/timezone';
 
 type ActivityStatisticsRow = {
   id: number;
@@ -230,7 +231,7 @@ export async function GET(request: NextRequest) {
       return new NextResponse(csv, {
         headers: {
           'Content-Type': 'text/csv; charset=utf-8',
-          'Content-Disposition': `attachment; filename="activity-statistics-${Date.now()}.csv"`,
+          'Content-Disposition': `attachment; filename="activity-statistics-${toVietnamFileTimestamp(new Date())}.csv"`,
         },
       });
     }
