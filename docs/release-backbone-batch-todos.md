@@ -2520,6 +2520,34 @@ Yeu cau:
 - [x] `npm.cmd run build` -> PASS (2026-04-24)
 - [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests, 2026-04-24)
 
+## 9.66) Batch uu tien nong - cleanup scope legacy create/edit
+
+### Muc tieu
+
+- Xoa cac multi-select scope cu dang bi `hidden` trong wizard tao/sua hoat dong.
+- Giam code du thua va tranh viec source con giu 2 luong UI scope song song.
+- Xac nhan create/edit checklist van on dinh sau khi cat bo markup legacy.
+
+### Viec can lam
+
+- [x] `src/app/teacher/activities/new/page.tsx`
+  - [x] xoa khoi multi-select scope lop legacy da bi vo hieu hoa truoc do.
+- [x] `src/app/teacher/activities/[id]/edit/page.tsx`
+  - [x] xoa khoi multi-select scope lop legacy da bi an.
+- [x] Regression create/edit wizard
+  - [x] xac nhan create + preview + edit + preview van xanh sau cleanup.
+
+### Risk / defer
+
+- [ ] Chua cleanup cac dialog/admin route khac neu con reuse select scope cu.
+- [ ] Van con batch lon pending cho camera HTTP fallback UX, audit timezone, huong dan QR/FaceID va dark mode dialog tao hoat dong.
+
+### Verification
+
+- [x] `npm.cmd test -- test/teacher-create-activity-page.test.tsx test/teacher-create-activity-preview.test.tsx test/teacher-edit-activity-page.test.tsx test/teacher-edit-activity-preview.test.tsx` -> PASS (4 files / 7 tests, 2026-04-24)
+- [x] `npm.cmd run build` -> PASS (2026-04-24)
+- [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests, 2026-04-24)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix

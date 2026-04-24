@@ -878,54 +878,6 @@ export default function CreateActivityPage() {
                           </li>
                         </ul>
                       </div>
-                      <div className="hidden">
-                        <div>
-                          <label className="mb-1 block text-sm font-medium text-orange-700">
-                            Lớp bắt buộc
-                          </label>
-                          <select
-                            multiple
-                            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-200 h-32"
-                            value={mandatoryClassIds.map(String)}
-                            onChange={() => undefined}
-                            disabled={submitting || appliesToAllStudents}
-                          >
-                            {classes.map((cls: any) => (
-                              <option key={cls.id} value={cls.id}>
-                                {cls.name}
-                              </option>
-                            ))}
-                          </select>
-                          <p className="mt-1 text-xs text-gray-500">
-                            Các lớp này sẽ được gán diện bắt buộc tham gia.
-                          </p>
-                        </div>
-                        <div>
-                          <label className="mb-1 block text-sm font-medium text-sky-700">
-                            Lớp tự nguyện
-                          </label>
-                          <select
-                            multiple
-                            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-200 h-32"
-                            value={voluntaryClassIds.map(String)}
-                            onChange={() => undefined}
-                            disabled={submitting || appliesToAllStudents}
-                          >
-                            {classes.map((cls: any) => (
-                              <option
-                                key={`voluntary-${cls.id}`}
-                                value={cls.id}
-                                disabled={mandatoryClassIds.includes(cls.id)}
-                              >
-                                {cls.name}
-                              </option>
-                            ))}
-                          </select>
-                          <p className="mt-1 text-xs text-gray-500">
-                            Các lớp này có thể tự đăng ký nếu muốn tham gia.
-                          </p>
-                        </div>
-                      </div>
                       <div className="rounded-xl border border-gray-200 bg-white p-4">
                         <div className="flex flex-wrap items-center justify-between gap-3">
                           <div>
