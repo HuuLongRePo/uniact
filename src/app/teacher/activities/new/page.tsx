@@ -181,6 +181,7 @@ export default function CreateActivityPage() {
   const [voluntaryStudentIds, setVoluntaryStudentIds] = useState<number[]>([]);
   const [studentOptions, setStudentOptions] = useState<StudentOption[]>([]);
   const [studentSearch, setStudentSearch] = useState('');
+  const [classSearch, setClassSearch] = useState('');
   const [studentsLoaded, setStudentsLoaded] = useState(false);
   const [studentsLoading, setStudentsLoading] = useState(false);
   const [appliesToAllStudents, setAppliesToAllStudents] = useState(false);
@@ -218,11 +219,38 @@ export default function CreateActivityPage() {
       return haystack.includes(keyword);
     });
   }, [studentOptions, studentSearch]);
+  const filteredClasses = useMemo(() => {
+    const keyword = classSearch.trim().toLowerCase();
+    if (!keyword) return classes;
+
+    return classes.filter((classItem) => classItem.name.toLowerCase().includes(keyword));
+  }, [classSearch, classes]);
   const effectiveAppliesToAllStudents =
     appliesToAllStudents ||
     (selectedClasses.length === 0 &&
       mandatoryStudentIds.length === 0 &&
       voluntaryStudentIds.length === 0);
+  const mandatoryClassItems = useMemo(
+    () =>
+      filteredClasses.map((classItem) => ({
+        id: classItem.id,
+        label: classItem.name,
+        meta: 'Gán bắt buộc cho toàn bộ học viên trong lớp này',
+      })),
+    [filteredClasses]
+  );
+  const voluntaryClassItems = useMemo(
+    () =>
+      filteredClasses.map((classItem) => ({
+        id: classItem.id,
+        label: classItem.name,
+        meta: mandatoryClassIds.includes(classItem.id)
+          ? 'Đã thuộc nhóm bắt buộc nên không thể đồng thời ở nhóm đăng ký'
+          : 'Cho phép học viên lớp này tự đăng ký tham gia',
+        disabled: mandatoryClassIds.includes(classItem.id),
+      })),
+    [filteredClasses, mandatoryClassIds]
+  );
   const mandatoryStudentItems = useMemo(
     () =>
       filteredStudentOptions.map((student) => ({
@@ -414,17 +442,44 @@ export default function CreateActivityPage() {
     setFiles((files) => files.filter((_, i) => i !== idx));
   };
 
-  const handleMandatoryClassSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const values = Array.from(e.target.selectedOptions).map((opt) => Number(opt.value));
-    setMandatoryClassIds(values);
-    setVoluntaryClassIds((current) => current.filter((classId) => !values.includes(classId)));
+  const toggleClassSelection = (scope: 'mandatory' | 'voluntary', classId: number) => {
+    if (scope === 'mandatory') {
+      setMandatoryClassIds((current) =>
+        current.includes(classId) ? current.filter((id) => id !== classId) : [...current, classId]
+      );
+      setVoluntaryClassIds((current) => current.filter((id) => id !== classId));
+      return;
+    }
+
+    if (mandatoryClassIds.includes(classId)) {
+      return;
+    }
+
+    setVoluntaryClassIds((current) =>
+      current.includes(classId) ? current.filter((id) => id !== classId) : [...current, classId]
+    );
   };
 
-  const handleVoluntaryClassSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const values = Array.from(e.target.selectedOptions)
-      .map((opt) => Number(opt.value))
-      .filter((classId) => !mandatoryClassIds.includes(classId));
-    setVoluntaryClassIds(values);
+  const applyClassSelection = (scope: 'mandatory' | 'voluntary', classIds: number[]) => {
+    if (classIds.length === 0) return;
+
+    if (scope === 'mandatory') {
+      setMandatoryClassIds((current) => Array.from(new Set([...current, ...classIds])));
+      setVoluntaryClassIds((current) => current.filter((id) => !classIds.includes(id)));
+      return;
+    }
+
+    const allowedClassIds = classIds.filter((id) => !mandatoryClassIds.includes(id));
+    setVoluntaryClassIds((current) => Array.from(new Set([...current, ...allowedClassIds])));
+  };
+
+  const clearClassSelection = (scope: 'mandatory' | 'voluntary') => {
+    if (scope === 'mandatory') {
+      setMandatoryClassIds([]);
+      return;
+    }
+
+    setVoluntaryClassIds([]);
   };
 
   const toggleStudentSelection = (scope: 'mandatory' | 'voluntary', studentId: number) => {
@@ -823,7 +878,7 @@ export default function CreateActivityPage() {
                           </li>
                         </ul>
                       </div>
-                      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                      <div className="hidden">
                         <div>
                           <label className="mb-1 block text-sm font-medium text-orange-700">
                             Lớp bắt buộc
@@ -832,7 +887,7 @@ export default function CreateActivityPage() {
                             multiple
                             className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-200 h-32"
                             value={mandatoryClassIds.map(String)}
-                            onChange={handleMandatoryClassSelect}
+                            onChange={() => undefined}
                             disabled={submitting || appliesToAllStudents}
                           >
                             {classes.map((cls: any) => (
@@ -853,7 +908,7 @@ export default function CreateActivityPage() {
                             multiple
                             className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-200 h-32"
                             value={voluntaryClassIds.map(String)}
-                            onChange={handleVoluntaryClassSelect}
+                            onChange={() => undefined}
                             disabled={submitting || appliesToAllStudents}
                           >
                             {classes.map((cls: any) => (
@@ -869,6 +924,110 @@ export default function CreateActivityPage() {
                           <p className="mt-1 text-xs text-gray-500">
                             Các lớp này có thể tự đăng ký nếu muốn tham gia.
                           </p>
+                        </div>
+                      </div>
+                      <div className="rounded-xl border border-gray-200 bg-white p-4">
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <div>
+                            <h3 className="text-sm font-semibold text-gray-900">
+                              {'Ch\u1ecdn l\u1edbp theo checklist'}
+                            </h3>
+                            <p className="mt-1 text-xs text-gray-500">
+                              {
+                                'Kh\u00f4ng c\u00f2n ph\u1ee5 thu\u1ed9c Ctrl/Cmd multi-select. C\u00f3 th\u1ec3 l\u1ecdc, ch\u1ecdn nhanh v\u00e0 ph\u1ed1i h\u1ee3p nhi\u1ec1u l\u1edbp b\u1eaft bu\u1ed9c/\u0111\u01b0\u1ee3c \u0111\u0103ng k\u00fd.'
+                              }
+                            </p>
+                          </div>
+                          <div className="text-xs font-medium text-gray-500">
+                            {`T\u1ed5ng ${selectedClasses.length}/${classes.length} l\u1edbp trong ph\u1ea1m vi`}
+                          </div>
+                        </div>
+                        <div className="mt-3">
+                          <input
+                            type="text"
+                            value={classSearch}
+                            onChange={(event) => setClassSearch(event.target.value)}
+                            placeholder={'L\u1ecdc theo t\u00ean l\u1edbp'}
+                            disabled={submitting || appliesToAllStudents}
+                            className="w-full rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:ring-blue-200 disabled:bg-gray-100"
+                          />
+                          <p className="mt-1 text-xs text-gray-500">
+                            {`Hi\u1ec3n th\u1ecb ${filteredClasses.length}/${classes.length} l\u1edbp ph\u00f9 h\u1ee3p.`}
+                          </p>
+                        </div>
+                        <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+                          <SelectionChecklist
+                            title={'L\u1edbp b\u1eaft bu\u1ed9c'}
+                            description={
+                              'C\u00e1c l\u1edbp n\u00e0y s\u1ebd \u0111\u01b0\u1ee3c g\u00e1n di\u1ec7n b\u1eaft bu\u1ed9c tham gia.'
+                            }
+                            tone="mandatory"
+                            items={mandatoryClassItems}
+                            selectedIds={mandatoryClassIds}
+                            onToggle={(classId) => toggleClassSelection('mandatory', classId)}
+                            emptyText={'Kh\u00f4ng c\u00f3 l\u1edbp n\u00e0o kh\u1edbp b\u1ed9 l\u1ecdc hi\u1ec7n t\u1ea1i.'}
+                            actions={
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    applyClassSelection(
+                                      'mandatory',
+                                      filteredClasses.map((classItem) => classItem.id)
+                                    )
+                                  }
+                                  disabled={submitting || appliesToAllStudents}
+                                  className="rounded-lg border border-orange-200 bg-white px-3 py-1.5 text-xs font-medium text-orange-700 hover:bg-orange-100 disabled:opacity-50"
+                                >
+                                  {'Ch\u1ecdn t\u1ea5t c\u1ea3 \u0111ang l\u1ecdc'}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => clearClassSelection('mandatory')}
+                                  disabled={submitting || appliesToAllStudents}
+                                  className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+                                >
+                                  {'X\u00f3a ch\u1ecdn'}
+                                </button>
+                              </>
+                            }
+                          />
+                          <SelectionChecklist
+                            title={'L\u1edbp \u0111\u01b0\u1ee3c \u0111\u0103ng k\u00fd'}
+                            description={
+                              'C\u00e1c l\u1edbp n\u00e0y c\u00f3 th\u1ec3 t\u1ef1 \u0111\u0103ng k\u00fd n\u1ebfu mu\u1ed1n tham gia.'
+                            }
+                            tone="voluntary"
+                            items={voluntaryClassItems}
+                            selectedIds={voluntaryClassIds}
+                            onToggle={(classId) => toggleClassSelection('voluntary', classId)}
+                            emptyText={'Kh\u00f4ng c\u00f3 l\u1edbp n\u00e0o kh\u1edbp b\u1ed9 l\u1ecdc hi\u1ec7n t\u1ea1i.'}
+                            actions={
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    applyClassSelection(
+                                      'voluntary',
+                                      filteredClasses.map((classItem) => classItem.id)
+                                    )
+                                  }
+                                  disabled={submitting || appliesToAllStudents}
+                                  className="rounded-lg border border-sky-200 bg-white px-3 py-1.5 text-xs font-medium text-sky-700 hover:bg-sky-100 disabled:opacity-50"
+                                >
+                                  {'Ch\u1ecdn t\u1ea5t c\u1ea3 \u0111ang l\u1ecdc'}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => clearClassSelection('voluntary')}
+                                  disabled={submitting || appliesToAllStudents}
+                                  className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+                                >
+                                  {'X\u00f3a ch\u1ecdn'}
+                                </button>
+                              </>
+                            }
+                          />
                         </div>
                       </div>
                       {!appliesToAllStudents && (

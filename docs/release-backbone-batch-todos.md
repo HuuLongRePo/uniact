@@ -2455,6 +2455,39 @@ Yeu cau:
 - [x] `npm.cmd run build` -> PASS (2026-04-24)
 - [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests, 2026-04-24)
 
+## 9.64) Batch uu tien nong - checklist scope tao hoat dong cho lop/hoc vien
+
+### Muc tieu
+
+- Bo multi-select kieu desktop trong wizard tao hoat dong de giao vien khong can giu `Ctrl/Cmd`.
+- Giu nguyen contract `mandatory_class_ids`, `voluntary_class_ids`, `mandatory_student_ids`, `voluntary_student_ids`, `applies_to_all_students`.
+- Bao toan logic "khong chon scope nao = mo cho tat ca" va preview participation chi load khi can.
+
+### Viec can lam
+
+- [x] `src/app/teacher/activities/new/page.tsx`
+  - [x] them class filter + checklist cho nhom lop bat buoc / duoc dang ky.
+  - [x] them thao tac nhanh "chon tat ca dang loc" va "xoa chon" cho scope lop.
+  - [x] giu nguyen quick actions cho scope hoc vien truc tiep va participation preview.
+- [x] `test/teacher-create-activity-page.test.tsx`
+  - [x] cap nhat regression create page theo checklist UI moi.
+  - [x] them case loc lop + quick-pick vao nhom bat buoc.
+- [x] `test/teacher-create-activity-preview.test.tsx`
+  - [x] cap nhat regression preview theo checklist UI moi.
+
+### Risk / defer
+
+- [ ] Chua dua cung mot checklist scope sang trang `teacher/activities/[id]/edit`; create flow da xanh truoc, edit parity se dong batch tiep theo.
+- [ ] Markup select legacy trong create page da duoc vo hieu hoa o UI, can tiep tuc cleanup source khi tiep batch edit parity de giam code du thua.
+- [ ] Chua audit lai man dialog tao hoat dong legacy phia admin neu con route nao khac su dung.
+
+### Verification
+
+- [x] `npm.cmd test -- test/teacher-create-activity-page.test.tsx` -> PASS (1 file / 4 tests, 2026-04-24)
+- [x] `npm.cmd test -- test/teacher-create-activity-preview.test.tsx` -> PASS (1 file / 1 test, 2026-04-24)
+- [x] `npm.cmd run build` -> PASS (2026-04-24)
+- [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests, 2026-04-24)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix

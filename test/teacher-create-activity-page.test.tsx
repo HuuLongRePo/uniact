@@ -100,10 +100,7 @@ describe('CreateActivityPage', () => {
     });
     fireEvent.change(textInputs[1] as HTMLInputElement, { target: { value: 'Phòng 101' } });
 
-    const classSelects = container.querySelectorAll('select[multiple]');
-    const mandatorySelect = classSelects[0] as HTMLSelectElement;
-    mandatorySelect.options[0].selected = true;
-    fireEvent.change(mandatorySelect);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Chọn tất cả đang lọc' })[0]);
 
     expect(screen.getByRole('button', { name: 'Đến bước 3 để gửi duyệt' })).toBeDisabled();
 
@@ -127,7 +124,8 @@ describe('CreateActivityPage', () => {
 
     expect(
       fetchMock.mock.calls.some(
-        ([url, init]) => String(url) === '/api/activities/321/submit-approval' && init?.method === 'POST'
+        ([url, init]) =>
+          String(url) === '/api/activities/321/submit-approval' && init?.method === 'POST'
       )
     ).toBe(true);
   });
@@ -184,6 +182,74 @@ describe('CreateActivityPage', () => {
     });
   });
 
+  it('supports checklist-based class filtering and quick-pick for mandatory scope', async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+
+      if (url === '/api/classes') {
+        return jsonResponse({
+          classes: [
+            { id: 1, name: 'CNTT K18A' },
+            { id: 2, name: 'ANM K18B' },
+          ],
+        });
+      }
+      if (url === '/api/activity-types') return jsonResponse({ types: [] });
+      if (url === '/api/organization-levels') return jsonResponse({ levels: [] });
+
+      if (url === '/api/activities' && init?.method === 'POST') {
+        const body = JSON.parse(String(init.body || '{}'));
+        return jsonResponse({ activity: { id: 501, title: body.title } }, true, 201);
+      }
+
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
+
+    vi.stubGlobal('fetch', fetchMock);
+    window.fetch = fetchMock as typeof fetch;
+
+    const { container } = render(React.createElement(CreateActivityPage));
+
+    const textInputs = container.querySelectorAll('input[type="text"]');
+    fireEvent.change(textInputs[0] as HTMLInputElement, { target: { value: 'Checklist lớp' } });
+    fireEvent.change(container.querySelector('input[type="date"]') as HTMLInputElement, {
+      target: { value: '2026-05-03' },
+    });
+    const timeInputs = container.querySelectorAll('input[type="time"]');
+    fireEvent.change(timeInputs[0] as HTMLInputElement, {
+      target: { value: '08:00' },
+    });
+    fireEvent.change(textInputs[1] as HTMLInputElement, { target: { value: 'Phòng B1' } });
+
+    expect((await screen.findAllByText('ANM K18B')).length).toBeGreaterThan(0);
+    fireEvent.change(screen.getByPlaceholderText('Lọc theo tên lớp'), {
+      target: { value: 'ANM' },
+    });
+    fireEvent.click(screen.getAllByRole('button', { name: 'Chọn tất cả đang lọc' })[0]);
+
+    fireEvent.click(screen.getByRole('button', { name: /Bước 3: Tài liệu và gửi/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Lưu nháp/i }));
+
+    await waitFor(() => {
+      expect(toastSuccessMock).toHaveBeenCalled();
+    });
+
+    const createCall = fetchMock.mock.calls.find(
+      ([url, init]) => String(url) === '/api/activities' && init?.method === 'POST'
+    );
+    expect(createCall).toBeTruthy();
+    const createdBody = JSON.parse(String(createCall?.[1]?.body || '{}'));
+    expect(createdBody).toMatchObject({
+      title: 'Checklist lớp',
+      date_time: '2026-05-03T08:00',
+      location: 'Phòng B1',
+      class_ids: [2],
+      mandatory_class_ids: [2],
+      voluntary_class_ids: [],
+      applies_to_all_students: false,
+    });
+  });
+
   it('allows bulk-picking filtered direct students into the mandatory bucket', async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
@@ -202,15 +268,6 @@ describe('CreateActivityPage', () => {
 
       if (url === '/api/activities' && init?.method === 'POST') {
         const body = JSON.parse(String(init.body || '{}'));
-        expect(body).toMatchObject({
-          title: 'Chọn trực tiếp học viên',
-          date_time: '2026-05-02T07:30',
-          location: 'Sân trường',
-          mandatory_student_ids: [201],
-          voluntary_student_ids: [],
-          applies_to_all_students: false,
-        });
-
         return jsonResponse({ activity: { id: 700, title: body.title } }, true, 201);
       }
 
@@ -241,13 +298,27 @@ describe('CreateActivityPage', () => {
     fireEvent.change(screen.getByPlaceholderText(/Lọc theo tên, email hoặc lớp/i), {
       target: { value: 'Nguyễn Văn A' },
     });
-    fireEvent.click(screen.getAllByRole('button', { name: 'Chọn tất cả đang lọc' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Chọn tất cả đang lọc' })[2]);
 
     fireEvent.click(screen.getByRole('button', { name: /Bước 3: Tài liệu và gửi/i }));
     fireEvent.click(screen.getByRole('button', { name: /Lưu nháp/i }));
 
     await waitFor(() => {
       expect(toastSuccessMock).toHaveBeenCalled();
+    });
+
+    const createCall = fetchMock.mock.calls.find(
+      ([url, init]) => String(url) === '/api/activities' && init?.method === 'POST'
+    );
+    expect(createCall).toBeTruthy();
+    const createdBody = JSON.parse(String(createCall?.[1]?.body || '{}'));
+    expect(createdBody).toMatchObject({
+      title: 'Chọn trực tiếp học viên',
+      date_time: '2026-05-02T07:30',
+      location: 'Sân trường',
+      mandatory_student_ids: [201],
+      voluntary_student_ids: [],
+      applies_to_all_students: false,
     });
   });
 });

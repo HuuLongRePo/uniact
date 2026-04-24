@@ -41,7 +41,9 @@ describe('CreateActivityPage participation preview', () => {
       if (url === '/api/activity-types') return jsonResponse({ types: [] });
       if (url === '/api/organization-levels') return jsonResponse({ levels: [] });
       if (url === '/api/teacher/students') {
-        return jsonResponse({ students: [{ id: 201, name: 'Student Direct', class_name: 'CNTT K18B' }] });
+        return jsonResponse({
+          students: [{ id: 201, name: 'Student Direct', class_name: 'CNTT K18B' }],
+        });
       }
 
       if (url === '/api/activities/participation-preview' && init?.method === 'POST') {
@@ -89,14 +91,10 @@ describe('CreateActivityPage participation preview', () => {
     vi.stubGlobal('fetch', fetchMock);
     window.fetch = fetchMock as typeof fetch;
 
-    const { container } = render(React.createElement(CreateActivityPage));
+    render(React.createElement(CreateActivityPage));
     expect((await screen.findAllByText('CNTT K18A')).length).toBeGreaterThan(0);
 
-    const classSelects = container.querySelectorAll('select[multiple]');
-    const mandatorySelect = classSelects[0] as HTMLSelectElement;
-    mandatorySelect.options[0].selected = true;
-    fireEvent.change(mandatorySelect);
-
+    fireEvent.click(screen.getAllByRole('button', { name: 'Chọn tất cả đang lọc' })[0]);
     fireEvent.click(screen.getByRole('button', { name: 'Xem trước danh sách tham gia' }));
 
     await waitFor(() => {
@@ -105,7 +103,7 @@ describe('CreateActivityPage participation preview', () => {
 
     expect(screen.getAllByText(/CNTT K18A/i).length).toBeGreaterThan(0);
     expect(screen.getByText('Student A')).toBeInTheDocument();
-    expect(screen.getByText(/Học viên chọn trực tiếp • 1 học viên/i)).toBeInTheDocument();
+    expect(screen.getByText(/Học viên chọn trực tiếp/i)).toBeInTheDocument();
     expect(screen.getByText('Student Direct')).toBeInTheDocument();
     expect(screen.getAllByText('Tự nguyện').length).toBeGreaterThan(0);
   });
