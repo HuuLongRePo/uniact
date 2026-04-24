@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { BarChart3, Search, Filter, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { formatVietnamDateTime, parseVietnamDate, toVietnamDatetimeLocalValue } from '@/lib/timezone';
+import { resolveDownloadFilename } from '@/lib/download-filename';
+import { formatVietnamDateTime, parseVietnamDate, toVietnamDateStamp } from '@/lib/timezone';
 
 interface PollResponse {
   id: number;
@@ -176,8 +177,12 @@ export default function PollResponsesPage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `poll-responses-${toVietnamDatetimeLocalValue(new Date()).slice(0, 10)}.csv`;
+      a.download = resolveDownloadFilename(
+        response.headers?.get?.('Content-Disposition') ?? null,
+        `poll-responses-${toVietnamDateStamp(new Date())}.csv`
+      );
       a.click();
+      URL.revokeObjectURL(url);
       toast.success('Xuất phản hồi thành công');
     } catch (error) {
       console.error('Error exporting responses:', error);

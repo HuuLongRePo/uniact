@@ -6,7 +6,8 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, CheckCircle, XCircle, Eye, Loader, AlertCircle, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { formatVietnamDateTime, parseVietnamDate, toVietnamDatetimeLocalValue } from '@/lib/timezone';
+import { resolveDownloadFilename } from '@/lib/download-filename';
+import { formatVietnamDateTime, parseVietnamDate, toVietnamDateStamp } from '@/lib/timezone';
 
 interface BonusProposal {
   id: number;
@@ -207,10 +208,10 @@ export default function AdminBonusApprovePage() {
       const downloadUrl = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = downloadUrl;
-      link.download =
-        format === 'csv'
-          ? `bonus-report-${toVietnamDatetimeLocalValue(new Date()).slice(0, 10)}.csv`
-          : `bonus-report-${toVietnamDatetimeLocalValue(new Date()).slice(0, 10)}.json`;
+      link.download = resolveDownloadFilename(
+        response.headers?.get?.('Content-Disposition') ?? null,
+        `bonus-report-${toVietnamDateStamp(new Date())}.${format}`
+      );
       link.click();
       window.URL.revokeObjectURL(downloadUrl);
 

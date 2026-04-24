@@ -4,7 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Check, Save, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { formatVietnamDateTime, toVietnamDatetimeLocalValue } from '@/lib/timezone';
+import { resolveDownloadFilename } from '@/lib/download-filename';
+import { formatVietnamDateTime, toVietnamDateStamp } from '@/lib/timezone';
 
 interface Student {
   id: number;
@@ -203,7 +204,10 @@ export default function ManualAttendancePage({ params }: { params: Promise<{ id:
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `dau-danh-${id}-${toVietnamDatetimeLocalValue(new Date()).slice(0, 10)}.xlsx`;
+      a.download = resolveDownloadFilename(
+        response.headers?.get?.('Content-Disposition') ?? null,
+        `dau-danh-${id}-${toVietnamDateStamp(new Date())}.xlsx`
+      );
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);

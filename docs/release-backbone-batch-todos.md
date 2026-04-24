@@ -2826,6 +2826,43 @@ Sau khi code:
 
 - [x] `npm.cmd test -- test/admin-backup-and-rankings-routes.test.ts` -> PASS (1 file / 4 tests, 2026-04-24)
 
+## 9.74) Batch uu tien nong - sync Content-Disposition filename cho residual blob exports
+
+### Muc tieu
+
+- Dong bo them cac page export client-side dang dung `response.blob()` ve filename tu `Content-Disposition`.
+- Giam do lech ten file giua FE fallback va BE tra ve, giu fallback VN khi header thieu.
+- Bo sung `URL.revokeObjectURL` day du cho luong download con thieu cleanup.
+
+### Viec can lam
+
+- [x] Cum teacher export da sua do:
+  - [x] `src/app/teacher/reports/attendance/page.tsx`
+  - [x] `src/app/teacher/reports/participation/page.tsx`
+  - [x] `src/app/teacher/reports/class-stats/page.tsx`
+  - [x] `src/app/teacher/notifications/history/page.tsx`
+  - [x] `src/app/teacher/attendance/[id]/manual/page.tsx`
+  - [x] `src/app/teacher/polls/responses/page.tsx`
+  - [x] dung `resolveDownloadFilename(...)` + fallback timestamp VN.
+- [x] Cum admin export da sua:
+  - [x] `src/app/admin/classes/page.tsx`
+  - [x] `src/app/admin/scores/export/page.tsx`
+  - [x] `src/app/admin/bonus-approval/page.tsx`
+  - [x] `src/app/admin/bonus-reports/page.tsx`
+  - [x] `src/app/admin/reports/custom/page.tsx`
+  - [x] dung `resolveDownloadFilename(...)` + fallback an toan theo context.
+- [x] Khong doi contract API trong batch nay; chi sync cach dat ten file tai FE.
+
+### Risk / defer
+
+- [ ] Van con nhieu nut export tao CSV thu cong tren FE (khong qua export route), nen khong co `Content-Disposition`; giu fallback local theo nghiep vu hien tai.
+- [ ] Route `teacher polls responses export` chua co hardening test route-level cho header filename trong batch nay.
+
+### Verification
+
+- [x] `npm.cmd test -- test/teacher-participation-page.test.tsx test/teacher-class-stats-page.test.tsx test/teacher-notification-history-page.test.tsx test/download-filename.test.ts test/admin-scores-route.test.ts test/custom-report-page.test.tsx test/teacher-poll-responses-page.test.tsx test/bonus-reports.test.ts` -> PASS (8 files / 49 tests, 2026-04-24)
+- [x] `npm.cmd run build` -> PASS (2026-04-24)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix

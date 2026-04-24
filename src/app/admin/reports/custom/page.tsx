@@ -7,7 +7,8 @@ import toast from 'react-hot-toast';
 import { ArrowLeft, Download, Eye, Settings } from 'lucide-react';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { useAuth } from '@/contexts/AuthContext';
-import { toVietnamDatetimeLocalValue } from '@/lib/timezone';
+import { resolveDownloadFilename } from '@/lib/download-filename';
+import { toVietnamDateStamp } from '@/lib/timezone';
 
 type ReportType = 'activities' | 'participants' | 'scores' | 'awards';
 
@@ -304,7 +305,10 @@ export default function CustomReportsPage() {
       const url = window.URL.createObjectURL(blob);
       const anchor = document.createElement('a');
       anchor.href = url;
-      anchor.download = `${config.name}-${toVietnamDatetimeLocalValue(new Date()).slice(0, 10)}.csv`;
+      anchor.download = resolveDownloadFilename(
+        response.headers?.get?.('Content-Disposition') ?? null,
+        `${config.name}-${toVietnamDateStamp(new Date())}.csv`
+      );
       document.body.appendChild(anchor);
       anchor.click();
       window.URL.revokeObjectURL(url);

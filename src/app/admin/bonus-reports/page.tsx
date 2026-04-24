@@ -14,6 +14,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { resolveDownloadFilename } from '@/lib/download-filename';
 
 interface SemesterReport {
   semester: string;
@@ -104,7 +105,10 @@ export default function BonusReportsPage() {
       const downloadUrl = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = downloadUrl;
-      link.download = `bonus-hk${semester}-${academicYear}.${type}`;
+      link.download = resolveDownloadFilename(
+        response.headers?.get?.('Content-Disposition') ?? null,
+        `bonus-hk${semester}-${academicYear}.${type}`
+      );
       link.click();
       window.URL.revokeObjectURL(downloadUrl);
 

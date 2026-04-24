@@ -6,7 +6,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import toast from 'react-hot-toast';
 import { Download, FileSpreadsheet, Filter, RefreshCw, Search, Award } from 'lucide-react';
-import { toVietnamDatetimeLocalValue } from '@/lib/timezone';
+import { resolveDownloadFilename } from '@/lib/download-filename';
+import { toVietnamDateStamp } from '@/lib/timezone';
 
 interface StudentScore {
   id: number;
@@ -106,7 +107,10 @@ export default function ExportScoresPage() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `scores-${toVietnamDatetimeLocalValue(new Date()).slice(0, 10)}.${format === 'csv' ? 'csv' : 'xlsx'}`;
+      a.download = resolveDownloadFilename(
+        response.headers?.get?.('Content-Disposition') ?? null,
+        `scores-${toVietnamDateStamp(new Date())}.${format === 'csv' ? 'csv' : 'xlsx'}`
+      );
       document.body.appendChild(a);
       a.click();
       a.remove();

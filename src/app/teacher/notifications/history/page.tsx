@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { useAuth } from '@/contexts/AuthContext';
+import { resolveDownloadFilename } from '@/lib/download-filename';
 import { formatVietnamDateTime, toVietnamFileTimestamp } from '@/lib/timezone';
 
 type ReadDevice = 'web' | 'mobile' | 'email' | 'sms' | 'unknown';
@@ -255,8 +256,12 @@ export default function NotificationHistoryPage() {
       const url = window.URL.createObjectURL(blob);
       const anchor = document.createElement('a');
       anchor.href = url;
-      anchor.download = `notification-history-${toVietnamFileTimestamp(new Date())}.csv`;
+      anchor.download = resolveDownloadFilename(
+        response.headers?.get?.('Content-Disposition') ?? null,
+        `notification-history-${toVietnamFileTimestamp(new Date())}.csv`
+      );
       anchor.click();
+      window.URL.revokeObjectURL(url);
       toast.success('Đã xuất CSV lịch sử thông báo');
     } catch (error) {
       console.error('Error exporting history:', error);
