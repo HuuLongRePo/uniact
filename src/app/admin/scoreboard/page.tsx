@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { TrendingUp, Download, Filter, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { toVietnamDatetimeLocalValue } from '@/lib/timezone';
 
 interface RankingRecord {
   rank: number;
@@ -191,7 +192,7 @@ export default function ScoreboardPage() {
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
-      link.download = `bang-xep-hang-${new Date().toISOString().split('T')[0]}.csv`;
+      link.download = `bang-xep-hang-${toVietnamDatetimeLocalValue(new Date()).slice(0, 10)}.csv`;
       link.click();
 
       toast.success('Xuất CSV thành công!');
@@ -260,7 +261,7 @@ export default function ScoreboardPage() {
       });
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
-      link.download = `bang-xep-hang-${new Date().toISOString().split('T')[0]}.xlsx`;
+      link.download = `bang-xep-hang-${toVietnamDatetimeLocalValue(new Date()).slice(0, 10)}.xlsx`;
       link.click();
 
       toast.success('Xuất Excel thành công!');

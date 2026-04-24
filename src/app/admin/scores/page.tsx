@@ -17,6 +17,7 @@ import {
   Trophy,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { formatVietnamDateTime } from '@/lib/timezone';
 
 interface StudentScore {
   user_id: number;
@@ -379,7 +380,7 @@ export default function AdminStudentScoresPage() {
                       </span>
                     </div>
                     <div className="mt-2 text-xs text-gray-500">
-                      {new Date(adjustment.calculated_at).toLocaleString('vi-VN')}
+                      {formatVietnamDateTime(adjustment.calculated_at)}
                     </div>
                   </div>
                 ))

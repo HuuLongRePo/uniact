@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
+import { toVietnamDatetimeLocalValue } from '@/lib/timezone';
 
 interface Activity {
   id: number;
@@ -39,12 +40,8 @@ const getErrorMessage = (error: unknown, fallback: string) =>
   error instanceof Error ? error.message : fallback;
 
 const toDateInputValue = (dateTime: string) => {
-  const activityDate = new Date(dateTime);
-  if (Number.isNaN(activityDate.getTime())) {
-    return '';
-  }
-
-  return activityDate.toISOString().split('T')[0];
+  const datetimeValue = toVietnamDatetimeLocalValue(dateTime);
+  return datetimeValue ? datetimeValue.slice(0, 10) : '';
 };
 
 const getSlotStatusLabel = (status: string) => {

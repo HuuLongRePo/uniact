@@ -2108,6 +2108,38 @@ Yeu cau:
 - [x] `npm.cmd run build` -> PASS (2026-04-24)
 - [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests, 2026-04-24)
 
+## 9.53) Batch uu tien nong - timezone VN admin scoreboard/leaderboard/scores/reports/time-slots
+
+### Muc tieu
+
+- Dong bo cac diem con sot o cum admin van su dung UTC `toISOString().split('T')[0]` cho ten file export.
+- Chuyen hiển thị moc `calculated_at` o admin scores sang helper timezone VN.
+- Chuan hoa convert ngay hoat dong -> `input[type="date"]` o time-slots theo timezone VN de tranh lech ngay.
+
+### Viec can lam
+
+- [x] Scoreboard / leaderboard:
+  - [x] `src/app/admin/scoreboard/page.tsx`
+  - [x] `src/app/admin/leaderboard/page.tsx`
+- [x] Scores / export:
+  - [x] `src/app/admin/scores/page.tsx`
+  - [x] `src/app/admin/scores/export/page.tsx`
+- [x] Custom reports + time slots:
+  - [x] `src/app/admin/reports/custom/page.tsx`
+  - [x] `src/app/admin/time-slots/page.tsx`
+- [x] Dong bo filename export ve `toVietnamDatetimeLocalValue(new Date()).slice(0, 10)` cho toan bo file vua sua.
+
+### Risk / defer
+
+- [ ] Van con `new Date()/toLocale...` ngoai cum backbone o cac trang khac (khong nam trong gate release nong) chua audit het.
+- [ ] Build pass nhung chua bo sung test UI component-level cho `time-slots` date binding; hien tai duoc bao phu gian tiep boi `build` va route tests.
+
+### Verification
+
+- [x] `npm.cmd test -- test/admin-scores-route.test.ts test/admin-reports-scores-route.test.ts test/admin-rankings-route.test.ts test/admin-leaderboard-route.test.ts` -> PASS (4 files / 8 tests, 2026-04-24)
+- [x] `npm.cmd run build` -> PASS (2026-04-24)
+- [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests, 2026-04-24)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix
