@@ -3,6 +3,7 @@ import { dbAll, dbReady } from '@/lib/database';
 import { getUserFromRequest } from '@/lib/guards';
 import Papa from 'papaparse';
 import { ApiError, errorResponse } from '@/lib/api-response';
+import { toVietnamDateStamp } from '@/lib/timezone';
 
 // GET /api/export/users?format=csv|excel
 export async function GET(request: NextRequest) {
@@ -79,7 +80,7 @@ export async function GET(request: NextRequest) {
         'created_at',
       ],
     });
-    const filename = `users-export-${new Date().toISOString().split('T')[0]}.csv`;
+    const filename = `users-export-${toVietnamDateStamp(new Date())}.csv`;
     return new NextResponse('\uFEFF' + csv, {
       headers: {
         'Content-Type': 'text/csv; charset=utf-8',

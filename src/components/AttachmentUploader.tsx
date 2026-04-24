@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
+import { formatVietnamDateTime } from '@/lib/timezone';
 
 interface Attachment {
   name: string;
@@ -130,7 +131,7 @@ export default function AttachmentUploader({ activityId, canUpload }: Attachment
                   <div className="font-medium text-gray-900 truncate">{file.name}</div>
                   <div className="text-xs text-gray-500">
                     {formatFileSize(file.size)} •{' '}
-                    {new Date(file.uploadedAt).toLocaleDateString('vi-VN')}
+                    {formatVietnamDateTime(file.uploadedAt, 'date')}
                   </div>
                 </div>
               </div>

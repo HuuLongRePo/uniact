@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { formatVietnamWithOptions } from '@/lib/timezone';
 
 interface TimeSlot {
   id: number;
@@ -106,8 +107,7 @@ export default function TimeSlotPicker({
   };
 
   const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('vi-VN', {
+    return formatVietnamWithOptions(dateStr, {
       weekday: 'long',
       year: 'numeric',
       month: 'long',

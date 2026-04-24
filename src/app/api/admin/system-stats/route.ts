@@ -3,6 +3,7 @@ import { requireApiRole } from '@/lib/guards';
 import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
 import fs from 'fs';
 import path from 'path';
+import { formatVietnamDateTime } from '@/lib/timezone';
 
 function formatUptime(): string {
   const uptime = process.uptime();
@@ -45,8 +46,7 @@ export async function GET(request: NextRequest) {
 
         if (files.length > 0) {
           const lastFile = files[0];
-          const date = new Date(lastFile.time);
-          lastBackup = date.toLocaleString('vi-VN');
+          lastBackup = formatVietnamDateTime(new Date(lastFile.time));
         }
       }
     } catch (e) {

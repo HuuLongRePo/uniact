@@ -2392,6 +2392,43 @@ Yeu cau:
 - [x] `npm.cmd run build` -> PASS (2026-04-24)
 - [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests, 2026-04-24)
 
+## 9.62) Batch uu tien nong - timezone VN hardening cho export/date surfaces
+
+### Muc tieu
+
+- Giam lech ngay tren file export/issued date do `toISOString().split('T')[0]` (UTC) khong trung ngay VN.
+- Dong bo mot so surface hien thi ngay gio con dung local browser/server ve helper timezone Viet Nam.
+
+### Viec can lam
+
+- [x] `src/lib/timezone.ts`
+  - [x] them helper `toVietnamDateStamp(...)`.
+- [x] API export/date routes:
+  - [x] `src/app/api/export/users/route.ts`
+  - [x] `src/app/api/export/scoreboard/route.ts`
+  - [x] `src/app/api/export/class-summary/route.ts`
+  - [x] `src/app/api/reports/participation/route.ts`
+  - [x] `src/app/api/users/export/route.ts`
+  - [x] `src/app/api/admin/awards/create/route.ts`
+  - [x] `src/app/api/admin/system-stats/route.ts`
+  - [x] `src/lib/bonus-reports.ts`
+  - [x] doi ten file/issued date/last backup sang helper timezone VN.
+- [x] UI date surfaces:
+  - [x] `src/components/AttachmentUploader.tsx`
+  - [x] `src/components/TimeSlotPicker.tsx`
+  - [x] doi render date sang `formatVietnamDateTime` / `formatVietnamWithOptions`.
+
+### Risk / defer
+
+- [ ] Van con mot so route/tool legacy ngoai backbone hot-flow chua duoc thay toan bo (se tiep tuc quet theo batch sau).
+- [ ] Build pass, chua co visual e2e cho toan bo man hinh legacy co date formatting.
+
+### Verification
+
+- [x] `npm.cmd test -- test/bonus-reports.test.ts test/export.test.ts test/participation-report-route.test.ts test/admin-database-ops-routes.test.ts` -> PASS (4 files / 49 tests, 2026-04-24)
+- [x] `npm.cmd run build` -> PASS (2026-04-24)
+- [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests, 2026-04-24)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix

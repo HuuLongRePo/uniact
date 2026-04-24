@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromToken } from '@/lib/auth';
 import { dbAll } from '@/lib/database';
 import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
+import { toVietnamDateStamp } from '@/lib/timezone';
 
 interface ParticipationReportRow {
   id: number;
@@ -111,7 +112,7 @@ export async function GET(request: NextRequest) {
         )
         .join('\n');
 
-      const filename = `participation-report-${new Date().toISOString().split('T')[0]}.csv`;
+      const filename = `participation-report-${toVietnamDateStamp(new Date())}.csv`;
       return new NextResponse(csv, {
         headers: {
           'Content-Type': 'text/csv; charset=utf-8',

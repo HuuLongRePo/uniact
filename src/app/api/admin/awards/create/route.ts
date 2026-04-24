@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { dbGet, dbReady, dbRun } from '@/lib/database';
 import { getUserFromRequest } from '@/lib/guards';
 import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
+import { toVietnamDateStamp } from '@/lib/timezone';
 
 interface CreateAwardRequest {
   student_id: number;
@@ -139,7 +140,7 @@ export async function POST(request: NextRequest) {
           student_id,
           award_name,
           points,
-          issued_at: issue_date || new Date().toISOString().split('T')[0],
+          issued_at: issue_date || toVietnamDateStamp(new Date()),
         },
       },
       `Tạo giải thưởng cho ${student.name} thành công!`

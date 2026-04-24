@@ -7,6 +7,7 @@
 
 import { dbAll, dbGet } from './db-core';
 import { createWorkbookFromSheets } from './excel-export';
+import { toVietnamDateStamp } from './timezone';
 
 export interface BonusReport {
   studentId: number;
@@ -344,7 +345,7 @@ export function generateExportFilename(
   format: 'csv' | 'xlsx' | 'json',
   date: Date = new Date()
 ): string {
-  const dateStr = date.toISOString().split('T')[0];
+  const dateStr = toVietnamDateStamp(date);
   const typeMap = {
     student: 'bonus-student',
     class: 'bonus-class',

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { dbAll, dbHelpers } from '@/lib/database';
 import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
 import { requireApiRole } from '@/lib/guards';
+import { formatVietnamDateTime, toVietnamDateStamp } from '@/lib/timezone';
 
 // GET /api/users/export - Export danh sách người dùng ra CSV
 export async function GET(request: NextRequest) {
@@ -67,7 +68,7 @@ export async function GET(request: NextRequest) {
         u.total_points || 0,
         u.activity_count || 0,
         u.award_count || 0,
-        new Date(u.created_at).toLocaleDateString('vi-VN'),
+        formatVietnamDateTime(u.created_at, 'date'),
       ]);
 
       const csvContent = [
@@ -75,7 +76,7 @@ export async function GET(request: NextRequest) {
         ...rows.map((row) => row.map((cell) => `"${cell}"`).join(',')),
       ].join('\n');
 
-      const filename = `users-${role}-${new Date().toISOString().split('T')[0]}.csv`;
+      const filename = `users-${role}-${toVietnamDateStamp(new Date())}.csv`;
 
       await dbHelpers.createAuditLog(
         user.id,

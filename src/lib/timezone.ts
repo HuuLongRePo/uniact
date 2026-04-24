@@ -64,6 +64,10 @@ export function toVietnamDatetimeLocalValue(date: string | Date | null | undefin
   return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`;
 }
 
+export function toVietnamDateStamp(date: string | Date | null | undefined): string {
+  return toVietnamDatetimeLocalValue(date).slice(0, 10);
+}
+
 export function formatVietnamWithOptions(
   date: string | Date | null | undefined,
   options: Intl.DateTimeFormatOptions,

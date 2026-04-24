@@ -3,6 +3,7 @@ import { getUserFromRequest } from '@/lib/guards';
 import { dbHelpers, dbAll } from '@/lib/database';
 import Papa from 'papaparse';
 import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
+import { toVietnamDateStamp } from '@/lib/timezone';
 
 export async function GET(request: NextRequest) {
   try {
@@ -59,7 +60,7 @@ export async function GET(request: NextRequest) {
     }));
 
     const csv = Papa.unparse(csvData);
-    const filename = `scoreboard-export-${new Date().toISOString().split('T')[0]}.csv`;
+    const filename = `scoreboard-export-${toVietnamDateStamp(new Date())}.csv`;
 
     return new NextResponse(csv, {
       status: 200,

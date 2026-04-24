@@ -11,6 +11,7 @@ import { getUserFromRequest } from '@/lib/guards';
 import { PointCalculationService } from '@/lib/scoring';
 import Papa from 'papaparse';
 import { ApiError, errorResponse } from '@/lib/api-response';
+import { toVietnamDateStamp } from '@/lib/timezone';
 
 export async function GET(request: NextRequest) {
   try {
@@ -129,7 +130,7 @@ export async function GET(request: NextRequest) {
     return new NextResponse(csvWithBOM, {
       headers: {
         'Content-Type': 'text/csv; charset=utf-8',
-        'Content-Disposition': `attachment; filename="class-${classId}-summary-${new Date().toISOString().split('T')[0]}.csv"`,
+        'Content-Disposition': `attachment; filename="class-${classId}-summary-${toVietnamDateStamp(new Date())}.csv"`,
       },
     });
   } catch (error: any) {
