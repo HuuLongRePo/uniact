@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { toast } from '@/lib/toast';
 import { Button } from '@/components/ui/Button';
 import { formatDate } from '@/lib/formatters';
-import { toVietnamDatetimeLocalValue } from '@/lib/timezone';
+import { toVietnamDateStamp } from '@/lib/timezone';
 
 interface ScoreRecord {
   participation_id: number;
@@ -149,9 +149,11 @@ export default function StudentScoresPage() {
     const csv = [headers, ...rows].join('\n');
     const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `bang-diem-${toVietnamDatetimeLocalValue(new Date()).slice(0, 10)}.csv`;
+    const url = URL.createObjectURL(blob);
+    link.href = url;
+    link.download = `bang-diem-${toVietnamDateStamp(new Date())}.csv`;
     link.click();
+    URL.revokeObjectURL(url);
 
     toast.success('Đã xuất file CSV thành công!');
   };

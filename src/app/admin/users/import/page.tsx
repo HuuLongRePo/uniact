@@ -60,6 +60,7 @@ admin@example.com,Nguyen Van C,admin,admin123`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
     toast.success('Đã tải xuống file mẫu!');
   };
 

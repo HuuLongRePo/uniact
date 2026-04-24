@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { Trophy, Medal, Award, Download, Settings } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { toVietnamDatetimeLocalValue } from '@/lib/timezone';
+import { toVietnamDateStamp } from '@/lib/timezone';
 
 interface LeaderboardEntry {
   rank: number;
@@ -94,9 +94,11 @@ export default function AdminLeaderboardPage() {
 
     const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `bang-xep-hang-top-${limit}-${toVietnamDatetimeLocalValue(new Date()).slice(0, 10)}.csv`;
+    const url = URL.createObjectURL(blob);
+    link.href = url;
+    link.download = `bang-xep-hang-top-${limit}-${toVietnamDateStamp(new Date())}.csv`;
     link.click();
+    URL.revokeObjectURL(url);
 
     toast.success(`Đã xuất Top ${limit} học viên!`);
     setShowExportDialog(false);
@@ -139,9 +141,11 @@ export default function AdminLeaderboardPage() {
 
     const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `bang-xep-hang-top-${limit}-${toVietnamDatetimeLocalValue(new Date()).slice(0, 10)}.xls`;
+    const url = URL.createObjectURL(blob);
+    link.href = url;
+    link.download = `bang-xep-hang-top-${limit}-${toVietnamDateStamp(new Date())}.xls`;
     link.click();
+    URL.revokeObjectURL(url);
 
     toast.success(`Đã xuất Top ${limit} sang Excel!`);
     setShowExportDialog(false);

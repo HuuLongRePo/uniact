@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { formatVietnamDateTime, toVietnamDatetimeLocalValue } from '@/lib/timezone';
+import { formatVietnamDateTime, toVietnamDateStamp } from '@/lib/timezone';
 
 type Audit = {
   id: number;
@@ -109,7 +109,7 @@ export default function AdminAuditPage() {
               const url = URL.createObjectURL(blob);
               const a = document.createElement('a');
               a.href = url;
-              a.download = `audit-export-${toVietnamDatetimeLocalValue(new Date()).slice(0, 10)}.csv`;
+              a.download = `audit-export-${toVietnamDateStamp(new Date())}.csv`;
               document.body.appendChild(a);
               a.click();
               a.remove();

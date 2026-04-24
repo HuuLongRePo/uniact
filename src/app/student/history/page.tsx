@@ -7,7 +7,7 @@ import LoadingSpinner from '@/components/LoadingSpinner';
 import { Download, Calendar, Trophy, Award } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { formatDate } from '@/lib/formatters';
-import { parseVietnamDate, toVietnamDatetimeLocalValue } from '@/lib/timezone';
+import { parseVietnamDate, toVietnamDateStamp } from '@/lib/timezone';
 
 interface HistoryItem {
   participation_id: number;
@@ -155,9 +155,11 @@ export default function StudentHistoryPage() {
 
     const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `lich-su-hoat-dong-${toVietnamDatetimeLocalValue(new Date()).slice(0, 10)}.csv`;
+    const url = URL.createObjectURL(blob);
+    link.href = url;
+    link.download = `lich-su-hoat-dong-${toVietnamDateStamp(new Date())}.csv`;
     link.click();
+    URL.revokeObjectURL(url);
     toast.success('Đã xuất file CSV thành công!');
   };
 

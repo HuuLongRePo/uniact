@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { TrendingUp, Download, Filter, ChevronLeft, ChevronRight, X } from 'lucide-react';
-import { toVietnamDatetimeLocalValue } from '@/lib/timezone';
+import { toVietnamDateStamp } from '@/lib/timezone';
 
 interface RankingRecord {
   rank: number;
@@ -191,9 +191,11 @@ export default function ScoreboardPage() {
       // Download
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = `bang-xep-hang-${toVietnamDatetimeLocalValue(new Date()).slice(0, 10)}.csv`;
+      const url = URL.createObjectURL(blob);
+      link.href = url;
+      link.download = `bang-xep-hang-${toVietnamDateStamp(new Date())}.csv`;
       link.click();
+      URL.revokeObjectURL(url);
 
       toast.success('Xuất CSV thành công!');
     } catch (error) {
@@ -260,9 +262,11 @@ export default function ScoreboardPage() {
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       });
       const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = `bang-xep-hang-${toVietnamDatetimeLocalValue(new Date()).slice(0, 10)}.xlsx`;
+      const url = URL.createObjectURL(blob);
+      link.href = url;
+      link.download = `bang-xep-hang-${toVietnamDateStamp(new Date())}.xlsx`;
       link.click();
+      URL.revokeObjectURL(url);
 
       toast.success('Xuất Excel thành công!');
     } catch (error) {

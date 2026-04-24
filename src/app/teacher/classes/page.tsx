@@ -6,7 +6,7 @@ import toast from 'react-hot-toast';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import EmptyState from '@/components/EmptyState';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
-import { toVietnamDatetimeLocalValue } from '@/lib/timezone';
+import { toVietnamDateStamp } from '@/lib/timezone';
 
 interface Class {
   id: number;
@@ -239,9 +239,11 @@ export default function TeacherClassManagementPage() {
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `danh-sach-${className}-${toVietnamDatetimeLocalValue(new Date()).slice(0, 10)}.csv`;
+    const url = URL.createObjectURL(blob);
+    link.href = url;
+    link.download = `danh-sach-${className}-${toVietnamDateStamp(new Date())}.csv`;
     link.click();
+    URL.revokeObjectURL(url);
 
     toast.success('Xuất file thành công!');
   }

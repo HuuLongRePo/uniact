@@ -2865,6 +2865,42 @@ Sau khi code:
 - [x] `npm.cmd test -- test/admin-backup-and-rankings-routes.test.ts test/admin-database-ops-routes.test.ts test/download-filename.test.ts` -> PASS (3 files / 14 tests, 2026-04-24)
 - [x] `npm.cmd run build` -> PASS (2026-04-24)
 
+## 9.75) Batch uu tien nong - cleanup local CSV export date stamp + object URL revoke
+
+### Muc tieu
+
+- Don cac trang export CSV tao file ngay tren FE: chuyen date stamp fallback ve helper `toVietnamDateStamp(...)` thay cho `toVietnamDatetimeLocalValue(...).slice(0, 10)`.
+- Bo sung `URL.revokeObjectURL(...)` day du cho cac export local con thieu cleanup.
+- Giu nguyen contract API va payload hien tai; batch nay chi harden client-side export UX/technical debt.
+
+### Viec can lam
+
+- [x] Cac trang admin:
+  - [x] `src/app/admin/activities/[id]/page.tsx`
+  - [x] `src/app/admin/audit/page.tsx`
+  - [x] `src/app/admin/classes/[id]/page.tsx`
+  - [x] `src/app/admin/classes/[id]/students/page.tsx`
+  - [x] `src/app/admin/users/page.tsx`
+  - [x] `src/app/admin/leaderboard/page.tsx`
+  - [x] `src/app/admin/scoreboard/page.tsx`
+  - [x] `src/app/admin/users/import/page.tsx`
+- [x] Cac trang teacher/student:
+  - [x] `src/app/teacher/classes/page.tsx`
+  - [x] `src/app/teacher/polls/[id]/page.tsx`
+  - [x] `src/app/student/history/page.tsx`
+  - [x] `src/app/student/scores/page.tsx`
+- [x] Tat ca diem export vua sua deu co revoke object URL sau khi click download.
+
+### Risk / defer
+
+- [ ] Cac export khong tao blob file (vd image static/route khac) khong nam trong scope batch nay.
+- [ ] Chua chuan hoa thong nhat thong diep toast/ten file cho tat ca export local theo 1 convention duy nhat; chi harden phan date stamp + cleanup URL.
+
+### Verification
+
+- [x] `npm.cmd test -- test/admin-activities-page.test.tsx test/student-history-page.test.tsx test/student-scores-page.test.tsx` -> PASS (3 files / 8 tests, 2026-04-24)
+- [x] `npm.cmd run build` -> PASS (2026-04-24)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix

@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import toast from 'react-hot-toast';
 import { Download } from 'lucide-react';
-import { formatVietnamDateTime, toVietnamDatetimeLocalValue } from '@/lib/timezone';
+import { formatVietnamDateTime, toVietnamDateStamp } from '@/lib/timezone';
 
 interface PollDetail {
   poll: {
@@ -94,9 +94,11 @@ export default function PollDetailPage() {
 
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `poll_${data.poll.id}_${toVietnamDatetimeLocalValue(new Date()).slice(0, 10)}.csv`;
+    const url = URL.createObjectURL(blob);
+    link.href = url;
+    link.download = `poll_${data.poll.id}_${toVietnamDateStamp(new Date())}.csv`;
     link.click();
+    URL.revokeObjectURL(url);
     toast.success('Đã xuất kết quả khảo sát');
   };
 

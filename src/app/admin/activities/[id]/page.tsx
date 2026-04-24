@@ -25,7 +25,7 @@ import {
 import toast from 'react-hot-toast';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { formatDate } from '@/lib/formatters';
-import { toVietnamDatetimeLocalValue } from '@/lib/timezone';
+import { toVietnamDateStamp } from '@/lib/timezone';
 
 interface Activity {
   id: number;
@@ -259,7 +259,7 @@ export default function AdminActivityDetailPage() {
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `hoat-dong-${activityId}-nguoi-tham-gia-${toVietnamDatetimeLocalValue(new Date()).slice(0, 10)}.csv`;
+    link.download = `hoat-dong-${activityId}-nguoi-tham-gia-${toVietnamDateStamp(new Date())}.csv`;
     link.click();
     window.URL.revokeObjectURL(url);
     toast.success(`Đã xuất ${participants.length} người tham gia`);
