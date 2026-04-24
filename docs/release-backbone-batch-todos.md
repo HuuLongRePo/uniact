@@ -2282,6 +2282,34 @@ Yeu cau:
 - [x] `npm.cmd run build` -> PASS (2026-04-24)
 - [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests, 2026-04-24)
 
+## 9.58) Batch uu tien nong - QR image decode hardening + projector 95% fullscreen
+
+### Muc tieu
+
+- Giam tiep truong hop hoc vien bao loi `Khong doc duoc ma QR tu anh` khi camera khong dung duoc.
+- Dieu chinh man hinh chieu QR toan man hinh cho giao vien de ma QR chiem ~95% viewport nhu yeu cau van hanh lop hoc.
+
+### Viec can lam
+
+- [x] `src/lib/qr-scan-decoder.ts`
+  - [x] bo sung aggressive candidate generation co xoay anh 90/180/270 do va bien the contrast + upscale.
+  - [x] giu thu tu fallback an toan: BarcodeDetector -> jsQR direct -> jsQR attemptBoth -> aggressive passes.
+- [x] `test/qr-scan-decoder.test.ts`
+  - [x] cap nhat regression cho aggressive mode va bo sung case xac nhan decoder co thu candidate xoay.
+- [x] `src/app/teacher/qr/page.tsx`
+  - [x] man projector doi sang container `95vw x 95vh`, QR fit full trong khung, tang kha nang doc tu xa.
+
+### Risk / defer
+
+- [ ] Camera tren HTTP LAN (khong localhost/HTTPS) van bi browser chan theo secure-context policy, batch nay khong the bypass policy.
+- [ ] Truong hop anh qua mo/loa/chup cheo qua muc van co the fail decode; da bo sung xoay+contrast+upscale nhung khong dam bao 100%.
+
+### Verification
+
+- [x] `npm.cmd test -- test/qr-scan-decoder.test.ts test/teacher-qr-page.test.tsx test/student-qr-scanner-playback-gesture.test.tsx test/camera-stream.test.ts` -> PASS (4 files / 19 tests, 2026-04-24)
+- [x] `npm.cmd run build` -> PASS (2026-04-24)
+- [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests, 2026-04-24)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix

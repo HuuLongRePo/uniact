@@ -125,14 +125,79 @@ function buildResizedImageData(imageData: ImageDataLike, scale: number): ImageDa
   };
 }
 
-function decodeAggressiveWithJsQr(jsQrDecoder: JsQrDecoder, imageData: ImageDataLike): string | null {
-  const candidates: ImageDataLike[] = [buildHighContrastImageData(imageData)];
-  const maxDimension = Math.max(imageData.width, imageData.height);
-  const resized = maxDimension <= 1200 ? buildResizedImageData(imageData, 2) : null;
+function buildRotatedImageData(imageData: ImageDataLike, angle: 90 | 180 | 270): ImageDataLike {
+  const source = imageData.data;
+  const sourceWidth = imageData.width;
+  const sourceHeight = imageData.height;
+  const rotatedWidth = angle === 180 ? sourceWidth : sourceHeight;
+  const rotatedHeight = angle === 180 ? sourceHeight : sourceWidth;
+  const rotated = new Uint8ClampedArray(rotatedWidth * rotatedHeight * 4);
 
-  if (resized) {
-    candidates.push(resized, buildHighContrastImageData(resized));
+  const getSourceOffset = (x: number, y: number) => (y * sourceWidth + x) * 4;
+  const getTargetOffset = (x: number, y: number) => (y * rotatedWidth + x) * 4;
+
+  for (let y = 0; y < sourceHeight; y += 1) {
+    for (let x = 0; x < sourceWidth; x += 1) {
+      let targetX = x;
+      let targetY = y;
+
+      if (angle === 90) {
+        targetX = sourceHeight - 1 - y;
+        targetY = x;
+      } else if (angle === 180) {
+        targetX = sourceWidth - 1 - x;
+        targetY = sourceHeight - 1 - y;
+      } else if (angle === 270) {
+        targetX = y;
+        targetY = sourceWidth - 1 - x;
+      }
+
+      const sourceOffset = getSourceOffset(x, y);
+      const targetOffset = getTargetOffset(targetX, targetY);
+      rotated[targetOffset] = source[sourceOffset];
+      rotated[targetOffset + 1] = source[sourceOffset + 1];
+      rotated[targetOffset + 2] = source[sourceOffset + 2];
+      rotated[targetOffset + 3] = source[sourceOffset + 3];
+    }
   }
+
+  return {
+    data: rotated,
+    width: rotatedWidth,
+    height: rotatedHeight,
+  };
+}
+
+function collectAggressiveCandidates(imageData: ImageDataLike) {
+  const candidates: ImageDataLike[] = [];
+  const maxDimension = Math.max(imageData.width, imageData.height);
+  const scale = maxDimension <= 1200 ? 2 : 1.5;
+
+  const pushVariants = (candidate: ImageDataLike) => {
+    candidates.push(candidate);
+    candidates.push(buildHighContrastImageData(candidate));
+
+    const resized = buildResizedImageData(candidate, scale);
+    if (resized) {
+      candidates.push(resized);
+      candidates.push(buildHighContrastImageData(resized));
+    }
+  };
+
+  pushVariants(imageData);
+
+  const rotated90 = buildRotatedImageData(imageData, 90);
+  const rotated180 = buildRotatedImageData(imageData, 180);
+  const rotated270 = buildRotatedImageData(imageData, 270);
+  pushVariants(rotated90);
+  pushVariants(rotated180);
+  pushVariants(rotated270);
+
+  return candidates;
+}
+
+function decodeAggressiveWithJsQr(jsQrDecoder: JsQrDecoder, imageData: ImageDataLike): string | null {
+  const candidates = collectAggressiveCandidates(imageData);
 
   for (const candidate of candidates) {
     const decoded =

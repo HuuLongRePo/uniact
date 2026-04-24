@@ -1104,10 +1104,10 @@ export default function TeacherQRPage() {
               </div>
             )}
 
-            <div className="mt-5 flex flex-1 items-center justify-center">
-              <div className="rounded-3xl bg-white p-4 shadow-2xl sm:p-6">
-                <div className="w-[min(95vmin,1100px)]">
-                  <QrCodeSvg value={createdSession.payload} />
+            <div className="mt-5 flex flex-1 items-center justify-center overflow-hidden">
+              <div className="flex h-[95vh] w-[95vw] items-center justify-center rounded-3xl bg-white p-3 shadow-2xl sm:p-4">
+                <div className="h-full w-full [&_svg]:h-full [&_svg]:w-full">
+                  <QrCodeSvg value={createdSession.payload} size={2048} />
                 </div>
               </div>
             </div>

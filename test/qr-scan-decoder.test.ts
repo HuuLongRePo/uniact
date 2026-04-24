@@ -9,6 +9,21 @@ const fakeImageData = {
   height: 1,
 } as unknown as ImageData;
 
+const rectangularImageData = {
+  data: new Uint8ClampedArray([
+    0,
+    0,
+    0,
+    255,
+    255,
+    255,
+    255,
+    255,
+  ]),
+  width: 1,
+  height: 2,
+} as unknown as ImageData;
+
 describe('qr scan decoder', () => {
   it('returns decoded value from BarcodeDetector when available', async () => {
     const barcodeDetector: BarcodeDetectorInstance = {
@@ -94,5 +109,29 @@ describe('qr scan decoder', () => {
 
     expect(result).toBe('qr-from-aggressive-pass');
     expect(jsQrDecoder).toHaveBeenCalledTimes(3);
+  });
+
+  it('tries rotated candidates in aggressive mode for tilted image uploads', async () => {
+    const jsQrMock = vi
+      .fn((_: Uint8ClampedArray, width: number, height: number) => {
+        if (width === 2 && height === 1) {
+          return { data: 'qr-from-rotated-or-resized-pass' };
+        }
+        return null;
+      })
+      .mockName('jsQrDecoder');
+    const jsQrDecoder = jsQrMock as unknown as JsQrDecoder;
+
+    const result = await decodeQrValueFromSource({
+      source: fakeSource,
+      barcodeDetector: null,
+      jsQrDecoder,
+      getFallbackImageData: () => rectangularImageData,
+      aggressive: true,
+    });
+
+    expect(result).toBe('qr-from-rotated-or-resized-pass');
+    expect(jsQrDecoder).toHaveBeenCalled();
+    expect(jsQrMock.mock.calls.some((call) => call[1] === 2 && call[2] === 1)).toBe(true);
   });
 });
