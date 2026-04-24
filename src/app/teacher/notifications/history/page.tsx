@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { useAuth } from '@/contexts/AuthContext';
+import { formatVietnamDateTime } from '@/lib/timezone';
 
 type ReadDevice = 'web' | 'mobile' | 'email' | 'sms' | 'unknown';
 
@@ -526,10 +527,10 @@ export default function NotificationHistoryPage() {
                         {record.notification_title}
                       </td>
                       <td className="px-4 py-4 text-sm text-gray-600">
-                        {new Date(record.sent_at).toLocaleString('vi-VN')}
+                        {formatVietnamDateTime(record.sent_at)}
                       </td>
                       <td className="px-4 py-4 text-sm text-gray-600">
-                        {record.read_at ? new Date(record.read_at).toLocaleString('vi-VN') : '-'}
+                        {record.read_at ? formatVietnamDateTime(record.read_at) : '-'}
                       </td>
                       <td className="px-4 py-4">
                         {record.is_read ? (

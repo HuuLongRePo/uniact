@@ -2179,6 +2179,42 @@ Yeu cau:
 - [x] `npm.cmd run build` -> PASS (2026-04-24)
 - [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests, 2026-04-24)
 
+## 9.55) Batch uu tien nong - timezone VN teacher/student attendance + notifications surfaces
+
+### Muc tieu
+
+- Dong bo timezone VN cho cum giang vien/hoc vien gan diem danh va thong bao (nhom user-facing cao tan suat).
+- Chuan hoa ten file export CSV/XLSX theo ngay Viet Nam.
+- Chuan hoa bo loc ngay schedule thong bao tranh lech ngay theo UTC tren may client.
+
+### Viec can lam
+
+- [x] Student history:
+  - [x] `src/app/student/history/page.tsx`
+- [x] Teacher classes + attendance surfaces:
+  - [x] `src/app/teacher/classes/page.tsx`
+  - [x] `src/app/teacher/attendance/[id]/page.tsx`
+  - [x] `src/app/teacher/attendance/[id]/manual/page.tsx`
+  - [x] `src/app/teacher/activities/[id]/qr-sessions/page.tsx`
+  - [x] `src/app/teacher/activities/[id]/attendance/bulk/page.tsx`
+- [x] Teacher notifications surfaces:
+  - [x] `src/app/teacher/notify-students/page.tsx`
+  - [x] `src/app/teacher/notifications/history/page.tsx`
+  - [x] `src/app/teacher/notifications/broadcast/page.tsx`
+  - [x] `src/app/teacher/notifications/settings/page.tsx`
+- [x] Chuyen cac diem `toLocaleDateString/toLocaleString('vi-VN')` va `toISOString().split('T')[0]` trong cum tren sang helper `formatVietnamDateTime` / `toVietnamDatetimeLocalValue`.
+
+### Risk / defer
+
+- [ ] Van con nhieu diem timezone chua audit het o cac module ngoai cum nong nay (templates, mot so API export/phu tro, page cu).
+- [ ] `teacher/attendance/[id]/manual/page.tsx` va mot so trang legacy con text mojibake; batch nay uu tien dung formatter timezone, chua lam sach toan bo text.
+
+### Verification
+
+- [x] `npm.cmd test -- test/student-history-page.test.tsx test/teacher-notify-students-page.test.tsx test/teacher-notification-settings-page.test.tsx test/teacher-notification-history-page.test.tsx test/teacher-notification-broadcast-page.test.tsx test/teacher-attendance-page.test.tsx test/teacher-face-attendance-page.test.tsx` -> PASS (7 files / 19 tests, 2026-04-24)
+- [x] `npm.cmd run build` -> PASS (2026-04-24)
+- [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests, 2026-04-24)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix

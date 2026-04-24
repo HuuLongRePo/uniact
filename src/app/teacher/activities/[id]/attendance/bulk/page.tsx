@@ -16,6 +16,7 @@ import {
   Clock,
   Save,
 } from 'lucide-react';
+import { formatVietnamDateTime } from '@/lib/timezone';
 
 type AttendanceStatus = 'present' | 'absent' | 'late' | 'excused';
 
@@ -341,7 +342,7 @@ export default function BulkAttendancePage() {
                 </h1>
                 <p className="text-gray-600 mt-2">{activity.title}</p>
                 <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
-                  <span>📅 {new Date(activity.date_time).toLocaleDateString('vi-VN')}</span>
+                  <span>📅 {formatVietnamDateTime(activity.date_time, 'date')}</span>
                   <span>📍 {activity.location}</span>
                 </div>
               </div>

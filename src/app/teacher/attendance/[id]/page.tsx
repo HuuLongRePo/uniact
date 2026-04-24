@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from '@/lib/toast';
+import { formatVietnamDateTime } from '@/lib/timezone';
 
 interface Activity {
   id: number;
@@ -174,7 +175,7 @@ export default function AttendanceDetailPage() {
           <div>
             <p className="text-gray-600 text-sm">Thời gian</p>
             <p className="font-semibold">
-              {new Date(activity.date_time).toLocaleDateString('vi-VN')}
+              {formatVietnamDateTime(activity.date_time, 'date')}
             </p>
           </div>
         </div>

@@ -17,6 +17,7 @@ import {
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useAuth } from '@/contexts/AuthContext';
+import { formatVietnamDateTime } from '@/lib/timezone';
 
 interface NotificationChannel {
   id: number;
@@ -450,7 +451,7 @@ export default function NotificationSettingsPage() {
                         <div className="font-medium text-gray-900">{template.name}</div>
                         <div className="text-xs text-gray-500">
                           {template.category} •{' '}
-                          {new Date(template.created_at).toLocaleDateString('vi-VN')}
+                          {formatVietnamDateTime(template.created_at, 'date')}
                         </div>
                       </div>
                       <div className="flex gap-2">

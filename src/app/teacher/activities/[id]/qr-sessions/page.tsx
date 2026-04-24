@@ -8,6 +8,7 @@ import { ArrowLeft, CheckCircle2, Clock, Play, QrCode, StopCircle, Users } from 
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useAuth } from '@/contexts/AuthContext';
+import { formatVietnamDateTime } from '@/lib/timezone';
 
 interface QRSession {
   id: number;
@@ -185,7 +186,7 @@ export default function QRSessionsPage() {
                 </h1>
                 <p className="mt-2 text-gray-600">{activity.title}</p>
                 <div className="mt-2 flex items-center gap-4 text-sm text-gray-500">
-                  <span>📅 {new Date(activity.date_time).toLocaleDateString('vi-VN')}</span>
+                  <span>📅 {formatVietnamDateTime(activity.date_time, 'date')}</span>
                   <span>📍 {activity.location || 'Chưa cập nhật'}</span>
                 </div>
               </div>

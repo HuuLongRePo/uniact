@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Check, Save, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { formatVietnamDateTime, toVietnamDatetimeLocalValue } from '@/lib/timezone';
 
 interface Student {
   id: number;
@@ -202,7 +203,7 @@ export default function ManualAttendancePage({ params }: { params: Promise<{ id:
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `dau-danh-${id}-${new Date().toISOString().split('T')[0]}.xlsx`;
+      a.download = `dau-danh-${id}-${toVietnamDatetimeLocalValue(new Date()).slice(0, 10)}.xlsx`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -248,7 +249,7 @@ export default function ManualAttendancePage({ params }: { params: Promise<{ id:
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-gray-900">Dấu danh - {activity?.title}</h1>
           <p className="text-gray-600 mt-2">
-            Ngày: {new Date(activity!.date_time).toLocaleDateString('vi-VN')}
+            Ngày: {formatVietnamDateTime(activity!.date_time, 'date')}
           </p>
         </div>
 

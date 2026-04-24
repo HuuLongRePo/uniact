@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { useAuth } from '@/contexts/AuthContext';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { formatVietnamDateTime, toVietnamDatetimeLocalValue } from '@/lib/timezone';
 
 interface Student {
   id: number;
@@ -468,7 +469,7 @@ export default function TeacherNotifyStudentsPage() {
                           type="date"
                           value={scheduleDate}
                           onChange={(event) => setScheduleDate(event.target.value)}
-                          min={new Date().toISOString().split('T')[0]}
+                          min={toVietnamDatetimeLocalValue(new Date()).slice(0, 10)}
                           className="w-full rounded-md border border-gray-300 px-2.5 py-2 text-sm focus:border-transparent focus:ring-2 focus:ring-blue-500"
                         />
                       </div>
@@ -587,7 +588,7 @@ export default function TeacherNotifyStudentsPage() {
                             </span>
                           </td>
                           <td className="px-4 py-3 text-sm text-gray-600">
-                            {new Date(notification.created_at).toLocaleString('vi-VN')}
+                            {formatVietnamDateTime(notification.created_at)}
                           </td>
                         </tr>
                       ))}
@@ -655,7 +656,7 @@ export default function TeacherNotifyStudentsPage() {
                             </span>
                           </td>
                           <td className="px-4 py-3 text-sm text-gray-600">
-                            {new Date(notification.scheduled_at).toLocaleString('vi-VN')}
+                            {formatVietnamDateTime(notification.scheduled_at)}
                           </td>
                           <td className="px-4 py-3 text-center text-sm">
                             <span

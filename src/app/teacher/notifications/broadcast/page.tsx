@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Clock, Edit2, Plus, Save, Send, Trash2, Users } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { formatVietnamDateTime } from '@/lib/timezone';
 
 interface Class {
   id: number;
@@ -508,16 +509,16 @@ export default function BroadcastNotificationsPage() {
                         </span>
                         <span className="inline-flex items-center gap-1">
                           <Clock className="h-4 w-4" />
-                          {new Date(notification.created_at).toLocaleString('vi-VN')}
+                          {formatVietnamDateTime(notification.created_at)}
                         </span>
                         {notification.scheduled_at && notification.status === 'scheduled' && (
                           <span className="text-blue-600">
-                            Gửi lúc {new Date(notification.scheduled_at).toLocaleString('vi-VN')}
+                            Gửi lúc {formatVietnamDateTime(notification.scheduled_at)}
                           </span>
                         )}
                         {notification.sent_at && (
                           <span className="text-emerald-600">
-                            Đã gửi lúc {new Date(notification.sent_at).toLocaleString('vi-VN')}
+                            Đã gửi lúc {formatVietnamDateTime(notification.sent_at)}
                           </span>
                         )}
                       </div>
