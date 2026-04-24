@@ -5,6 +5,7 @@ import { ApiError, errorResponse } from '@/lib/api-response';
 import { createSimplePdf } from '@/lib/reports/simple-pdf';
 import { calculateParticipationRate } from '@/lib/calculations';
 import { formatDate } from '@/lib/formatters';
+import { toVietnamFileTimestamp } from '@/lib/timezone';
 
 async function getAccessibleClassIds(user: { id: number; role: string }): Promise<number[]> {
   if (user.role === 'admin') {
@@ -102,7 +103,7 @@ export async function POST(request: NextRequest) {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="participation-report-${Date.now()}.pdf"`,
+        'Content-Disposition': `attachment; filename="participation-report-${toVietnamFileTimestamp(new Date())}.pdf"`,
         'Cache-Control': 'no-store',
       },
     });

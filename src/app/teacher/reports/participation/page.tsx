@@ -6,7 +6,7 @@ import { toast } from 'react-hot-toast';
 import { Activity, ArrowLeft, Download, Filter, Search } from 'lucide-react';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { useAuth } from '@/contexts/AuthContext';
-import { formatVietnamDateTime, parseVietnamDate } from '@/lib/timezone';
+import { formatVietnamDateTime, parseVietnamDate, toVietnamFileTimestamp } from '@/lib/timezone';
 
 interface ClassOption {
   id: number;
@@ -319,7 +319,7 @@ export default function ParticipationReportsPage() {
       const url = window.URL.createObjectURL(blob);
       const anchor = document.createElement('a');
       anchor.href = url;
-      anchor.download = `participation-report-${Date.now()}.pdf`;
+      anchor.download = `participation-report-${toVietnamFileTimestamp(new Date())}.pdf`;
       anchor.click();
       toast.success('Đã xuất báo cáo thành công');
     } catch (error) {

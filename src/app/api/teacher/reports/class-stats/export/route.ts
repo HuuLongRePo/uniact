@@ -5,6 +5,7 @@ import { ApiError, errorResponse } from '@/lib/api-response';
 import { createSimplePdf } from '@/lib/reports/simple-pdf';
 import { calculateAttendanceRate } from '@/lib/calculations';
 import { formatDate } from '@/lib/formatters';
+import { toVietnamFileTimestamp } from '@/lib/timezone';
 
 async function assertCanAccessClass(
   user: { id: number; role: string },
@@ -111,7 +112,7 @@ export async function POST(request: NextRequest) {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="class-stats-${Date.now()}.pdf"`,
+        'Content-Disposition': `attachment; filename="class-stats-${toVietnamFileTimestamp(new Date())}.pdf"`,
         'Cache-Control': 'no-store',
       },
     });

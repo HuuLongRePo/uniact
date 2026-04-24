@@ -2588,6 +2588,34 @@ Yeu cau:
 - [x] `npm.cmd run build` -> PASS (2026-04-24)
 - [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests, 2026-04-24)
 
+## 9.68) Batch uu tien nong - timezone VN teacher report export filenames
+
+### Muc tieu
+
+- Don tiep cum filename export user-facing o cac bao cao giang vien dang dung `Date.now()`.
+- Dong bo ten file tai ca client va API route ve timestamp Viet Nam de khong lech ngay quanh moc 00:00.
+
+### Viec can lam
+
+- [x] `src/app/teacher/reports/attendance/page.tsx`
+- [x] `src/app/teacher/reports/participation/page.tsx`
+- [x] `src/app/teacher/reports/class-stats/page.tsx`
+- [x] `src/app/api/teacher/reports/attendance/export/route.ts`
+- [x] `src/app/api/teacher/reports/participation/export/route.ts`
+- [x] `src/app/api/teacher/reports/class-stats/export/route.ts`
+  - [x] doi ten file export sang `toVietnamFileTimestamp(new Date())`.
+
+### Risk / defer
+
+- [ ] Van con residual filename/export khac ngoai cum bao cao giang vien, dac biet o participants/history va mot so admin route.
+- [ ] Batch nay chi chot naming/timestamp, chua audit sau noi dung ngay gio trong tung file xuat.
+
+### Verification
+
+- [x] `npm.cmd test -- test/teacher-attendance-report-page.test.tsx test/teacher-participation-page.test.tsx test/teacher-class-stats-page.test.tsx test/participation-report-page.test.tsx` -> PASS (4 files / 8 tests, 2026-04-24)
+- [x] `npm.cmd run build` -> PASS (2026-04-24)
+- [x] `npm.cmd run test:backbone` -> PASS (11 files / 47 tests, 2026-04-24)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix

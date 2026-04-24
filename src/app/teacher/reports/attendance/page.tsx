@@ -27,7 +27,7 @@ import {
   type ClassOption,
   type StudentAttendanceSummary,
 } from '@/features/reports/attendance-report-helpers';
-import { formatVietnamDateTime, parseVietnamDate } from '@/lib/timezone';
+import { formatVietnamDateTime, parseVietnamDate, toVietnamFileTimestamp } from '@/lib/timezone';
 
 type AttendanceSortKey = 'date' | 'student' | 'status' | 'method';
 type SortDirection = 'asc' | 'desc';
@@ -304,7 +304,7 @@ export default function AttendanceReportsPage() {
       const url = window.URL.createObjectURL(blob);
       const anchor = document.createElement('a');
       anchor.href = url;
-      anchor.download = `attendance-report-${Date.now()}.xlsx`;
+      anchor.download = `attendance-report-${toVietnamFileTimestamp(new Date())}.xlsx`;
       anchor.click();
       toast.success('Đã xuất báo cáo thành công');
     } catch (error) {

@@ -6,6 +6,7 @@ import { toast } from 'react-hot-toast';
 import { ArrowLeft, BarChart3, Calendar, Download, Filter, TrendingUp, Users } from 'lucide-react';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { useAuth } from '@/contexts/AuthContext';
+import { toVietnamFileTimestamp } from '@/lib/timezone';
 
 interface ClassOption {
   id: number;
@@ -186,7 +187,7 @@ export default function ClassStatsPage() {
       const url = window.URL.createObjectURL(blob);
       const anchor = document.createElement('a');
       anchor.href = url;
-      anchor.download = `class-stats-${Date.now()}.pdf`;
+      anchor.download = `class-stats-${toVietnamFileTimestamp(new Date())}.pdf`;
       anchor.click();
       toast.success('Đã xuất báo cáo thành công');
     } catch (error) {
