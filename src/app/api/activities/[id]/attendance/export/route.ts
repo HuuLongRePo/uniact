@@ -4,6 +4,7 @@ import { requireRole } from '@/lib/guards';
 import { ApiError, errorResponse } from '@/lib/api-response';
 import { teacherCanAccessActivity } from '@/lib/activity-access';
 import { createWorkbookFromJsonSheets } from '@/lib/excel-export';
+import { toVietnamDateStamp } from '@/lib/timezone';
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -107,7 +108,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       buffer.byteOffset + buffer.byteLength
     ) as ArrayBuffer;
 
-    const dateStr = String(activity.date_time || new Date().toISOString()).slice(0, 10);
+    const dateStr = toVietnamDateStamp(activity.date_time || new Date()) || toVietnamDateStamp(new Date());
     const filename = `dau-danh-${activityId}-${dateStr}.xlsx`;
 
     return new Response(ab, {

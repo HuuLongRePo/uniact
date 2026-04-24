@@ -16,7 +16,8 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { formatDate } from '@/lib/formatters';
-import { parseVietnamDate } from '@/lib/timezone';
+import { resolveDownloadFilename } from '@/lib/download-filename';
+import { parseVietnamDate, toVietnamDateStamp } from '@/lib/timezone';
 
 type AttendanceStatus = 'present' | 'absent' | 'late' | 'excused';
 
@@ -161,8 +162,12 @@ export default function AttendanceHistoryPage() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `attendance-${activityId}-${Date.now()}.xlsx`;
+      a.download = resolveDownloadFilename(
+        response.headers.get('Content-Disposition'),
+        `dau-danh-${activityId}-${toVietnamDateStamp(new Date())}.xlsx`
+      );
       a.click();
+      window.URL.revokeObjectURL(url);
       toast.success('Đã xuất file thành công');
     } catch (error) {
       console.error('Error exporting:', error);

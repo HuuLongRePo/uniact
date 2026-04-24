@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { toast } from '@/lib/toast';
 import { formatDate } from '@/lib/formatters';
+import { resolveDownloadFilename } from '@/lib/download-filename';
+import { toVietnamDateStamp } from '@/lib/timezone';
 
 interface Participation {
   id: number;
@@ -220,8 +222,12 @@ export default function ParticipantsPage() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `participants-${activityId}-${Date.now()}.csv`;
+      a.download = resolveDownloadFilename(
+        res.headers.get('Content-Disposition'),
+        `participants-${activityId}-${toVietnamDateStamp(new Date())}.csv`
+      );
       a.click();
+      window.URL.revokeObjectURL(url);
       toast.success('Đã xuất file thành công');
     } catch (_error) {
       toast.error('Không thể xuất file');

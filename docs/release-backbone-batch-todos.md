@@ -2742,6 +2742,40 @@ Sau khi code:
 - Cap nhat docs/release-backbone-batch-todos.md (section 9.70) voi ket qua va risk/defer.
 ```
 
+## 9.71) Batch uu tien nong - dong bo filename export tu API cho teacher activity pages
+
+### Muc tieu
+
+- Dong bo ten file tai xuong o UI teacher theo `Content-Disposition` tra ve tu API, tranh lech ten giua FE fallback va BE.
+- Don residual timezone drift cho route export diem danh hoat dong theo moc ngay VN thay vi cat chuoi UTC.
+- Bo sung helper parse filename de tai su dung cho cac page export client-side.
+
+### Viec can lam
+
+- [x] `src/lib/download-filename.ts` (moi)
+  - [x] them helper parse `filename`/`filename*` tu `Content-Disposition`.
+  - [x] ho tro decode percent-encoding va fallback an toan.
+- [x] `src/app/teacher/activities/[id]/participants/page.tsx`
+  - [x] dung filename tra ve tu header API, fallback `participants-{id}-{VN date}.csv`.
+  - [x] them `URL.revokeObjectURL` sau khi trigger download.
+- [x] `src/app/teacher/activities/[id]/attendance/history/page.tsx`
+  - [x] dung filename tra ve tu header API, fallback `dau-danh-{id}-{VN date}.xlsx`.
+  - [x] them `URL.revokeObjectURL` sau khi trigger download.
+- [x] `src/app/api/activities/[id]/attendance/export/route.ts`
+  - [x] doi filename date stamp sang `toVietnamDateStamp(activity.date_time)` de tranh drift quanh moc 00:00.
+- [x] Test hardening:
+  - [x] `test/download-filename.test.ts` (moi)
+  - [x] `test/timezone-export-filenames-route.test.ts` (bo sung case attendance export filename).
+
+### Risk / defer
+
+- [ ] Van con mot so page export client-side khac chua uu tien parse filename tu header (dang fallback local), se tiep tuc audit o batch timezone residual tiep theo.
+- [ ] Batch nay chua chuan hoa toan bo header quoting (`filename=` vs `filename="..."`) o tat ca route export.
+
+### Verification
+
+- [x] `npm.cmd test -- test/download-filename.test.ts test/timezone-export-filenames-route.test.ts` -> PASS (2 files / 7 tests, 2026-04-24)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix
