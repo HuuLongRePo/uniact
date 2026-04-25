@@ -12,10 +12,10 @@ export function legacyAdminReportRouteResponse({
   alternatives = [],
 }: LegacyAdminReportRouteOptions): NextResponse {
   const target = replacement
-    ? `Hãy chuyển sang ${replacement}.`
-    : 'Hiện chưa có endpoint thay thế được duy trì cho luồng này.';
+    ? `Hay chuyen sang ${replacement}.`
+    : 'Hien chua co endpoint thay the duoc duy tri cho luong nay.';
 
-  const message = `Route ${route} là endpoint legacy và không còn tương thích với cấu trúc báo cáo hiện tại. ${target}`;
+  const message = `Route ${route} la endpoint legacy va khong con tuong thich voi cau truc bao cao hien tai. ${target}`;
 
   return NextResponse.json(
     {
@@ -30,3 +30,4 @@ export function legacyAdminReportRouteResponse({
     { status: 410 }
   );
 }
+

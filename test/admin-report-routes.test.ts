@@ -282,6 +282,7 @@ describe('Admin report routes', () => {
     });
     expect(body.error).toContain('/api/admin/reports/student-points');
     expect(body.error).toContain('/api/admin/reports/scores');
+    expect(String(body.error)).not.toMatch(/[ÃƒÃ‚Ã¢]/);
   });
 
   it('class participation legacy route returns 410 with alternatives', async () => {
@@ -300,5 +301,6 @@ describe('Admin report routes', () => {
     });
     expect(body.message).toContain('/api/admin/reports/class-participation');
     expect(body.message).toContain('/api/reports/participation');
+    expect(String(body.message)).not.toMatch(/[ÃƒÃ‚Ã¢]/);
   });
 });

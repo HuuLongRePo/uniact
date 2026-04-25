@@ -75,6 +75,7 @@ Nguon tong hop: release backbone todos + critical closeout todos + expansion/bac
 - Do lon: XL.
 
 10. **[RB-10] Repository hygiene + docs conflict reconciliation (bat buoc)**
+- Cap nhat 2026-04-25 (tiep 3): da don mojibake cho helper route legacy (`src/app/api/admin/reports/_legacy.ts`, `src/app/api/reports/_legacy.ts`), xoa file rac `src/app/teacher/dashboard/page_old.tsx`, va bo sung anti-mojibake regression tests (batch 9.92); RB-10 con backlog hop nhat docs xung dot va cleanup legacy residual theo domain.
 - Outcome cho end-user: release nhat quan, team dev khong bi nghen do tai lieu/ma nguon rac/xung dot.
 - Pham vi:
   - don file khong gia tri/trung lap (scripts/docs legacy, quarantine khong dung),

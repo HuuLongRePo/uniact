@@ -12,10 +12,10 @@ export function legacyReportRouteResponse({
   alternatives = [],
 }: LegacyRouteOptions): NextResponse {
   const target = replacement
-    ? `Hãy chuyển sang ${replacement}.`
-    : 'Chưa có endpoint thay thế được duy trì cho luồng này.';
+    ? `Hay chuyen sang ${replacement}.`
+    : 'Chua co endpoint thay the duoc duy tri cho luong nay.';
 
-  const message = `Route ${route} là endpoint legacy và không còn tương thích schema hiện tại. ${target}`;
+  const message = `Route ${route} la endpoint legacy va khong con tuong thich schema hien tai. ${target}`;
 
   return NextResponse.json(
     {
@@ -30,3 +30,4 @@ export function legacyReportRouteResponse({
     { status: 410 }
   );
 }
+

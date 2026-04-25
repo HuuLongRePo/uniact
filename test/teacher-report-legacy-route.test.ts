@@ -18,5 +18,6 @@ describe('Teacher dashboard legacy report route', () => {
     });
     expect(body.message).toContain('/api/reports/teacher-dashboard');
     expect(body.message).toContain('/api/teacher/dashboard-stats');
+    expect(String(body.message)).not.toMatch(/[ÃƒÃ‚Ã¢]/);
   });
 });

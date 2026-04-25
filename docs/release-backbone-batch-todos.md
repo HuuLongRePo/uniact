@@ -3403,6 +3403,36 @@ Sau khi code:
 
 - [x] `npm.cmd test -- test/export-residual-routes.test.ts` -> PASS (1 file / 2 tests, 2026-04-25)
 
+## 9.92) Batch uu tien nong - legacy mojibake cleanup + dead page prune
+
+### Muc tieu
+
+- Don residual text mojibake o cac helper route legacy de response message khong bi vo ma.
+- Loai bo file legacy khong con duoc route/import su dung de giam rac repository.
+- Khoa regression bang assertion anti-mojibake cho test route legacy.
+
+### Viec can lam
+
+- [x] Chuan hoa message ASCII trong helper legacy:
+  - [x] `src/app/api/admin/reports/_legacy.ts`
+  - [x] `src/app/api/reports/_legacy.ts`
+- [x] Xoa file legacy khong con gia tri:
+  - [x] `src/app/teacher/dashboard/page_old.tsx`
+- [x] Bo sung test anti-mojibake:
+  - [x] `test/admin-report-routes.test.ts`
+  - [x] `test/teacher-report-legacy-route.test.ts`
+  - [x] assert message khong match mau `/[ÃƒÃ‚Ã¢]/`.
+
+### Risk / defer
+
+- [ ] Van con residual text legacy/mojibake o mot so module UI/API khac (se tiep tuc theo cum RB-10).
+- [ ] Chua gom quyet dinh final ve policy ngon ngu (ASCII vs Unicode) cho text noi bo response legacy.
+
+### Verification
+
+- [x] `npm.cmd test -- test/teacher-report-legacy-route.test.ts test/admin-report-routes.test.ts` -> PASS (2 files / 9 tests, 2026-04-25)
+- [x] `npm.cmd run build` -> PASS (2026-04-25)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix
