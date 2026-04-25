@@ -56,7 +56,7 @@ export default function TeacherPollsPage() {
   const fetchPolls = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/polls');
+      const res = await fetch('/api/teacher/polls');
       const data = await res.json();
       if (res.ok) {
         setPolls(data.polls || []);
@@ -104,7 +104,7 @@ export default function TeacherPollsPage() {
     }
 
     try {
-      const res = await fetch('/api/polls', {
+      const res = await fetch('/api/teacher/polls', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -136,7 +136,7 @@ export default function TeacherPollsPage() {
 
   const handleClosePoll = async (pollId: number) => {
     try {
-      const res = await fetch(`/api/polls/${pollId}?action=close`, { method: 'DELETE' });
+      const res = await fetch(`/api/teacher/polls/${pollId}?action=close`, { method: 'DELETE' });
       const data = await res.json();
       if (res.ok) {
         toast.success('Đã đóng poll');
@@ -151,7 +151,7 @@ export default function TeacherPollsPage() {
 
   const handleDeletePoll = async (pollId: number) => {
     try {
-      const res = await fetch(`/api/polls/${pollId}`, { method: 'DELETE' });
+      const res = await fetch(`/api/teacher/polls/${pollId}`, { method: 'DELETE' });
       const data = await res.json();
       if (res.ok) {
         toast.success('Đã xóa poll');

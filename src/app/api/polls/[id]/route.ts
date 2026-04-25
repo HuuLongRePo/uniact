@@ -1,197 +1,286 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { dbAll, dbGet, dbRun } from '@/lib/database';
+import { NextRequest } from 'next/server';
+import { dbAll, dbGet, dbReady, dbRun } from '@/lib/database';
 import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
+import { ensurePollSchema, parsePollId } from '@/lib/polls';
+import { requireApiAuth } from '@/lib/guards';
 
-// GET /api/polls/[id] - Lấy chi tiết poll và kết quả
-export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+function toNumber(value: unknown): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+async function checkStudentPollMembership(userId: number, classId: number | null): Promise<boolean> {
+  if (!classId) return true;
+
+  const membership = await dbGet(
+    `
+      SELECT id
+      FROM class_members
+      WHERE user_id = ? AND class_id = ?
+      LIMIT 1
+    `,
+    [userId, classId]
+  );
+
+  return Boolean(membership);
+}
+
+async function canViewPoll(
+  user: { id: number; role: string; class_id?: number | null },
+  poll: { created_by: number; class_id: number | null }
+): Promise<boolean> {
+  if (user.role === 'admin') return true;
+  if (user.role === 'teacher') return poll.created_by === user.id;
+
+  if (poll.class_id === null) {
+    return true;
+  }
+
+  if (user.class_id && Number(user.class_id) === Number(poll.class_id)) {
+    return true;
+  }
+
+  return checkStudentPollMembership(user.id, poll.class_id);
+}
+
+// GET /api/polls/[id] - poll detail and aggregated result
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    await dbReady();
+    await ensurePollSchema();
+
+    const user = await requireApiAuth(request);
     const { id } = await params;
-    const userId = req.headers.get('x-user-id');
-    if (!userId) {
-      return errorResponse(ApiError.unauthorized('Chưa đăng nhập'));
+    const pollId = parsePollId(id);
+    if (!pollId) {
+      return errorResponse(ApiError.validation('ID poll khong hop le'));
     }
 
-    const pollId = id;
-
-    // Lấy thông tin poll
     const poll = await dbGet(
-      `SELECT 
-        p.*,
-        c.name as class_name,
-        u.name as creator_name
-       FROM polls p
-       LEFT JOIN classes c ON p.class_id = c.id
-       LEFT JOIN users u ON p.created_by = u.id
-       WHERE p.id = ?`,
+      `
+        SELECT
+          p.*,
+          c.name AS class_name,
+          u.name AS creator_name
+        FROM polls p
+        LEFT JOIN classes c ON c.id = p.class_id
+        LEFT JOIN users u ON u.id = p.created_by
+        WHERE p.id = ?
+      `,
       [pollId]
     );
 
     if (!poll) {
-      return errorResponse(ApiError.notFound('Không tìm thấy khảo sát'));
+      return errorResponse(ApiError.notFound('Khong tim thay poll'));
     }
 
-    // Lấy danh sách options với số lượng vote
+    const allowed = await canViewPoll(user, poll);
+    if (!allowed) {
+      return errorResponse(ApiError.forbidden('Khong co quyen truy cap poll nay'));
+    }
+
     const options = await dbAll(
-      `SELECT 
-        po.id,
-        po.option_text,
-        po.display_order,
-        COUNT(pr.id) as vote_count
-       FROM poll_options po
-       LEFT JOIN poll_responses pr ON po.id = pr.option_id
-       WHERE po.poll_id = ?
-       GROUP BY po.id
-       ORDER BY po.display_order`,
+      `
+        SELECT
+          po.id,
+          po.option_text,
+          po.display_order,
+          COUNT(pr.id) AS vote_count
+        FROM poll_options po
+        LEFT JOIN poll_responses pr ON pr.option_id = po.id
+        WHERE po.poll_id = ?
+        GROUP BY po.id
+        ORDER BY po.display_order ASC, po.id ASC
+      `,
       [pollId]
     );
 
-    // Kiểm tra user đã vote chưa
     const userVotes = await dbAll(
-      'SELECT option_id FROM poll_responses WHERE poll_id = ? AND user_id = ?',
-      [pollId, userId]
+      `
+        SELECT option_id
+        FROM poll_responses
+        WHERE poll_id = ? AND user_id = ?
+      `,
+      [pollId, user.id]
     );
 
-    const totalVotes = options.reduce((sum: number, opt: any) => sum + opt.vote_count, 0);
+    const totalVotes = options.reduce((sum, option) => sum + toNumber((option as any).vote_count), 0);
 
     return successResponse({
       poll,
-      options: options.map((opt: any) => ({
-        ...opt,
-        percentage: totalVotes > 0 ? ((opt.vote_count / totalVotes) * 100).toFixed(1) : 0,
-      })),
+      options: options.map((option: any) => {
+        const voteCount = toNumber(option.vote_count);
+        return {
+          ...option,
+          vote_count: voteCount,
+          percentage: totalVotes > 0 ? ((voteCount / totalVotes) * 100).toFixed(1) : '0.0',
+        };
+      }),
       total_votes: totalVotes,
-      user_votes: userVotes.map((v: any) => v.option_id),
+      user_votes: userVotes.map((vote: any) => toNumber(vote.option_id)),
       has_voted: userVotes.length > 0,
     });
   } catch (error) {
-    console.error('Lỗi lấy chi tiết khảo sát:', error);
-    return errorResponse(ApiError.internalError('Lỗi máy chủ'));
+    console.error('Poll detail error:', error);
+    return errorResponse(
+      error instanceof ApiError ||
+        (error && typeof (error as any).status === 'number' && typeof (error as any).code === 'string')
+        ? (error as ApiError)
+        : ApiError.internalError('Khong the tai chi tiet poll')
+    );
   }
 }
 
-// POST /api/polls/[id] - Vote cho poll
-export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+// POST /api/polls/[id] - submit vote
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    await dbReady();
+    await ensurePollSchema();
+
+    const user = await requireApiAuth(request);
     const { id } = await params;
-    const userId = req.headers.get('x-user-id');
-    const userRole = req.headers.get('x-user-role');
-
-    if (!userId) {
-      return errorResponse(ApiError.unauthorized('Chưa đăng nhập'));
+    const pollId = parsePollId(id);
+    if (!pollId) {
+      return errorResponse(ApiError.validation('ID poll khong hop le'));
     }
 
-    const pollId = id;
-    const body = await req.json();
-    const { option_ids } = body;
+    const body = await request.json();
+    const optionIds = Array.isArray(body?.option_ids)
+      ? body.option_ids
+          .map((value: unknown) => Number.parseInt(String(value), 10))
+          .filter((value: number) => Number.isFinite(value) && value > 0)
+      : [];
+    const responseText = body?.response_text ? String(body.response_text).trim() : '';
 
-    if (!Array.isArray(option_ids) || option_ids.length === 0) {
-      return errorResponse(ApiError.validation('Chưa chọn phương án'));
+    if (optionIds.length === 0) {
+      return errorResponse(ApiError.validation('Chua chon lua chon nao'));
     }
 
-    // Lấy thông tin poll
-    const poll = await dbGet('SELECT * FROM polls WHERE id = ?', [pollId]);
-
+    const poll = await dbGet(`SELECT * FROM polls WHERE id = ?`, [pollId]);
     if (!poll) {
-      return errorResponse(ApiError.notFound('Không tìm thấy khảo sát'));
+      return errorResponse(ApiError.notFound('Khong tim thay poll'));
     }
 
     if (poll.status !== 'active') {
-      return errorResponse(ApiError.validation('Khảo sát đã đóng'));
+      return errorResponse(ApiError.validation('Poll da dong'));
     }
 
-    // Kiểm tra allow_multiple
-    if (!poll.allow_multiple && option_ids.length > 1) {
-      return errorResponse(ApiError.validation('Chỉ được chọn một phương án'));
+    if (!poll.allow_multiple && optionIds.length > 1) {
+      return errorResponse(ApiError.validation('Poll chi cho phep chon mot lua chon'));
     }
 
-    // Kiểm tra quyền vote (chỉ students trong lớp)
-    if (userRole === 'student' && poll.class_id) {
-      const membership = await dbGet(
-        'SELECT id FROM class_members WHERE user_id = ? AND class_id = ?',
-        [userId, poll.class_id]
-      );
-      if (!membership) {
-        return errorResponse(ApiError.forbidden('Bạn không thuộc lớp này'));
+    if (user.role === 'student') {
+      const inOwnClass = poll.class_id === null || Number(poll.class_id) === Number(user.class_id || 0);
+      if (!inOwnClass) {
+        const membership = await checkStudentPollMembership(user.id, poll.class_id);
+        if (!membership) {
+          return errorResponse(ApiError.forbidden('Ban khong thuoc lop cua poll nay'));
+        }
       }
     }
 
-    // Kiểm tra đã vote chưa
-    const existingVotes = await dbAll(
-      'SELECT id FROM poll_responses WHERE poll_id = ? AND user_id = ?',
-      [pollId, userId]
+    const existingVote = await dbGet(
+      `
+        SELECT id
+        FROM poll_responses
+        WHERE poll_id = ? AND user_id = ?
+        LIMIT 1
+      `,
+      [pollId, user.id]
     );
-
-    if (existingVotes.length > 0) {
-      return errorResponse(ApiError.validation('Bạn đã bình chọn rồi'));
+    if (existingVote) {
+      return errorResponse(ApiError.validation('Ban da binh chon poll nay'));
     }
 
-    // Xác minh option_ids hợp lệ
+    const placeholders = optionIds.map(() => '?').join(', ');
     const validOptions = await dbAll(
-      `SELECT id FROM poll_options WHERE poll_id = ? AND id IN (${option_ids.map(() => '?').join(',')})`,
-      [pollId, ...option_ids]
+      `
+        SELECT id
+        FROM poll_options
+        WHERE poll_id = ? AND id IN (${placeholders})
+      `,
+      [pollId, ...optionIds]
     );
 
-    if (validOptions.length !== option_ids.length) {
-      return errorResponse(ApiError.validation('ID phương án không hợp lệ'));
+    if (validOptions.length !== optionIds.length) {
+      return errorResponse(ApiError.validation('Lua chon khong hop le'));
     }
 
-    // Lưu votes
     const now = new Date().toISOString();
-    for (const optionId of option_ids) {
+    for (const optionId of optionIds) {
       await dbRun(
-        'INSERT INTO poll_responses (poll_id, option_id, user_id, created_at) VALUES (?, ?, ?, ?)',
-        [pollId, optionId, userId, now]
+        `
+          INSERT INTO poll_responses (poll_id, option_id, user_id, response_text, created_at)
+          VALUES (?, ?, ?, ?, ?)
+        `,
+        [pollId, optionId, user.id, responseText || null, now]
       );
     }
 
-    return successResponse({}, 'Ghi nhận bình chọn thành công');
+    return successResponse({}, 'Ghi nhan binh chon thanh cong');
   } catch (error) {
-    console.error('Lỗi bình chọn khảo sát:', error);
-    return errorResponse(ApiError.internalError('Lỗi máy chủ'));
+    console.error('Poll vote error:', error);
+    return errorResponse(
+      error instanceof ApiError ||
+        (error && typeof (error as any).status === 'number' && typeof (error as any).code === 'string')
+        ? (error as ApiError)
+        : ApiError.internalError('Khong the ghi nhan binh chon')
+    );
   }
 }
 
-// DELETE /api/polls/[id] - Xóa hoặc đóng poll
-export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+// DELETE /api/polls/[id]?action=close|delete - close or delete poll
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
+    await dbReady();
+    await ensurePollSchema();
+
+    const user = await requireApiAuth(request);
+    if (user.role !== 'teacher' && user.role !== 'admin') {
+      return errorResponse(ApiError.forbidden('Khong co quyen thao tac poll'));
+    }
+
     const { id } = await params;
-    const userId = req.headers.get('x-user-id');
-    const userRole = req.headers.get('x-user-role');
-
-    if (!userId) {
-      return errorResponse(ApiError.unauthorized('Chưa đăng nhập'));
+    const pollId = parsePollId(id);
+    if (!pollId) {
+      return errorResponse(ApiError.validation('ID poll khong hop le'));
     }
 
-    const pollId = id;
-    const { searchParams } = new URL(req.url);
-    const action = searchParams.get('action'); // 'close' or 'delete'
-
-    const poll = await dbGet('SELECT * FROM polls WHERE id = ?', [pollId]);
-
+    const poll = await dbGet(`SELECT * FROM polls WHERE id = ?`, [pollId]);
     if (!poll) {
-      return errorResponse(ApiError.notFound('Không tìm thấy khảo sát'));
+      return errorResponse(ApiError.notFound('Khong tim thay poll'));
     }
 
-    // Kiểm tra quyền
-    if (userRole !== 'admin' && poll.created_by !== parseInt(userId)) {
-      return errorResponse(ApiError.forbidden('Không có quyền truy cập'));
+    const isOwner = Number(poll.created_by) === Number(user.id);
+    if (user.role !== 'admin' && !isOwner) {
+      return errorResponse(ApiError.forbidden('Khong co quyen thao tac poll nay'));
     }
 
+    const action = new URL(request.url).searchParams.get('action');
     if (action === 'close') {
-      // Đóng poll
-      await dbRun('UPDATE polls SET status = ?, closed_at = ? WHERE id = ?', [
-        'closed',
-        new Date().toISOString(),
-        pollId,
-      ]);
-      return successResponse({}, 'Đã đóng khảo sát');
-    } else {
-      // Xóa poll (cascade sẽ xóa options và responses)
-      await dbRun('DELETE FROM polls WHERE id = ?', [pollId]);
-      return successResponse({}, 'Đã xoá khảo sát');
+      await dbRun(
+        `
+          UPDATE polls
+          SET status = 'closed', closed_at = ?
+          WHERE id = ?
+        `,
+        [new Date().toISOString(), pollId]
+      );
+      return successResponse({}, 'Da dong poll');
     }
+
+    await dbRun(`DELETE FROM polls WHERE id = ?`, [pollId]);
+    return successResponse({}, 'Da xoa poll');
   } catch (error) {
-    console.error('Lỗi đóng/xoá khảo sát:', error);
-    return errorResponse(ApiError.internalError('Lỗi máy chủ'));
+    console.error('Poll delete/close error:', error);
+    return errorResponse(
+      error instanceof ApiError ||
+        (error && typeof (error as any).status === 'number' && typeof (error as any).code === 'string')
+        ? (error as ApiError)
+        : ApiError.internalError('Khong the thao tac poll')
+    );
   }
 }

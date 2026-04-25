@@ -2857,7 +2857,7 @@ Sau khi code:
 ### Risk / defer
 
 - [ ] Van con nhieu nut export tao CSV thu cong tren FE (khong qua export route), nen khong co `Content-Disposition`; giu fallback local theo nghiep vu hien tai.
-- [ ] Route `teacher polls responses export` chua co hardening test route-level cho header filename trong batch nay.
+- [x] Route `teacher polls responses export` da co hardening test route-level (`test/teacher-poll-responses-route.test.ts`, 2026-04-24 batch 9.77).
 
 ### Verification
 
@@ -2929,6 +2929,129 @@ Sau khi code:
 
 - [x] `npm.cmd test -- test/class-export-route.test.ts test/download-filename.test.ts` -> PASS (2 files / 7 tests, 2026-04-24)
 - [x] `npm.cmd run build` -> PASS (2026-04-24)
+
+## 9.77) Batch uu tien nong - Poll teacher API closeout + auth canonical + route regression
+
+### Muc tieu
+
+- Dong bo namespace Poll teacher (`/api/teacher/polls/*`) de man hinh responses/settings/export hoat dong day du.
+- Chuan hoa auth cho `/api/polls` theo cookie/token guard thay vi header tam.
+- Giu backward compatibility cho student poll flow (`/api/polls` list/detail/vote).
+
+### Viec can lam
+
+- [x] Them helper schema poll dung chung:
+  - [x] `src/lib/polls.ts` (`ensurePollSchema`, `parsePollId`, `parseTemplateOptions`, `csvCell`).
+- [x] Refactor poll core APIs:
+  - [x] `src/app/api/polls/route.ts`
+  - [x] `src/app/api/polls/[id]/route.ts`
+  - [x] auth guard canonical + validate scope + vote/delete logic.
+- [x] Them day du teacher poll routes con thieu:
+  - [x] `src/app/api/teacher/polls/route.ts`
+  - [x] `src/app/api/teacher/polls/[id]/route.ts`
+  - [x] `src/app/api/teacher/polls/[id]/responses/route.ts`
+  - [x] `src/app/api/teacher/polls/[id]/responses/export/route.ts`
+  - [x] `src/app/api/teacher/polls/settings/route.ts`
+  - [x] `src/app/api/teacher/polls/templates/route.ts`
+  - [x] `src/app/api/teacher/polls/templates/[id]/route.ts`
+- [x] Dong bo teacher poll page sang namespace teacher:
+  - [x] `src/app/teacher/polls/page.tsx`.
+- [x] Bo sung route regression:
+  - [x] `test/teacher-poll-responses-route.test.ts`
+  - [x] `test/teacher-poll-settings-route.test.ts`.
+
+### Risk / defer
+
+- [ ] Poll detail UI text con mojibake tren mot so trang legacy (`teacher/polls/[id]`, `student/polls`), batch nay uu tien API contract/guard truoc.
+- [x] Da bo sung route test rieng cho `/api/teacher/polls` list/create va `/api/teacher/polls/templates/[id]` delete trong batch 9.79.
+
+### Verification
+
+- [x] `npm.cmd test -- test/teacher-poll-responses-route.test.ts test/teacher-poll-settings-route.test.ts test/teacher-poll-responses-page.test.tsx` -> PASS (3 files / 7 tests, 2026-04-24)
+- [x] `npm.cmd run build` -> PASS (2026-04-24)
+
+## 9.78) Batch uu tien nong - prompt tong hop batch con lai + ap dung ngay
+
+### Muc tieu
+
+- Tao prompt tong hop tai lieu toan he thong, danh so batch con lai de co the chon theo list so.
+- Bat buoc nhung yeu cau cleanup repository: don rac, gom file co the gom, cap nhat cac diem xung dot tai lieu.
+- Ap dung prompt ngay bang cach sinh catalog batch con lai tu state hien tai.
+
+### Viec can lam
+
+- [x] Tao prompt:
+  - [x] `docs/system-wide-remaining-batches-planner-prompt.md`
+  - [x] ho tro 2 vong: (1) xuat danh sach batch danh so, (2) nhan list so va lap execution plan hop nhat.
+- [x] Ap dung prompt (vong 1) va xuat catalog:
+  - [x] `docs/system-wide-remaining-batches-catalog.md`
+  - [x] da bao gom batch cleanup/hygiene bat buoc va cac batch he thong con lai theo muc tieu end-user flow.
+
+### Risk / defer
+
+- [ ] Catalog batch con lai la snapshot theo trang thai 2026-04-24; can cap nhat lai neu co batch lon moi duoc merge.
+- [ ] Chua thuc thi xoa/gom file cleanup trong batch nay; moi dung o muc planning + scope chuan hoa.
+
+## 9.79) Batch uu tien nong - Poll route parity regression hardening
+
+### Muc tieu
+
+- Khoa regression cho cac route teacher poll con defer sau batch 9.77.
+- Chot parity route-level cho list/create/close/delete/templates CRUD o namespace `/api/teacher/polls`.
+
+### Viec can lam
+
+- [x] Bo sung route test:
+  - [x] `test/teacher-polls-management-routes.test.ts`
+  - [x] cover:
+    - [x] GET `/api/teacher/polls` (teacher-owned list)
+    - [x] POST `/api/teacher/polls` (create success + class-scope guard fail)
+    - [x] DELETE `/api/teacher/polls/[id]` (close owner + forbidden non-owner)
+    - [x] GET/POST `/api/teacher/polls/templates`
+    - [x] DELETE `/api/teacher/polls/templates/[id]`
+- [x] Re-run poll bundle regression:
+  - [x] `test/teacher-polls-management-routes.test.ts`
+  - [x] `test/teacher-poll-responses-route.test.ts`
+  - [x] `test/teacher-poll-settings-route.test.ts`
+  - [x] `test/teacher-poll-responses-page.test.tsx`
+
+### Risk / defer
+
+- [ ] Poll pages legacy (`teacher/polls/[id]`, `student/polls`) van con text mojibake, can batch UI text cleanup rieng de tranh va cham logic.
+- [x] Da bo sung route test cho `/api/polls` student vote/detail edge-cases trong batch 9.80.
+
+### Verification
+
+- [x] `npm.cmd test -- test/teacher-polls-management-routes.test.ts test/teacher-poll-responses-route.test.ts test/teacher-poll-settings-route.test.ts test/teacher-poll-responses-page.test.tsx` -> PASS (4 files / 13 tests, 2026-04-25)
+- [x] `npm.cmd run build` -> PASS (2026-04-25)
+
+## 9.80) Batch uu tien nong - Poll core route parity (student scope + vote constraints)
+
+### Muc tieu
+
+- Khoa regression cho namespace poll core `/api/polls` va `/api/polls/[id]`.
+- Dam bao matrix truy cap student/teacher + vote constraints duoc bao phu test route-level.
+
+### Viec can lam
+
+- [x] Them route test:
+  - [x] `test/polls-core-routes.test.ts`
+  - [x] cover:
+    - [x] GET `/api/polls` cho student scope list active.
+    - [x] POST `/api/polls` teacher class-out-of-scope -> forbidden.
+    - [x] GET `/api/polls/[id]` student out-of-scope -> forbidden.
+    - [x] POST `/api/polls/[id]` reject multi-select khi `allow_multiple=0`.
+    - [x] POST `/api/polls/[id]` vote success ghi nhan poll_responses.
+- [x] Re-run poll full regression bundle (core + teacher routes + teacher page consumer).
+
+### Risk / defer
+
+- [ ] Chua bo sung route test cho DELETE `/api/polls/[id]` action close/delete matrix (owner/admin) va edge-case poll da dong.
+- [ ] Chua bo sung page-level regression cho `student/polls` va `teacher/polls/[id]` (hien dang route-level la chinh).
+
+### Verification
+
+- [x] `npm.cmd test -- test/polls-core-routes.test.ts test/teacher-polls-management-routes.test.ts test/teacher-poll-responses-route.test.ts test/teacher-poll-settings-route.test.ts test/teacher-poll-responses-page.test.tsx` -> PASS (5 files / 18 tests, 2026-04-25)
 
 ## 10) Ke hoach commit de xuat
 

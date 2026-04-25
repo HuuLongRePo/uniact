@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { dbAll, dbGet, dbReady, dbRun } from '@/lib/database';
 import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
 import { ensurePollSchema } from '@/lib/polls';
-import { requireApiAuth, requireApiRole } from '@/lib/guards';
+import { requireApiRole } from '@/lib/guards';
 
 function normalizeBool(value: unknown): number {
   return value ? 1 : 0;
@@ -23,85 +23,48 @@ async function verifyTeacherClassAccess(userId: number, classId: number) {
   return Boolean(accessibleClass);
 }
 
-// GET /api/polls - list polls (teacher: own polls, student: available polls, admin: all)
 export async function GET(request: NextRequest) {
   try {
     await dbReady();
     await ensurePollSchema();
 
-    const user = await requireApiAuth(request);
-
-    if (user.role === 'teacher') {
-      const polls = await dbAll(
-        `
-          SELECT
-            p.*,
-            c.name AS class_name,
-            COUNT(DISTINCT pr.user_id) AS response_count
-          FROM polls p
-          LEFT JOIN classes c ON c.id = p.class_id
-          LEFT JOIN poll_responses pr ON pr.poll_id = p.id
-          WHERE p.created_by = ?
-          GROUP BY p.id
-          ORDER BY datetime(p.created_at) DESC, p.id DESC
-        `,
-        [user.id]
-      );
-
-      return successResponse({ polls });
-    }
-
-    if (user.role === 'student') {
-      const polls = await dbAll(
-        `
-          SELECT
-            p.*,
-            c.name AS class_name,
-            COUNT(DISTINCT pr.user_id) AS response_count,
-            (
-              SELECT COUNT(*)
-              FROM poll_responses pr2
-              WHERE pr2.poll_id = p.id AND pr2.user_id = ?
-            ) AS has_voted
-          FROM polls p
-          LEFT JOIN classes c ON c.id = p.class_id
-          LEFT JOIN poll_responses pr ON pr.poll_id = p.id
-          WHERE p.status = 'active'
-            AND (
-              p.class_id IS NULL
-              OR p.class_id = ?
-              OR EXISTS (
-                SELECT 1
-                FROM class_members cm
-                WHERE cm.class_id = p.class_id AND cm.user_id = ?
-              )
-            )
-          GROUP BY p.id
-          ORDER BY datetime(p.created_at) DESC, p.id DESC
-        `,
-        [user.id, user.class_id ?? null, user.id]
-      );
-
-      return successResponse({ polls });
-    }
-
-    const polls = await dbAll(`
-      SELECT
-        p.*,
-        c.name AS class_name,
-        u.name AS creator_name,
-        COUNT(DISTINCT pr.user_id) AS response_count
-      FROM polls p
-      LEFT JOIN classes c ON c.id = p.class_id
-      LEFT JOIN users u ON u.id = p.created_by
-      LEFT JOIN poll_responses pr ON pr.poll_id = p.id
-      GROUP BY p.id
-      ORDER BY datetime(p.created_at) DESC, p.id DESC
-    `);
+    const user = await requireApiRole(request, ['teacher', 'admin']);
+    const polls =
+      user.role === 'admin'
+        ? await dbAll(
+            `
+              SELECT
+                p.*,
+                c.name AS class_name,
+                u.name AS creator_name,
+                COUNT(DISTINCT pr.user_id) AS response_count
+              FROM polls p
+              LEFT JOIN classes c ON c.id = p.class_id
+              LEFT JOIN users u ON u.id = p.created_by
+              LEFT JOIN poll_responses pr ON pr.poll_id = p.id
+              GROUP BY p.id
+              ORDER BY datetime(p.created_at) DESC, p.id DESC
+            `
+          )
+        : await dbAll(
+            `
+              SELECT
+                p.*,
+                c.name AS class_name,
+                COUNT(DISTINCT pr.user_id) AS response_count
+              FROM polls p
+              LEFT JOIN classes c ON c.id = p.class_id
+              LEFT JOIN poll_responses pr ON pr.poll_id = p.id
+              WHERE p.created_by = ?
+              GROUP BY p.id
+              ORDER BY datetime(p.created_at) DESC, p.id DESC
+            `,
+            [user.id]
+          );
 
     return successResponse({ polls });
   } catch (error) {
-    console.error('Poll list error:', error);
+    console.error('Teacher polls list error:', error);
     return errorResponse(
       error instanceof ApiError ||
         (error && typeof (error as any).status === 'number' && typeof (error as any).code === 'string')
@@ -111,7 +74,6 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/polls - create poll (teacher/admin)
 export async function POST(request: NextRequest) {
   try {
     await dbReady();
@@ -179,7 +141,7 @@ export async function POST(request: NextRequest) {
     const poll = await dbGet('SELECT * FROM polls WHERE id = ?', [pollId]);
     return successResponse({ poll_id: pollId, poll }, 'Tao poll thanh cong', 201);
   } catch (error) {
-    console.error('Create poll error:', error);
+    console.error('Teacher poll create error:', error);
     return errorResponse(
       error instanceof ApiError ||
         (error && typeof (error as any).status === 'number' && typeof (error as any).code === 'string')
