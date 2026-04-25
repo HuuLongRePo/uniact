@@ -3184,6 +3184,31 @@ Sau khi code:
 - [x] `npm.cmd test -- test/admin-database-ops-routes.test.ts` -> PASS (1 file / 7 tests, 2026-04-25)
 - [x] `npm.cmd run build` -> PASS (2026-04-25)
 
+## 9.85) Batch uu tien nong - poll core delete/close parity regression
+
+### Muc tieu
+
+- Dong no risk con treo tu batch poll core: bo sung test cho `DELETE /api/polls/[id]`.
+- Khoa matrix quyen thao tac poll tren core route: owner teacher, non-owner teacher, admin.
+- Bao phu edge-case poll da dong van co the bi admin delete.
+
+### Viec can lam
+
+- [x] `test/polls-core-routes.test.ts`
+  - [x] them case owner teacher close poll voi `?action=close`.
+  - [x] them case non-owner teacher bi chan thao tac.
+  - [x] them case admin delete poll da dong.
+- [x] Re-run poll regression bundle core/teacher routes.
+
+### Risk / defer
+
+- [ ] Chua bo sung e2e/page-level flow cho thao tac close/delete poll tu UI (batch nay route-level regression la chinh).
+- [ ] Chua mo rong audit log cho close/delete poll trong core route (neu can theo policy van hanh se tach batch audit rieng).
+
+### Verification
+
+- [x] `npm.cmd test -- test/polls-core-routes.test.ts test/teacher-polls-management-routes.test.ts test/admin-database-ops-routes.test.ts` -> PASS (3 files / 21 tests, 2026-04-25)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix

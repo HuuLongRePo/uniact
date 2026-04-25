@@ -139,4 +139,57 @@ describe('Poll core routes', () => {
       [7, 2, 501, 'Nhan xet', expect.any(String)]
     );
   });
+
+  it('allows poll owner teacher to close poll from core route', async () => {
+    mocks.mockRequireApiAuth.mockResolvedValue({ id: 12, role: 'teacher' });
+    mocks.mockDbGet.mockResolvedValue({ id: 7, created_by: 12, status: 'active' });
+
+    const route = await import('../src/app/api/polls/[id]/route');
+    const response = await route.DELETE(
+      { url: 'http://localhost/api/polls/7?action=close' } as any,
+      { params: Promise.resolve({ id: '7' }) }
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.success).toBe(true);
+    expect(mocks.mockDbRun).toHaveBeenCalledWith(
+      expect.stringContaining("SET status = 'closed'"),
+      [expect.any(String), 7]
+    );
+  });
+
+  it('blocks non-owner teacher from deleting poll in core route', async () => {
+    mocks.mockRequireApiAuth.mockResolvedValue({ id: 44, role: 'teacher' });
+    mocks.mockDbGet.mockResolvedValue({ id: 7, created_by: 12, status: 'active' });
+
+    const route = await import('../src/app/api/polls/[id]/route');
+    const response = await route.DELETE(
+      { url: 'http://localhost/api/polls/7' } as any,
+      { params: Promise.resolve({ id: '7' }) }
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(403);
+    expect(body.code).toBe('FORBIDDEN');
+  });
+
+  it('allows admin to delete closed poll in core route', async () => {
+    mocks.mockRequireApiAuth.mockResolvedValue({ id: 1, role: 'admin' });
+    mocks.mockDbGet.mockResolvedValue({ id: 7, created_by: 12, status: 'closed' });
+
+    const route = await import('../src/app/api/polls/[id]/route');
+    const response = await route.DELETE(
+      { url: 'http://localhost/api/polls/7' } as any,
+      { params: Promise.resolve({ id: '7' }) }
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.success).toBe(true);
+    expect(mocks.mockDbRun).toHaveBeenCalledWith(
+      expect.stringContaining('DELETE FROM polls WHERE id = ?'),
+      [7]
+    );
+  });
 });
