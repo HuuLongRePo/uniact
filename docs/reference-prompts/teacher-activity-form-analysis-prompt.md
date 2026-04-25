@@ -1,5 +1,7 @@
 # TEACHER ACTIVITY FORM ANALYSIS PROMPT
 
+Status: REFERENCE_ONLY (superseded by `docs/teacher-activity-scope-and-ux-analysis-prompt-v2.md`)
+
 Use this prompt to continue deep analysis / implementation planning for the next subsystem batch.
 
 ---

@@ -97,6 +97,7 @@ Nguon tong hop: release backbone todos + critical closeout todos + expansion/bac
 - Cap nhat 2026-04-25 (tiep 13): da archive vat ly 5 prompt reference-only vao `docs/reference-prompts/` va cap nhat registry/references lien quan (batch 9.102); RB-10 con backlog merge/noi dung prompt trung lap theo domain.
 - Cap nhat 2026-04-25 (tiep 14): da bo sung route-level regression tests cho contract header download UTF-8 o `custom report`, `bonus reports (csv/xlsx)` va `teacher class-stats export (pdf)` (batch 9.103); RB-10 con tiep tuc quet cac route export residual chua co test rieng + merge prompt/domain docs con trung lap.
 - Cap nhat 2026-04-25 (tiep 15): da bo sung route-level regression cho legacy `GET /api/users/export` (validation role, csv header UTF-8/BOM, json fallback + audit log) trong batch 9.104; RB-10 con backlog cleanup message legacy/mojibake va ke hoach deprecate namespace cu neu client da migrate.
+- Cap nhat 2026-04-25 (tiep 16): da tao `docs/domain-analysis-pack-manifest.md`, dong bo registry/planner theo manifest nay, va archive 2 prompt legacy (`teacher-activity-form-analysis-prompt`, `md-consolidation-plan`) vao `docs/reference-prompts/` (batch 9.105); RB-10 con tiep tuc merge noi dung followup docs trung lap theo tung domain.
 - Blocker/risk: xoa nham tai lieu tham chieu con dung.
 - DoD/test: manifest truoc-sau cleanup + link/docs integrity checks + build/test smoke.
 - Do lon: L.

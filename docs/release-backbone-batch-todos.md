@@ -3764,6 +3764,34 @@ Sau khi code:
 - [x] `npm.cmd test -- test/users-export-route.test.ts` -> PASS (1 file / 3 tests, 2026-04-25)
 - [x] `npm.cmd run build` -> PASS (2026-04-25)
 
+## 9.105) Batch uu tien nong - domain prompt packs normalization + legacy prompt archive
+
+### Muc tieu
+
+- Giam xung dot prompt docs bang manifest domain pack canonical.
+- Don docs legacy khong con active vao `reference-prompts` de planner khong quet nham nguon.
+
+### Viec can lam
+
+- [x] Them manifest canonical:
+  - [x] `docs/domain-analysis-pack-manifest.md` (moi)
+  - [x] liet ke day du packs ACTIVE + REFERENCE_ONLY.
+- [x] Cap nhat registry/planner:
+  - [x] `docs/system-prompt-registry.md` tham chieu manifest domain pack.
+  - [x] `docs/system-wide-remaining-batches-planner-prompt.md` them mandatory source `domain-analysis-pack-manifest.md` + cap nhat thu tu de-conflict.
+- [x] Archive prompt docs legacy:
+  - [x] `docs/teacher-activity-form-analysis-prompt.md` -> `docs/reference-prompts/teacher-activity-form-analysis-prompt.md`
+  - [x] `docs/md-consolidation-plan.md` -> `docs/reference-prompts/md-consolidation-plan.md`
+
+### Risk / defer
+
+- [ ] Batch nay chua merge noi dung cac followup docs theo domain; moi chot governance va bo tri file.
+- [ ] Van can quet tiep cac prompt docs con duplicate noi dung de giam them sprawl trong RB-10.
+
+### Verification
+
+- [x] `rg -n "docs/teacher-activity-form-analysis-prompt\\.md|docs/md-consolidation-plan\\.md" docs --glob "!docs/release-backbone-batch-todos.md" --glob "!docs/reference-prompts/md-consolidation-plan.md" --glob "!docs/reference-prompts/teacher-activity-form-analysis-prompt.md"` -> khong con reference path cu ngoai migration notes.
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix

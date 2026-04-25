@@ -1,5 +1,7 @@
 # Markdown Consolidation Plan
 
+Status: REFERENCE_ONLY (exploratory artifact, khong phai source-of-truth hien hanh)
+
 This document audits the current Markdown sprawl in the UniAct repo and proposes the smallest logical active-doc set that still preserves clear source-of-truth boundaries.
 
 ---

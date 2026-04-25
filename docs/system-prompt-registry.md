@@ -23,21 +23,9 @@ Muc tieu: chot 1 nguon canonical cho toan bo prompt/todo planning docs, giam tru
 
 ## 2) Domain analysis packs (tham chieu co dinh huong)
 
-Moi domain pack nen doc theo cap:
-- Prompt phan tich (`*-analysis-prompt*.md`)
-- Follow-up tasks (`*-followup-tasks*.md`)
-
-Danh sach pack hien hanh:
-- teacher activity scope/UX
-- teacher cross-class activity management
-- approved activity visibility
-- student activity visibility
-- mandatory participation generation
-- activity overdue/listing
-- realtime filters/performance
-- activity wizard performance
-- admin attendance/scoring authority
-- admin attendance + actor filters
+- Manifest canonical: `docs/domain-analysis-pack-manifest.md`
+- Rule: planner chi quet cac pack duoc danh dau `ACTIVE` trong manifest.
+- Cac prompt/followup ngoai manifest khong duoc coi la domain pack active.
 
 ## 3) Prompt docs chi de tham khao (khong lam nguon su that chinh)
 
@@ -46,6 +34,8 @@ Danh sach pack hien hanh:
 - `docs/reference-prompts/critical-flow-closeout-prompt.md`
 - `docs/reference-prompts/attendance-timezone-face-closeout-prompt.md`
 - `docs/reference-prompts/demo-data-refresh-prompt.md`
+- `docs/reference-prompts/teacher-activity-form-analysis-prompt.md`
+- `docs/reference-prompts/md-consolidation-plan.md`
 
 Nguyen tac:
 - Khong dung cac file tren de override backlog canonical.
