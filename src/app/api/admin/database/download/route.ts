@@ -7,11 +7,11 @@ import path from 'path';
 
 function validateBackupFilename(filename: string | null): string {
   if (!filename) {
-    throw ApiError.validation('Thiếu tên file backup');
+    throw ApiError.validation('Thieu ten file backup');
   }
 
   if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
-    throw ApiError.validation('Tên file backup không hợp lệ');
+    throw ApiError.validation('Ten file backup khong hop le');
   }
 
   return filename;
@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
     const backupPath = path.join(process.cwd(), 'backups', filename);
 
     if (!fs.existsSync(backupPath)) {
-      return errorResponse(ApiError.notFound('Không tìm thấy file backup'));
+      return errorResponse(ApiError.notFound('Khong tim thay file backup'));
     }
 
     const fileBuffer = fs.readFileSync(backupPath);
@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
       error instanceof ApiError ||
         (error && typeof error.status === 'number' && typeof error.code === 'string')
         ? error
-        : ApiError.internalError('Không thể tải file backup', { details: error?.message })
+        : ApiError.internalError('Khong the tai file backup', { details: error?.message })
     );
   }
 }

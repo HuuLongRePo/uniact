@@ -1,5 +1,7 @@
 # TEACHER ACTIVITY SCOPE AND UX NEXT BATCHES
 
+Status: ARCHIVED on 2026-04-25 (superseded by `docs/teacher-activity-scope-and-ux-followup-tasks.md`)
+
 Status: follow-up after visibility + time-clear groundwork batch
 
 ## Batch A - Deadline control redesign with business-rule decision

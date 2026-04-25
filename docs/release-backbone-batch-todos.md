@@ -3818,6 +3818,45 @@ Sau khi code:
 - [x] `npm.cmd test -- test/users-export-route.test.ts` -> PASS (1 file / 3 tests, 2026-04-25)
 - [x] `npm.cmd run build` -> PASS (2026-04-25)
 
+## 9.107) Batch uu tien nong - merge teacher activity follow-up docs + harden admin database download contract
+
+### Muc tieu
+
+- Gop 2 file follow-up trung lap domain teacher activity scope/UX thanh 1 canonical source-of-truth.
+- Khoa chat contract route `GET /api/admin/database/download` (header + validation message + anti-mojibake assertion).
+
+### Viec can lam
+
+- [x] Route hardening:
+  - [x] `src/app/api/admin/database/download/route.ts`
+  - [x] sanitize thong diep validation/not-found/internal-error ve chuoi on dinh.
+  - [x] giu contract `Content-Disposition` qua helper canonical.
+- [x] Test hardening:
+  - [x] `test/admin-database-ops-routes.test.ts`
+  - [x] bo sung assert message `Thieu ten file backup` + `expectNoMojibake`.
+  - [x] bo sung regex assert header canonical (`filename` + `filename*`) cho binary download.
+- [x] Docs consolidation:
+  - [x] tao canonical file moi `docs/teacher-activity-scope-and-ux-followup-tasks.md`.
+  - [x] archive 2 file cu:
+    - [x] `docs/teacher-activity-form-followup-tasks.md` -> `docs/archive/post-consolidation-2026-04-25/teacher-activity-form-followup-tasks.md`
+    - [x] `docs/teacher-activity-scope-and-ux-next-batches.md` -> `docs/archive/post-consolidation-2026-04-25/teacher-activity-scope-and-ux-next-batches.md`
+  - [x] update references active:
+    - [x] `docs/activity-scope-selection-batch-prompt.md`
+    - [x] `docs/activity-overdue-and-listing-analysis-prompt.md`
+    - [x] `docs/teacher-activity-scope-and-ux-analysis-prompt-v2.md`
+    - [x] `docs/domain-analysis-pack-manifest.md`
+
+### Risk / defer
+
+- [ ] Batch nay chua merge toan bo follow-up docs cac domain khac; moi dong bo teacher activity scope/UX domain.
+- [ ] Chua deprecate route `admin/database/download` vi can giu backward compatibility voi admin backup UI hien tai.
+
+### Verification
+
+- [x] `npm.cmd test -- test/admin-database-ops-routes.test.ts` -> PASS (1 file / 7 tests, 2026-04-25)
+- [x] `npm.cmd run build` -> PASS (2026-04-25)
+- [x] `rg -n "docs/teacher-activity-form-followup-tasks\\.md|docs/teacher-activity-scope-and-ux-next-batches\\.md" docs --glob "!docs/release-backbone-batch-todos.md"` -> khong con reference active den path cu.
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix

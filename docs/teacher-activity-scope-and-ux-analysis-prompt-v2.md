@@ -8,8 +8,7 @@ Continue implementation planning for UniAct teacher activity create/edit improve
 - Teacher visibility groundwork has been expanded so teachers can now load all classes and the teacher student route can view/filter across all classes.
 - Create/edit pages already have small clear buttons for start/end time fields.
 - Follow-up docs:
-  - `docs/teacher-activity-form-followup-tasks.md`
-  - `docs/teacher-activity-scope-and-ux-next-batches.md`
+  - `docs/teacher-activity-scope-and-ux-followup-tasks.md`
   - `docs/workflow-core-closeout-verdict.md`
 
 ## Analyze these requested problems

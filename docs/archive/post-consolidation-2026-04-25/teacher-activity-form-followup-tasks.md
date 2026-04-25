@@ -1,5 +1,7 @@
 # TEACHER ACTIVITY FORM FOLLOW-UP TASKS
 
+Status: ARCHIVED on 2026-04-25 (superseded by `docs/teacher-activity-scope-and-ux-followup-tasks.md`)
+
 Status: active follow-up task matrix after workflow-core closeout
 
 ## P0 - Form responsiveness and primary input UX

@@ -14,8 +14,7 @@ Muc tieu cua batch nay:
 
 Source tham khao:
 - `docs/release-backbone-batch-todos.md`
-- `docs/teacher-activity-scope-and-ux-next-batches.md`
-- `docs/teacher-activity-form-followup-tasks.md`
+- `docs/teacher-activity-scope-and-ux-followup-tasks.md`
 - `docs/activity-business-reanalysis-and-actor-crud-impact-matrix.md`
 
 Yeu cau thuc hien:

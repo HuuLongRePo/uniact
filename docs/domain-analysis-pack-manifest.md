@@ -7,7 +7,7 @@ Muc tieu: chot danh muc domain analysis packs dang active de planner quet dung n
 
 1. `DP-01` Teacher activity scope/UX
 - Prompt: `docs/teacher-activity-scope-and-ux-analysis-prompt-v2.md`
-- Tasks: `docs/teacher-activity-scope-and-ux-next-batches.md`, `docs/teacher-activity-form-followup-tasks.md`
+- Tasks: `docs/teacher-activity-scope-and-ux-followup-tasks.md`
 - Trang thai: ACTIVE
 
 2. `DP-02` Teacher cross-class activity management
@@ -64,6 +64,14 @@ Muc tieu: chot danh muc domain analysis packs dang active de planner quet dung n
 
 2. `docs/reference-prompts/md-consolidation-plan.md`
 - Ly do: exploratory artifact, khong con dung lam source-of-truth cho planning hien tai.
+- Trang thai: REFERENCE_ONLY
+
+3. `docs/archive/post-consolidation-2026-04-25/teacher-activity-form-followup-tasks.md`
+- Ly do: da duoc merge vao follow-up canonical cho teacher activity scope/UX.
+- Trang thai: REFERENCE_ONLY
+
+4. `docs/archive/post-consolidation-2026-04-25/teacher-activity-scope-and-ux-next-batches.md`
+- Ly do: da duoc merge vao follow-up canonical cho teacher activity scope/UX.
 - Trang thai: REFERENCE_ONLY
 
 ## 3) Rule su dung

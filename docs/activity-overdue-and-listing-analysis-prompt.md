@@ -8,7 +8,7 @@ Continue deep analysis for UniAct after workflow-core and teacher-visibility gro
 - Teacher activities page already sorts by newest/oldest/title and now has an initial dedicated `Sắp diễn ra` section.
 - Current follow-up docs:
   - `docs/activity-overdue-and-listing-followup-tasks.md`
-  - `docs/teacher-activity-scope-and-ux-next-batches.md`
+  - `docs/teacher-activity-scope-and-ux-followup-tasks.md`
   - `docs/workflow-core-closeout-verdict.md`
 
 ## New product questions to analyze

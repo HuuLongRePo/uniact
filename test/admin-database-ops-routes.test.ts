@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { expectNoMojibake } from './helpers/mojibake';
 
 const mocks = vi.hoisted(() => ({
   requireApiRole: vi.fn(),
@@ -90,6 +91,8 @@ describe('admin database/system ops routes', () => {
     expect(response.status).toBe(400);
     const body = await response.json();
     expect(body.code).toBe('VALIDATION_ERROR');
+    expect(body.error).toBe('Thieu ten file backup');
+    expectNoMojibake(body.error);
   });
 
   it('returns binary response for valid database download', async () => {
@@ -97,8 +100,9 @@ describe('admin database/system ops routes', () => {
     const response = await route.GET({ nextUrl: new URL('http://localhost/api/admin/database/download?file=backup-1.db') } as any);
 
     expect(response.status).toBe(200);
-    expect(response.headers.get('Content-Disposition')).toContain('backup-1.db');
-    expect(response.headers.get('Content-Disposition')).toContain("filename*=UTF-8''");
+    expect(response.headers.get('Content-Disposition')).toMatch(
+      /^attachment; filename="backup-1\.db"; filename\*=UTF-8''backup-1\.db$/
+    );
   });
 
   it('creates backup with vietnam timestamp filename and canonical payload', async () => {
