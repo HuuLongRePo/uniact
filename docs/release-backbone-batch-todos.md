@@ -3543,6 +3543,27 @@ Sau khi code:
 
 - [x] `npm.cmd test -- test/admin-approvals-page.test.tsx` -> PASS (1 file / 2 tests, 2026-04-25)
 
+## 9.97) Batch uu tien nong - docs prompt path encoding cleanup
+
+### Muc tieu
+
+- Don path mojibake con sot trong tai lieu prompt de tranh copy/paste sai workspace.
+- Giu docs prompt nhat quan encoding voi cac section khac.
+
+### Viec can lam
+
+- [x] `docs/codex-batch-prompts.md`
+  - [x] sua path `OneDrive/MÃ¡y tÃ­nh` -> `OneDrive/Máy tính` o batch 4 prompt.
+- [x] Re-scan docs (khong tinh archive), khong con chuoi path mojibake.
+
+### Risk / defer
+
+- [ ] Van con cac regex anti-mojibake chu dong trong `release-backbone-batch-todos.md` (co chu dich de test/doc guard).
+
+### Verification
+
+- [x] `rg -n "MÃ|tÃ|Ãƒ|Ã‚|Ã¢" docs --glob "!docs/archive/**"` -> chi con cac dong regex anti-mojibake co chu dich trong todo docs.
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix

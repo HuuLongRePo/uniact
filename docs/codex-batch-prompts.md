@@ -156,7 +156,7 @@ Implement the smallest safe first wizard batch, run focused tests, and summarize
 
 ## CODEX BATCH 4 - Class schedule conflict guard (teacher create/edit)
 You are working in the UniAct repo at:
-`C:\Users\nhuul\OneDrive\MÃ¡y tÃ­nh\uniact`
+`C:\Users\nhuul\OneDrive\Máy tính\uniact`
 
 ## Goal
 When a teacher selects classes for an activity, if any selected class already has another activity overlapping the same time window, the system must:
