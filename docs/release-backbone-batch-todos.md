@@ -3241,6 +3241,36 @@ Sau khi code:
 - [x] `npm.cmd test -- test/admin-database-backups-routes.test.ts test/admin-database-ops-routes.test.ts` -> PASS (2 files / 11 tests, 2026-04-25)
 - [x] `npm.cmd run build` -> PASS (2026-04-25)
 
+## 9.87) Batch uu tien nong - admin backup page text cleanup + page regression
+
+### Muc tieu
+
+- Don residual text mojibake tren trang `/admin/backup` de UI user-facing nhat quan va de doc.
+- Giu nguyen API contract backup/restore/backups da chot o batch 9.84-9.86.
+- Bo sung page-level regression de khoa flow load du lieu va anti-mojibake signal.
+
+### Viec can lam
+
+- [x] `src/app/admin/backup/page.tsx`
+  - [x] clean labels/messages user-facing tren toan trang.
+  - [x] giu download flow dung `resolveDownloadFilename(...)` + `encodeURIComponent(filename)` cho query file.
+  - [x] giu nguyen logic refresh danh sach backup + db stats sau thao tac.
+- [x] Them page test:
+  - [x] `test/admin-backup-page.test.tsx` (moi)
+  - [x] cover load `/api/admin/database/stats` + `/api/admin/database/backups`.
+  - [x] cover redirect non-admin -> `/login`.
+  - [x] cover anti-mojibake signal (`/[ÃƒÃ‚Ã¢]/` khong xuat hien tren rendered text).
+
+### Risk / defer
+
+- [ ] Chua cover interaction test cho confirm dialog backup/restore/delete (batch nay uu tien render/load/redirect regression).
+- [ ] Van con residual text legacy/mojibake o mot so page domain khac ngoai `/admin/backup`.
+
+### Verification
+
+- [x] `npm.cmd test -- test/admin-backup-page.test.tsx test/admin-database-backups-routes.test.ts test/admin-database-ops-routes.test.ts` -> PASS (3 files / 13 tests, 2026-04-25)
+- [x] `npm.cmd run build` -> PASS (2026-04-25)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix

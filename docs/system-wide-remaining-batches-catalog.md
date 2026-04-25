@@ -78,6 +78,7 @@ Nguon tong hop: release backbone todos + critical closeout todos + expansion/bac
   - cap nhat tai lieu xung dot/loi thoi de phan anh dung state hien tai.
 - Cap nhat 2026-04-25: da khoi phuc xong cum script maintenance bi hong encoding (`backup-db`, `validate-project`, `fix-project`, `add-workflow-cols`, `db-analysis-and-reset`); RB-10 con phan docs/legacy cleanup va hop nhat tai lieu.
 - Cap nhat 2026-04-25 (tiep): da bo sung route parity cho Admin backup management (`/api/admin/database/backups`, `/api/admin/database/backups/[filename]`) de khop consumer `/admin/backup`.
+- Cap nhat 2026-04-25 (tiep 2): da don text mojibake + khoa page regression cho `/admin/backup` (`test/admin-backup-page.test.tsx`); RB-10 con phan dọn docs legacy va reconciliation toan repository.
 - Blocker/risk: xoa nham tai lieu tham chieu con dung.
 - DoD/test: manifest truoc-sau cleanup + link/docs integrity checks + build/test smoke.
 - Do lon: L.
