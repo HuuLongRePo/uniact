@@ -31,6 +31,7 @@ Nguon tong hop: release backbone todos + critical closeout todos + expansion/bac
 - Pham vi: `src/app/teacher/polls/[id]/page.tsx`, `src/app/student/polls/page.tsx`, poll page regressions.
 - Blocker/risk: sua text/page lon de va cham snapshot va i18n khong chuan.
 - DoD/test: page tests cho detail/vote/results, zero mojibake o poll pages user-facing.
+- Cap nhat 2026-04-25: da hoan thanh trong batch 9.83 (UI text cleanup + page regression tests), RB-04 dong.
 - Do lon: L.
 
 5. **[RB-05] Admin override + audit completeness**
@@ -74,6 +75,7 @@ Nguon tong hop: release backbone todos + critical closeout todos + expansion/bac
   - don file khong gia tri/trung lap (scripts/docs legacy, quarantine khong dung),
   - gom file co the gom ma khong doi nghia nghiep vu,
   - cap nhat tai lieu xung dot/loi thoi de phan anh dung state hien tai.
+- Cap nhat 2026-04-25: da khoi phuc xong cum script maintenance bi hong encoding (`backup-db`, `validate-project`, `fix-project`, `add-workflow-cols`, `db-analysis-and-reset`); RB-10 con phan docs/legacy cleanup va hop nhat tai lieu.
 - Blocker/risk: xoa nham tai lieu tham chieu con dung.
 - DoD/test: manifest truoc-sau cleanup + link/docs integrity checks + build/test smoke.
 - Do lon: L.

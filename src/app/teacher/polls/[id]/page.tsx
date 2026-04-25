@@ -1,177 +1,167 @@
-'use client';
+'use client'
 
-import { useEffect, useState } from 'react';
-import { useRouter, useParams } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
-import LoadingSpinner from '@/components/LoadingSpinner';
-import toast from 'react-hot-toast';
-import { Download } from 'lucide-react';
-import { formatVietnamDateTime, toVietnamDateStamp } from '@/lib/timezone';
+import { useEffect, useState } from 'react'
+import { useParams, useRouter } from 'next/navigation'
+import { useAuth } from '@/contexts/AuthContext'
+import LoadingSpinner from '@/components/LoadingSpinner'
+import toast from 'react-hot-toast'
+import { Download } from 'lucide-react'
+import { formatVietnamDateTime, toVietnamDateStamp } from '@/lib/timezone'
 
 interface PollDetail {
   poll: {
-    id: number;
-    title: string;
-    description: string;
-    class_name: string;
-    creator_name: string;
-    status: string;
-    allow_multiple: boolean;
-    created_at: string;
-  };
+    id: number
+    title: string
+    description: string
+    class_name: string
+    creator_name: string
+    status: string
+    allow_multiple: boolean
+    created_at: string
+  }
   options: Array<{
-    id: number;
-    option_text: string;
-    vote_count: number;
-    percentage: string;
-  }>;
-  total_votes: number;
-  has_voted: boolean;
+    id: number
+    option_text: string
+    vote_count: number
+    percentage: string
+  }>
+  total_votes: number
+  has_voted: boolean
 }
 
 export default function PollDetailPage() {
-  const { user, loading: authLoading } = useAuth();
-  const router = useRouter();
-  const params = useParams();
-  const [loading, setLoading] = useState(true);
-  const [data, setData] = useState<PollDetail | null>(null);
+  const { user, loading: authLoading } = useAuth()
+  const router = useRouter()
+  const params = useParams()
+  const [loading, setLoading] = useState(true)
+  const [data, setData] = useState<PollDetail | null>(null)
 
   useEffect(() => {
     if (!authLoading && !user) {
-      router.push('/login');
-      return;
+      router.push('/login')
+      return
     }
     if (user && params.id) {
-      fetchPollDetail();
+      fetchPollDetail()
     }
-  }, [user, authLoading, router, params.id]);
+  }, [user, authLoading, router, params.id])
 
   const fetchPollDetail = async () => {
     try {
-      setLoading(true);
-      const res = await fetch(`/api/polls/${params.id}`);
-      const pollData = await res.json();
+      setLoading(true)
+      const res = await fetch(`/api/polls/${params.id}`)
+      const pollData = await res.json()
       if (res.ok) {
-        setData(pollData);
+        setData(pollData)
       } else {
-        toast.error(pollData.error || 'Không thể tải poll');
-        router.back();
+        toast.error(pollData.error || 'Không thể tải poll')
+        router.back()
       }
-    } catch (e) {
-      console.error('Fetch poll detail error:', e);
-      router.back();
+    } catch (error) {
+      console.error('Fetch poll detail error:', error)
+      router.back()
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
-  if (authLoading || loading) return <LoadingSpinner />;
-  if (!data) return <div className="container mx-auto px-4 py-8">Không có dữ liệu</div>;
-
-  const maxVotes = Math.max(...data.options.map((o) => o.vote_count), 1);
+  if (authLoading || loading) return <LoadingSpinner />
+  if (!data) return <div className="container mx-auto px-4 py-8">Không có dữ liệu</div>
 
   const handleExportCSV = () => {
-    if (!data) return;
+    if (!data) return
 
-    // Create CSV content
-    const headers = ['Lựa Chọn', 'Số Phiếu', 'Phần Trăm'];
-    const rows = data.options.map((option) => [
-      `"${option.option_text}"`,
-      option.vote_count,
-      `${option.percentage}%`,
-    ]);
+    const headers = ['Lua chon', 'So phieu', 'Phan tram']
+    const rows = data.options.map((option) => [`"${option.option_text}"`, option.vote_count, `${option.percentage}%`])
 
     const csv = [
-      `"Tiêu Đề Cuộc Khảo Sát","${data.poll.title}"`,
-      `"Mô Tả","${data.poll.description || ''}"`,
-      `"Lớp","${data.poll.class_name || 'Tất cả lớp'}"`,
-      `"Tổng Phiếu","${data.total_votes}"`,
-      `"Ngày Tạo","${formatVietnamDateTime(data.poll.created_at)}"`,
+      `"Tieu de cuoc khao sat","${data.poll.title}"`,
+      `"Mo ta","${data.poll.description || ''}"`,
+      `"Lop","${data.poll.class_name || 'Tat ca lop'}"`,
+      `"Tong phieu","${data.total_votes}"`,
+      `"Ngay tao","${formatVietnamDateTime(data.poll.created_at)}"`,
       '',
       headers.join(','),
       ...rows.map((row) => row.join(',')),
-    ].join('\n');
+    ].join('\n')
 
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.href = url;
-    link.download = `poll_${data.poll.id}_${toVietnamDateStamp(new Date())}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
-    toast.success('Đã xuất kết quả khảo sát');
-  };
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+    link.href = url
+    link.download = `poll_${data.poll.id}_${toVietnamDateStamp(new Date())}.csv`
+    link.click()
+    URL.revokeObjectURL(url)
+    toast.success('Đã xuất kết quả khảo sát')
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
       <button onClick={() => router.back()} className="mb-4 text-blue-600 hover:underline">
-        ← Quay lại
+        Quay lại
       </button>
 
-      <div className="bg-white rounded-lg shadow p-6 mb-6">
-        <div className="flex justify-between items-start mb-4">
+      <div className="mb-6 rounded-lg bg-white p-6 shadow">
+        <div className="mb-4 flex items-start justify-between">
           <div className="flex-1">
-            <h1 className="text-2xl font-bold mb-2">{data.poll.title}</h1>
-            {data.poll.description && <p className="text-gray-600 mb-3">{data.poll.description}</p>}
+            <h1 className="mb-2 text-2xl font-bold">{data.poll.title}</h1>
+            {data.poll.description && <p className="mb-3 text-gray-600">{data.poll.description}</p>}
             <div className="flex gap-4 text-sm text-gray-500">
-              <span>🏫 {data.poll.class_name || 'Tất cả lớp'}</span>
-              <span>👤 Tạo bởi: {data.poll.creator_name}</span>
-              <span>📅 {formatVietnamDateTime(data.poll.created_at)}</span>
+              <span>Lớp: {data.poll.class_name || 'Tất cả lớp'}</span>
+              <span>Tạo bởi: {data.poll.creator_name}</span>
+              <span>{formatVietnamDateTime(data.poll.created_at)}</span>
             </div>
           </div>
           <div className="flex gap-2">
             <span
-              className={`px-3 py-1 rounded text-sm font-medium ${
-                data.poll.status === 'active'
-                  ? 'bg-green-100 text-green-800'
-                  : 'bg-gray-100 text-gray-800'
+              className={`rounded px-3 py-1 text-sm font-medium ${
+                data.poll.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
               }`}
             >
-              {data.poll.status === 'active' ? '🟢 Đang mở' : '⚫ Đã đóng'}
+              {data.poll.status === 'active' ? 'Đang mở' : 'Đã đóng'}
             </span>
             <button
               onClick={handleExportCSV}
-              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors text-sm font-medium"
+              className="flex items-center gap-2 rounded bg-green-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700"
             >
-              <Download className="w-4 h-4" />
+              <Download className="h-4 w-4" />
               Xuất CSV
             </button>
           </div>
         </div>
 
-        <div className="bg-blue-50 p-4 rounded">
-          <div className="flex justify-between items-center">
+        <div className="rounded bg-blue-50 p-4">
+          <div className="flex items-center justify-between">
             <span className="font-medium">Tổng số phản hồi:</span>
             <span className="text-2xl font-bold text-blue-600">{data.total_votes}</span>
           </div>
           {data.poll.allow_multiple && (
-            <p className="text-xs text-blue-800 mt-2">* Cho phép chọn nhiều lựa chọn</p>
+            <p className="mt-2 text-xs text-blue-800">* Cho phép chọn nhiều lựa chọn</p>
           )}
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-bold mb-4">📊 Kết quả</h2>
+      <div className="rounded-lg bg-white p-6 shadow">
+        <h2 className="mb-4 text-xl font-bold">Kết quả</h2>
 
         <div className="space-y-4">
           {data.options.map((option, idx) => (
             <div key={option.id} className="border-l-4 border-blue-500 pl-4">
-              <div className="flex justify-between items-start mb-2">
+              <div className="mb-2 flex items-start justify-between">
                 <div className="flex-1">
                   <div className="font-medium">
                     {idx + 1}. {option.option_text}
                   </div>
                 </div>
-                <div className="text-right ml-4">
+                <div className="ml-4 text-right">
                   <div className="font-bold text-blue-600">{option.vote_count} phiếu</div>
                   <div className="text-sm text-gray-600">{option.percentage}%</div>
                 </div>
               </div>
 
-              {/* Biểu đồ thanh */}
-              <div className="relative w-full h-8 bg-gray-100 rounded overflow-hidden">
+              <div className="relative h-8 w-full overflow-hidden rounded bg-gray-100">
                 <div
-                  className="absolute top-0 left-0 h-full bg-blue-500 transition-all"
+                  className="absolute left-0 top-0 h-full bg-blue-500 transition-all"
                   style={{ width: `${option.percentage}%` }}
                 />
                 <div className="absolute inset-0 flex items-center justify-center text-sm font-medium">
@@ -183,21 +173,20 @@ export default function PollDetailPage() {
         </div>
 
         {data.options.length === 0 && (
-          <p className="text-gray-500 text-center py-8">Chưa có lựa chọn nào</p>
+          <p className="py-8 text-center text-gray-500">Chưa có lựa chọn nào</p>
         )}
       </div>
 
-      {/* Biểu đồ hình tròn đơn giản (text-based) */}
-      <div className="bg-white rounded-lg shadow p-6 mt-6">
-        <h2 className="text-xl font-bold mb-4">📈 Biểu Đồ Tròn</h2>
+      <div className="mt-6 rounded-lg bg-white p-6 shadow">
+        <h2 className="mb-4 text-xl font-bold">Biểu đồ tròn</h2>
         <div className="flex justify-center">
-          <div className="w-64 h-64 rounded-full border-8 border-gray-200 flex items-center justify-center relative overflow-hidden">
+          <div className="relative flex h-64 w-64 items-center justify-center overflow-hidden rounded-full border-8 border-gray-200">
             {data.options.map((option, idx) => {
               const previousPercentage = data.options
                 .slice(0, idx)
-                .reduce((sum, opt) => sum + parseFloat(opt.percentage), 0);
+                .reduce((sum, item) => sum + parseFloat(item.percentage), 0)
 
-              const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
+              const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899']
 
               return (
                 <div
@@ -211,9 +200,9 @@ export default function PollDetailPage() {
                     )`,
                   }}
                 />
-              );
+              )
             })}
-            <div className="absolute inset-8 bg-white rounded-full flex items-center justify-center">
+            <div className="absolute inset-8 flex items-center justify-center rounded-full bg-white">
               <div className="text-center">
                 <div className="text-3xl font-bold">{data.total_votes}</div>
                 <div className="text-sm text-gray-600">phiếu</div>
@@ -224,23 +213,17 @@ export default function PollDetailPage() {
 
         <div className="mt-6 grid grid-cols-2 gap-3">
           {data.options.map((option, idx) => {
-            const colors = [
-              'bg-blue-500',
-              'bg-green-500',
-              'bg-yellow-500',
-              'bg-red-500',
-              'bg-purple-500',
-              'bg-pink-500',
-            ];
+            const colors = ['bg-blue-500', 'bg-green-500', 'bg-yellow-500', 'bg-red-500', 'bg-purple-500', 'bg-pink-500']
             return (
               <div key={option.id} className="flex items-center gap-2">
-                <div className={`w-4 h-4 rounded ${colors[idx % colors.length]}`} />
-                <span className="text-sm truncate">{option.option_text}</span>
+                <div className={`h-4 w-4 rounded ${colors[idx % colors.length]}`} />
+                <span className="truncate text-sm">{option.option_text}</span>
               </div>
-            );
+            )
           })}
         </div>
       </div>
     </div>
-  );
+  )
 }
+

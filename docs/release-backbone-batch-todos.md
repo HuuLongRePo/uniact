@@ -3084,6 +3084,77 @@ Sau khi code:
 - [x] `npm.cmd test -- test/admin-attendance-page.test.tsx test/student-award-history-page.test.tsx test/admin-activities-page.test.tsx` -> PASS (3 files / 7 tests, 2026-04-25)
 - [x] `npm.cmd run build` -> PASS (2026-04-25)
 
+## 9.82) Batch uu tien nong - khoi phuc scripts maintenance bi hong encoding + hygiene
+
+### Muc tieu
+
+- Khoi phuc cac script maintenance dang bi hong nhi phan trong `scripts/maintenance` de tra lai kha nang van hanh.
+- Giu nguyen contract npm scripts hien tai (`backup-db`, `validate*`, `fix*`) de khong vo quy trinh release/ops.
+- Dong bo batch hygiene bat buoc trong RB-10: loai bo file script khong doc duoc va thay bang TypeScript sach.
+
+### Viec can lam
+
+- [x] Thay moi cac file maintenance bi hong:
+  - [x] `scripts/maintenance/backup-db.ts`
+  - [x] `scripts/maintenance/validate-project.ts`
+  - [x] `scripts/maintenance/fix-project.ts`
+  - [x] `scripts/maintenance/add-workflow-cols.ts`
+  - [x] `scripts/maintenance/db-analysis-and-reset.ts`
+- [x] Tao helper dung chung de giam duplicate logic sqlite/cli:
+  - [x] `scripts/maintenance/_db-maintenance-utils.ts`
+- [x] Bao toan contract mode:
+  - [x] `validate`: `all|schema|data|indexes`
+  - [x] `fix`: `all|schema|api-queries|dry-run`
+  - [x] `backup-db`: backup theo timestamp VN + WAL checkpoint truoc copy.
+
+### Risk / defer
+
+- [ ] Can tiep tuc cleanup mojibake text o mot so file legacy ngoai scope maintenance scripts.
+- [ ] Kiem tra warning du lieu `Teachers without homeroom class` trong env demodata truoc khi dung `validate` lam gate cứng CI.
+
+### Verification
+
+- [x] `npm.cmd run fix:dry-run` -> PASS (planned/applied summary, 2026-04-25)
+- [x] `npm.cmd run fix` -> PASS (schema + index actions, 2026-04-25)
+- [x] `npm.cmd run validate` -> PASS (0 error / 1 warning, 2026-04-25)
+- [x] `npm.cmd run validate:indexes` -> PASS (2026-04-25)
+- [x] `npm.cmd run backup-db -- --label=smoke` -> PASS, tao backup file trong `backups/` (2026-04-25)
+- [x] `npx.cmd tsx scripts/maintenance/db-analysis-and-reset.ts --mode=analyze` -> PASS (2026-04-25)
+- [x] `npx.cmd tsx scripts/maintenance/add-workflow-cols.ts --mode=dry-run` -> PASS (2026-04-25)
+
+## 9.83) Batch uu tien nong - Poll UI text cleanup + page parity residual
+
+### Muc tieu
+
+- Don text mojibake o Poll UI cho 2 actor con defer (`student/polls`, `teacher/polls/[id]`).
+- Giu nguyen API contract poll core/teacher namespace, chi clean user-facing labels + thong diep.
+- Khoa regression page-level de chot parity UI sau cac batch route-level 9.77-9.80.
+
+### Viec can lam
+
+- [x] UI text cleanup:
+  - [x] `src/app/student/polls/page.tsx`
+    - [x] thay chuoi mojibake bang text tieng Viet ro rang.
+    - [x] don labels/user messages cho list/detail/vote states.
+  - [x] `src/app/teacher/polls/[id]/page.tsx`
+    - [x] clean toan bo labels/heading/status/export toast.
+    - [x] giu nguyen luong export CSV + revoke object URL.
+- [x] Page regression tests moi:
+  - [x] `test/student-polls-page.test.tsx`
+  - [x] `test/teacher-poll-detail-page.test.tsx`
+  - [x] cover render labels chinh + anti-mojibake signal (`/[ÃÂâ]/` khong xuat hien).
+- [x] Re-run poll bundle route + page de dam bao khong hoi quy logic.
+
+### Risk / defer
+
+- [ ] Van con cac page khac trong he thong co text legacy/mojibake, can tiep tuc cleanup theo domain (khong chi poll).
+- [ ] Batch nay khong mo rong them i18n framework; chi harden text user-facing o poll pages.
+
+### Verification
+
+- [x] `npm.cmd test -- test/student-polls-page.test.tsx test/teacher-poll-detail-page.test.tsx test/polls-core-routes.test.ts test/teacher-polls-management-routes.test.ts` -> PASS (4 files / 14 tests, 2026-04-25)
+- [x] `npm.cmd run build` -> PASS (2026-04-25)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix
