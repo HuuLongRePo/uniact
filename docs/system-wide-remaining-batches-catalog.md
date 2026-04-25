@@ -95,6 +95,7 @@ Nguon tong hop: release backbone todos + critical closeout todos + expansion/bac
 - Cap nhat 2026-04-25 (tiep 11): da tao `docs/system-prompt-registry.md` lam canonical map + de-conflict rules, va dong bo planner/clone prompts tham chieu registry (batch 9.100); RB-10 con phase tiep theo de archive/gop vat ly prompt docs reference-only.
 - Cap nhat 2026-04-25 (tiep 12): da chuan hoa strategy date stamp filename cho residual exports (`export/activity-participation`, `qr-sessions/[id]/scans/export`) sang `toVietnamDateStamp(new Date())` (batch 9.101); RB-03/RB-10 con sweep timezone residual tren cac flow user-facing ngoai cum export da harden.
 - Cap nhat 2026-04-25 (tiep 13): da archive vat ly 5 prompt reference-only vao `docs/reference-prompts/` va cap nhat registry/references lien quan (batch 9.102); RB-10 con backlog merge/noi dung prompt trung lap theo domain.
+- Cap nhat 2026-04-25 (tiep 14): da bo sung route-level regression tests cho contract header download UTF-8 o `custom report`, `bonus reports (csv/xlsx)` va `teacher class-stats export (pdf)` (batch 9.103); RB-10 con tiep tuc quet cac route export residual chua co test rieng + merge prompt/domain docs con trung lap.
 - Blocker/risk: xoa nham tai lieu tham chieu con dung.
 - DoD/test: manifest truoc-sau cleanup + link/docs integrity checks + build/test smoke.
 - Do lon: L.

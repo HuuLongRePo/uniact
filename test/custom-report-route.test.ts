@@ -60,6 +60,9 @@ describe('POST /api/admin/reports/custom', () => {
 
     expect(response.status).toBe(200);
     expect(response.headers.get('Content-Type')).toContain('text/csv');
+    expect(response.headers.get('Content-Disposition')).toMatch(
+      /^attachment; filename="score-report\.csv"; filename\*=UTF-8''score-report\.csv$/
+    );
 
     const csv = await response.text();
     expect(csv).toContain('Họ tên');

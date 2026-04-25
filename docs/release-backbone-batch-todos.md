@@ -3710,6 +3710,34 @@ Sau khi code:
 
 - [x] `rg -n "docs/(codex-batch-prompts|system-completion-expansion-prompts|critical-flow-closeout-prompt|attendance-timezone-face-closeout-prompt|demo-data-refresh-prompt)\\.md" docs --glob "!docs/release-backbone-batch-todos.md"` -> khong con tham chieu path cu ngoai migration note.
 
+## 9.103) Batch uu tien nong - harden route-level download header parity cho export residual
+
+### Muc tieu
+
+- Khoa contract `Content-Disposition` UTF-8 cho cac route export residual con thieu test route-level rieng.
+- Dam bao parser filename o frontend nhan du contract nhat quan tren CSV/XLSX/PDF.
+
+### Viec can lam
+
+- [x] `test/custom-report-route.test.ts`
+  - [x] bo sung assert canonical `Content-Disposition` (`filename` + `filename*`) cho luong export CSV thanh cong.
+- [x] `test/bonus-reports-route.test.ts` (moi)
+  - [x] them route-level tests cho `GET /api/bonus/reports` voi `format=csv|xlsx`.
+  - [x] assert `Content-Type` dung va header download UTF-8 canonical.
+- [x] `test/teacher-class-stats-export-route.test.ts` (moi)
+  - [x] them route-level test cho `POST /api/teacher/reports/class-stats/export`.
+  - [x] assert `application/pdf` + `Content-Disposition` canonical.
+
+### Risk / defer
+
+- [ ] Batch nay tap trung header contract, chua bo sung matrix auth/validation day du cho tung route.
+- [ ] Van con mot so route export residual chua co test route-level rieng (se tiep tuc sweep theo RB-03/RB-10).
+
+### Verification
+
+- [x] `npm.cmd test -- test/custom-report-route.test.ts test/bonus-reports-route.test.ts test/teacher-class-stats-export-route.test.ts` -> PASS (3 files / 5 tests, 2026-04-25)
+- [x] `npm.cmd run build` -> PASS (2026-04-25)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix
