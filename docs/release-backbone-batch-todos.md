@@ -3738,6 +3738,32 @@ Sau khi code:
 - [x] `npm.cmd test -- test/custom-report-route.test.ts test/bonus-reports-route.test.ts test/teacher-class-stats-export-route.test.ts` -> PASS (3 files / 5 tests, 2026-04-25)
 - [x] `npm.cmd run build` -> PASS (2026-04-25)
 
+## 9.104) Batch uu tien nong - route regression closeout cho legacy users export namespace
+
+### Muc tieu
+
+- Khoa route-level contract cho legacy endpoint `GET /api/users/export` de tranh drift voi cum export namespace moi.
+- Bao phu ca 3 nhanh nghiep vu: validation role filter, CSV download UTF-8 header, va JSON fallback + audit log.
+
+### Viec can lam
+
+- [x] Them test moi:
+  - [x] `test/users-export-route.test.ts`
+- [x] Bao phu cac scenario chinh:
+  - [x] `role` khong hop le -> `VALIDATION_ERROR` (400).
+  - [x] `format=csv` -> `Content-Type text/csv` + `Content-Disposition` canonical (`filename` + `filename*`) + BOM UTF-8.
+  - [x] `format=json` -> tra data top-level `users` va ghi audit log voi `format: json`.
+
+### Risk / defer
+
+- [ ] Batch nay tap trung contract route-level; chua don text mojibake residual trong noi dung thong diep legacy cua route.
+- [ ] Chua deprecate namespace `/api/users/export` vi can giu backward compatibility cho client legacy.
+
+### Verification
+
+- [x] `npm.cmd test -- test/users-export-route.test.ts` -> PASS (1 file / 3 tests, 2026-04-25)
+- [x] `npm.cmd run build` -> PASS (2026-04-25)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix
