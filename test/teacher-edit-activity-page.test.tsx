@@ -157,7 +157,7 @@ describe('EditActivityPage', () => {
           class_schedule_conflicts: [
             {
               activity_id: 99,
-              title: 'Hoáº¡t Ä‘á»™ng trÃ¹ng',
+              title: 'Hoat dong trung',
               class_id: 1,
               class_name: 'CNTT K18A',
               date_time: '2026-04-25T08:30:00.000Z',
@@ -171,13 +171,13 @@ describe('EditActivityPage', () => {
         return jsonResponse({
           activity: {
             id: 55,
-            title: 'Hoáº¡t Ä‘á»™ng cÅ©',
-            description: 'MÃ´ táº£ cÅ©',
+            title: 'Hoat dong cu',
+            description: 'Mo ta cu',
             date_time: '2026-04-25T08:30:00.000Z',
             location: 'Phong A1',
             status: 'draft',
             approval_status: 'rejected',
-            rejected_reason: 'Cáº§n bá»• sung thÃ´ng tin',
+            rejected_reason: 'Can bo sung thong tin',
             max_participants: 30,
             activity_type_id: 5,
             organization_level_id: 7,
@@ -190,8 +190,8 @@ describe('EditActivityPage', () => {
       }
 
       if (url === '/api/classes') return jsonResponse({ classes: [{ id: 1, name: 'CNTT K18A' }] });
-      if (url === '/api/activity-types') return jsonResponse({ types: [{ id: 5, name: 'TÃ¬nh nguyá»‡n' }] });
-      if (url === '/api/organization-levels') return jsonResponse({ levels: [{ id: 7, name: 'Cáº¥p trÆ°á»ng' }] });
+      if (url === '/api/activity-types') return jsonResponse({ types: [{ id: 5, name: 'Tinh nguyen' }] });
+      if (url === '/api/organization-levels') return jsonResponse({ levels: [{ id: 7, name: 'Cap truong' }] });
 
       if (url === '/api/activities/55' && init?.method === 'PUT') {
         throw new Error('Update API must not be called when conflicts exist');

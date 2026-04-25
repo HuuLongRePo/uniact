@@ -147,7 +147,7 @@ describe('CreateActivityPage', () => {
           class_schedule_conflicts: [
             {
               activity_id: 10,
-              title: 'Hoáº¡t Ä‘á»™ng trÃ¹ng lá»‹ch',
+              title: 'Hoat dong trung lich',
               class_id: 1,
               class_name: 'CNTT K18A',
               date_time: '2026-04-20T08:30:00.000Z',
@@ -184,7 +184,7 @@ describe('CreateActivityPage', () => {
     expect((await screen.findAllByText('CNTT K18A')).length).toBeGreaterThan(0);
 
     const textInputs = container.querySelectorAll('input[type="text"]');
-    fireEvent.change(textInputs[0] as HTMLInputElement, { target: { value: 'Hoáº¡t Ä‘á»™ng má»›i' } });
+    fireEvent.change(textInputs[0] as HTMLInputElement, { target: { value: 'Hoat dong moi' } });
     fireEvent.change(container.querySelector('input[type="date"]') as HTMLInputElement, {
       target: { value: '2026-04-20' },
     });
@@ -192,7 +192,7 @@ describe('CreateActivityPage', () => {
     fireEvent.change(timeInputs[0] as HTMLInputElement, {
       target: { value: '08:30' },
     });
-    fireEvent.change(textInputs[1] as HTMLInputElement, { target: { value: 'PhÃ²ng 101' } });
+    fireEvent.change(textInputs[1] as HTMLInputElement, { target: { value: 'Phong 101' } });
 
     fireEvent.click(screen.getAllByRole('button', { name: /Chọn tất cả đang lọc/i })[0]);
     fireEvent.click(screen.getByRole('button', { name: /Bước 3: Tài liệu và gửi/i }));

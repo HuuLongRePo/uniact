@@ -3495,6 +3495,30 @@ Sau khi code:
 - [x] `npm.cmd test -- test/activities-create-route.test.ts test/activities.test.ts` -> PASS (2 files / 11 tests, 2026-04-25)
 - [x] `npm.cmd run build` -> PASS (2026-04-25)
 
+## 9.95) Batch uu tien nong - cleanup mojibake fixtures cho teacher activity page tests
+
+### Muc tieu
+
+- Don text mojibake trong fixture test create/edit activity pages de bo test de doc va on dinh.
+- Giam risk expectation sai do chuoi test du lieu vo ma.
+
+### Viec can lam
+
+- [x] Chuan hoa fixture strings:
+  - [x] `test/teacher-create-activity-page.test.tsx`
+  - [x] `test/teacher-edit-activity-page.test.tsx`
+  - [x] doi cac chuoi `Hoat dong...`, `Phong 101`, `Tinh nguyen`, `Cap truong`, `Can bo sung thong tin` ve dang ASCII on dinh.
+- [x] Re-scan 2 files, khong con match mau mojibake `/[ÃÄÆá»áº]/`.
+
+### Risk / defer
+
+- [ ] Van con fixture mojibake o mot so test file UI khac ngoai scope teacher create/edit pages.
+- [ ] Batch nay khong doi runtime code, chi cleanup test data readability.
+
+### Verification
+
+- [x] `npm.cmd test -- test/teacher-create-activity-page.test.tsx test/teacher-edit-activity-page.test.tsx` -> PASS (2 files / 7 tests, 2026-04-25)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix

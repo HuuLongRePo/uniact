@@ -87,6 +87,7 @@ Nguon tong hop: release backbone todos + critical closeout todos + expansion/bac
 - Cap nhat 2026-04-25 (tiep 3): da don mojibake cho helper route legacy (`src/app/api/admin/reports/_legacy.ts`, `src/app/api/reports/_legacy.ts`), xoa file rac `src/app/teacher/dashboard/page_old.tsx`, va bo sung anti-mojibake regression tests (batch 9.92); RB-10 con backlog hop nhat docs xung dot va cleanup legacy residual theo domain.
 - Cap nhat 2026-04-25 (tiep 4): da tiep tuc cleanup residual mojibake route export lop + helper filename fallback Unicode-safe (batch 9.93); RB-10 con backlog don tai lieu/prompt trung lap va reconciliation docs theo module.
 - Cap nhat 2026-04-25 (tiep 5): da chuan hoa message `CLASS_SCHEDULE_CONFLICT` cho create/update activity routes va bo sung regression assertions anti-mojibake (batch 9.94); RB-10 con cleanup fixture text mojibake trong test UI va hop nhat docs con trung lap.
+- Cap nhat 2026-04-25 (tiep 6): da don mojibake fixtures cho teacher create/edit activity page tests (`test/teacher-create-activity-page.test.tsx`, `test/teacher-edit-activity-page.test.tsx`) trong batch 9.95; RB-10 con quet tiep cac test/UI fixtures residual khac theo domain.
 - Blocker/risk: xoa nham tai lieu tham chieu con dung.
 - DoD/test: manifest truoc-sau cleanup + link/docs integrity checks + build/test smoke.
 - Do lon: L.
