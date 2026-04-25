@@ -3380,6 +3380,29 @@ Sau khi code:
 - [x] `npm.cmd test -- test/admin-report-routes.test.ts test/admin-scores-route.test.ts test/teacher-participation-export-route.test.ts test/teacher-attendance-export-route.test.ts test/teacher-notification-history-export-route.test.ts test/teacher-notification-routes.test.ts` -> PASS (6 files / 23 tests, 2026-04-25)
 - [x] `npm.cmd run build` -> PASS (2026-04-25)
 
+## 9.91) Batch uu tien nong - bo sung route regression cho export residual chua co test rieng
+
+### Muc tieu
+
+- Khoa regression cho 2 route export da migrate nhung truoc do chua co route-level test rieng.
+- Dam bao contract `Content-Disposition` co `filename + filename*` cho cum export residual.
+
+### Viec can lam
+
+- [x] Them test moi:
+  - [x] `test/export-residual-routes.test.ts`
+  - [x] cover `GET /api/export/activity-participation`
+  - [x] cover `GET /api/export/class-summary`
+  - [x] assert `Content-Type` + `Content-Disposition` (bao gom `filename*=UTF-8''`).
+
+### Risk / defer
+
+- [ ] Chua bo sung test route-level cho mot so export khac it tan suat (de tiep tuc theo RB-03 khi can).
+
+### Verification
+
+- [x] `npm.cmd test -- test/export-residual-routes.test.ts` -> PASS (1 file / 2 tests, 2026-04-25)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix
