@@ -69,7 +69,7 @@ describe('POST /api/teacher/reports/participation/export', () => {
 
     expect(response.status).toBe(200);
     expect(response.headers.get('Content-Disposition')).toMatch(
-      /^attachment; filename="participation-report-\d{4}-\d{2}-\d{2}_\d{2}-\d{2}\.pdf"$/
+      /^attachment; filename="participation-report-\d{4}-\d{2}-\d{2}_\d{2}-\d{2}\.pdf"; filename\*=UTF-8''participation-report-\d{4}-\d{2}-\d{2}_\d{2}-\d{2}\.pdf$/
     );
   });
 });

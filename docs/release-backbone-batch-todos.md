@@ -3343,6 +3343,43 @@ Sau khi code:
 - [x] `npm.cmd test -- test/export-users-route.test.ts test/export.test.ts test/participation-report-route.test.ts test/admin-backup-and-rankings-routes.test.ts test/admin-database-ops-routes.test.ts` -> PASS (5 files / 24 tests, 2026-04-25)
 - [x] `npm.cmd run build` -> PASS (2026-04-25)
 
+## 9.90) Batch uu tien nong - dong bo Content-Disposition helper cho export/report residual routes
+
+### Muc tieu
+
+- Hoan tat migration header download `filename + filename*` cho cum route export/report con residual.
+- Dam bao route CSV/XLSX/PDF cua cum admin/teacher/export dung chung contract header de frontend parse ten file on dinh.
+- Khoa regression bang test assertion header cho cac route da co bo test.
+
+### Viec can lam
+
+- [x] Ap helper `buildAttachmentContentDisposition(...)` vao cac route:
+  - [x] `src/app/api/admin/reports/activity-statistics/route.ts`
+  - [x] `src/app/api/admin/scores/route.ts`
+  - [x] `src/app/api/export/activity-participation/route.ts`
+  - [x] `src/app/api/export/class-summary/route.ts`
+  - [x] `src/app/api/teacher/notifications/history/export/route.ts`
+  - [x] `src/app/api/teacher/reports/attendance/export/route.ts`
+  - [x] `src/app/api/teacher/reports/class-stats/export/route.ts`
+  - [x] `src/app/api/teacher/reports/participation/export/route.ts`
+- [x] Cap nhat regression tests:
+  - [x] `test/admin-report-routes.test.ts`
+  - [x] `test/admin-scores-route.test.ts`
+  - [x] `test/teacher-participation-export-route.test.ts`
+  - [x] `test/teacher-attendance-export-route.test.ts`
+  - [x] `test/teacher-notification-history-export-route.test.ts`
+  - [x] `test/teacher-notification-routes.test.ts`
+
+### Risk / defer
+
+- [ ] `src/app/api/classes/[id]/export/route.ts` van dung implementation rieng cho `filename` + `filename*` (da dung contract, chua can doi helper trong batch nay).
+- [ ] Cum route export khong co test route-level rieng (`export/activity-participation`, `export/class-summary`, `teacher/reports/class-stats/export`) hien duoc bao boi build + contract migration.
+
+### Verification
+
+- [x] `npm.cmd test -- test/admin-report-routes.test.ts test/admin-scores-route.test.ts test/teacher-participation-export-route.test.ts test/teacher-attendance-export-route.test.ts test/teacher-notification-history-export-route.test.ts test/teacher-notification-routes.test.ts` -> PASS (6 files / 23 tests, 2026-04-25)
+- [x] `npm.cmd run build` -> PASS (2026-04-25)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix

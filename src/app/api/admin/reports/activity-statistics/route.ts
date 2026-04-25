@@ -4,6 +4,7 @@ import { requireApiRole } from '@/lib/guards';
 import { ApiError, errorResponse } from '@/lib/api-response';
 import { formatDate } from '@/lib/formatters';
 import { toVietnamFileTimestamp } from '@/lib/timezone';
+import { buildAttachmentContentDisposition } from '@/lib/content-disposition';
 
 type ActivityStatisticsRow = {
   id: number;
@@ -227,11 +228,12 @@ export async function GET(request: NextRequest) {
       const csv = `\uFEFF${rows
         .map((row) => row.map((value) => toCsvValue(value)).join(','))
         .join('\n')}`;
+      const filename = `activity-statistics-${toVietnamFileTimestamp(new Date())}.csv`;
 
       return new NextResponse(csv, {
         headers: {
           'Content-Type': 'text/csv; charset=utf-8',
-          'Content-Disposition': `attachment; filename="activity-statistics-${toVietnamFileTimestamp(new Date())}.csv"`,
+          'Content-Disposition': buildAttachmentContentDisposition(filename),
         },
       });
     }

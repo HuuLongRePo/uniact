@@ -27,6 +27,7 @@ Nguon tong hop: release backbone todos + critical closeout todos + expansion/bac
 - Cap nhat 2026-04-25: da hoan thanh them cum `/api/admin/database/backup` + `/api/admin/database/restore` sang timestamp VN (batch 9.84); RB-03 con residual cleanup mojibake + timezone sweep tiep theo domain.
 - Cap nhat 2026-04-25 (tiep): da chuan hoa `Content-Disposition` (co `filename` + `filename*`) cho cum export activity attendance/participants + qr scans + teacher poll responses qua helper `buildAttachmentContentDisposition` (batch 9.88); RB-03 con cac route export khac chua migrate.
 - Cap nhat 2026-04-25 (tiep 2): da mo rong migration helper `Content-Disposition` cho them 9 route export (users/attendance/scoreboard/participation/admin backup/database download/custom/bonus) trong batch 9.89; RB-03 con cac route export edge-case chua co test rieng theo domain.
+- Cap nhat 2026-04-25 (tiep 3): da dong bo tiep 8 route export/report residual (activity statistics, admin scores, export activity/class summary, teacher notification history export, teacher attendance/class-stats/participation export) trong batch 9.90; RB-03 con cleanup timezone/text residual ngoai cum Content-Disposition.
 - Do lon: XL.
 
 4. **[RB-04] Poll UI text cleanup + final page parity residual**

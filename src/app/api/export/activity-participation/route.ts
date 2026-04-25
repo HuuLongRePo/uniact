@@ -12,6 +12,7 @@ import Papa from 'papaparse';
 import { ApiError, errorResponse } from '@/lib/api-response';
 import { formatDate } from '@/lib/formatters';
 import { toVietnamDatetimeLocalValue } from '@/lib/timezone';
+import { buildAttachmentContentDisposition } from '@/lib/content-disposition';
 
 export async function GET(request: NextRequest) {
   try {
@@ -101,11 +102,13 @@ export async function GET(request: NextRequest) {
     // Add BOM for Excel UTF-8 support
     const csvWithBOM = '\uFEFF' + csv;
 
+    const filename = `activity-${activityId}-participants-${toVietnamDatetimeLocalValue(new Date()).slice(0, 10)}.csv`;
+
     // Return CSV file
     return new NextResponse(csvWithBOM, {
       headers: {
         'Content-Type': 'text/csv; charset=utf-8',
-        'Content-Disposition': `attachment; filename="activity-${activityId}-participants-${toVietnamDatetimeLocalValue(new Date()).slice(0, 10)}.csv"`,
+        'Content-Disposition': buildAttachmentContentDisposition(filename),
       },
     });
   } catch (error: any) {

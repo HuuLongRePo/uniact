@@ -12,6 +12,7 @@ import { PointCalculationService } from '@/lib/scoring';
 import Papa from 'papaparse';
 import { ApiError, errorResponse } from '@/lib/api-response';
 import { toVietnamDateStamp } from '@/lib/timezone';
+import { buildAttachmentContentDisposition } from '@/lib/content-disposition';
 
 export async function GET(request: NextRequest) {
   try {
@@ -126,11 +127,13 @@ export async function GET(request: NextRequest) {
     // Add BOM for Excel UTF-8 support
     const csvWithBOM = '\uFEFF' + csv;
 
+    const filename = `class-${classId}-summary-${toVietnamDateStamp(new Date())}.csv`;
+
     // Return CSV file
     return new NextResponse(csvWithBOM, {
       headers: {
         'Content-Type': 'text/csv; charset=utf-8',
-        'Content-Disposition': `attachment; filename="class-${classId}-summary-${toVietnamDateStamp(new Date())}.csv"`,
+        'Content-Disposition': buildAttachmentContentDisposition(filename),
       },
     });
   } catch (error: any) {

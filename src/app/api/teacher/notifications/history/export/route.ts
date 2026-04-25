@@ -4,6 +4,7 @@ import { dbAll, dbReady, dbRun } from '@/lib/database';
 import { ApiError, errorResponse } from '@/lib/api-response';
 import { formatDate } from '@/lib/formatters';
 import { parseVietnamDate, toVietnamFileTimestamp } from '@/lib/timezone';
+import { buildAttachmentContentDisposition } from '@/lib/content-disposition';
 
 async function ensureBroadcastTables() {
   await dbRun(`
@@ -110,11 +111,12 @@ export async function POST(request: NextRequest) {
     const csv = `\uFEFF${rowsForCsv
       .map((row) => row.map((value) => toCsvValue(value)).join(','))
       .join('\n')}`;
+    const filename = `notification-history-${toVietnamFileTimestamp(new Date())}.csv`;
 
     return new NextResponse(csv, {
       headers: {
         'Content-Type': 'text/csv; charset=utf-8',
-        'Content-Disposition': `attachment; filename="notification-history-${toVietnamFileTimestamp(new Date())}.csv"`,
+        'Content-Disposition': buildAttachmentContentDisposition(filename),
       },
     });
   } catch (error) {

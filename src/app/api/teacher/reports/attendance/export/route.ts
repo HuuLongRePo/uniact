@@ -6,6 +6,7 @@ import { ApiError, errorResponse } from '@/lib/api-response';
 import { calculateAttendanceRate } from '@/lib/calculations';
 import { formatAttendanceStatus } from '@/lib/formatters';
 import { toVietnamFileTimestamp } from '@/lib/timezone';
+import { buildAttachmentContentDisposition } from '@/lib/content-disposition';
 
 async function getAccessibleClassIds(user: { id: number; role: string }): Promise<number[]> {
   if (user.role === 'admin') {
@@ -80,7 +81,9 @@ export async function POST(request: NextRequest) {
         status: 200,
         headers: {
           'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-          'Content-Disposition': `attachment; filename="attendance-report-${toVietnamFileTimestamp(new Date())}.xlsx"`,
+          'Content-Disposition': buildAttachmentContentDisposition(
+            `attendance-report-${toVietnamFileTimestamp(new Date())}.xlsx`
+          ),
           'Cache-Control': 'no-store',
         },
       });
@@ -322,7 +325,9 @@ export async function POST(request: NextRequest) {
       status: 200,
       headers: {
         'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'Content-Disposition': `attachment; filename="attendance-report-${toVietnamFileTimestamp(new Date())}.xlsx"`,
+        'Content-Disposition': buildAttachmentContentDisposition(
+          `attendance-report-${toVietnamFileTimestamp(new Date())}.xlsx`
+        ),
         'Cache-Control': 'no-store',
       },
     });

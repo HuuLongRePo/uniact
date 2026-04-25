@@ -63,6 +63,7 @@ describe('POST /api/teacher/reports/attendance/export', () => {
     } as any);
 
     expect(response.status).toBe(200);
+    expect(response.headers.get('Content-Disposition')).toContain("filename*=UTF-8''");
     const [query, params] = mockDbAll.mock.calls[1] as [string, Array<string | number>];
 
     expect(query).toContain('c.name = ?');

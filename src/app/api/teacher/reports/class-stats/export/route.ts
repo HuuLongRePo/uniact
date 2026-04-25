@@ -6,6 +6,7 @@ import { createSimplePdf } from '@/lib/reports/simple-pdf';
 import { calculateAttendanceRate } from '@/lib/calculations';
 import { formatDate } from '@/lib/formatters';
 import { toVietnamFileTimestamp } from '@/lib/timezone';
+import { buildAttachmentContentDisposition } from '@/lib/content-disposition';
 
 async function assertCanAccessClass(
   user: { id: number; role: string },
@@ -107,12 +108,13 @@ export async function POST(request: NextRequest) {
     }
 
     const pdf = createSimplePdf(lines);
+    const filename = `class-stats-${toVietnamFileTimestamp(new Date())}.pdf`;
 
     return new NextResponse(pdf as any, {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="class-stats-${toVietnamFileTimestamp(new Date())}.pdf"`,
+        'Content-Disposition': buildAttachmentContentDisposition(filename),
         'Cache-Control': 'no-store',
       },
     });

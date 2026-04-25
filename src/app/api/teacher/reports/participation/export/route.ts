@@ -6,6 +6,7 @@ import { createSimplePdf } from '@/lib/reports/simple-pdf';
 import { calculateParticipationRate } from '@/lib/calculations';
 import { formatDate } from '@/lib/formatters';
 import { toVietnamFileTimestamp } from '@/lib/timezone';
+import { buildAttachmentContentDisposition } from '@/lib/content-disposition';
 
 async function getAccessibleClassIds(user: { id: number; role: string }): Promise<number[]> {
   if (user.role === 'admin') {
@@ -35,11 +36,12 @@ export async function POST(request: NextRequest) {
     const classIds = await getAccessibleClassIds(user);
     if (classIds.length === 0) {
       const pdf = createSimplePdf(['Báo cáo tham gia hoạt động', 'Không có dữ liệu']);
+      const filename = `participation-report-${toVietnamFileTimestamp(new Date())}.pdf`;
       return new NextResponse(pdf as any, {
         status: 200,
         headers: {
           'Content-Type': 'application/pdf',
-          'Content-Disposition': `attachment; filename="participation-report-${toVietnamFileTimestamp(new Date())}.pdf"`,
+          'Content-Disposition': buildAttachmentContentDisposition(filename),
         },
       });
     }
@@ -98,12 +100,13 @@ export async function POST(request: NextRequest) {
     }
 
     const pdf = createSimplePdf(lines);
+    const filename = `participation-report-${toVietnamFileTimestamp(new Date())}.pdf`;
 
     return new NextResponse(pdf as any, {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="participation-report-${toVietnamFileTimestamp(new Date())}.pdf"`,
+        'Content-Disposition': buildAttachmentContentDisposition(filename),
         'Cache-Control': 'no-store',
       },
     });
