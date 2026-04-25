@@ -3433,6 +3433,38 @@ Sau khi code:
 - [x] `npm.cmd test -- test/teacher-report-legacy-route.test.ts test/admin-report-routes.test.ts` -> PASS (2 files / 9 tests, 2026-04-25)
 - [x] `npm.cmd run build` -> PASS (2026-04-25)
 
+## 9.93) Batch uu tien nong - class export mojibake cleanup + helper parity
+
+### Muc tieu
+
+- Don mojibake residual trong route export danh sach lop va lock filename UTF-8 contract theo helper dung chung.
+- Dong bo `Content-Disposition` cho `GET /api/classes/[id]/export` qua `buildAttachmentContentDisposition`.
+- Sua helper fallback ASCII de map dung ky tu `d/Đ` tieng Viet, tranh fallback sai ten file.
+
+### Viec can lam
+
+- [x] Refactor route export lop:
+  - [x] `src/app/api/classes/[id]/export/route.ts`
+  - [x] don text response/CSV header mojibake.
+  - [x] bo sung select `major`, `academic_year` dung voi summary row da xuat.
+  - [x] dung `buildAttachmentContentDisposition(fileName)` thay implementation rieng.
+- [x] Fix helper content disposition:
+  - [x] `src/lib/content-disposition.ts`
+  - [x] map `\u0111` -> `d`, `\u0110` -> `D` thay cho ky tu mojibake.
+- [x] Regression tests:
+  - [x] `test/class-export-route.test.ts` cap nhat assert fallback ASCII + UTF-8 filename* + anti-mojibake.
+  - [x] `test/content-disposition.test.ts` cap nhat case filename tieng Viet bang Unicode escapes.
+
+### Risk / defer
+
+- [ ] Van con mot so route/page residual co text mojibake ngoai cum export lop (tiep tuc sweep theo RB-10).
+- [ ] Batch nay chua mo rong route-level test cho toan bo export routes it tan suat khac.
+
+### Verification
+
+- [x] `npm.cmd test -- test/content-disposition.test.ts test/class-export-route.test.ts` -> PASS (2 files / 5 tests, 2026-04-25)
+- [x] `npm.cmd run build` -> PASS (2026-04-25)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix

@@ -29,6 +29,7 @@ Nguon tong hop: release backbone todos + critical closeout todos + expansion/bac
 - Cap nhat 2026-04-25 (tiep 2): da mo rong migration helper `Content-Disposition` cho them 9 route export (users/attendance/scoreboard/participation/admin backup/database download/custom/bonus) trong batch 9.89; RB-03 con cac route export edge-case chua co test rieng theo domain.
 - Cap nhat 2026-04-25 (tiep 3): da dong bo tiep 8 route export/report residual (activity statistics, admin scores, export activity/class summary, teacher notification history export, teacher attendance/class-stats/participation export) trong batch 9.90; RB-03 con cleanup timezone/text residual ngoai cum Content-Disposition.
 - Cap nhat 2026-04-25 (tiep 4): da bo sung route regression tests cho `export/activity-participation` va `export/class-summary` (batch 9.91) de khoa contract header download UTF-8.
+- Cap nhat 2026-04-25 (tiep 5): da don mojibake route `GET /api/classes/[id]/export`, dong bo helper `Content-Disposition`, va fix mapping `d/Đ` trong helper fallback ASCII (batch 9.93); RB-03 con residual timezone sweep tren cac module UI/API khac.
 - Do lon: XL.
 
 4. **[RB-04] Poll UI text cleanup + final page parity residual**
@@ -75,7 +76,6 @@ Nguon tong hop: release backbone todos + critical closeout todos + expansion/bac
 - Do lon: XL.
 
 10. **[RB-10] Repository hygiene + docs conflict reconciliation (bat buoc)**
-- Cap nhat 2026-04-25 (tiep 3): da don mojibake cho helper route legacy (`src/app/api/admin/reports/_legacy.ts`, `src/app/api/reports/_legacy.ts`), xoa file rac `src/app/teacher/dashboard/page_old.tsx`, va bo sung anti-mojibake regression tests (batch 9.92); RB-10 con backlog hop nhat docs xung dot va cleanup legacy residual theo domain.
 - Outcome cho end-user: release nhat quan, team dev khong bi nghen do tai lieu/ma nguon rac/xung dot.
 - Pham vi:
   - don file khong gia tri/trung lap (scripts/docs legacy, quarantine khong dung),
@@ -83,7 +83,9 @@ Nguon tong hop: release backbone todos + critical closeout todos + expansion/bac
   - cap nhat tai lieu xung dot/loi thoi de phan anh dung state hien tai.
 - Cap nhat 2026-04-25: da khoi phuc xong cum script maintenance bi hong encoding (`backup-db`, `validate-project`, `fix-project`, `add-workflow-cols`, `db-analysis-and-reset`); RB-10 con phan docs/legacy cleanup va hop nhat tai lieu.
 - Cap nhat 2026-04-25 (tiep): da bo sung route parity cho Admin backup management (`/api/admin/database/backups`, `/api/admin/database/backups/[filename]`) de khop consumer `/admin/backup`.
-- Cap nhat 2026-04-25 (tiep 2): da don text mojibake + khoa page regression cho `/admin/backup` (`test/admin-backup-page.test.tsx`); RB-10 con phan dọn docs legacy va reconciliation toan repository.
+- Cap nhat 2026-04-25 (tiep 2): da don text mojibake + khoa page regression cho `/admin/backup` (`test/admin-backup-page.test.tsx`); RB-10 con phan don docs legacy va reconciliation toan repository.
+- Cap nhat 2026-04-25 (tiep 3): da don mojibake cho helper route legacy (`src/app/api/admin/reports/_legacy.ts`, `src/app/api/reports/_legacy.ts`), xoa file rac `src/app/teacher/dashboard/page_old.tsx`, va bo sung anti-mojibake regression tests (batch 9.92); RB-10 con backlog hop nhat docs xung dot va cleanup legacy residual theo domain.
+- Cap nhat 2026-04-25 (tiep 4): da tiep tuc cleanup residual mojibake route export lop + helper filename fallback Unicode-safe (batch 9.93); RB-10 con backlog don tai lieu/prompt trung lap va reconciliation docs theo module.
 - Blocker/risk: xoa nham tai lieu tham chieu con dung.
 - DoD/test: manifest truoc-sau cleanup + link/docs integrity checks + build/test smoke.
 - Do lon: L.

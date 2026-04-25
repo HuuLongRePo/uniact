@@ -4,8 +4,16 @@ import { requireAuth } from '@/lib/guards';
 import { ApiError, errorResponse } from '@/lib/api-response';
 import { formatDate } from '@/lib/formatters';
 import { toVietnamDateStamp } from '@/lib/timezone';
+import { buildAttachmentContentDisposition } from '@/lib/content-disposition';
 
-// GET /api/classes/:id/export - Export danh sách học viên lớp ra CSV
+type ClassInfo = {
+  name: string;
+  major?: string | null;
+  academic_year?: string | null;
+  teacher_name?: string | null;
+};
+
+// GET /api/classes/:id/export - Export danh sach hoc vien lop ra CSV
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
@@ -13,40 +21,37 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     try {
       user = await requireAuth(request);
     } catch (err: any) {
-      return errorResponse(ApiError.unauthorized(err?.message || 'Chưa đăng nhập'));
+      return errorResponse(ApiError.unauthorized(err?.message || 'Chua dang nhap'));
     }
 
     const classId = Number(id);
     if (!classId || Number.isNaN(classId)) {
-      return errorResponse(ApiError.validation('ID lớp học không hợp lệ'));
+      return errorResponse(ApiError.validation('ID lop hoc khong hop le'));
     }
 
-    // Kiểm tra quyền
     if (user.role === 'teacher') {
       const classData = await dbGet('SELECT teacher_id FROM classes WHERE id = ?', [classId]);
       if (!classData || classData.teacher_id !== user.id) {
-        return errorResponse(ApiError.forbidden('Bạn chỉ được xuất lớp học bạn phụ trách'));
+        return errorResponse(ApiError.forbidden('Ban chi duoc xuat lop hoc ban phu trach'));
       }
     } else if (user.role !== 'admin') {
-      return errorResponse(ApiError.forbidden('Không có quyền truy cập'));
+      return errorResponse(ApiError.forbidden('Khong co quyen truy cap'));
     }
 
-    // Lấy thông tin lớp
-    const classInfo = await dbGet(
-      `SELECT c.name, u.name as teacher_name
+    const classInfo = (await dbGet(
+      `SELECT c.name, c.major, c.academic_year, u.name as teacher_name
        FROM classes c
        LEFT JOIN users u ON c.teacher_id = u.id
        WHERE c.id = ?`,
       [classId]
-    );
+    )) as ClassInfo | undefined;
 
     if (!classInfo) {
-      return errorResponse(ApiError.notFound('Không tìm thấy lớp học'));
+      return errorResponse(ApiError.notFound('Khong tim thay lop hoc'));
     }
 
-    // Lấy danh sách học viên với thông tin chi tiết
     const students = await dbAll(
-      `SELECT 
+      `SELECT
         u.id,
         u.name,
         u.email,
@@ -56,8 +61,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         COUNT(DISTINCT CASE WHEN p.attendance_status = 'attended' THEN p.activity_id END) as attended_activities,
         COUNT(DISTINCT sa.id) as awards_count,
         (SELECT COUNT(*) + 1 FROM (
-          SELECT student_id, SUM(points) as pts 
-          FROM student_scores 
+          SELECT student_id, SUM(points) as pts
+          FROM student_scores
           WHERE student_id IN (SELECT id FROM users WHERE class_id = ?)
           GROUP BY student_id
           HAVING pts > COALESCE((SELECT SUM(points) FROM student_scores WHERE student_id = u.id), 0)
@@ -72,20 +77,19 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       [classId, classId]
     );
 
-    // Tạo CSV với BOM cho UTF-8
     const BOM = '\uFEFF';
     const headers = [
       'STT',
-      'Mã HV',
-      'Họ và tên',
+      'Ma HV',
+      'Ho va ten',
       'Email',
-      'Tổng điểm',
-      'Xếp hạng',
-      'Số hoạt động',
-      'Đã điểm danh',
-      'Tỷ lệ điểm danh (%)',
-      'Số khen thưởng',
-      'Ngày tham gia',
+      'Tong diem',
+      'Xep hang',
+      'So hoat dong',
+      'Da diem danh',
+      'Ty le diem danh (%)',
+      'So khen thuong',
+      'Ngay tham gia',
     ];
 
     const csvRows = [headers.join(',')];
@@ -112,29 +116,26 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       csvRows.push(row.join(','));
     });
 
-    // Thêm thông tin tổng hợp ở cuối
     csvRows.push('');
-    csvRows.push(`"Lớp:","${classInfo.name}"`);
-    csvRows.push(`"Chuyên ngành:","${(classInfo as any).major || ''}"`);
-    csvRows.push(`"Năm học:","${(classInfo as any).academic_year || ''}"`);
-    csvRows.push(`"Giảng viên chủ nhiệm:","${classInfo.teacher_name || ''}"`);
-    csvRows.push(`"Tổng số học viên:",${students.length}`);
-    csvRows.push(`"Ngày xuất:",${formatDate(new Date())}`);
+    csvRows.push(`"Lop:","${classInfo.name}"`);
+    csvRows.push(`"Chuyen nganh:","${classInfo.major || ''}"`);
+    csvRows.push(`"Nam hoc:","${classInfo.academic_year || ''}"`);
+    csvRows.push(`"Giang vien chu nhiem:","${classInfo.teacher_name || ''}"`);
+    csvRows.push(`"Tong so hoc vien:",${students.length}`);
+    csvRows.push(`"Ngay xuat:",${formatDate(new Date())}`);
 
     const csv = BOM + csvRows.join('\n');
     const dateStamp = toVietnamDateStamp(new Date());
     const fileName = `Danh-sach-lop-${classInfo.name.replace(/\s+/g, '-')}-${dateStamp}.csv`;
-    const fallbackFilename = `class-${classId}-${dateStamp}.csv`;
-    const encodedFileName = encodeURIComponent(fileName);
 
     return new NextResponse(csv, {
       headers: {
         'Content-Type': 'text/csv; charset=utf-8',
-        'Content-Disposition': `attachment; filename="${fallbackFilename}"; filename*=UTF-8''${encodedFileName}`,
+        'Content-Disposition': buildAttachmentContentDisposition(fileName),
       },
     });
   } catch (error) {
     console.error('Export class error:', error);
-    return errorResponse(ApiError.internalError('Lỗi khi xuất danh sách lớp'));
+    return errorResponse(ApiError.internalError('Loi khi xuat danh sach lop'));
   }
 }

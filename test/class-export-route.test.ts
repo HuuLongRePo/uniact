@@ -32,8 +32,10 @@ describe('GET /api/classes/[id]/export', () => {
   it('returns utf8 content-disposition filename with ascii fallback for admin', async () => {
     mocks.mockRequireAuth.mockResolvedValue({ id: 1, role: 'admin' });
     mocks.mockDbGet.mockResolvedValue({
-      name: 'Công nghệ 1',
+      name: 'C\u00f4ng ngh\u1ec7 1',
       teacher_name: 'Giang vien A',
+      major: 'CNTT',
+      academic_year: '2025-2026',
     });
     mocks.mockDbAll.mockResolvedValue([]);
 
@@ -42,11 +44,12 @@ describe('GET /api/classes/[id]/export', () => {
     expect(response.status).toBe(200);
     const contentDisposition = response.headers.get('Content-Disposition');
     expect(contentDisposition).toMatch(
-      /^attachment; filename="class-1-\d{4}-\d{2}-\d{2}\.csv"; filename\*=UTF-8''.+$/
+      /^attachment; filename="Danh-sach-lop-Cong-nghe-1-\d{4}-\d{2}-\d{2}\.csv"; filename\*=UTF-8''.+$/
     );
     expect(resolveDownloadFilename(contentDisposition, 'fallback.csv')).toMatch(
-      /^Danh-sach-lop-Công-nghệ-1-\d{4}-\d{2}-\d{2}\.csv$/
+      /^Danh-sach-lop-C\u00f4ng-ngh\u1ec7-1-\d{4}-\d{2}-\d{2}\.csv$/
     );
+    expect(String(contentDisposition)).not.toMatch(/[ÃƒÃ‚Ã¢]/);
   });
 
   it('blocks teacher when exporting class outside scope', async () => {
@@ -68,4 +71,3 @@ describe('GET /api/classes/[id]/export', () => {
     expect(mocks.mockDbAll).not.toHaveBeenCalled();
   });
 });
-

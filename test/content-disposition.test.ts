@@ -11,10 +11,10 @@ describe('content disposition helper', () => {
   });
 
   it('normalizes vietnamese filename into safe ascii fallback', () => {
-    const header = buildAttachmentContentDisposition('Điểm danh lớp K18A.csv');
+    const vnFilename = '\u0110i\u1ec3m danh l\u1edbp K18A.csv';
+    const header = buildAttachmentContentDisposition(vnFilename);
 
     expect(header).toContain('filename="Diem danh lop K18A.csv"');
-    expect(header).toContain("filename*=UTF-8''%C4%90i%E1%BB%83m%20danh%20l%E1%BB%9Bp%20K18A.csv");
+    expect(header).toContain(`filename*=UTF-8''${encodeURIComponent(vnFilename)}`);
   });
 });
-
