@@ -8,6 +8,7 @@ Muc tieu: giu on dinh release backbone (Auth -> Activity workflow -> Registratio
 
 Bat buoc thuc hien theo thu tu:
 1) Doc va su dung lam source of truth:
+- docs/system-prompt-registry.md
 - docs/release-backbone-batch-todos.md
 - docs/codex-ide-transition-pack.md
 2) Audit nhanh repo + trang thai test/build hien tai.

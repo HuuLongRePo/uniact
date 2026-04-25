@@ -3624,6 +3624,35 @@ Sau khi code:
 - [x] `npm.cmd test -- test/activity-file-access.test.ts` -> PASS (1 file / 12 tests, 2026-04-25)
 - [x] `npm.cmd run build` -> PASS (2026-04-25)
 
+## 9.100) Batch uu tien nong - prompt registry canonicalization + de-conflict rules
+
+### Muc tieu
+
+- Giam trung lap/xung dot tai lieu prompt bang 1 registry canonical.
+- Dong bo planner prompt va clone prompt de doc registry truoc khi lap ke hoach thi cong.
+
+### Viec can lam
+
+- [x] Them registry canonical:
+  - [x] `docs/system-prompt-registry.md` (moi)
+  - [x] quy dinh ro orchestrator canonical, domain packs, reference-only prompts, va rule de-conflict.
+- [x] Dong bo planner prompt:
+  - [x] `docs/system-wide-remaining-batches-planner-prompt.md`
+  - [x] bo sung `docs/system-prompt-registry.md` vao mandatory sources.
+  - [x] bo sung thu tu de-conflict nguon docs.
+- [x] Dong bo clone prompt:
+  - [x] `docs/codex-clone-coreflows-prompt.md`
+  - [x] bo sung `docs/system-prompt-registry.md` vao source-of-truth.
+
+### Risk / defer
+
+- [ ] Batch nay chua xoa/gop vat ly cac file prompt reference-only; moi chot governance va canonical map.
+- [ ] Van can 1 batch tiep theo de quyet dinh file nao archive/giu lai theo module ownership.
+
+### Verification
+
+- [x] Kiem tra manual consistency: planner prompt + clone prompt da cung reference `docs/system-prompt-registry.md`.
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix

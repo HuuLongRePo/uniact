@@ -21,6 +21,7 @@ Rang buoc quan trong:
   - cap nhat cac tai lieu/chu thich xung dot de phan anh dung trang thai du an hien tai.
 
 Nguon bat buoc can quet:
+- docs/system-prompt-registry.md
 - docs/release-backbone-batch-todos.md
 - docs/critical-flow-closeout-todos.md
 - docs/system-completion-expansion-tasks.md
@@ -29,6 +30,11 @@ Nguon bat buoc can quet:
 - src/app/api/**/* + src/app/{admin,teacher,student}/**/*
 - test/**/*.test.ts?(x)
 - scripts/**/* + docs/archive/**/*
+
+Thu tu de-conflict nguon docs:
+1) release-backbone-batch-todos.md (state implementation)
+2) system-wide-remaining-batches-catalog.md (batch numbering)
+3) cac prompt/followup docs con lai chi la tham chieu bo tro
 
 Dinh dang output vong 1 (danh sach batch):
 1. [Batch-ID] Ten batch
