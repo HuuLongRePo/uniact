@@ -6,6 +6,7 @@ import { teacherCanAccessActivity } from '@/lib/activity-access';
 import { readFile } from 'fs/promises';
 import { existsSync } from 'fs';
 import path from 'path';
+import { buildAttachmentContentDisposition } from '@/lib/content-disposition';
 
 function resolveActivityPublicFilePath(
   activityId: number,
@@ -99,13 +100,12 @@ export async function GET(
 
     const buffer = await readFile(fullPath);
     const fileName = String(attachment.file_name || 'download');
-    const encoded = encodeURIComponent(fileName);
 
     return new NextResponse(buffer, {
       status: 200,
       headers: {
         'Content-Type': String(attachment.mime_type || 'application/octet-stream'),
-        'Content-Disposition': `attachment; filename*=UTF-8''${encoded}`,
+        'Content-Disposition': buildAttachmentContentDisposition(fileName),
         'Cache-Control': 'no-store',
       },
     });

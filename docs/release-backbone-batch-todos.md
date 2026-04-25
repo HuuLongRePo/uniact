@@ -3597,6 +3597,33 @@ Sau khi code:
 - [x] `npm.cmd test -- test/activities-create-route.test.ts test/activities.test.ts test/admin-backup-page.test.tsx test/admin-report-routes.test.ts test/class-export-route.test.ts test/student-polls-page.test.tsx test/teacher-poll-detail-page.test.tsx test/teacher-report-legacy-route.test.ts` -> PASS (8 files / 28 tests, 2026-04-25)
 - [x] `rg -n "not\\.toMatch\\(/\\[Ã|/\\[Ã|Ãƒ|Ã‚|Ã¢|ÃÂâ" test` -> no matches.
 
+## 9.99) Batch uu tien nong - migrate activity file download header sang helper UTF-8 canonical
+
+### Muc tieu
+
+- Dong bo route download file hoat dong theo contract `Content-Disposition` chung (`filename` + `filename*`).
+- Khoa regression bang route-level test cho download header filename UTF-8.
+
+### Viec can lam
+
+- [x] Migrate route:
+  - [x] `src/app/api/activities/[id]/files/[fileId]/download/route.ts`
+  - [x] doi header tu implementation thu cong `filename*` sang `buildAttachmentContentDisposition(fileName)`.
+- [x] Them regression test:
+  - [x] `test/activity-file-access.test.ts`
+  - [x] bo sung case download thanh cong assert co `filename=` + `filename*=UTF-8''`.
+  - [x] assert `resolveDownloadFilename(...)` tra dung filename UTF-8.
+
+### Risk / defer
+
+- [ ] Batch nay chua cleanup toan bo text mojibake trong route download/preview files (scope uu tien la header parity).
+- [ ] Cac route download static khac van can audit tiep de dam bao dung helper canonical.
+
+### Verification
+
+- [x] `npm.cmd test -- test/activity-file-access.test.ts` -> PASS (1 file / 12 tests, 2026-04-25)
+- [x] `npm.cmd run build` -> PASS (2026-04-25)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix

@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { resolveDownloadFilename } from '@/lib/download-filename';
 
 function mockFs(options?: {
   exists?: boolean;
@@ -214,6 +215,50 @@ describe('activity file access routes', () => {
     expect(response.status).toBe(403);
     const body = await response.json();
     expect(body.error).toContain('tải file của hoạt động thuộc phạm vi quản lý');
+  });
+
+  it('returns utf8 content-disposition with ascii fallback when downloading a file', async () => {
+    mockFs({ exists: true });
+
+    vi.doMock('@/lib/guards', () => ({
+      requireRole: async () => ({ id: 1, role: 'admin' }),
+    }));
+
+    vi.doMock('@/lib/activity-access', () => ({
+      teacherCanAccessActivity: async () => true,
+    }));
+
+    vi.doMock('@/lib/database', () => ({
+      dbGet: vi.fn(async (sql: string) => {
+        if (sql.includes('SELECT id, teacher_id FROM activities')) {
+          return { id: 71, teacher_id: 99 };
+        }
+
+        if (sql.includes('FROM activity_attachments')) {
+          return {
+            id: 501,
+            file_path: '/uploads/activities/71/bao-cao.pdf',
+            file_name: '\u0110iem danh l\u1edbp K18A.pdf',
+            mime_type: 'application/pdf',
+          };
+        }
+
+        return null;
+      }),
+    }));
+
+    const route = await import('../src/app/api/activities/[id]/files/[fileId]/download/route');
+    const response = await route.GET({} as any, {
+      params: Promise.resolve({ id: '71', fileId: '501' }),
+    } as any);
+
+    expect(response.status).toBe(200);
+    const contentDisposition = response.headers.get('Content-Disposition') || '';
+    expect(contentDisposition).toContain('filename=');
+    expect(contentDisposition).toContain("filename*=UTF-8''");
+    expect(resolveDownloadFilename(contentDisposition, 'fallback.pdf')).toBe(
+      '\u0110iem danh l\u1edbp K18A.pdf'
+    );
   });
 
   it('blocks out-of-scope teachers from previewing a file', async () => {

@@ -91,6 +91,7 @@ Nguon tong hop: release backbone todos + critical closeout todos + expansion/bac
 - Cap nhat 2026-04-25 (tiep 7): da don residual mojibake matcher trong `test/admin-approvals-page.test.tsx` va `test/uat/helpers/student.helper.ts` (batch 9.96); RB-10 con tiep tuc cleanup anti-pattern docs/prompt trung lap.
 - Cap nhat 2026-04-25 (tiep 8): da don path mojibake trong `docs/codex-batch-prompts.md` (batch 9.97); RB-10 con tiep tuc gom/cat tai lieu prompt trung lap theo module.
 - Cap nhat 2026-04-25 (tiep 9): da centralize anti-mojibake assertions qua helper `test/helpers/mojibake.ts` va refactor 8 test files de bo regex literal `Ã...` (batch 9.98); RB-10 con tiep tuc gom tai lieu prompt trung lap va don docs conflict theo module.
+- Cap nhat 2026-04-25 (tiep 10): da migrate route `GET /api/activities/[id]/files/[fileId]/download` sang helper `buildAttachmentContentDisposition` va bo sung regression test header UTF-8 (batch 9.99); RB-10 con tiep tuc quet tiep route download/static con implementation rieng.
 - Blocker/risk: xoa nham tai lieu tham chieu con dung.
 - DoD/test: manifest truoc-sau cleanup + link/docs integrity checks + build/test smoke.
 - Do lon: L.
