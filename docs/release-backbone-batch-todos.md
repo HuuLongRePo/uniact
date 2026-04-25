@@ -3564,6 +3564,39 @@ Sau khi code:
 
 - [x] `rg -n "MÃ|tÃ|Ãƒ|Ã‚|Ã¢" docs --glob "!docs/archive/**"` -> chi con cac dong regex anti-mojibake co chu dich trong todo docs.
 
+## 9.98) Batch uu tien nong - centralize anti-mojibake assertions trong test suite
+
+### Muc tieu
+
+- Loai bo regex mojibake hardcode dang gay nhieu chuoi `Ã...` trong test files.
+- Dung helper assertion trung tam de test de doc, de maintain va giam noise docs.
+
+### Viec can lam
+
+- [x] Them helper chung:
+  - [x] `test/helpers/mojibake.ts`
+  - [x] `expectNoMojibake(value)` + regex guard `MOJIBAKE_CHAR_PATTERN` viet bang Unicode escapes.
+- [x] Refactor cac tests dang hardcode regex mojibake:
+  - [x] `test/activities-create-route.test.ts`
+  - [x] `test/activities.test.ts`
+  - [x] `test/admin-backup-page.test.tsx`
+  - [x] `test/admin-report-routes.test.ts`
+  - [x] `test/class-export-route.test.ts`
+  - [x] `test/student-polls-page.test.tsx`
+  - [x] `test/teacher-poll-detail-page.test.tsx`
+  - [x] `test/teacher-report-legacy-route.test.ts`
+- [x] Re-scan test folder: khong con regex literal `Ã...` trong assertions anti-mojibake.
+
+### Risk / defer
+
+- [ ] Regex helper dang theo heuristic glyph set, chua phan tich full-byte-sequence cho moi truong encoding hiem.
+- [ ] Van con noise stderr co chuoi tieng Viet co dau tu route mock trong mot so tests, khong anh huong pass/fail.
+
+### Verification
+
+- [x] `npm.cmd test -- test/activities-create-route.test.ts test/activities.test.ts test/admin-backup-page.test.tsx test/admin-report-routes.test.ts test/class-export-route.test.ts test/student-polls-page.test.tsx test/teacher-poll-detail-page.test.tsx test/teacher-report-legacy-route.test.ts` -> PASS (8 files / 28 tests, 2026-04-25)
+- [x] `rg -n "not\\.toMatch\\(/\\[Ã|/\\[Ã|Ãƒ|Ã‚|Ã¢|ÃÂâ" test` -> no matches.
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix

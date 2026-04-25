@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { expectNoMojibake } from './helpers/mojibake';
 
 const mocks = vi.hoisted(() => ({
   mockRequireApiAuth: vi.fn(),
@@ -218,7 +219,7 @@ describe('Activities API (unit)', () => {
     const body = await res.json();
     expect(body.code).toBe('CLASS_SCHEDULE_CONFLICT');
     expect(String(body.message || body.error || '')).toContain('trung khung gio');
-    expect(String(body.message || body.error || '')).not.toMatch(/[ÃƒÃ‚Ã¢]/);
+    expectNoMojibake(String(body.message || body.error || ''));
     expect(mocks.mockFindClassScheduleConflicts).toHaveBeenCalledWith(
       expect.objectContaining({
         excludeActivityId: 1,

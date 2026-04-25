@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { User } from '@/types/database'
 import BackupRestorePage from '@/app/admin/backup/page'
 import { useAuth } from '@/contexts/AuthContext'
+import { expectNoMojibake } from './helpers/mojibake'
 
 const { pushMock, toastErrorMock, toastSuccessMock } = vi.hoisted(() => ({
   pushMock: vi.fn(),
@@ -112,7 +113,7 @@ describe('Admin backup page', () => {
     expect(
       await screen.findByRole('heading', { name: /Sao lưu và khôi phục database/i })
     ).toBeInTheDocument()
-    expect(container.textContent || '').not.toMatch(/[ÃƒÃ‚Ã¢]/)
+    expectNoMojibake(container.textContent || '')
   })
 
   it('redirects non-admin users to login', () => {

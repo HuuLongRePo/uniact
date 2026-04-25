@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { User } from '@/types/database'
 import PollDetailPage from '@/app/teacher/polls/[id]/page'
 import { useAuth } from '@/contexts/AuthContext'
+import { expectNoMojibake } from './helpers/mojibake'
 
 const { pushMock, backMock, toastErrorMock } = vi.hoisted(() => ({
   pushMock: vi.fn(),
@@ -89,6 +90,6 @@ describe('PollDetailPage', () => {
     expect(screen.getByText('Đã đóng')).toBeInTheDocument()
     expect(screen.getByText('Biểu đồ tròn')).toBeInTheDocument()
     expect(screen.getByText('phiếu')).toBeInTheDocument()
-    expect(container.textContent || '').not.toMatch(/[ÃÂâ]/)
+    expectNoMojibake(container.textContent || '')
   })
 })

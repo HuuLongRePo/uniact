@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { resolveDownloadFilename } from '@/lib/download-filename';
+import { expectNoMojibake } from './helpers/mojibake';
 
 const mocks = vi.hoisted(() => ({
   mockDbAll: vi.fn(),
@@ -49,7 +50,7 @@ describe('GET /api/classes/[id]/export', () => {
     expect(resolveDownloadFilename(contentDisposition, 'fallback.csv')).toMatch(
       /^Danh-sach-lop-C\u00f4ng-ngh\u1ec7-1-\d{4}-\d{2}-\d{2}\.csv$/
     );
-    expect(String(contentDisposition)).not.toMatch(/[ÃƒÃ‚Ã¢]/);
+    expectNoMojibake(String(contentDisposition));
   });
 
   it('blocks teacher when exporting class outside scope', async () => {

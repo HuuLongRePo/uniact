@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { User } from '@/types/database'
 import StudentPollsPage from '@/app/student/polls/page'
 import { useAuth } from '@/contexts/AuthContext'
+import { expectNoMojibake } from './helpers/mojibake'
 
 const { pushMock, toastErrorMock, toastSuccessMock } = vi.hoisted(() => ({
   pushMock: vi.fn(),
@@ -84,7 +85,7 @@ describe('StudentPollsPage', () => {
     expect(await screen.findByText('Khảo sát / Poll')).toBeInTheDocument()
     expect(await screen.findByText('Lớp: CNTT K18A')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Tham gia poll' })).toBeInTheDocument()
-    expect(container.textContent || '').not.toMatch(/[ÃÂâ]/)
+    expectNoMojibake(container.textContent || '')
   })
 
   it('opens poll detail and submits vote with canonical endpoint', async () => {

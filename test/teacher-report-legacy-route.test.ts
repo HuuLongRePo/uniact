@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { expectNoMojibake } from './helpers/mojibake';
 import * as teacherDashboardLegacyRoute from '../src/app/api/reports/teacher-dashboard/route';
 
 describe('Teacher dashboard legacy report route', () => {
@@ -18,6 +19,6 @@ describe('Teacher dashboard legacy report route', () => {
     });
     expect(body.message).toContain('/api/reports/teacher-dashboard');
     expect(body.message).toContain('/api/teacher/dashboard-stats');
-    expect(String(body.message)).not.toMatch(/[ÃƒÃ‚Ã¢]/);
+    expectNoMojibake(String(body.message));
   });
 });
