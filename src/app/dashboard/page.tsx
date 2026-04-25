@@ -494,24 +494,32 @@ export default function DashboardPage() {
             </div>
 
             {/* System Status Card */}
-            <div className="bg-gradient-to-r from-blue-50 to-green-50 border border-blue-200 rounded-lg p-6">
-              <h3 className="text-lg font-semibold text-blue-900 mb-2">📊 Thống kê hệ thống</h3>
+            <div className="rounded-lg border border-blue-200 bg-gradient-to-r from-blue-50 to-green-50 p-6 dark:border-slate-700 dark:from-slate-900 dark:to-slate-800">
+              <h3 className="mb-2 text-lg font-semibold text-blue-900 dark:text-slate-100">
+                📊 Thống kê hệ thống
+              </h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-blue-600">{stats.classCount}</div>
-                  <div className="text-xs text-gray-600">Lớp học</div>
+                  <div className="text-2xl font-bold text-blue-600 dark:text-blue-300">{stats.classCount}</div>
+                  <div className="text-xs text-gray-600 dark:text-slate-300">Lớp học</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-purple-600">{stats.teacherCount}</div>
-                  <div className="text-xs text-gray-600">Giảng viên</div>
+                  <div className="text-2xl font-bold text-purple-600 dark:text-purple-300">
+                    {stats.teacherCount}
+                  </div>
+                  <div className="text-xs text-gray-600 dark:text-slate-300">Giảng viên</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-orange-600">{stats.studentCount}</div>
-                  <div className="text-xs text-gray-600">Học viên</div>
+                  <div className="text-2xl font-bold text-orange-600 dark:text-amber-300">
+                    {stats.studentCount}
+                  </div>
+                  <div className="text-xs text-gray-600 dark:text-slate-300">Học viên</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-green-600">{stats.activityCount}</div>
-                  <div className="text-xs text-gray-600">Hoạt động</div>
+                  <div className="text-2xl font-bold text-green-600 dark:text-emerald-300">
+                    {stats.activityCount}
+                  </div>
+                  <div className="text-xs text-gray-600 dark:text-slate-300">Hoạt động</div>
                 </div>
               </div>
             </div>
