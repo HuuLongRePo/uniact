@@ -3519,6 +3519,30 @@ Sau khi code:
 
 - [x] `npm.cmd test -- test/teacher-create-activity-page.test.tsx test/teacher-edit-activity-page.test.tsx` -> PASS (2 files / 7 tests, 2026-04-25)
 
+## 9.96) Batch uu tien nong - cleanup residual mojibake matcher trong admin approvals + UAT helper
+
+### Muc tieu
+
+- Don residual mojibake con sot trong matcher chuoi test.
+- Dam bao test string matcher de doc, de bao tri va khong bi phu thuoc vao encoding vo ma.
+
+### Viec can lam
+
+- [x] `test/admin-approvals-page.test.tsx`
+  - [x] doi query chuoi mojibake ve matcher ASCII on dinh: `Khong tim thay du lieu`.
+- [x] `test/uat/helpers/student.helper.ts`
+  - [x] doi regex mojibake ve regex on dinh: `/Awards|Giai thuong|Khen thuong/i`.
+- [x] Re-scan 2 file, khong con match mau mojibake `/[ÃÄÂÆá»áº]/`.
+
+### Risk / defer
+
+- [ ] Van con anti-mojibake regex assertions co chuoi `Ã...` o nhieu test file (co chu dich, khong phai corrupted fixture).
+- [ ] Chua quet toan bo fixture test UI/UAT ngoai 2 file scope batch nay.
+
+### Verification
+
+- [x] `npm.cmd test -- test/admin-approvals-page.test.tsx` -> PASS (1 file / 2 tests, 2026-04-25)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix

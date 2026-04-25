@@ -97,7 +97,7 @@ describe('AdminApprovalsPage', () => {
     expect(await screen.findByText('Hoat dong cho duyet')).toBeInTheDocument();
 
     await waitFor(() => {
-      expect(screen.queryByText('KhÃƒÂ´ng tÃƒÂ¬m thÃ¡ÂºÂ¥y dÃ¡Â»Â¯ liÃ¡Â»â€¡u')).not.toBeInTheDocument();
+      expect(screen.queryByText('Khong tim thay du lieu')).not.toBeInTheDocument();
     });
   });
 

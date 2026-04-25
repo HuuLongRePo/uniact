@@ -227,7 +227,7 @@ export class StudentHelper {
   async viewBadges() {
     await this.page.goto('/student/awards')
     await expect(this.page.locator('[data-testid="awards-heading"], h1, h2')).toContainText(
-      /Awards|Giáº£i thÆ°á»Ÿng/i
+      /Awards|Giai thuong|Khen thuong/i
     )
   }
 
