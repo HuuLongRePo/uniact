@@ -111,6 +111,7 @@ describe('Teacher poll responses routes', () => {
     expect(response.status).toBe(200);
     expect(response.headers.get('Content-Type')).toContain('text/csv');
     expect(response.headers.get('Content-Disposition')).toContain('poll-responses-7-');
+    expect(response.headers.get('Content-Disposition')).toContain("filename*=UTF-8''");
 
     const csv = await response.text();
     expect(csv).toContain('Nguyen Van A');

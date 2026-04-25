@@ -25,6 +25,7 @@ Nguon tong hop: release backbone todos + critical closeout todos + expansion/bac
 - Blocker/risk: surface lon, de phat sinh mismatch contract neu sua khong theo cum.
 - DoD/test: route/page timezone regression bundle + build pass.
 - Cap nhat 2026-04-25: da hoan thanh them cum `/api/admin/database/backup` + `/api/admin/database/restore` sang timestamp VN (batch 9.84); RB-03 con residual cleanup mojibake + timezone sweep tiep theo domain.
+- Cap nhat 2026-04-25 (tiep): da chuan hoa `Content-Disposition` (co `filename` + `filename*`) cho cum export activity attendance/participants + qr scans + teacher poll responses qua helper `buildAttachmentContentDisposition` (batch 9.88); RB-03 con cac route export khac chua migrate.
 - Do lon: XL.
 
 4. **[RB-04] Poll UI text cleanup + final page parity residual**

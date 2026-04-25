@@ -4,6 +4,7 @@ import { ApiError, errorResponse } from '@/lib/api-response';
 import { requireApiRole } from '@/lib/guards';
 import { csvCell, ensurePollSchema, parsePollId } from '@/lib/polls';
 import { formatVietnamDateTime, toVietnamDateStamp } from '@/lib/timezone';
+import { buildAttachmentContentDisposition } from '@/lib/content-disposition';
 
 function buildWhereClause(filters: any) {
   const clauses: string[] = [];
@@ -102,7 +103,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       status: 200,
       headers: {
         'Content-Type': 'text/csv; charset=utf-8',
-        'Content-Disposition': `attachment; filename="${filename}"`,
+        'Content-Disposition': buildAttachmentContentDisposition(filename),
         'Cache-Control': 'no-store',
       },
     });

@@ -5,6 +5,7 @@ import { ApiError, errorResponse } from '@/lib/api-response';
 import { teacherCanAccessActivity } from '@/lib/activity-access';
 import { createWorkbookFromJsonSheets } from '@/lib/excel-export';
 import { toVietnamDateStamp } from '@/lib/timezone';
+import { buildAttachmentContentDisposition } from '@/lib/content-disposition';
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -115,7 +116,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       status: 200,
       headers: new Headers({
         'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'Content-Disposition': `attachment; filename="${filename}"`,
+        'Content-Disposition': buildAttachmentContentDisposition(filename),
       }),
     });
   } catch (error: any) {

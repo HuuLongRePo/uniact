@@ -3271,6 +3271,41 @@ Sau khi code:
 - [x] `npm.cmd test -- test/admin-backup-page.test.tsx test/admin-database-backups-routes.test.ts test/admin-database-ops-routes.test.ts` -> PASS (3 files / 13 tests, 2026-04-25)
 - [x] `npm.cmd run build` -> PASS (2026-04-25)
 
+## 9.88) Batch uu tien nong - export Content-Disposition UTF-8 parity + timezone residual hardening
+
+### Muc tieu
+
+- Chuan hoa header download cho cac route export chinh: tra ve ca `filename` (ASCII fallback) va `filename*` (UTF-8) de client nhan dung ten file.
+- Giam residual drift/khac biet ten file giua cac route export activity/qr/poll.
+- Tao helper dung chung de tranh duplicate logic tao `Content-Disposition`.
+
+### Viec can lam
+
+- [x] Them helper:
+  - [x] `src/lib/content-disposition.ts` (moi)
+  - [x] `buildAttachmentContentDisposition(filename)` tra ve:
+    - [x] `filename="..."` fallback ASCII an toan
+    - [x] `filename*=UTF-8''...` cho ten file goc UTF-8
+- [x] Ap helper vao cac route export:
+  - [x] `src/app/api/activities/[id]/participants/export/route.ts`
+  - [x] `src/app/api/activities/[id]/attendance/export/route.ts`
+  - [x] `src/app/api/qr-sessions/[id]/scans/export/route.ts`
+  - [x] `src/app/api/teacher/polls/[id]/responses/export/route.ts`
+- [x] Regression tests:
+  - [x] `test/content-disposition.test.ts` (moi) cho helper fallback + UTF-8.
+  - [x] `test/timezone-export-filenames-route.test.ts` cap nhat assert header co ca `filename` + `filename*`.
+  - [x] `test/teacher-poll-responses-route.test.ts` bo sung assert co `filename*=UTF-8''`.
+
+### Risk / defer
+
+- [ ] Cac route export khac trong he thong van chua migrate sang helper dung chung (se tiep tuc theo cum de tranh patch qua lon).
+- [ ] Batch nay uu tien header parity, chua gom cleanup text legacy/mojibake trong toan bo route export.
+
+### Verification
+
+- [x] `npm.cmd test -- test/content-disposition.test.ts test/timezone-export-filenames-route.test.ts test/teacher-poll-responses-route.test.ts` -> PASS (3 files / 8 tests, 2026-04-25)
+- [x] `npm.cmd run build` -> PASS (2026-04-25)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix

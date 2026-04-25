@@ -65,7 +65,7 @@ describe('timezone export filename routes', () => {
 
     expect(response.status).toBe(200);
     expect(response.headers.get('Content-Disposition')).toMatch(
-      /^attachment; filename="participants-42-\d{4}-\d{2}-\d{2}\.csv"$/
+      /^attachment; filename="participants-42-\d{4}-\d{2}-\d{2}\.csv"; filename\*=UTF-8''participants-42-\d{4}-\d{2}-\d{2}\.csv$/
     );
   });
 
@@ -88,7 +88,7 @@ describe('timezone export filename routes', () => {
 
     expect(response.status).toBe(200);
     expect(response.headers.get('Content-Disposition')).toMatch(
-      /^attachment; filename="diem-danh-7-\d{4}-\d{2}-\d{2}\.csv"$/
+      /^attachment; filename="diem-danh-7-\d{4}-\d{2}-\d{2}\.csv"; filename\*=UTF-8''diem-danh-7-\d{4}-\d{2}-\d{2}\.csv$/
     );
   });
 
@@ -122,7 +122,7 @@ describe('timezone export filename routes', () => {
 
     expect(response.status).toBe(200);
     expect(response.headers.get('Content-Disposition')).toBe(
-      'attachment; filename="dau-danh-42-2026-04-25.xlsx"'
+      `attachment; filename="dau-danh-42-2026-04-25.xlsx"; filename*=UTF-8''dau-danh-42-2026-04-25.xlsx`
     );
   });
 });
