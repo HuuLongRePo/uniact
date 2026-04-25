@@ -267,7 +267,7 @@ export async function POST(request: NextRequest) {
         return errorResponse(
           new ApiError(
             'CLASS_SCHEDULE_CONFLICT',
-            'Lớp đã có hoạt động trùng khung giờ. Vui lòng đổi thời gian hoặc bỏ lớp bị xung đột.',
+            'Lop da co hoat dong trung khung gio. Vui long doi thoi gian hoac bo lop bi xung dot.',
             409,
             {
               class_schedule_conflicts: classConflictResult.conflicts,

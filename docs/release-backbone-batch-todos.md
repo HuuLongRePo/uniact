@@ -3465,6 +3465,36 @@ Sau khi code:
 - [x] `npm.cmd test -- test/content-disposition.test.ts test/class-export-route.test.ts` -> PASS (2 files / 5 tests, 2026-04-25)
 - [x] `npm.cmd run build` -> PASS (2026-04-25)
 
+## 9.94) Batch uu tien nong - class conflict message normalization (create/update)
+
+### Muc tieu
+
+- Don message mojibake trong luong chan trung gio khi tao/sua activity.
+- Dong bo message canonical cho `CLASS_SCHEDULE_CONFLICT` o ca create route va update route.
+- Khoa regression bang test assertion message co nghia + khong mojibake.
+
+### Viec can lam
+
+- [x] Chuan hoa message conflict:
+  - [x] `src/app/api/activities/route.ts`
+  - [x] `src/app/api/activities/[id]/route.ts`
+  - [x] message su dung chuoi ASCII on dinh: `Lop da co hoat dong trung khung gio...`.
+- [x] Bo sung regression assertions:
+  - [x] `test/activities-create-route.test.ts`
+  - [x] `test/activities.test.ts`
+  - [x] assert message co cum `trung khung gio`.
+  - [x] assert message khong match mau mojibake `/[ÃƒÃ‚Ã¢]/`.
+
+### Risk / defer
+
+- [ ] Van con mot so fixture text mojibake trong test UI khong anh huong logic (se cleanup theo batch docs/hygiene tiep theo RB-10).
+- [ ] Chua mo rong i18n strategy cho message API (batch nay chi harden readability + consistency).
+
+### Verification
+
+- [x] `npm.cmd test -- test/activities-create-route.test.ts test/activities.test.ts` -> PASS (2 files / 11 tests, 2026-04-25)
+- [x] `npm.cmd run build` -> PASS (2026-04-25)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix

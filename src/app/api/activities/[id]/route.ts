@@ -297,7 +297,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
           return errorResponse(
             new ApiError(
               'CLASS_SCHEDULE_CONFLICT',
-              'Lá»›p Ä‘Ã£ cÃ³ hoáº¡t Ä‘á»™ng trÃ¹ng khung giá». Vui lÃ²ng Ä‘á»•i thá»i gian hoáº·c bá» lá»›p bá»‹ xung Ä‘á»™t.',
+              'Lop da co hoat dong trung khung gio. Vui long doi thoi gian hoac bo lop bi xung dot.',
               409,
               {
                 class_schedule_conflicts: classConflictResult.conflicts,

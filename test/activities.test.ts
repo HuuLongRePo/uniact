@@ -217,6 +217,8 @@ describe('Activities API (unit)', () => {
     expect(res.status).toBe(409);
     const body = await res.json();
     expect(body.code).toBe('CLASS_SCHEDULE_CONFLICT');
+    expect(String(body.message || body.error || '')).toContain('trung khung gio');
+    expect(String(body.message || body.error || '')).not.toMatch(/[ÃƒÃ‚Ã¢]/);
     expect(mocks.mockFindClassScheduleConflicts).toHaveBeenCalledWith(
       expect.objectContaining({
         excludeActivityId: 1,

@@ -137,6 +137,8 @@ describe('POST /api/activities', () => {
     expect(response.status).toBe(409);
     const body = await response.json();
     expect(body.code).toBe('CLASS_SCHEDULE_CONFLICT');
+    expect(String(body.message || body.error || '')).toContain('trung khung gio');
+    expect(String(body.message || body.error || '')).not.toMatch(/[ÃƒÃ‚Ã¢]/);
     expect(mocks.mockCreateActivity).not.toHaveBeenCalled();
   });
 });
