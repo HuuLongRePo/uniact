@@ -3053,6 +3053,37 @@ Sau khi code:
 
 - [x] `npm.cmd test -- test/polls-core-routes.test.ts test/teacher-polls-management-routes.test.ts test/teacher-poll-responses-route.test.ts test/teacher-poll-settings-route.test.ts test/teacher-poll-responses-page.test.tsx` -> PASS (5 files / 18 tests, 2026-04-25)
 
+## 9.81) Batch uu tien nong - timezone VN residual sweep (admin/student user-facing dates)
+
+### Muc tieu
+
+- Don residual date rendering con dung `toLocaleDateString(...)` de tranh lech ngay theo timezone may client.
+- Chuan hoa ve helper timezone VN cho cac surface user-facing con lai trong cum admin/student.
+
+### Viec can lam
+
+- [x] UI date formatting update:
+  - [x] `src/app/admin/attendance/page.tsx`
+    - [x] doi `new Date(...).toLocaleDateString()` -> `formatVietnamDateTime(..., 'date')`.
+  - [x] `src/app/admin/activities/ActivityTable.tsx`
+    - [x] doi `toLocaleDateString('vi-VN')` -> `formatVietnamDateTime(..., 'date')`.
+  - [x] `src/app/student/awards/history/page.tsx`
+    - [x] doi `toLocaleDateString('en-US', ...)` -> `formatVietnamWithOptions(..., ..., 'en-US')` de giu locale nhung chot timezone VN.
+- [x] Regression tests:
+  - [x] `test/admin-attendance-page.test.tsx` (moi)
+  - [x] `test/student-award-history-page.test.tsx` (moi)
+  - [x] `test/admin-activities-page.test.tsx` (bo sung assert date format table).
+
+### Risk / defer
+
+- [ ] Van con residual `toLocaleString/new Date` o nhieu module khac (bao gom route logs/internal timestamps) khong nam trong user-facing date scope batch nay.
+- [ ] `teacher/dashboard/page_old.tsx` la legacy page, chua uu tien cleanup timezone trong batch nay.
+
+### Verification
+
+- [x] `npm.cmd test -- test/admin-attendance-page.test.tsx test/student-award-history-page.test.tsx test/admin-activities-page.test.tsx` -> PASS (3 files / 7 tests, 2026-04-25)
+- [x] `npm.cmd run build` -> PASS (2026-04-25)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix

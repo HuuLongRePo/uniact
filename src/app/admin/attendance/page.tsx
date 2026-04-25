@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Calendar, Users, CheckCircle, XCircle, Edit2, Save } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import toast from 'react-hot-toast';
+import { formatVietnamDateTime } from '@/lib/timezone';
 
 interface AttendanceRecord {
   id: number;
@@ -199,7 +200,7 @@ export default function AttendanceManagementPage() {
                     <tr key={record.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 text-sm text-gray-900">{record.activityName}</td>
                       <td className="px-6 py-4 text-sm text-gray-500">
-                        {new Date(record.activityDate).toLocaleDateString()}
+                        {formatVietnamDateTime(record.activityDate, 'date')}
                       </td>
                       <td className="px-6 py-4">
                         <div>

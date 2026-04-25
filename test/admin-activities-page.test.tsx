@@ -143,6 +143,8 @@ describe('Admin activities page', () => {
       expect(screen.getByText('Approved Published Activity')).toBeInTheDocument();
     });
 
+    expect(screen.getByText('01/01/2099')).toBeInTheDocument();
+
     const selects = screen.getAllByRole('combobox');
 
     fireEvent.change(selects[0], { target: { value: 'published' } });

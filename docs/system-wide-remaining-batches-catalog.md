@@ -1,6 +1,6 @@
 # SYSTEM-WIDE REMAINING BATCHES CATALOG
 
-Ngay cap nhat: 2026-04-24
+Ngay cap nhat: 2026-04-25
 Nguon tong hop: release backbone todos + critical closeout todos + expansion/backlog docs + current API/UI/test surface
 
 ## Danh sach batch lon con lai
@@ -26,11 +26,11 @@ Nguon tong hop: release backbone todos + critical closeout todos + expansion/bac
 - DoD/test: route/page timezone regression bundle + build pass.
 - Do lon: XL.
 
-4. **[RB-04] Poll domain closeout (responses/settings/templates + student parity + text cleanup)**
-- Outcome cho end-user: poll teacher/student van hanh end-to-end, bao cao/export/cofig mau on dinh.
-- Pham vi: `/api/polls*`, `/api/teacher/polls*`, teacher/student polls pages, poll route tests, mojibake text tren polls.
-- Blocker/risk: hop dong cu/new payload va quyen truy cap.
-- DoD/test: route + page tests cho create/vote/detail/responses/settings/export, build xanh.
+4. **[RB-04] Poll UI text cleanup + final page parity residual**
+- Outcome cho end-user: poll teacher/student hien thi text nhat quan, khong mojibake, page-level parity day du.
+- Pham vi: `src/app/teacher/polls/[id]/page.tsx`, `src/app/student/polls/page.tsx`, poll page regressions.
+- Blocker/risk: sua text/page lon de va cham snapshot va i18n khong chuan.
+- DoD/test: page tests cho detail/vote/results, zero mojibake o poll pages user-facing.
 - Do lon: L.
 
 5. **[RB-05] Admin override + audit completeness**

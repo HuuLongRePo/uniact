@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Award, Calendar, TrendingUp } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { formatVietnamWithOptions } from '@/lib/timezone';
 
 interface AwardRecord {
   id: number;
@@ -115,11 +116,15 @@ export default function AwardHistoryPage() {
                           <div className="flex items-center gap-4 mt-3 text-sm text-gray-500">
                             <span className="flex items-center gap-1">
                               <Calendar className="w-4 h-4" />
-                              {new Date(award.awardedAt).toLocaleDateString('en-US', {
-                                year: 'numeric',
-                                month: 'long',
-                                day: 'numeric',
-                              })}
+                              {formatVietnamWithOptions(
+                                award.awardedAt,
+                                {
+                                  year: 'numeric',
+                                  month: 'long',
+                                  day: 'numeric',
+                                },
+                                'en-US'
+                              )}
                             </span>
                           </div>
                         </div>

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { CheckCircle, Eye, Edit, Trash2, XCircle, QrCode } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { Activity } from './types';
+import { formatVietnamDateTime } from '@/lib/timezone';
 
 type ActiveQrSessionSummary = {
   session_id: number;
@@ -140,7 +141,7 @@ export default function ActivityTable({
                       <div className="text-gray-500">{activity.organization_level}</div>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-900">
-                      {new Date(activity.date_time).toLocaleDateString('vi-VN')}
+                      {formatVietnamDateTime(activity.date_time, 'date')}
                     </td>
                     <td className="px-6 py-4 text-sm">
                       <div className="font-medium text-gray-900">
