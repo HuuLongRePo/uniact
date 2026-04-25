@@ -5,7 +5,7 @@ import { requireApiRole } from '@/lib/guards';
 import { formatVietnamDateTime, toVietnamDateStamp } from '@/lib/timezone';
 import { buildAttachmentContentDisposition } from '@/lib/content-disposition';
 
-// GET /api/users/export - Export danh sách người dùng ra CSV
+// GET /api/users/export - Export danh sach nguoi dung ra CSV
 export async function GET(request: NextRequest) {
   try {
     const user = await requireApiRole(request, ['admin']);
@@ -15,12 +15,11 @@ export async function GET(request: NextRequest) {
     const format = searchParams.get('format') || 'csv';
 
     if (!['admin', 'teacher', 'student'].includes(role)) {
-      return errorResponse(ApiError.validation('Vai trò không hợp lệ'));
+      return errorResponse(ApiError.validation('Vai tro khong hop le'));
     }
 
-    // Fetch users with stats
     const query = `
-      SELECT 
+      SELECT
         u.id,
         u.student_id,
         u.name,
@@ -45,35 +44,34 @@ export async function GET(request: NextRequest) {
     const users = await dbAll(query, [role]);
 
     if (format === 'csv') {
-      // Generate CSV
       const headers = [
         'ID',
-        'Mã học viên',
-        'Tên',
+        'Ma hoc vien',
+        'Ten',
         'Email',
-        'Vai trò',
-        'Lớp',
-        'Tổng điểm',
-        'Số hoạt động',
-        'Số giải thưởng',
-        'Ngày tạo',
+        'Vai tro',
+        'Lop',
+        'Tong diem',
+        'So hoat dong',
+        'So giai thuong',
+        'Ngay tao',
       ];
 
-      const rows = users.map((u: any) => [
-        u.id,
-        u.student_id || '',
-        u.name,
-        u.email,
-        u.role === 'student' ? 'Học viên' : u.role === 'teacher' ? 'Giảng viên' : 'Admin',
-        u.class_name || '',
-        u.total_points || 0,
-        u.activity_count || 0,
-        u.award_count || 0,
-        formatVietnamDateTime(u.created_at, 'date'),
+      const rows = users.map((row: any) => [
+        row.id,
+        row.student_id || '',
+        row.name,
+        row.email,
+        row.role === 'student' ? 'Hoc vien' : row.role === 'teacher' ? 'Giang vien' : 'Admin',
+        row.class_name || '',
+        row.total_points || 0,
+        row.activity_count || 0,
+        row.award_count || 0,
+        formatVietnamDateTime(row.created_at, 'date'),
       ]);
 
       const csvContent = [
-        '\uFEFF' + headers.join(','), // BOM for UTF-8
+        '\uFEFF' + headers.join(','),
         ...rows.map((row) => row.map((cell) => `"${cell}"`).join(',')),
       ].join('\n');
 
@@ -95,7 +93,6 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // JSON fallback
     await dbHelpers.createAuditLog(
       user.id,
       'EXPORT',
@@ -106,7 +103,7 @@ export async function GET(request: NextRequest) {
 
     return successResponse({ users });
   } catch (error: any) {
-    console.error('Lỗi export danh sách người dùng:', error);
-    return errorResponse(ApiError.internalError('Lỗi máy chủ'));
+    console.error('Loi export danh sach nguoi dung:', error);
+    return errorResponse(ApiError.internalError('Loi may chu'));
   }
 }

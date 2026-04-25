@@ -3792,6 +3792,32 @@ Sau khi code:
 
 - [x] `rg -n "docs/teacher-activity-form-analysis-prompt\\.md|docs/md-consolidation-plan\\.md" docs --glob "!docs/release-backbone-batch-todos.md" --glob "!docs/reference-prompts/md-consolidation-plan.md" --glob "!docs/reference-prompts/teacher-activity-form-analysis-prompt.md"` -> khong con reference path cu ngoai migration notes.
 
+## 9.106) Batch uu tien nong - sanitize legacy users export text + anti-mojibake guard
+
+### Muc tieu
+
+- Don text mojibake residual trong route legacy `GET /api/users/export` de thong diep/CSV labels on dinh.
+- Khoa regression bang assertions anti-mojibake trong route test vua bo sung o batch 9.104.
+
+### Viec can lam
+
+- [x] `src/app/api/users/export/route.ts`
+  - [x] chuan hoa message validation/internal error ve chuoi on dinh khong dau.
+  - [x] chuan hoa CSV headers/role labels ve chuoi on dinh khong mojibake.
+- [x] `test/users-export-route.test.ts`
+  - [x] assert message validation canonical: `Vai tro khong hop le`.
+  - [x] them guard `expectNoMojibake(...)` cho message + csv payload.
+
+### Risk / defer
+
+- [ ] Batch nay chua normalize toan bo message mojibake tren cac route export legacy khac.
+- [ ] Chon strategy chuoi khong dau de an toan encoding; can batch localization rieng neu muon dong nhat dau tieng Viet toan he thong.
+
+### Verification
+
+- [x] `npm.cmd test -- test/users-export-route.test.ts` -> PASS (1 file / 3 tests, 2026-04-25)
+- [x] `npm.cmd run build` -> PASS (2026-04-25)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix

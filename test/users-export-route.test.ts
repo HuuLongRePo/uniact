@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { expectNoMojibake } from './helpers/mojibake';
 
 const mocks = vi.hoisted(() => ({
   requireApiRole: vi.fn(),
@@ -44,6 +45,8 @@ describe('GET /api/users/export', () => {
     const body = await response.json();
     expect(body.success).toBe(false);
     expect(body.code).toBe('VALIDATION_ERROR');
+    expect(body.error).toBe('Vai tro khong hop le');
+    expectNoMojibake(body.error);
   });
 
   it('returns csv export with canonical utf-8 content-disposition', async () => {
@@ -76,6 +79,7 @@ describe('GET /api/users/export', () => {
     const bytes = new Uint8Array(await response.arrayBuffer());
     const csv = new TextDecoder('utf-8').decode(bytes);
     expect(Array.from(bytes.slice(0, 3))).toEqual([239, 187, 191]);
+    expectNoMojibake(csv);
     expect(csv).toContain('student.a@example.com');
     expect(csv).toContain('"Student A"');
     expect(mocks.createAuditLog).toHaveBeenCalledWith(
