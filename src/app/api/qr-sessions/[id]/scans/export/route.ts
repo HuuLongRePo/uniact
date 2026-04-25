@@ -144,7 +144,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     // 10. RETURN CSV FILE WITH PROPER HEADERS
-    const dateStr = toVietnamDateStamp(timestamp) || timestamp.split('T')[0];
+    const dateStr = toVietnamDateStamp(new Date());
     const filename = `diem-danh-${sessionId}-${dateStr}.csv`;
 
     return new NextResponse(csvContent, {

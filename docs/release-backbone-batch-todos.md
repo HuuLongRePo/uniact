@@ -3653,6 +3653,32 @@ Sau khi code:
 
 - [x] Kiem tra manual consistency: planner prompt + clone prompt da cung reference `docs/system-prompt-registry.md`.
 
+## 9.101) Batch uu tien nong - standardize VN date-stamp strategy for residual exports
+
+### Muc tieu
+
+- Dong bo cach tao date stamp trong filename export theo `toVietnamDateStamp(...)`.
+- Loai bo implementation le (`toVietnamDatetimeLocalValue(...).slice(0,10)` / fallback split ISO) o cac route residual.
+
+### Viec can lam
+
+- [x] `src/app/api/export/activity-participation/route.ts`
+  - [x] doi date stamp filename sang `toVietnamDateStamp(new Date())`.
+  - [x] bo import `toVietnamDatetimeLocalValue` khong con can.
+- [x] `src/app/api/qr-sessions/[id]/scans/export/route.ts`
+  - [x] chuan hoa date stamp filename sang `toVietnamDateStamp(new Date())`.
+  - [x] bo fallback `timestamp.split('T')[0]` trong ten file.
+
+### Risk / defer
+
+- [ ] Batch nay chi dong bo filename generation strategy, khong doi noi dung CSV.
+- [ ] Van con cac timestamp noi bo (audit/log/runtime) su dung ISO theo muc dich ky thuat, khong thuoc scope user-facing filename.
+
+### Verification
+
+- [x] `npm.cmd test -- test/export-residual-routes.test.ts test/timezone-export-filenames-route.test.ts` -> PASS (2 files / 5 tests, 2026-04-25)
+- [x] `npm.cmd run build` -> PASS (2026-04-25)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix

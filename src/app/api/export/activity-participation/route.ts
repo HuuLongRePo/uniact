@@ -11,7 +11,7 @@ import { getUserFromRequest } from '@/lib/guards';
 import Papa from 'papaparse';
 import { ApiError, errorResponse } from '@/lib/api-response';
 import { formatDate } from '@/lib/formatters';
-import { toVietnamDatetimeLocalValue } from '@/lib/timezone';
+import { toVietnamDateStamp } from '@/lib/timezone';
 import { buildAttachmentContentDisposition } from '@/lib/content-disposition';
 
 export async function GET(request: NextRequest) {
@@ -102,7 +102,7 @@ export async function GET(request: NextRequest) {
     // Add BOM for Excel UTF-8 support
     const csvWithBOM = '\uFEFF' + csv;
 
-    const filename = `activity-${activityId}-participants-${toVietnamDatetimeLocalValue(new Date()).slice(0, 10)}.csv`;
+    const filename = `activity-${activityId}-participants-${toVietnamDateStamp(new Date())}.csv`;
 
     // Return CSV file
     return new NextResponse(csvWithBOM, {
