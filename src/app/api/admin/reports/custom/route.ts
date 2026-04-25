@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireApiRole } from '@/lib/guards';
 import { dbAll } from '@/lib/database';
 import { ApiError, errorResponse } from '@/lib/api-response';
+import { buildAttachmentContentDisposition } from '@/lib/content-disposition';
 
 type ReportType = 'activities' | 'participants' | 'scores' | 'awards';
 
@@ -291,7 +292,7 @@ export async function POST(request: NextRequest) {
       status: 200,
       headers: {
         'Content-Type': 'text/csv; charset=utf-8',
-        'Content-Disposition': `attachment; filename="${filename}"`,
+        'Content-Disposition': buildAttachmentContentDisposition(filename),
       },
     });
   } catch (error: unknown) {

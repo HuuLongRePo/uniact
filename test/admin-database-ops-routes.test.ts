@@ -98,6 +98,7 @@ describe('admin database/system ops routes', () => {
 
     expect(response.status).toBe(200);
     expect(response.headers.get('Content-Disposition')).toContain('backup-1.db');
+    expect(response.headers.get('Content-Disposition')).toContain("filename*=UTF-8''");
   });
 
   it('creates backup with vietnam timestamp filename and canonical payload', async () => {

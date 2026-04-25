@@ -4,6 +4,7 @@ import { getUserFromRequest } from '@/lib/guards';
 import Papa from 'papaparse';
 import { ApiError, errorResponse } from '@/lib/api-response';
 import { toVietnamDateStamp } from '@/lib/timezone';
+import { buildAttachmentContentDisposition } from '@/lib/content-disposition';
 
 // GET /api/export/users?format=csv|excel
 export async function GET(request: NextRequest) {
@@ -84,7 +85,7 @@ export async function GET(request: NextRequest) {
     return new NextResponse('\uFEFF' + csv, {
       headers: {
         'Content-Type': 'text/csv; charset=utf-8',
-        'Content-Disposition': `attachment; filename="${filename}"`,
+        'Content-Disposition': buildAttachmentContentDisposition(filename),
       },
     });
   }

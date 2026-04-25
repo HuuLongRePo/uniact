@@ -67,7 +67,7 @@ describe('admin backup and rankings routes', () => {
 
     expect(response.status).toBe(200);
     expect(response.headers.get('Content-Disposition')).toMatch(
-      /^attachment; filename="uniact-\d{4}-\d{2}-\d{2}_\d{2}-\d{2}\.db"$/
+      /^attachment; filename="uniact-\d{4}-\d{2}-\d{2}_\d{2}-\d{2}\.db"; filename\*=UTF-8''uniact-\d{4}-\d{2}-\d{2}_\d{2}-\d{2}\.db$/
     );
   });
 

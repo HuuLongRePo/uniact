@@ -4,6 +4,7 @@ import { dbHelpers, dbAll } from '@/lib/database';
 import Papa from 'papaparse';
 import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
 import { toVietnamDateStamp } from '@/lib/timezone';
+import { buildAttachmentContentDisposition } from '@/lib/content-disposition';
 
 export async function GET(request: NextRequest) {
   try {
@@ -66,7 +67,7 @@ export async function GET(request: NextRequest) {
       status: 200,
       headers: {
         'Content-Type': 'text/csv; charset=utf-8',
-        'Content-Disposition': `attachment; filename="${filename}"`,
+        'Content-Disposition': buildAttachmentContentDisposition(filename),
       },
     });
   } catch (error: any) {

@@ -69,7 +69,7 @@ describe('GET /api/export/users', () => {
     expect(response.status).toBe(200);
     expect(mocks.mockDbReady).toHaveBeenCalled();
     expect(response.headers.get('Content-Disposition')).toMatch(
-      /^attachment; filename="users-export-\d{4}-\d{2}-\d{2}\.csv"$/
+      /^attachment; filename="users-export-\d{4}-\d{2}-\d{2}\.csv"; filename\*=UTF-8''users-export-\d{4}-\d{2}-\d{2}\.csv$/
     );
 
     const bytes = new Uint8Array(await response.arrayBuffer());

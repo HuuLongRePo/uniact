@@ -3,6 +3,7 @@ import { getUserFromRequest } from '@/lib/guards';
 import { dbHelpers } from '@/lib/database';
 import { ApiError, errorResponse } from '@/lib/api-response';
 import { toVietnamFileTimestamp } from '@/lib/timezone';
+import { buildAttachmentContentDisposition } from '@/lib/content-disposition';
 
 function toCsvValue(value: any): string {
   if (value === null || value === undefined) return '';
@@ -73,7 +74,7 @@ export async function GET(request: NextRequest) {
       status: 200,
       headers: {
         'Content-Type': 'text/csv; charset=utf-8',
-        'Content-Disposition': `attachment; filename="${filename}"`,
+        'Content-Disposition': buildAttachmentContentDisposition(filename),
       },
     });
   } catch (error: any) {

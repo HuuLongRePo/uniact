@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireApiRole } from '@/lib/guards';
 import { ApiError, errorResponse } from '@/lib/api-response';
+import { buildAttachmentContentDisposition } from '@/lib/content-disposition';
 import fs from 'fs';
 import path from 'path';
 
@@ -33,7 +34,7 @@ export async function GET(request: NextRequest) {
     return new NextResponse(fileBuffer, {
       headers: {
         'Content-Type': 'application/octet-stream',
-        'Content-Disposition': `attachment; filename="${filename}"`,
+        'Content-Disposition': buildAttachmentContentDisposition(filename),
       },
     });
   } catch (error: any) {

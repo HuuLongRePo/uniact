@@ -3,6 +3,7 @@ import { dbAll, dbHelpers } from '@/lib/database';
 import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
 import { requireApiRole } from '@/lib/guards';
 import { formatVietnamDateTime, toVietnamDateStamp } from '@/lib/timezone';
+import { buildAttachmentContentDisposition } from '@/lib/content-disposition';
 
 // GET /api/users/export - Export danh sách người dùng ra CSV
 export async function GET(request: NextRequest) {
@@ -89,7 +90,7 @@ export async function GET(request: NextRequest) {
       return new NextResponse(csvContent, {
         headers: {
           'Content-Type': 'text/csv; charset=utf-8',
-          'Content-Disposition': `attachment; filename="${filename}"`,
+          'Content-Disposition': buildAttachmentContentDisposition(filename),
         },
       });
     }

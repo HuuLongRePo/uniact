@@ -3306,6 +3306,43 @@ Sau khi code:
 - [x] `npm.cmd test -- test/content-disposition.test.ts test/timezone-export-filenames-route.test.ts test/teacher-poll-responses-route.test.ts` -> PASS (3 files / 8 tests, 2026-04-25)
 - [x] `npm.cmd run build` -> PASS (2026-04-25)
 
+## 9.89) Batch uu tien nong - mo rong Content-Disposition helper cho export routes con lai
+
+### Muc tieu
+
+- Mo rong helper `buildAttachmentContentDisposition` sang cac route export user-facing con dang tra ve `filename` don le.
+- Dong bo hanh vi download giua admin/teacher/student exports de tranh sai ten file tren trinh duyet khac nhau.
+- Tiep tuc giam debt timezone/export filename trong RB-03 bang patch theo cum lon.
+
+### Viec can lam
+
+- [x] Ap helper vao route exports:
+  - [x] `src/app/api/export/users/route.ts`
+  - [x] `src/app/api/users/export/route.ts`
+  - [x] `src/app/api/export/attendance/route.ts`
+  - [x] `src/app/api/export/scoreboard/route.ts`
+  - [x] `src/app/api/reports/participation/route.ts`
+  - [x] `src/app/api/admin/backup/route.ts`
+  - [x] `src/app/api/admin/database/download/route.ts`
+  - [x] `src/app/api/admin/reports/custom/route.ts`
+  - [x] `src/app/api/bonus/reports/route.ts`
+- [x] Cap nhat regression tests co assert `Content-Disposition`:
+  - [x] `test/export-users-route.test.ts`
+  - [x] `test/export.test.ts`
+  - [x] `test/participation-report-route.test.ts`
+  - [x] `test/admin-backup-and-rankings-routes.test.ts`
+  - [x] `test/admin-database-ops-routes.test.ts`
+
+### Risk / defer
+
+- [ ] Van con mot so route export dang hardcode `Content-Disposition` ma chua migrate helper (se tiep tuc theo domain de giam risk regression).
+- [ ] Cac route duoc cap nhat nhung chua co test rieng cho tung nhanh (vd: `admin/reports/custom`, `bonus/reports`) hien duoc bao boi build/typecheck.
+
+### Verification
+
+- [x] `npm.cmd test -- test/export-users-route.test.ts test/export.test.ts test/participation-report-route.test.ts test/admin-backup-and-rankings-routes.test.ts test/admin-database-ops-routes.test.ts` -> PASS (5 files / 24 tests, 2026-04-25)
+- [x] `npm.cmd run build` -> PASS (2026-04-25)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix

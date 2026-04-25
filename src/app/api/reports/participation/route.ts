@@ -3,6 +3,7 @@ import { getUserFromToken } from '@/lib/auth';
 import { dbAll } from '@/lib/database';
 import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
 import { toVietnamDateStamp } from '@/lib/timezone';
+import { buildAttachmentContentDisposition } from '@/lib/content-disposition';
 
 interface ParticipationReportRow {
   id: number;
@@ -116,7 +117,7 @@ export async function GET(request: NextRequest) {
       return new NextResponse(csv, {
         headers: {
           'Content-Type': 'text/csv; charset=utf-8',
-          'Content-Disposition': `attachment; filename="${filename}"`,
+          'Content-Disposition': buildAttachmentContentDisposition(filename),
         },
       });
     }

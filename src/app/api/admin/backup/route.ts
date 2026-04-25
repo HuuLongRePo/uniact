@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireApiRole } from '@/lib/guards';
 import { ApiError, errorResponse } from '@/lib/api-response';
 import { toVietnamFileTimestamp } from '@/lib/timezone';
+import { buildAttachmentContentDisposition } from '@/lib/content-disposition';
 import fs from 'fs';
 import path from 'path';
 
@@ -25,7 +26,7 @@ export async function POST(request: NextRequest) {
     return new NextResponse(dbBuffer, {
       headers: {
         'Content-Type': 'application/octet-stream',
-        'Content-Disposition': `attachment; filename="${filename}"`,
+        'Content-Disposition': buildAttachmentContentDisposition(filename),
         'Content-Length': dbBuffer.length.toString(),
       },
     });

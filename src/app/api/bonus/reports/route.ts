@@ -14,6 +14,7 @@ import {
 } from '@/lib/bonus-reports';
 import { getUserFromSession } from '@/lib/auth';
 import { ApiError, successResponse, errorResponse } from '@/lib/api-response';
+import { buildAttachmentContentDisposition } from '@/lib/content-disposition';
 
 /**
  * GET /api/bonus/reports
@@ -76,7 +77,7 @@ export async function GET(req: NextRequest) {
         status: 200,
         headers: {
           'Content-Type': 'text/csv; charset=utf-8',
-          'Content-Disposition': `attachment; filename="${filename}"`,
+          'Content-Disposition': buildAttachmentContentDisposition(filename),
         },
       });
     }
@@ -102,7 +103,7 @@ export async function GET(req: NextRequest) {
         status: 200,
         headers: new Headers({
           'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-          'Content-Disposition': `attachment; filename="${filename}"`,
+          'Content-Disposition': buildAttachmentContentDisposition(filename),
         }),
       });
     }
