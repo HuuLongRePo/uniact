@@ -3209,6 +3209,38 @@ Sau khi code:
 
 - [x] `npm.cmd test -- test/polls-core-routes.test.ts test/teacher-polls-management-routes.test.ts test/admin-database-ops-routes.test.ts` -> PASS (3 files / 21 tests, 2026-04-25)
 
+## 9.86) Batch uu tien nong - admin database backups API parity (list/delete)
+
+### Muc tieu
+
+- Dong bo backend cho UI `/admin/backup`: bo sung namespace con thieu `/api/admin/database/backups` va `/api/admin/database/backups/[filename]`.
+- Dam bao luong backup management day du: liet ke backup + xoa backup + audit log.
+- Khoa regression route-level cho list/delete de tranh vo flow van hanh backup.
+
+### Viec can lam
+
+- [x] Them route list backup:
+  - [x] `src/app/api/admin/database/backups/route.ts` (moi)
+  - [x] quet file `.db` trong thu muc `backups/`
+  - [x] merge metadata tu `backup_history` neu co, fallback theo file stats.
+- [x] Them route xoa backup:
+  - [x] `src/app/api/admin/database/backups/[filename]/route.ts` (moi)
+  - [x] validate filename (chan path traversal)
+  - [x] xoa file + cleanup `backup_history` + ghi `audit_logs` action `DATABASE_BACKUP_DELETE`.
+- [x] Them route tests:
+  - [x] `test/admin-database-backups-routes.test.ts` (moi)
+  - [x] cover list success, empty dir, delete success, invalid filename.
+
+### Risk / defer
+
+- [ ] Chua bo sung soft-delete/retention policy cho backup files; hien tai xoa la xoa vat ly ngay.
+- [ ] Chua bo sung filter/pagination cho danh sach backup neu so luong file qua lon.
+
+### Verification
+
+- [x] `npm.cmd test -- test/admin-database-backups-routes.test.ts test/admin-database-ops-routes.test.ts` -> PASS (2 files / 11 tests, 2026-04-25)
+- [x] `npm.cmd run build` -> PASS (2026-04-25)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix

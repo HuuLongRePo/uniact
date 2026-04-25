@@ -88,6 +88,8 @@ backups/
 *.backup
 *.bak
 artifacts/
+!src/app/api/admin/database/backups/
+!src/app/api/admin/database/backups/**
 
 # vercel
 .vercel
