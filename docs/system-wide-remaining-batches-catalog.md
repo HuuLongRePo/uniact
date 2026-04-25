@@ -89,11 +89,12 @@ Nguon tong hop: release backbone todos + critical closeout todos + expansion/bac
 - Cap nhat 2026-04-25 (tiep 5): da chuan hoa message `CLASS_SCHEDULE_CONFLICT` cho create/update activity routes va bo sung regression assertions anti-mojibake (batch 9.94); RB-10 con cleanup fixture text mojibake trong test UI va hop nhat docs con trung lap.
 - Cap nhat 2026-04-25 (tiep 6): da don mojibake fixtures cho teacher create/edit activity page tests (`test/teacher-create-activity-page.test.tsx`, `test/teacher-edit-activity-page.test.tsx`) trong batch 9.95; RB-10 con quet tiep cac test/UI fixtures residual khac theo domain.
 - Cap nhat 2026-04-25 (tiep 7): da don residual mojibake matcher trong `test/admin-approvals-page.test.tsx` va `test/uat/helpers/student.helper.ts` (batch 9.96); RB-10 con tiep tuc cleanup anti-pattern docs/prompt trung lap.
-- Cap nhat 2026-04-25 (tiep 8): da don path mojibake trong `docs/codex-batch-prompts.md` (batch 9.97); RB-10 con tiep tuc gom/cat tai lieu prompt trung lap theo module.
+- Cap nhat 2026-04-25 (tiep 8): da don path mojibake trong `docs/reference-prompts/codex-batch-prompts.md` (batch 9.97); RB-10 con tiep tuc gom/cat tai lieu prompt trung lap theo module.
 - Cap nhat 2026-04-25 (tiep 9): da centralize anti-mojibake assertions qua helper `test/helpers/mojibake.ts` va refactor 8 test files de bo regex literal `Ã...` (batch 9.98); RB-10 con tiep tuc gom tai lieu prompt trung lap va don docs conflict theo module.
 - Cap nhat 2026-04-25 (tiep 10): da migrate route `GET /api/activities/[id]/files/[fileId]/download` sang helper `buildAttachmentContentDisposition` va bo sung regression test header UTF-8 (batch 9.99); RB-10 con tiep tuc quet tiep route download/static con implementation rieng.
 - Cap nhat 2026-04-25 (tiep 11): da tao `docs/system-prompt-registry.md` lam canonical map + de-conflict rules, va dong bo planner/clone prompts tham chieu registry (batch 9.100); RB-10 con phase tiep theo de archive/gop vat ly prompt docs reference-only.
 - Cap nhat 2026-04-25 (tiep 12): da chuan hoa strategy date stamp filename cho residual exports (`export/activity-participation`, `qr-sessions/[id]/scans/export`) sang `toVietnamDateStamp(new Date())` (batch 9.101); RB-03/RB-10 con sweep timezone residual tren cac flow user-facing ngoai cum export da harden.
+- Cap nhat 2026-04-25 (tiep 13): da archive vat ly 5 prompt reference-only vao `docs/reference-prompts/` va cap nhat registry/references lien quan (batch 9.102); RB-10 con backlog merge/noi dung prompt trung lap theo domain.
 - Blocker/risk: xoa nham tai lieu tham chieu con dung.
 - DoD/test: manifest truoc-sau cleanup + link/docs integrity checks + build/test smoke.
 - Do lon: L.

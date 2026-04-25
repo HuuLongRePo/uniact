@@ -41,11 +41,11 @@ Danh sach pack hien hanh:
 
 ## 3) Prompt docs chi de tham khao (khong lam nguon su that chinh)
 
-- `docs/codex-batch-prompts.md`
-- `docs/system-completion-expansion-prompts.md`
-- `docs/critical-flow-closeout-prompt.md`
-- `docs/attendance-timezone-face-closeout-prompt.md`
-- `docs/demo-data-refresh-prompt.md`
+- `docs/reference-prompts/codex-batch-prompts.md`
+- `docs/reference-prompts/system-completion-expansion-prompts.md`
+- `docs/reference-prompts/critical-flow-closeout-prompt.md`
+- `docs/reference-prompts/attendance-timezone-face-closeout-prompt.md`
+- `docs/reference-prompts/demo-data-refresh-prompt.md`
 
 Nguyen tac:
 - Khong dung cac file tren de override backlog canonical.

@@ -1816,7 +1816,7 @@ Yeu cau:
 
 - [x] Them docs:
   - [x] `docs/attendance-operator-guides.md`
-  - [x] `docs/attendance-timezone-face-closeout-prompt.md`
+  - [x] `docs/reference-prompts/attendance-timezone-face-closeout-prompt.md`
 - [x] Chot ro hien trang:
   - [x] QR deep link fallback la kenh uu tien khi camera web bi chan.
   - [x] Face attendance hien tai la pilot/QA flow, chua ho tro nhieu khuon mat cung luc.
@@ -3552,7 +3552,7 @@ Sau khi code:
 
 ### Viec can lam
 
-- [x] `docs/codex-batch-prompts.md`
+- [x] `docs/reference-prompts/codex-batch-prompts.md`
   - [x] sua path `OneDrive/MÃ¡y tÃ­nh` -> `OneDrive/Máy tính` o batch 4 prompt.
 - [x] Re-scan docs (khong tinh archive), khong con chuoi path mojibake.
 
@@ -3678,6 +3678,37 @@ Sau khi code:
 
 - [x] `npm.cmd test -- test/export-residual-routes.test.ts test/timezone-export-filenames-route.test.ts` -> PASS (2 files / 5 tests, 2026-04-25)
 - [x] `npm.cmd run build` -> PASS (2026-04-25)
+
+## 9.102) Batch uu tien nong - physical archive cho reference-only prompts
+
+### Muc tieu
+
+- Giam sprawl tai lieu prompt bang cach chuyen nhom prompt reference-only vao 1 thu muc rieng.
+- Dong bo lai registry + references de tranh path drift sau cleanup vat ly.
+
+### Viec can lam
+
+- [x] Tao thu muc archive tham chieu:
+  - [x] `docs/reference-prompts/`
+- [x] Di chuyen 5 file prompt reference-only:
+  - [x] `docs/codex-batch-prompts.md` -> `docs/reference-prompts/codex-batch-prompts.md`
+  - [x] `docs/system-completion-expansion-prompts.md` -> `docs/reference-prompts/system-completion-expansion-prompts.md`
+  - [x] `docs/critical-flow-closeout-prompt.md` -> `docs/reference-prompts/critical-flow-closeout-prompt.md`
+  - [x] `docs/attendance-timezone-face-closeout-prompt.md` -> `docs/reference-prompts/attendance-timezone-face-closeout-prompt.md`
+  - [x] `docs/demo-data-refresh-prompt.md` -> `docs/reference-prompts/demo-data-refresh-prompt.md`
+- [x] Cap nhat references:
+  - [x] `docs/system-prompt-registry.md`
+  - [x] `docs/release-backbone-batch-todos.md`
+  - [x] `docs/system-wide-remaining-batches-catalog.md`
+
+### Risk / defer
+
+- [ ] Batch nay chua xoa noi dung prompt trung lap; moi don theo cap folder + governance.
+- [ ] Can batch tiep theo de quyet dinh gom/noi dung giua `reference-prompts` va cac domain analysis packs.
+
+### Verification
+
+- [x] `rg -n "docs/(codex-batch-prompts|system-completion-expansion-prompts|critical-flow-closeout-prompt|attendance-timezone-face-closeout-prompt|demo-data-refresh-prompt)\\.md" docs --glob "!docs/release-backbone-batch-todos.md"` -> khong con tham chieu path cu ngoai migration note.
 
 ## 10) Ke hoach commit de xuat
 
