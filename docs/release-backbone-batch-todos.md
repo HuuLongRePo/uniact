@@ -3155,6 +3155,35 @@ Sau khi code:
 - [x] `npm.cmd test -- test/student-polls-page.test.tsx test/teacher-poll-detail-page.test.tsx test/polls-core-routes.test.ts test/teacher-polls-management-routes.test.ts` -> PASS (4 files / 14 tests, 2026-04-25)
 - [x] `npm.cmd run build` -> PASS (2026-04-25)
 
+## 9.84) Batch uu tien nong - timezone VN cho admin database backup/restore filenames
+
+### Muc tieu
+
+- Loai bo timestamp UTC/`Date.now()` trong backup filename cua namespace `/api/admin/database/*`.
+- Dong bo ten file backup/safety-backup theo helper timezone VN de tranh drift ngay khi van hanh qua moc 00:00.
+- Bo sung regression test route-level de khoa format filename.
+
+### Viec can lam
+
+- [x] `src/app/api/admin/database/backup/route.ts`
+  - [x] doi filename tu `uniact_backup_${date}_${Date.now()}.db` sang `uniact_backup_${toVietnamFileTimestamp(new Date())}.db`.
+- [x] `src/app/api/admin/database/restore/route.ts`
+  - [x] doi safety backup filename sang `pre_restore_${toVietnamFileTimestamp(new Date())}.db`.
+- [x] `test/admin-database-ops-routes.test.ts`
+  - [x] bo sung test cho `POST /api/admin/database/backup` assert format filename timestamp VN.
+  - [x] cap nhat test restore assert `safety_backup` theo format VN.
+  - [x] bo sung mock `mkdirSync` + fix mock admin user co `email` de khop contract route.
+
+### Risk / defer
+
+- [ ] UI `admin/backup/page.tsx` van con residual mojibake text legacy; batch nay chi uu tien timezone filename + route regression.
+- [ ] Cac route noi bo khac dung `Date.now()` cho ten file khong user-facing (vd QR logo upload) khong nam trong scope batch nay.
+
+### Verification
+
+- [x] `npm.cmd test -- test/admin-database-ops-routes.test.ts` -> PASS (1 file / 7 tests, 2026-04-25)
+- [x] `npm.cmd run build` -> PASS (2026-04-25)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix

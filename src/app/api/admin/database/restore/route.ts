@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { dbRun } from '@/lib/database';
 import { requireApiRole } from '@/lib/guards';
 import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
+import { toVietnamFileTimestamp } from '@/lib/timezone';
 import fs from 'fs';
 import path from 'path';
 
@@ -41,7 +42,11 @@ export async function POST(request: NextRequest) {
       return errorResponse(ApiError.notFound('Không tìm thấy cơ sở dữ liệu hiện tại'));
     }
 
-    const safetyBackup = path.join(process.cwd(), 'backups', `pre_restore_${Date.now()}.db`);
+    const safetyBackup = path.join(
+      process.cwd(),
+      'backups',
+      `pre_restore_${toVietnamFileTimestamp(new Date())}.db`
+    );
     fs.copyFileSync(dbPath, safetyBackup);
     fs.copyFileSync(backupPath, dbPath);
 

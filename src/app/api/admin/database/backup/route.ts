@@ -3,6 +3,7 @@ import { requireApiRole } from '@/lib/guards';
 import { rateLimit } from '@/lib/rateLimit';
 import { dbRun } from '@/lib/database';
 import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
+import { toVietnamFileTimestamp } from '@/lib/timezone';
 import fs from 'fs';
 import path from 'path';
 
@@ -18,8 +19,8 @@ export async function POST(request: NextRequest) {
 
     const user = await requireApiRole(request, ['admin']);
 
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').split('T')[0];
-    const filename = `uniact_backup_${timestamp}_${Date.now()}.db`;
+    const timestamp = toVietnamFileTimestamp(new Date());
+    const filename = `uniact_backup_${timestamp}.db`;
 
     const dbPath = path.join(process.cwd(), 'uniact.db');
     const backupDir = path.join(process.cwd(), 'backups');
