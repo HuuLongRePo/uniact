@@ -24,7 +24,7 @@ function parseQrPayload(rawValue: string): ParsedQrPayload {
   const trimmed = rawValue.trim();
 
   if (!trimmed) {
-    throw new Error('Mã QR trống. Vui lòng thử lại.');
+    throw new Error('Ma QR trong. Vui long thu lai.');
   }
 
   const extractPayload = (payload: Record<string, unknown>): ParsedQrPayload | null => {
@@ -57,7 +57,6 @@ function parseQrPayload(rawValue: string): ParsedQrPayload {
     return payload;
   };
 
-  // Support full URLs embedded into QR (e.g. http(s)://host/student/check-in?s=...&t=...)
   try {
     const url = new URL(trimmed);
     const payload = tryParseAsUrlSearchParams(url.searchParams);
@@ -70,7 +69,7 @@ function parseQrPayload(rawValue: string): ParsedQrPayload {
     if (payload) return payload;
   }
 
-  throw new Error('Mã QR không đúng định dạng mới. Vui lòng yêu cầu giảng viên tạo lại mã QR.');
+  throw new Error('Ma QR khong dung dinh dang moi. Vui long yeu cau giang vien tao lai ma QR.');
 }
 
 async function validateAttendance(payload: ParsedQrPayload) {
@@ -81,7 +80,7 @@ async function validateAttendance(payload: ParsedQrPayload) {
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    throw new AttendanceValidationError(data?.message || 'Xác thực thất bại', res.status);
+    throw new AttendanceValidationError(data?.message || 'Xac thuc that bai', res.status);
   }
   return data;
 }
@@ -111,59 +110,49 @@ export default function StudentCheckInPage() {
   }, [searchParams]);
 
   useEffect(() => {
-    let cancelled = false;
+    setAutoCheckinState('idle');
+    setAutoCheckinError(null);
+  }, [deepLinkPayload?.qr_token, deepLinkPayload?.session_id]);
 
-    if (!deepLinkPayload) {
-      setAutoCheckinState('idle');
-      setAutoCheckinError(null);
-      return;
-    }
+  const handleDeepLinkCheckin = async () => {
+    if (!deepLinkPayload) return;
 
     setAutoCheckinState('checking');
     setAutoCheckinError(null);
 
-    void (async () => {
-      try {
-        const result = await validateAttendance(deepLinkPayload);
-        if (cancelled) return;
-        setAutoCheckinState('success');
-        toast.success(result?.message || 'Điểm danh thành công');
-      } catch (err: unknown) {
-        if (cancelled) return;
+    try {
+      const result = await validateAttendance(deepLinkPayload);
+      setAutoCheckinState('success');
+      toast.success(result?.message || 'Diem danh thanh cong');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Xac thuc that bai';
+      const status = err instanceof AttendanceValidationError ? err.status : null;
+      const normalized = message.toLowerCase();
 
-        const message = err instanceof Error ? err.message : 'Xác thực thất bại';
-        const status = err instanceof AttendanceValidationError ? err.status : null;
-        const normalized = message.toLowerCase();
-
-        if (status === 403) {
-          setAutoCheckinState('error');
-          setAutoCheckinError('Tài khoản hiện tại không đủ quyền điểm danh phiên QR này.');
-          return;
-        }
-
-        if (
-          status === 401 ||
-          normalized.includes('không có quyền') ||
-          normalized.includes('unauthorized') ||
-          normalized.includes('forbidden') ||
-          normalized.includes('chưa đăng nhập') ||
-          normalized.includes('đăng nhập')
-        ) {
-          setAutoCheckinState('needs_login');
-          const next = `${pathname}?${searchParams.toString()}`;
-          router.push(`/login?next=${encodeURIComponent(next)}`);
-          return;
-        }
-
+      if (status === 403) {
         setAutoCheckinState('error');
-        setAutoCheckinError(message);
+        setAutoCheckinError('Tai khoan hien tai khong du quyen diem danh phien QR nay.');
+        return;
       }
-    })();
 
-    return () => {
-      cancelled = true;
-    };
-  }, [deepLinkPayload, pathname, router, searchParams]);
+      if (
+        status === 401 ||
+        normalized.includes('khong co quyen') ||
+        normalized.includes('unauthorized') ||
+        normalized.includes('forbidden') ||
+        normalized.includes('chua dang nhap') ||
+        normalized.includes('dang nhap')
+      ) {
+        setAutoCheckinState('needs_login');
+        const next = `${pathname}?${searchParams.toString()}`;
+        router.push(`/login?next=${encodeURIComponent(next)}`);
+        return;
+      }
+
+      setAutoCheckinState('error');
+      setAutoCheckinError(message);
+    }
+  };
 
   return (
     <div className="page-shell">
@@ -171,16 +160,16 @@ export default function StudentCheckInPage() {
         <div className="border-b border-gray-200 px-5 py-5 sm:px-7">
           <div className="max-w-3xl space-y-2">
             <div className="inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold tracking-wide text-blue-800">
-              Điểm danh QR cho học viên
+              Diem danh QR cho hoc vien
             </div>
-            <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">Điểm danh hoạt động</h1>
+            <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">Diem danh hoat dong</h1>
             <p className="text-sm leading-6 text-gray-600 sm:text-base">
-              Giảng viên tạo mã QR tại trang quản lý điểm danh. Học viên dùng trang này để quét mã
-              và xác thực tham gia.
+              Giang vien tao ma QR tai trang quan ly diem danh. Hoc vien dung trang nay de quet ma va
+              xac thuc tham gia.
             </p>
             {activityId && (
               <div className="inline-flex rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700">
-                Hoạt động #{activityId}
+                Hoat dong #{activityId}
               </div>
             )}
           </div>
@@ -189,18 +178,30 @@ export default function StudentCheckInPage() {
         <div className="space-y-6 px-5 py-6 sm:px-7">
           {deepLinkPayload && (
             <div className="content-card space-y-1 p-4 text-sm sm:p-5">
-              <div className="font-semibold text-gray-900">Đang xử lý điểm danh từ đường link...</div>
+              <div className="font-semibold text-gray-900">Phat hien du lieu diem danh tu duong link</div>
               <div className="text-xs text-gray-600">
-                Phiên #{deepLinkPayload.session_id} • Mã: {deepLinkPayload.qr_token.slice(0, 6)}…
+                Phien #{deepLinkPayload.session_id} - Ma: {deepLinkPayload.qr_token.slice(0, 6)}...
+              </div>
+              <div className="text-xs text-gray-600">
+                Bam nut xac nhan ben duoi de tien hanh diem danh.
               </div>
               {autoCheckinState === 'checking' && (
-                <div className="text-xs text-gray-600">Đang xác thực, vui lòng chờ.</div>
+                <div className="text-xs text-gray-600">Dang xac thuc, vui long cho.</div>
               )}
               {autoCheckinState === 'success' && (
-                <div className="text-xs text-emerald-700">Đã điểm danh thành công.</div>
+                <div className="text-xs text-emerald-700">Da diem danh thanh cong.</div>
               )}
               {autoCheckinState === 'error' && autoCheckinError && (
                 <div className="text-xs text-red-700">{autoCheckinError}</div>
+              )}
+              {autoCheckinState !== 'success' && (
+                <button
+                  type="button"
+                  onClick={() => void handleDeepLinkCheckin()}
+                  className="mt-2 inline-flex items-center rounded-xl bg-blue-600 px-3.5 py-2 text-xs font-semibold text-white transition-colors hover:bg-blue-700"
+                >
+                  Xac nhan diem danh
+                </button>
               )}
             </div>
           )}
@@ -209,23 +210,23 @@ export default function StudentCheckInPage() {
             onScan={async (rawValue) => {
               const payload = parseQrPayload(rawValue);
               const result = await validateAttendance(payload);
-              toast.success(result?.message || 'Điểm danh thành công');
+              toast.success(result?.message || 'Diem danh thanh cong');
             }}
           />
 
           <section className="content-card space-y-2 p-4 text-xs text-gray-600 sm:p-5">
             <p>
-              Mã QR hợp lệ phải chứa cả <code>session_id</code> và <code>qr_token</code>. Nếu camera
-              không nhận diện được, bạn có thể dán nguyên dữ liệu QR để điểm danh thủ công.
+              Ma QR hop le phai chua ca <code>session_id</code> va <code>qr_token</code>. Neu camera
+              khong nhan dien duoc, ban co the dan nguyen du lieu QR de diem danh thu cong.
             </p>
             <p>
-              Nếu báo hết hạn, phiên QR đã đóng hoặc đã đổi mã mới. Hãy liên hệ giảng viên để mở lại
-              phiên điểm danh.
+              Neu bao het han, phien QR da dong hoac da doi ma moi. Hay lien he giang vien de mo lai
+              phien diem danh.
             </p>
             <p>
-              Khi học viên quét bằng app camera/QR bên ngoài và mở đúng link
-              <code> /student/check-in?s=...&t=...</code>, trang này sẽ tự động điểm danh ngay sau
-              khi đăng nhập đúng tài khoản thuộc phạm vi phiên QR.
+              Khi hoc vien quet bang app camera/QR ben ngoai va mo dung link
+              <code> /student/check-in?s=...&t=...</code>, trang nay se hien thong tin phien va cho
+              hoc vien bam nut xac nhan diem danh.
             </p>
           </section>
         </div>
