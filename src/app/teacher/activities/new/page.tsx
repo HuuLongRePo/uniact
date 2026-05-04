@@ -504,8 +504,13 @@ export default function CreateActivityPage() {
     setVoluntaryClassIds([]);
     setMandatoryStudentIds([]);
     setVoluntaryStudentIds([]);
+    setAppliesToAllStudents(false);
+    setStudentOptions([]);
+    setStudentsLoaded(false);
+    setStudentsLoading(false);
     setClassScheduleConflicts([]);
     setClassScheduleConflictError(null);
+    setCheckingClassScheduleConflict(false);
     setQuickTemplateId('');
     setActivityTypeId('');
     setOrganizationLevelId('');

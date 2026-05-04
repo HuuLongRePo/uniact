@@ -558,6 +558,7 @@ describe('CreateActivityPage', () => {
       if (url === '/api/classes') return jsonResponse({ classes: [{ id: 1, name: 'CNTT K18A' }] });
       if (url === '/api/activity-types') return jsonResponse({ types: [] });
       if (url === '/api/organization-levels') return jsonResponse({ levels: [] });
+      if (url === '/api/teacher/students') return jsonResponse({ students: [] });
       if (url === '/api/activities' && init?.method === 'POST') {
         return jsonResponse({ activity: { id: 1000, title: 'Saved' } }, true, 201);
       }
@@ -570,19 +571,34 @@ describe('CreateActivityPage', () => {
     const { container } = render(React.createElement(CreateActivityPage));
     await screen.findAllByText('CNTT K18A');
 
+    fireEvent.click(screen.getByRole('button', { name: /tải danh sách học viên|tai danh sach hoc vien/i }));
+    await waitFor(() => {
+      expect(
+        fetchMock.mock.calls.filter(([url]) => String(url) === '/api/teacher/students').length
+      ).toBe(1);
+    });
+    fireEvent.click(screen.getAllByRole('checkbox')[0] as HTMLInputElement);
+
     fillRequiredFields(container, {
       title: 'Save and clear draft',
       date: '2026-05-15',
       time: '11:00',
       location: 'Room E1',
     });
-    clickPickAllFilteredClassMandatory();
     fireEvent.click(screen.getByRole('button', { name: /Buoc 3: Tai lieu va gui/i }));
     fireEvent.click(screen.getByRole('button', { name: /Luu nhap/i }));
 
     await waitFor(() => {
       expect(toastSuccessMock).toHaveBeenCalled();
       expect(window.sessionStorage.getItem('teacher:create-activity:draft:v1')).toBeNull();
+      expect((screen.getAllByRole('checkbox')[0] as HTMLInputElement).checked).toBe(false);
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /tải danh sách học viên|tai danh sach hoc vien/i }));
+    await waitFor(() => {
+      expect(
+        fetchMock.mock.calls.filter(([url]) => String(url) === '/api/teacher/students').length
+      ).toBe(2);
     });
   });
 
@@ -623,6 +639,7 @@ describe('CreateActivityPage', () => {
       if (url === '/api/classes') return jsonResponse({ classes: [{ id: 1, name: 'CNTT K18A' }] });
       if (url === '/api/activity-types') return jsonResponse({ types: [] });
       if (url === '/api/organization-levels') return jsonResponse({ levels: [] });
+      if (url === '/api/teacher/students') return jsonResponse({ students: [] });
       throw new Error(`Unexpected fetch: ${url}`);
     });
 
@@ -663,6 +680,13 @@ describe('CreateActivityPage', () => {
       time: '09:00',
       location: 'Room Z',
     });
+    fireEvent.click(screen.getByRole('button', { name: /tải danh sách học viên|tai danh sach hoc vien/i }));
+    await waitFor(() => {
+      expect(
+        fetchMock.mock.calls.filter(([url]) => String(url) === '/api/teacher/students').length
+      ).toBe(1);
+    });
+    fireEvent.click(screen.getAllByRole('checkbox')[0] as HTMLInputElement);
 
     fireEvent.click(screen.getByRole('button', { name: /Xoa ban nhap tam/i }));
 
@@ -670,5 +694,13 @@ describe('CreateActivityPage', () => {
     expect((textInputs[0] as HTMLInputElement).value).toBe('');
     expect(window.sessionStorage.getItem('teacher:create-activity:draft:v1')).toBeNull();
     expect(confirmSpy).toHaveBeenCalled();
+    expect((screen.getAllByRole('checkbox')[0] as HTMLInputElement).checked).toBe(false);
+
+    fireEvent.click(screen.getByRole('button', { name: /tải danh sách học viên|tai danh sach hoc vien/i }));
+    await waitFor(() => {
+      expect(
+        fetchMock.mock.calls.filter(([url]) => String(url) === '/api/teacher/students').length
+      ).toBe(2);
+    });
   });
 });
