@@ -104,3 +104,5 @@ next-env.d.ts
 # Local transient runtime files
 .next-build.exit
 .tmp-dev.pid
+
+certificates

@@ -8,6 +8,12 @@ From now on, new user-requested issues should be added proactively into follow-u
 ## Problem statement
 A teacher creates an activity, admin approves it, and the activity is intended to open registration broadly, but an arbitrary eligible student still does not see it to register.
 
+## New user-reported issue (2026-05-04)
+When registration reaches capacity, student is blocked correctly.  
+After admin increases `max_participants`, the student activities list (`/student/activities`) may still show stale full-state and keep blocking registration, while the detail page (`/student/activities/[id]`) already reflects new capacity and allows register.
+
+This indicates a consistency gap between list data and detail data (likely cache/revalidation/query timing drift).
+
 ## Core investigation areas
 ### 1. Canonical student visibility path
 Trace whether a student should see an activity only when all of these are true:
@@ -38,6 +44,10 @@ Clarify what “mở đăng ký rộng rãi” means in actual data terms:
 - audit teacher create/edit payload persistence for targeting scope
 - audit student activity page filters and consumer assumptions
 - verify how applicability is computed for a student outside the teacher-owned scope
+- audit capacity freshness path after admin updates `max_participants`:
+  - list API vs detail API parity for `registered_count`/`max_participants`/`is_full`,
+  - cache headers / fetch cache mode / revalidation behavior on student list page,
+  - client state update strategy after register-block state was previously set.
 
 ## P0 - Regression to add
 Add end-to-end regression proving:
@@ -45,6 +55,12 @@ Add end-to-end regression proving:
 - admin approves it,
 - unrelated but eligible student sees it in student activities list,
 - student can open detail and register.
+
+Add regression for capacity update consistency:
+- activity becomes full and blocks register on list/detail,
+- admin increases `max_participants`,
+- student list refresh reflects new capacity immediately,
+- register button on `/student/activities` becomes available without requiring manual deep-link to detail page.
 
 ## P1 - Global registration model decision
 If broad-open visibility is a real product requirement, decide canonical representation such as:
