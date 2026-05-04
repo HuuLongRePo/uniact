@@ -117,7 +117,7 @@ describe('EditActivityPage', () => {
 
     render(React.createElement(EditActivityPage, { params: { id: '55' } as any }));
 
-    expect(await screen.findByText('Hoạt động bị từ chối')).toBeInTheDocument();
+    expect(await screen.findByText('Hoat dong bi tu choi')).toBeInTheDocument();
     expect(screen.getByText('Tình nguyện')).toBeInTheDocument();
     expect(screen.getByText('Cấp trường')).toBeInTheDocument();
 
@@ -129,13 +129,13 @@ describe('EditActivityPage', () => {
     const numberInput = document.querySelector('input[type="number"]') as HTMLInputElement;
     fireEvent.change(numberInput, { target: { value: '' } });
 
-    expect(screen.getByRole('button', { name: 'Đến bước 3 để gửi duyệt' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Den buoc 3 de gui duyet' })).toBeDisabled();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Bước 3: Kiểm tra và gửi' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Gửi duyệt' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Buoc 3: Kiem tra va gui' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Gui duyet' }));
 
     await waitFor(() => {
-      expect(toastSuccessMock).toHaveBeenCalledWith('Đã gửi duyệt hoạt động');
+      expect(toastSuccessMock).toHaveBeenCalledWith('Da gui duyet hoat dong');
     });
 
     expect(
@@ -205,13 +205,13 @@ describe('EditActivityPage', () => {
 
     render(React.createElement(EditActivityPage, { params: { id: '55' } as any }));
 
-    expect(await screen.findByText(/Hoạt động bị từ chối/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Hoat dong bi tu choi/i)).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /Bước 3: Kiểm tra và gửi/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Buoc 3: Kiem tra va gui/i }));
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /Lưu nháp/i })).toBeDisabled();
-      expect(screen.getByRole('button', { name: /Gửi duyệt/i })).toBeDisabled();
+      expect(screen.getByRole('button', { name: /Luu nhap/i })).toBeDisabled();
+      expect(screen.getByRole('button', { name: /Gui duyet/i })).toBeDisabled();
     });
 
     expect(
@@ -219,5 +219,138 @@ describe('EditActivityPage', () => {
         ([url, init]) => String(url) === '/api/activities/55' && init?.method === 'PUT'
       )
     ).toBe(false);
+  });
+
+  it('blocks beforeunload when form has unsaved changes', async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+
+      if (url === '/api/activities/check-conflicts' && init?.method === 'POST') {
+        return jsonResponse({
+          has_class_schedule_conflict: false,
+          class_schedule_conflicts: [],
+        });
+      }
+
+      if (url === '/api/activities/55' && !init?.method) {
+        return jsonResponse({
+          activity: {
+            id: 55,
+            title: 'Hoat dong cu',
+            description: 'Mo ta cu',
+            date_time: '2026-04-25T08:30:00.000Z',
+            location: 'Phong A1',
+            status: 'draft',
+            approval_status: 'rejected',
+            rejected_reason: 'Can bo sung thong tin',
+            max_participants: 30,
+            activity_type_id: 5,
+            organization_level_id: 7,
+            class_ids: [1],
+            mandatory_class_ids: [1],
+            voluntary_class_ids: [],
+            classes: [{ id: 1, name: 'CNTT K18A', participation_mode: 'mandatory' }],
+          },
+        });
+      }
+
+      if (url === '/api/classes') return jsonResponse({ classes: [{ id: 1, name: 'CNTT K18A' }] });
+      if (url === '/api/activity-types') return jsonResponse({ types: [{ id: 5, name: 'Tinh nguyen' }] });
+      if (url === '/api/organization-levels') return jsonResponse({ levels: [{ id: 7, name: 'Cap truong' }] });
+
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
+
+    vi.stubGlobal('fetch', fetchMock);
+    window.fetch = fetchMock as typeof fetch;
+    const addEventListenerSpy = vi.spyOn(window, 'addEventListener');
+
+    render(React.createElement(EditActivityPage, { params: { id: '55' } as any }));
+
+    expect(await screen.findByText(/Hoat dong bi tu choi/i)).toBeInTheDocument();
+
+    const textInputs = screen.getAllByRole('textbox');
+    fireEvent.change(textInputs[0] as HTMLInputElement, { target: { value: 'Hoat dong moi' } });
+
+    const beforeUnloadHandlers = addEventListenerSpy.mock.calls
+      .filter(([eventName]) => eventName === 'beforeunload')
+      .map(([, handler]) => handler as EventListener);
+    const latestBeforeUnload = beforeUnloadHandlers[beforeUnloadHandlers.length - 1];
+    expect(latestBeforeUnload).toBeTypeOf('function');
+
+    const event = {
+      preventDefault: vi.fn(),
+      returnValue: undefined as unknown,
+    } as BeforeUnloadEvent;
+    latestBeforeUnload(event as unknown as Event);
+
+    expect(event.preventDefault).toHaveBeenCalledTimes(1);
+    expect(event.returnValue).toBe('');
+    addEventListenerSpy.mockRestore();
+  });
+
+  it('does not block beforeunload when form has no changes', async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+
+      if (url === '/api/activities/check-conflicts' && init?.method === 'POST') {
+        return jsonResponse({
+          has_class_schedule_conflict: false,
+          class_schedule_conflicts: [],
+        });
+      }
+
+      if (url === '/api/activities/55' && !init?.method) {
+        return jsonResponse({
+          activity: {
+            id: 55,
+            title: 'Hoat dong cu',
+            description: 'Mo ta cu',
+            date_time: '2026-04-25T08:30:00.000Z',
+            location: 'Phong A1',
+            status: 'draft',
+            approval_status: 'rejected',
+            rejected_reason: 'Can bo sung thong tin',
+            max_participants: 30,
+            activity_type_id: 5,
+            organization_level_id: 7,
+            class_ids: [1],
+            mandatory_class_ids: [1],
+            voluntary_class_ids: [],
+            classes: [{ id: 1, name: 'CNTT K18A', participation_mode: 'mandatory' }],
+          },
+        });
+      }
+
+      if (url === '/api/classes') return jsonResponse({ classes: [{ id: 1, name: 'CNTT K18A' }] });
+      if (url === '/api/activity-types') return jsonResponse({ types: [{ id: 5, name: 'Tinh nguyen' }] });
+      if (url === '/api/organization-levels') return jsonResponse({ levels: [{ id: 7, name: 'Cap truong' }] });
+
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
+
+    vi.stubGlobal('fetch', fetchMock);
+    window.fetch = fetchMock as typeof fetch;
+    const addEventListenerSpy = vi.spyOn(window, 'addEventListener');
+
+    render(React.createElement(EditActivityPage, { params: { id: '55' } as any }));
+
+    expect(await screen.findByText(/Hoat dong bi tu choi/i)).toBeInTheDocument();
+
+    const beforeUnloadHandlers = addEventListenerSpy.mock.calls
+      .filter(([eventName]) => eventName === 'beforeunload')
+      .map(([, handler]) => handler as EventListener);
+    const latestBeforeUnload = beforeUnloadHandlers[beforeUnloadHandlers.length - 1];
+    expect(latestBeforeUnload).toBeTypeOf('function');
+
+    const event = {
+      preventDefault: vi.fn(),
+      returnValue: undefined as unknown,
+    } as BeforeUnloadEvent;
+    latestBeforeUnload(event as unknown as Event);
+
+    expect(event.preventDefault).not.toHaveBeenCalled();
+    expect(event.returnValue).toBeUndefined();
+    addEventListenerSpy.mockRestore();
   });
 });

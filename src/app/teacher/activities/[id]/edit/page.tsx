@@ -106,6 +106,23 @@ interface Activity {
   classes?: Array<Class & { participation_mode?: 'mandatory' | 'voluntary' }>;
 }
 
+type EditActivityFormSnapshot = {
+  title: string;
+  description: string;
+  date: string;
+  time: string;
+  endTime: string;
+  location: string;
+  maxParticipants: number | '';
+  activityTypeId: number | '';
+  organizationLevelId: number | '';
+  mandatoryClassIds: number[];
+  voluntaryClassIds: number[];
+  mandatoryStudentIds: number[];
+  voluntaryStudentIds: number[];
+  appliesToAllStudents: boolean;
+};
+
 function extractActivity(payload: any): Activity {
   return payload?.activity || payload?.data?.activity || payload?.data || payload;
 }
@@ -116,6 +133,40 @@ function canEditActivity(activity: Activity): boolean {
 
 function getErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
+}
+
+function normalizeIdList(ids: number[]): number[] {
+  return [...ids].sort((a, b) => a - b);
+}
+
+function createFormSnapshot(
+  snapshot: EditActivityFormSnapshot
+): Omit<
+  EditActivityFormSnapshot,
+  'mandatoryClassIds' | 'voluntaryClassIds' | 'mandatoryStudentIds' | 'voluntaryStudentIds'
+> & {
+  mandatoryClassIds: number[];
+  voluntaryClassIds: number[];
+  mandatoryStudentIds: number[];
+  voluntaryStudentIds: number[];
+} {
+  return {
+    ...snapshot,
+    title: snapshot.title.trim(),
+    description: snapshot.description.trim(),
+    date: snapshot.date.trim(),
+    time: snapshot.time.trim(),
+    endTime: snapshot.endTime.trim(),
+    location: snapshot.location.trim(),
+    mandatoryClassIds: normalizeIdList(snapshot.mandatoryClassIds),
+    voluntaryClassIds: normalizeIdList(snapshot.voluntaryClassIds),
+    mandatoryStudentIds: normalizeIdList(snapshot.mandatoryStudentIds),
+    voluntaryStudentIds: normalizeIdList(snapshot.voluntaryStudentIds),
+  };
+}
+
+function serializeFormSnapshot(snapshot: EditActivityFormSnapshot): string {
+  return JSON.stringify(createFormSnapshot(snapshot));
 }
 
 function SelectionChecklist({
@@ -154,7 +205,7 @@ function SelectionChecklist({
           <p className={`mt-1 text-xs ${palette.textClass}`}>{description}</p>
         </div>
         <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-gray-700">
-          {selectedIds.length} đã chọn
+          {selectedIds.length} da chon
         </span>
       </div>
 
@@ -201,6 +252,7 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
   const [activity, setActivity] = useState<Activity | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [initialFormSnapshot, setInitialFormSnapshot] = useState<string | null>(null);
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -300,10 +352,60 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
       })),
     [filteredStudentOptions, mandatoryStudentIds]
   );
+  const currentFormSnapshot = useMemo(
+    () =>
+      serializeFormSnapshot({
+        title,
+        description,
+        date,
+        time,
+        endTime,
+        location,
+        maxParticipants,
+        activityTypeId,
+        organizationLevelId,
+        mandatoryClassIds,
+        voluntaryClassIds,
+        mandatoryStudentIds,
+        voluntaryStudentIds,
+        appliesToAllStudents,
+      }),
+    [
+      activityTypeId,
+      appliesToAllStudents,
+      date,
+      description,
+      endTime,
+      location,
+      mandatoryClassIds,
+      mandatoryStudentIds,
+      maxParticipants,
+      organizationLevelId,
+      time,
+      title,
+      voluntaryClassIds,
+      voluntaryStudentIds,
+    ]
+  );
+  const isFormDirty = useMemo(() => {
+    if (loading || !activity || initialFormSnapshot === null) return false;
+    return currentFormSnapshot !== initialFormSnapshot;
+  }, [activity, currentFormSnapshot, initialFormSnapshot, loading]);
 
   useEffect(() => {
     void fetchAllData();
   }, [id]);
+
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (!isFormDirty || submitting) return;
+      event.preventDefault();
+      event.returnValue = '';
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isFormDirty, submitting]);
 
   const toggleClassSelection = (scope: 'mandatory' | 'voluntary', classId: number) => {
     if (scope === 'mandatory') {
@@ -554,6 +656,7 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
   const fetchAllData = async () => {
     try {
       setLoading(true);
+      setInitialFormSnapshot(null);
 
       const [activityRes, classesRes, typesRes, levelsRes] = await Promise.all([
         fetch(`/api/activities/${id}`),
@@ -609,12 +712,35 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
       setVoluntaryClassIds(fetchedVoluntaryClassIds);
       setMandatoryStudentIds(nextActivity.mandatory_student_ids || []);
       setVoluntaryStudentIds(nextActivity.voluntary_student_ids || []);
-      setAppliesToAllStudents(
+      const nextAppliesToAllStudents =
         Boolean(nextActivity.applies_to_all_students) ||
-          (fetchedMandatoryClassIds.length === 0 &&
-            fetchedVoluntaryClassIds.length === 0 &&
-            (nextActivity.mandatory_student_ids || []).length === 0 &&
-            (nextActivity.voluntary_student_ids || []).length === 0)
+        (fetchedMandatoryClassIds.length === 0 &&
+          fetchedVoluntaryClassIds.length === 0 &&
+          (nextActivity.mandatory_student_ids || []).length === 0 &&
+          (nextActivity.voluntary_student_ids || []).length === 0);
+      setAppliesToAllStudents(nextAppliesToAllStudents);
+      setInitialFormSnapshot(
+        serializeFormSnapshot({
+          title: nextActivity.title || '',
+          description: nextActivity.description || '',
+          date: dateOnly || '',
+          time: timeOnly.slice(0, 5) || '00:00',
+          endTime:
+            typeof (nextActivity as any).end_time === 'string'
+              ? String((nextActivity as any).end_time)
+                  .split('T')[1]
+                  ?.slice(0, 5) || ''
+              : '',
+          location: nextActivity.location || '',
+          maxParticipants: nextActivity.max_participants || '',
+          activityTypeId: nextActivity.activity_type_id || '',
+          organizationLevelId: nextActivity.organization_level_id || '',
+          mandatoryClassIds: fetchedMandatoryClassIds,
+          voluntaryClassIds: fetchedVoluntaryClassIds,
+          mandatoryStudentIds: nextActivity.mandatory_student_ids || [],
+          voluntaryStudentIds: nextActivity.voluntary_student_ids || [],
+          appliesToAllStudents: nextAppliesToAllStudents,
+        })
       );
 
       if (classesRes.ok) {
@@ -637,7 +763,7 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
       }
     } catch (error) {
       console.error(error);
-      toast.error('Không thể tải dữ liệu');
+      toast.error('Khong the tai du lieu');
       router.push('/teacher/activities');
     } finally {
       setLoading(false);
@@ -646,22 +772,22 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
 
   const submitActivity = async (mode: 'draft' | 'submit') => {
     if (!title.trim()) {
-      toast.error('Vui lòng nhập tên hoạt động');
+      toast.error('Vui long nhap ten hoat dong');
       return;
     }
 
     if (!description.trim()) {
-      toast.error('Vui lòng nhập mô tả');
+      toast.error('Vui long nhap mo ta');
       return;
     }
 
     if (!date) {
-      toast.error('Vui lòng chọn ngày');
+      toast.error('Vui long chon ngay');
       return;
     }
 
     if (!location.trim()) {
-      toast.error('Vui lòng nhập địa điểm');
+      toast.error('Vui long nhap dia diem');
       return;
     }
 
@@ -671,12 +797,12 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
       mandatoryStudentIds.length === 0 &&
       voluntaryStudentIds.length === 0
     ) {
-      toast.error('Vui lòng chọn ít nhất một lớp hoặc học viên trực tiếp, hoặc bật mở cho tất cả học viên');
+      toast.error('Vui long chon it nhat mot lop hoac hoc vien truc tiep, hoac bat mo cho tat ca hoc vien');
       return;
     }
 
     if (hasBlockingClassScheduleConflict) {
-      toast.error('Lớp đã có hoạt động trùng giờ. Vui lòng xử lý xung đột trước khi lưu.');
+      toast.error('Lop da co hoat dong trung gio. Vui long xu ly xung dot truoc khi luu.');
       return;
     }
 
@@ -712,7 +838,7 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
           const serverConflicts = updateData?.details?.class_schedule_conflicts;
           setClassScheduleConflicts(Array.isArray(serverConflicts) ? serverConflicts : []);
           setClassScheduleConflictError(
-            updateData?.error || 'Lớp đã có hoạt động trùng giờ. Vui lòng đổi thời gian hoặc phạm vi lớp.'
+            updateData?.error || 'Lop da co hoat dong trung gio. Vui long doi thoi gian hoac pham vi lop.'
           );
         }
         throw new Error(updateData?.message || updateData?.error || 'Không thể cập nhật hoạt động');
@@ -728,16 +854,16 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
           throw new Error(
             submitData?.message ||
               submitData?.error ||
-              'Hoạt động đã cập nhật nhưng gửi duyệt thất bại'
+              'Hoat dong da cap nhat nhung gui duyet that bai'
           );
         }
       }
 
-      toast.success(mode === 'draft' ? 'Lưu nháp thành công' : 'Đã gửi duyệt hoạt động');
+      toast.success(mode === 'draft' ? 'Luu nhap thanh cong' : 'Da gui duyet hoat dong');
       router.push('/teacher/activities');
     } catch (error) {
       console.error(error);
-      toast.error(getErrorMessage(error, 'Không thể cập nhật hoạt động'));
+      toast.error(getErrorMessage(error, 'Khong the cap nhat hoat dong'));
     } finally {
       setSubmitting(false);
     }
@@ -754,7 +880,7 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
         <div className="mx-auto max-w-4xl">
           <div className="rounded-lg bg-white p-12 text-center shadow">
             <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-blue-600" />
-            <p className="mt-4 text-gray-600">Đang tải...</p>
+            <p className="mt-4 text-gray-600">Dang tai...</p>
           </div>
         </div>
       </div>
@@ -766,7 +892,7 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
       <div className="min-h-screen bg-gray-50 py-8">
         <div className="mx-auto max-w-4xl">
           <div className="rounded-lg border border-gray-200 bg-white p-12 text-center shadow">
-            <p className="text-gray-600">Không tìm thấy hoạt động</p>
+            <p className="text-gray-600">Khong tim thay hoat dong</p>
           </div>
         </div>
       </div>
@@ -785,13 +911,13 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
             className="flex items-center gap-2 text-gray-600 transition hover:text-gray-900"
           >
             <ArrowLeft className="h-5 w-5" />
-            Quay lại
+            Quay lai
           </button>
 
           {!canEdit && (
             <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-red-700">
               <Lock className="h-5 w-5" />
-              <span className="font-medium">Không thể chỉnh sửa hoạt động này</span>
+              <span className="font-medium">Khong the chinh sua hoat dong nay</span>
             </div>
           )}
         </div>
@@ -800,12 +926,12 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
           <div className="mb-6 flex gap-3 rounded-lg border border-orange-200 bg-orange-50 p-4">
             <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-orange-600" />
             <div>
-              <p className="font-medium text-orange-900">Hoạt động bị từ chối</p>
+              <p className="font-medium text-orange-900">Hoat dong bi tu choi</p>
               <p className="mt-1 text-sm text-orange-700">
-                Vui lòng cập nhật hoạt động và gửi lại để duyệt.
+                Vui long cap nhat hoat dong va gui lai de duyet.
               </p>
               {activity.rejected_reason && (
-                <p className="mt-2 text-sm text-orange-800">Lý do: {activity.rejected_reason}</p>
+                <p className="mt-2 text-sm text-orange-800">Ly do: {activity.rejected_reason}</p>
               )}
             </div>
           </div>
@@ -815,9 +941,9 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
           <div className="sticky top-4 z-10 rounded-lg border border-gray-200 bg-white p-3 shadow">
             <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
               {[
-                { key: 'basic', label: 'Bước 1: Thông tin' },
-                { key: 'scope', label: 'Bước 2: Phạm vi và phân loại' },
-                { key: 'submit', label: 'Bước 3: Kiểm tra và gửi' },
+                { key: 'basic', label: 'Buoc 1: Thong tin' },
+                { key: 'scope', label: 'Buoc 2: Pham vi va phan loai' },
+                { key: 'submit', label: 'Buoc 3: Kiem tra va gui' },
               ].map((step) => (
                 <button
                   key={step.key}
@@ -840,22 +966,22 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
                 disabled={currentStep === 'basic'}
                 className="rounded-lg border px-4 py-2 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
               >
-                Quay lại bước trước
+                Quay lai buoc truoc
               </button>
               <div className="text-center text-gray-600">
                 <div className="font-medium text-gray-800">
                   {currentStep === 'basic'
-                    ? 'Tiến độ 1/3, đang cập nhật thông tin chính.'
+                    ? 'Tien do 1/3, dang cap nhat thong tin chinh.'
                     : currentStep === 'scope'
-                      ? 'Tiến độ 2/3, đang điều chỉnh phạm vi và phân loại.'
-                      : 'Tiến độ 3/3, đã sẵn sàng kiểm tra và gửi lại hoạt động.'}
+                      ? 'Tien do 2/3, dang dieu chinh pham vi va phan loai.'
+                      : 'Tien do 3/3, da san sang kiem tra va gui lai hoat dong.'}
                 </div>
                 <div className="text-xs text-gray-500">
                   {currentStep === 'basic'
-                    ? 'Đi tiếp sang bước 2 để rà lại lớp, học viên và phân loại áp dụng.'
+                    ? 'Di tiep sang buoc 2 de ra soat lop, hoc vien va phan loai ap dung.'
                     : currentStep === 'scope'
-                      ? 'Sau khi chốt phạm vi, sang bước 3 để bật các hành động lưu nháp hoặc gửi duyệt.'
-                      : 'Bạn đang ở bước cuối, có thể lưu nháp hoặc gửi duyệt ngay.'}
+                      ? 'Sau khi chot pham vi, sang buoc 3 de bat cac hanh dong luu nhap hoac gui duyet.'
+                      : 'Ban dang o buoc cuoi, co the luu nhap hoac gui duyet ngay.'}
                 </div>
               </div>
               <button
@@ -868,7 +994,7 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
                 disabled={currentStep === 'submit'}
                 className="rounded-lg border px-4 py-2 text-blue-700 hover:bg-blue-50 disabled:opacity-50"
               >
-                Sang bước tiếp theo
+                Sang buoc tiep theo
               </button>
             </div>
           </div>
@@ -1059,8 +1185,8 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
                 className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {showParticipationPreview
-                  ? 'Ẩn xem trước danh sách tham gia'
-                  : 'Xem trước danh sách tham gia'}
+                  ? 'An xem truoc danh sach tham gia'
+                  : 'Xem truoc danh sach tham gia'}
               </button>
             </div>
 
@@ -1353,7 +1479,7 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
             {!appliesToAllStudents && showParticipationPreview && (
               <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
                 <div className="mb-2 text-sm font-semibold text-blue-900">
-                  Xem trước danh sách tham gia hiện tại
+                  Xem truoc danh sach tham gia hien tai
                 </div>
                 {selectedClasses.length === 0 &&
                 mandatoryStudentIds.length === 0 &&
@@ -1379,22 +1505,22 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
                         </div>
                       </div>
                       <div className="rounded-lg bg-white p-3">
-                        <div className="text-gray-500">Bắt buộc</div>
+                      <div className="text-gray-500">Bat buoc</div>
                         <div className="text-lg font-bold text-orange-700">
                           {participationPreview.mandatory_participants}
                         </div>
                       </div>
                     </div>
                     <div className="text-xs text-gray-600">
-                      Danh sách hiện được nhóm theo lớp và học viên chọn trực tiếp. Nếu một lớp hoặc
-                      học viên xuất hiện ở cả hai nhóm, hệ thống sẽ ưu tiên bắt buộc hơn tự nguyện.
+                      Danh sach hien duoc nhom theo lop va hoc vien chon truc tiep. Neu mot lop hoac
+                      hoc vien xuat hien o ca hai nhom, he thong se uu tien bat buoc hon tu nguyen.
                     </div>
                     {participationPreview.direct_students &&
                     participationPreview.direct_students.length > 0 ? (
                       <details className="rounded-lg border border-emerald-200 bg-white p-3">
                         <summary className="cursor-pointer list-none font-medium text-gray-800">
-                          Học viên chọn trực tiếp • {participationPreview.direct_students.length}{' '}
-                          học viên
+                          Hoc vien chon truc tiep • {participationPreview.direct_students.length}{' '}
+                          hoc vien
                         </summary>
                         <div className="mt-2 space-y-1 text-sm text-gray-600">
                           {participationPreview.direct_students.map((student) => (
@@ -1405,7 +1531,7 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
                               <div>
                                 <span>{student.name}</span>
                                 <span className="ml-2 text-xs font-medium text-emerald-700">
-                                  {student.resolved_mode === 'mandatory' ? 'Bắt buộc' : 'Tự nguyện'}
+                                  {student.resolved_mode === 'mandatory' ? 'Bat buoc' : 'Tu nguyen'}
                                 </span>
                               </div>
                               <span className="text-xs text-gray-500">
@@ -1423,7 +1549,7 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
                           className="rounded-lg border border-blue-200 bg-white p-3"
                         >
                           <summary className="cursor-pointer list-none font-medium text-gray-800">
-                            {group.class_name} • {group.mandatory_count} học viên bắt buộc
+                            {group.class_name} • {group.mandatory_count} hoc vien bat buoc
                           </summary>
                           <div className="mt-2 space-y-1 text-sm text-gray-600">
                             {group.students.map((student) => (
@@ -1449,28 +1575,28 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
               <div className="flex items-start gap-2">
                 <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />
                 <div className="space-y-1">
-                  <p className="font-semibold">Kiểm tra trùng lịch lớp</p>
+                  <p className="font-semibold">Kiem tra trung lich lop</p>
                   {checkingClassScheduleConflict ? (
-                    <p>Đang kiểm tra xung đột lịch với các hoạt động đã công bố...</p>
+                    <p>Dang kiem tra xung dot lich voi cac hoat dong da cong bo...</p>
                   ) : classScheduleConflictError ? (
                     <p className="text-red-700">{classScheduleConflictError}</p>
                   ) : hasBlockingClassScheduleConflict ? (
                     <>
                       <p>
-                        Có {classScheduleConflicts.length} xung đột lớp. Bạn cần đổi thời gian hoặc
-                        bỏ lớp bị xung đột trước khi lưu.
+                        Co {classScheduleConflicts.length} xung dot lop. Ban can doi thoi gian hoac
+                        bo lop bi xung dot truoc khi luu.
                       </p>
                       <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-amber-900">
                         {classScheduleConflicts.slice(0, 5).map((conflict) => (
                           <li key={`${conflict.activity_id}-${conflict.class_id}`}>
                             {conflict.class_name}: "{conflict.title}" ({conflict.overlap_minutes}{' '}
-                            phút trùng)
+                            phut trung)
                           </li>
                         ))}
                       </ul>
                     </>
                   ) : (
-                    <p className="text-emerald-700">Không có xung đột lịch lớp.</p>
+                    <p className="text-emerald-700">Khong co xung dot lich lop.</p>
                   )}
                 </div>
               </div>
@@ -1490,7 +1616,7 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
                 className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-gray-200 px-6 py-3 font-bold text-gray-700 transition hover:bg-gray-300 disabled:opacity-50"
               >
                 <Save className="h-5 w-5" />
-                {currentStep !== 'submit' ? 'Đến bước 3 để lưu nháp' : 'Lưu nháp'}
+                {currentStep !== 'submit' ? 'Den buoc 3 de luu nhap' : 'Luu nhap'}
               </button>
               <button
                 type="button"
@@ -1503,7 +1629,7 @@ export default function EditActivityPage({ params }: { params: Promise<{ id: str
                 className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-blue-600 px-6 py-3 font-bold text-white transition hover:bg-blue-700 disabled:opacity-50"
               >
                 <Send className="h-5 w-5" />
-                {currentStep !== 'submit' ? 'Đến bước 3 để gửi duyệt' : 'Gửi duyệt'}
+                {currentStep !== 'submit' ? 'Den buoc 3 de gui duyet' : 'Gui duyet'}
               </button>
             </div>
           )}
