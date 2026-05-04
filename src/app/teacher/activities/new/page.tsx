@@ -528,7 +528,7 @@ export default function CreateActivityPage() {
     if (!shouldDiscard) return;
     resetCreateActivityForm();
     clearDraftSnapshot();
-    toast.success('Da xoa ban nhap tam.');
+    toast.success('Đã xóa bản nháp tạm.');
   };
 
   useEffect(() => {
@@ -614,7 +614,7 @@ export default function CreateActivityPage() {
         setStudentsLoaded(true);
       }
 
-      toast.success('Da khoi phuc ban nhap dang tao.');
+      toast.success('Đã khôi phục bản nháp đang tạo.');
     } catch (error) {
       console.error(error);
       clearDraftSnapshot();
@@ -1048,7 +1048,7 @@ export default function CreateActivityPage() {
       }
 
       setSuccess(true);
-      toast.success(mode === 'draft' ? 'Luu nhap thanh cong!' : 'Gui duyet thanh cong!');
+      toast.success(mode === 'draft' ? 'Lưu nháp thành công!' : 'Gửi duyệt thành công!');
       resetCreateActivityForm();
       clearDraftSnapshot();
       setTimeout(() => {
@@ -1056,7 +1056,7 @@ export default function CreateActivityPage() {
       }, 1500);
       return;
     } catch (err: any) {
-      toast.error(err.message || 'Co loi xay ra');
+      toast.error(err.message || 'Có lỗi xảy ra');
       return;
     } finally {
       setSubmitting(false);
@@ -1072,10 +1072,10 @@ export default function CreateActivityPage() {
           <div className="border-b border-gray-200 p-6 bg-gradient-to-r from-blue-50 to-indigo-50">
             <h1 className="text-3xl font-bold text-blue-700 flex items-center gap-2">
               <Plus className="w-7 h-7 text-blue-600" />
-              Tao hoat dong moi
+              Tạo hoạt động mới
             </h1>
             <p className="mt-2 text-gray-600">
-              Dien thong tin chi tiet, chon lop va dinh kem tai lieu neu can.
+              Điền thông tin chi tiết, chọn lớp và đính kèm tài liệu nếu cần.
             </p>
 
             {/* Quick Template + Activity Type */}
@@ -1083,7 +1083,7 @@ export default function CreateActivityPage() {
               <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] lg:items-end">
                 <div>
                   <label className="mb-1 block text-sm font-semibold text-gray-800">
-                    Mau nhanh (dien tieu de + mo ta)
+                    Mẫu nhanh (điền tiêu đề + mô tả)
                   </label>
                   <select
                     value={quickTemplateId}
@@ -1109,7 +1109,7 @@ export default function CreateActivityPage() {
 
                 <div>
                   <label className="mb-1 block text-sm font-semibold text-gray-800">
-                    Loai hoat dong (anh huong cong thuc diem)
+                    Loại hoạt động (ảnh hưởng công thức điểm)
                   </label>
                   <select
                     value={activityTypeId}
@@ -1140,8 +1140,8 @@ export default function CreateActivityPage() {
 
               <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
                 <p className="text-xs text-gray-600">
-                  Goi y: Mau nhanh chi dien nhanh noi dung. Loai hoat dong la truong nghiep vu quan
-                  trong de tinh diem, ban co the doi lai bat ky luc nao.
+                  Gợi ý: Mẫu nhanh chỉ điền nhanh nội dung. Loại hoạt động là trường nghiệp vụ
+                  quan trọng để tính điểm, bạn có thể đổi lại bất kỳ lúc nào.
                 </p>
                 <button
                   type="button"
@@ -1149,7 +1149,7 @@ export default function CreateActivityPage() {
                   disabled={!hasUnsavedDraftData || submitting}
                   className="rounded-md border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  Xoa ban nhap tam
+                  Xóa bản nháp tạm
                 </button>
               </div>
             </div>
@@ -1167,7 +1167,7 @@ export default function CreateActivityPage() {
               }`}
             >
               <BookOpen className="w-4 h-4 inline mr-2" />
-              Buoc 1: Thong tin
+              Bước 1: Thông tin
             </button>
             <button
               type="button"
@@ -1179,7 +1179,7 @@ export default function CreateActivityPage() {
               }`}
             >
               <Award className="w-4 h-4 inline mr-2" />
-              Buoc 2: Pham vi va phan loai
+              Bước 2: Phạm vi và phân loại
             </button>
             <button
               type="button"
@@ -1191,7 +1191,7 @@ export default function CreateActivityPage() {
               }`}
             >
               <FileText className="w-4 h-4 inline mr-2" />
-              Buoc 3: Tai lieu va gui
+              Bước 3: Tài liệu và gửi
             </button>
           </div>
 
@@ -1891,7 +1891,7 @@ export default function CreateActivityPage() {
                     disabled={currentTab === 'basic'}
                     className="rounded-lg border bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 disabled:opacity-50"
                   >
-                    Quay lai buoc truoc
+                    Quay lại bước trước
                   </button>
                   <div className="text-center text-sm text-gray-600">
                     <div className="font-medium text-gray-800">
@@ -1919,7 +1919,7 @@ export default function CreateActivityPage() {
                     disabled={currentTab === 'files'}
                     className="rounded-lg border bg-white px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-50 disabled:opacity-50"
                   >
-                    Sang buoc tiep theo
+                    Sang bước tiếp theo
                   </button>
                 </div>
 
@@ -1928,7 +1928,7 @@ export default function CreateActivityPage() {
                     <div className="flex items-start gap-2">
                       <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />
                       <div className="space-y-1">
-                        <p className="font-semibold">Kiem tra trung lich lop</p>
+                        <p className="font-semibold">Kiểm tra trùng lịch lớp</p>
                         {checkingClassScheduleConflict ? (
                           <p>Dang kiem tra xung dot lich voi cac hoat dong da cong bo...</p>
                         ) : classScheduleConflictError ? (
@@ -1950,7 +1950,7 @@ export default function CreateActivityPage() {
                             </ul>
                           </>
                         ) : (
-                          <p className="text-emerald-700">Khong co xung dot lich lop.</p>
+                          <p className="text-emerald-700">Không có xung đột lịch lớp.</p>
                         )}
                       </div>
                     </div>
@@ -1982,7 +1982,7 @@ export default function CreateActivityPage() {
                       ? 'Dang xu ly...'
                       : currentTab !== 'files'
                         ? 'Den buoc 3 de luu nhap'
-                        : 'Luu nhap'}
+                        : 'Lưu nháp'}
                   </button>
                   <button
                     type="button"
@@ -2007,7 +2007,7 @@ export default function CreateActivityPage() {
                       ? 'Dang xu ly...'
                       : currentTab !== 'files'
                         ? 'Den buoc 3 de gui duyet'
-                        : 'Gui duyet'}
+                        : 'Gửi duyệt'}
                   </button>
                 </div>
                 {success && (

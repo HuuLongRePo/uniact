@@ -155,13 +155,13 @@ describe('CreateActivityPage', () => {
     });
 
     clickPickAllFilteredClassMandatory();
-    fireEvent.click(screen.getByRole('button', { name: /Buoc 3: Tai lieu va gui/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Bước 3: Tài liệu và gửi|Buoc 3: Tai lieu va gui/i }));
 
     const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement;
     const file = new File(['pdf-content'], 'guide.pdf', { type: 'application/pdf' });
     fireEvent.change(fileInput, { target: { files: [file] } });
 
-    fireEvent.click(screen.getByRole('button', { name: /Gui duyet/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Gửi duyệt|Gui duyet/i }));
 
     await waitFor(() => {
       expect(toastSuccessMock).toHaveBeenCalledTimes(1);
@@ -213,10 +213,10 @@ describe('CreateActivityPage', () => {
     });
     clickPickAllFilteredClassMandatory();
 
-    fireEvent.click(screen.getByRole('button', { name: /Buoc 3: Tai lieu va gui/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Bước 3: Tài liệu và gửi|Buoc 3: Tai lieu va gui/i }));
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /Luu nhap/i })).toBeDisabled();
-      expect(screen.getByRole('button', { name: /Gui duyet/i })).toBeDisabled();
+      expect(screen.getByRole('button', { name: /Lưu nháp|Luu nhap/i })).toBeDisabled();
+      expect(screen.getByRole('button', { name: /Gửi duyệt|Gui duyet/i })).toBeDisabled();
     });
   });
 
@@ -253,8 +253,8 @@ describe('CreateActivityPage', () => {
       location: 'Hoi truong lon',
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /Buoc 3: Tai lieu va gui/i }));
-    fireEvent.click(screen.getByRole('button', { name: /Luu nhap/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Bước 3: Tài liệu và gửi|Buoc 3: Tai lieu va gui/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Lưu nháp|Luu nhap/i }));
 
     await waitFor(() => {
       expect(toastSuccessMock).toHaveBeenCalled();
@@ -305,8 +305,8 @@ describe('CreateActivityPage', () => {
     fireEvent.change(getClassSearchInput(), { target: { value: 'ANM' } });
     clickPickAllFilteredClassMandatory();
 
-    fireEvent.click(screen.getByRole('button', { name: /Buoc 3: Tai lieu va gui/i }));
-    fireEvent.click(screen.getByRole('button', { name: /Luu nhap/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Bước 3: Tài liệu và gửi|Buoc 3: Tai lieu va gui/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Lưu nháp|Luu nhap/i }));
 
     await waitFor(() => {
       expect(toastSuccessMock).toHaveBeenCalled();
@@ -372,8 +372,8 @@ describe('CreateActivityPage', () => {
     });
     fireEvent.click(pickButtons[2] as HTMLButtonElement);
 
-    fireEvent.click(screen.getByRole('button', { name: /Buoc 3: Tai lieu va gui/i }));
-    fireEvent.click(screen.getByRole('button', { name: /Luu nhap/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Bước 3: Tài liệu và gửi|Buoc 3: Tai lieu va gui/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Lưu nháp|Luu nhap/i }));
 
     await waitFor(() => {
       expect(toastSuccessMock).toHaveBeenCalled();
@@ -424,7 +424,7 @@ describe('CreateActivityPage', () => {
     fireEvent.change(getClassSearchInput(), { target: { value: 'ANM' } });
     clickPickAllFilteredClassMandatory();
 
-    fireEvent.click(screen.getByRole('button', { name: /Buoc 2: Pham vi va phan loai/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Bước 2: Phạm vi và phân loại|Buoc 2: Pham vi va phan loai/i }));
     const maxInput = container.querySelector('input[type="number"]') as HTMLInputElement;
 
     await waitFor(() => {
@@ -433,8 +433,8 @@ describe('CreateActivityPage', () => {
     });
 
     fireEvent.change(maxInput, { target: { value: '40' } });
-    fireEvent.click(screen.getByRole('button', { name: /Buoc 3: Tai lieu va gui/i }));
-    fireEvent.click(screen.getByRole('button', { name: /Luu nhap/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Bước 3: Tài liệu và gửi|Buoc 3: Tai lieu va gui/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Lưu nháp|Luu nhap/i }));
 
     await waitFor(() => {
       expect(toastSuccessMock).toHaveBeenCalled();
@@ -471,9 +471,9 @@ describe('CreateActivityPage', () => {
     const textarea = container.querySelector('textarea') as HTMLTextAreaElement;
     fireEvent.change(textarea, { target: { value: 'Mo ta test giu du lieu' } });
 
-    fireEvent.click(screen.getByRole('button', { name: /Buoc 2: Pham vi va phan loai/i }));
-    fireEvent.click(screen.getByRole('button', { name: /Buoc 3: Tai lieu va gui/i }));
-    fireEvent.click(screen.getByRole('button', { name: /Buoc 1: Thong tin/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Bước 2: Phạm vi và phân loại|Buoc 2: Pham vi va phan loai/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Bước 3: Tài liệu và gửi|Buoc 3: Tai lieu va gui/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Bước 1: Thông tin|Buoc 1: Thong tin/i }));
 
     const textInputs = container.querySelectorAll('input[type="text"]');
     const dateInput = container.querySelector('input[type="date"]') as HTMLInputElement;
@@ -534,12 +534,12 @@ describe('CreateActivityPage', () => {
     const { container } = render(React.createElement(CreateActivityPage));
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /Buoc 2: Pham vi va phan loai/i })).toHaveClass(
+      expect(screen.getByRole('button', { name: /Bước 2: Phạm vi và phân loại|Buoc 2: Pham vi va phan loai/i })).toHaveClass(
         'border-b-2'
       );
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /Buoc 1: Thong tin/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Bước 1: Thông tin|Buoc 1: Thong tin/i }));
 
     const textInputs = container.querySelectorAll('input[type="text"]');
     expect((textInputs[0] as HTMLInputElement).value).toBe('Draft title');
@@ -593,8 +593,8 @@ describe('CreateActivityPage', () => {
       time: '11:00',
       location: 'Room E1',
     });
-    fireEvent.click(screen.getByRole('button', { name: /Buoc 3: Tai lieu va gui/i }));
-    fireEvent.click(screen.getByRole('button', { name: /Luu nhap/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Bước 3: Tài liệu và gửi|Buoc 3: Tai lieu va gui/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Lưu nháp|Luu nhap/i }));
 
     await waitFor(() => {
       expect(toastSuccessMock).toHaveBeenCalled();
@@ -697,7 +697,7 @@ describe('CreateActivityPage', () => {
     });
     fireEvent.click(screen.getAllByRole('checkbox')[0] as HTMLInputElement);
 
-    fireEvent.click(screen.getByRole('button', { name: /Xoa ban nhap tam/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Xóa bản nháp tạm|Xoa ban nhap tam/i }));
 
     const textInputs = container.querySelectorAll('input[type="text"]');
     expect((textInputs[0] as HTMLInputElement).value).toBe('');
