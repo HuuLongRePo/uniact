@@ -3,8 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
-    "dev:lan": "next dev --turbopack -H 0.0.0.0",
+    "dev": "node scripts/tools/dev-readable-host.mjs",
+    "dev:raw": "next dev --turbopack --experimental-https -H 0.0.0.0 -p 3000",
+    "dev:lan": "npm run dev:raw",
     "build": "next build",
     "start": "next start",
     "release:check": "node scripts/maintenance/release-check.mjs --mode=rc",
