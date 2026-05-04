@@ -1,4 +1,4 @@
-import type jsQR from 'jsqr';
+import jsQR from 'jsqr';
 
 export type BarcodeDetectorResult = {
   rawValue?: string | null;
@@ -11,8 +11,6 @@ export type BarcodeDetectorInstance = {
 type BarcodeDetectorConstructor = new (options?: { formats?: string[] }) => BarcodeDetectorInstance;
 
 export type JsQrDecoder = typeof jsQR;
-
-let cachedJsQrDecoderPromise: Promise<JsQrDecoder | null> | null = null;
 type ImageDataLike = Pick<ImageData, 'data' | 'width' | 'height'>;
 
 function normalizeDecodedValue(rawValue: unknown): string | null {
@@ -40,11 +38,7 @@ export function createBarcodeDetectorInstance(): BarcodeDetectorInstance | null 
 }
 
 export async function loadJsQrDecoder(): Promise<JsQrDecoder | null> {
-  if (!cachedJsQrDecoderPromise) {
-    cachedJsQrDecoderPromise = import('jsqr').then((module) => module.default).catch(() => null);
-  }
-
-  return cachedJsQrDecoderPromise;
+  return jsQR || null;
 }
 
 function decodeWithJsQr(
@@ -125,6 +119,100 @@ function buildResizedImageData(imageData: ImageDataLike, scale: number): ImageDa
   };
 }
 
+function buildCroppedImageData(
+  imageData: ImageDataLike,
+  crop: { x: number; y: number; width: number; height: number }
+): ImageDataLike | null {
+  const width = Math.floor(crop.width);
+  const height = Math.floor(crop.height);
+  const startX = Math.max(0, Math.floor(crop.x));
+  const startY = Math.max(0, Math.floor(crop.y));
+
+  if (width <= 0 || height <= 0) {
+    return null;
+  }
+  if (startX + width > imageData.width || startY + height > imageData.height) {
+    return null;
+  }
+
+  const source = imageData.data;
+  const cropped = new Uint8ClampedArray(width * height * 4);
+
+  for (let y = 0; y < height; y += 1) {
+    const sourceRowOffset = ((startY + y) * imageData.width + startX) * 4;
+    const targetRowOffset = y * width * 4;
+    const rowSlice = source.subarray(sourceRowOffset, sourceRowOffset + width * 4);
+    cropped.set(rowSlice, targetRowOffset);
+  }
+
+  return {
+    data: cropped,
+    width,
+    height,
+  };
+}
+
+function collectZoomCroppedCandidates(imageData: ImageDataLike) {
+  const candidates: ImageDataLike[] = [];
+  const seen = new Set<string>();
+  const minSide = Math.min(imageData.width, imageData.height);
+  if (minSide < 20) {
+    return candidates;
+  }
+
+  const zoomRatios = [0.88, 0.72, 0.58];
+  const placements = [
+    { dx: 0, dy: 0 },
+    { dx: -1, dy: 0 },
+    { dx: 1, dy: 0 },
+    { dx: 0, dy: -1 },
+    { dx: 0, dy: 1 },
+  ];
+
+  const pushCandidate = (x: number, y: number, side: number) => {
+    const clampedX = Math.max(0, Math.min(imageData.width - side, x));
+    const clampedY = Math.max(0, Math.min(imageData.height - side, y));
+    const key = `${clampedX}:${clampedY}:${side}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+
+    const cropped = buildCroppedImageData(imageData, {
+      x: clampedX,
+      y: clampedY,
+      width: side,
+      height: side,
+    });
+    if (cropped) {
+      candidates.push(cropped);
+    }
+  };
+
+  for (const ratio of zoomRatios) {
+    const side = Math.max(16, Math.floor(minSide * ratio));
+    const half = Math.floor(side / 2);
+    const centerX = Math.floor(imageData.width / 2);
+    const centerY = Math.floor(imageData.height / 2);
+    const shiftX = Math.max(
+      0,
+      Math.min(Math.floor((imageData.width - side) / 2), Math.floor(side * 0.14))
+    );
+    const shiftY = Math.max(
+      0,
+      Math.min(Math.floor((imageData.height - side) / 2), Math.floor(side * 0.14))
+    );
+
+    for (const placement of placements) {
+      pushCandidate(
+        centerX - half + placement.dx * shiftX,
+        centerY - half + placement.dy * shiftY,
+        side
+      );
+    }
+  }
+
+  return candidates;
+}
+
 function buildRotatedImageData(imageData: ImageDataLike, angle: 90 | 180 | 270): ImageDataLike {
   const source = imageData.data;
   const sourceWidth = imageData.width;
@@ -185,6 +273,9 @@ function collectAggressiveCandidates(imageData: ImageDataLike) {
   };
 
   pushVariants(imageData);
+  for (const cropped of collectZoomCroppedCandidates(imageData)) {
+    pushVariants(cropped);
+  }
 
   const rotated90 = buildRotatedImageData(imageData, 90);
   const rotated180 = buildRotatedImageData(imageData, 180);
@@ -227,9 +318,11 @@ export async function decodeQrValueFromSource({
   if (barcodeDetector) {
     try {
       const detectorResults = await barcodeDetector.detect(source);
-      const fromDetector = normalizeDecodedValue(detectorResults?.[0]?.rawValue);
-      if (fromDetector) {
-        return fromDetector;
+      for (const item of detectorResults || []) {
+        const fromDetector = normalizeDecodedValue(item?.rawValue);
+        if (fromDetector) {
+          return fromDetector;
+        }
       }
     } catch {
       // Keep fallback path for browsers where BarcodeDetector is flaky.
