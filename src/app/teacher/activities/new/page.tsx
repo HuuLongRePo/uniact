@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Plus,
   Upload,
@@ -26,6 +27,7 @@ import { formatVietnamDateTime } from '@/lib/timezone';
 interface Class {
   id: number;
   name: string;
+  student_count?: number | null;
 }
 
 interface StudentOption {
@@ -44,6 +46,37 @@ interface ActivityType {
 interface OrganizationLevel {
   id: number;
   name: string;
+}
+
+interface QuickTemplate {
+  id: number;
+  name: string;
+  title: string;
+  description: string;
+  typeHints: string[];
+}
+
+interface CreateActivityDraftSnapshot {
+  title: string;
+  description: string;
+  date: string;
+  time: string;
+  endTime: string;
+  location: string;
+  maxParticipants: number | '';
+  mandatoryClassIds: number[];
+  voluntaryClassIds: number[];
+  mandatoryStudentIds: number[];
+  voluntaryStudentIds: number[];
+  appliesToAllStudents: boolean;
+  activityTypeId: number | '';
+  organizationLevelId: number | '';
+  quickTemplateId: number | '';
+  currentTab: 'basic' | 'details' | 'files';
+  classSearch: string;
+  studentSearch: string;
+  studentsLoaded: boolean;
+  studentOptions: StudentOption[];
 }
 
 interface ParticipationPreviewStudent {
@@ -103,6 +136,8 @@ type SelectionChecklistProps = {
   emptyText: string;
 };
 
+const CREATE_ACTIVITY_DRAFT_STORAGE_KEY = 'teacher:create-activity:draft:v1';
+
 function SelectionChecklist({
   title,
   description,
@@ -139,7 +174,7 @@ function SelectionChecklist({
           <p className={`mt-1 text-xs ${palette.text}`}>{description}</p>
         </div>
         <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-gray-700">
-          {selectedIds.length} đã chọn
+          {selectedIds.length} da chon
         </span>
       </div>
 
@@ -180,6 +215,7 @@ function SelectionChecklist({
 }
 
 export default function CreateActivityPage() {
+  const router = useRouter();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [date, setDate] = useState('');
@@ -210,6 +246,7 @@ export default function CreateActivityPage() {
   const [submitMode, setSubmitMode] = useState<'draft' | 'submit'>('draft');
   const [currentTab, setCurrentTab] = useState<'basic' | 'details' | 'files'>('basic');
   const [showPreview, setShowPreview] = useState(false);
+  const [quickTemplateId, setQuickTemplateId] = useState<number | ''>('');
   const [participationPreview, setParticipationPreview] = useState<ParticipationPreview | null>(
     null
   );
@@ -218,6 +255,8 @@ export default function CreateActivityPage() {
   const [classScheduleConflicts, setClassScheduleConflicts] = useState<ClassScheduleConflict[]>([]);
   const [checkingClassScheduleConflict, setCheckingClassScheduleConflict] = useState(false);
   const [classScheduleConflictError, setClassScheduleConflictError] = useState<string | null>(null);
+  const hasRestoredDraftRef = useRef(false);
+  const hasLoadedInitialReferenceDataRef = useRef(false);
   const selectedClasses = useMemo(
     () => Array.from(new Set([...mandatoryClassIds, ...voluntaryClassIds])),
     [mandatoryClassIds, voluntaryClassIds]
@@ -240,11 +279,95 @@ export default function CreateActivityPage() {
 
     return classes.filter((classItem) => classItem.name.toLowerCase().includes(keyword));
   }, [classSearch, classes]);
+  const classStudentCountMap = useMemo(() => {
+    return new Map(
+      classes.map((classItem) => [classItem.id, Math.max(0, Number(classItem.student_count || 0))])
+    );
+  }, [classes]);
   const effectiveAppliesToAllStudents =
     appliesToAllStudents ||
     (selectedClasses.length === 0 &&
       mandatoryStudentIds.length === 0 &&
       voluntaryStudentIds.length === 0);
+  const selectedClassPopulation = useMemo(
+    () =>
+      selectedClasses.reduce(
+        (total, classId) => total + (classStudentCountMap.get(classId) || 0),
+        0
+      ),
+    [classStudentCountMap, selectedClasses]
+  );
+  const directSelectedStudentCountOutsideClasses = useMemo(() => {
+    const selectedClassSet = new Set(selectedClasses);
+    const directStudentIds = Array.from(new Set([...mandatoryStudentIds, ...voluntaryStudentIds]));
+    if (!studentsLoaded) {
+      return directStudentIds.length;
+    }
+
+    const selectedStudentMap = new Map(studentOptions.map((student) => [student.id, student]));
+    return directStudentIds.reduce((total, studentId) => {
+      const student = selectedStudentMap.get(studentId);
+      if (!student) return total + 1;
+      if (student.class_id && selectedClassSet.has(student.class_id)) {
+        return total;
+      }
+      return total + 1;
+    }, 0);
+  }, [
+    mandatoryStudentIds,
+    selectedClasses,
+    studentOptions,
+    studentsLoaded,
+    voluntaryStudentIds,
+  ]);
+  const maxParticipantsFloor = useMemo(() => {
+    if (effectiveAppliesToAllStudents) {
+      return 30;
+    }
+
+    const nextFloor = selectedClassPopulation + directSelectedStudentCountOutsideClasses;
+    return Math.max(1, Math.min(5000, nextFloor));
+  }, [
+    directSelectedStudentCountOutsideClasses,
+    effectiveAppliesToAllStudents,
+    selectedClassPopulation,
+  ]);
+  const isMaxParticipantsBelowFloor =
+    maxParticipants !== '' && Number(maxParticipants) > 0 && Number(maxParticipants) < maxParticipantsFloor;
+  const hasUnsavedDraftData = useMemo(() => {
+    if (title.trim()) return true;
+    if (description.trim()) return true;
+    if (date) return true;
+    if (time) return true;
+    if (endTime) return true;
+    if (location.trim()) return true;
+    if (maxParticipants !== '') return true;
+    if (mandatoryClassIds.length > 0 || voluntaryClassIds.length > 0) return true;
+    if (mandatoryStudentIds.length > 0 || voluntaryStudentIds.length > 0) return true;
+    if (appliesToAllStudents) return true;
+    if (activityTypeId !== '') return true;
+    if (organizationLevelId !== '') return true;
+    if (quickTemplateId !== '') return true;
+    if (files.length > 0) return true;
+    return false;
+  }, [
+    activityTypeId,
+    appliesToAllStudents,
+    date,
+    description,
+    endTime,
+    files.length,
+    location,
+    mandatoryClassIds.length,
+    mandatoryStudentIds.length,
+    maxParticipants,
+    organizationLevelId,
+    quickTemplateId,
+    time,
+    title,
+    voluntaryClassIds.length,
+    voluntaryStudentIds.length,
+  ]);
   const hasBlockingClassScheduleConflict = classScheduleConflicts.length > 0;
   const mandatoryClassItems = useMemo(
     () =>
@@ -290,47 +413,83 @@ export default function CreateActivityPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Activity Templates
-  const templates = [
+  const templates: QuickTemplate[] = [
     {
       id: 1,
       name: 'Tổng vệ sinh',
       title: 'Tổng vệ sinh lớp',
       description: 'Hoạt động vệ sinh môi trường lớp học định kỳ',
+      typeHints: ['vệ sinh', 'tình nguyện'],
     },
     {
       id: 2,
       name: 'Tham quan',
       title: 'Tham quan học tập',
       description: 'Chuyến tham quan thực tế ngoài trường',
+      typeHints: ['tham quan', 'học tập'],
     },
     {
       id: 3,
       name: 'Tình nguyện',
       title: 'Hoạt động tình nguyện',
       description: 'Hoạt động thiện nguyện vì cộng đồng',
+      typeHints: ['tình nguyện'],
     },
     {
       id: 4,
       name: 'Văn nghệ',
       title: 'Biểu diễn văn nghệ',
       description: 'Hoạt động văn nghệ, văn hóa, nghệ thuật',
+      typeHints: ['văn nghệ', 'văn hóa'],
     },
     {
       id: 5,
       name: 'Thể thao',
       title: 'Hoạt động thể thao',
       description: 'Thi đấu thể thao, rèn luyện sức khỏe',
+      typeHints: ['thể thao'],
     },
   ];
+
+  const resolveActivityTypeIdByTemplate = (template: QuickTemplate) => {
+    if (!activityTypes.length) return null;
+    const normalizedHints = [template.name, ...template.typeHints]
+      .map((value) => value.trim().toLowerCase())
+      .filter(Boolean);
+
+    const matched = activityTypes.find((type) => {
+      const normalizedTypeName = type.name.trim().toLowerCase();
+      return normalizedHints.some(
+        (hint) => normalizedTypeName.includes(hint) || hint.includes(normalizedTypeName)
+      );
+    });
+    return matched?.id ?? null;
+  };
 
   const applyTemplate = (templateId: number) => {
     const template = templates.find((t) => t.id === templateId);
     if (template) {
+      const nextTypeId = resolveActivityTypeIdByTemplate(template);
+      setQuickTemplateId(templateId);
       setTitle(template.title);
       setDescription(template.description);
-      toast.success(`Đã áp dụng mẫu: ${template.name}`);
+      if (nextTypeId) {
+        setActivityTypeId(nextTypeId);
+      }
+      toast.success(
+        nextTypeId
+          ? `Đã áp dụng mẫu: ${template.name} và gợi ý luôn loại hoạt động.`
+          : `Đã áp dụng mẫu: ${template.name}.`
+      );
     }
   };
+
+  useEffect(() => {
+    if (maxParticipantsFloor <= 0) return;
+    if (maxParticipants === '' || Number(maxParticipants) < maxParticipantsFloor) {
+      setMaxParticipants(maxParticipantsFloor);
+    }
+  }, [maxParticipants, maxParticipantsFloor]);
 
   // Fetch class list, activity types, organization levels on mount
   useEffect(() => {
@@ -349,6 +508,130 @@ export default function CreateActivityPage() {
         toast.error('Không thể tải dữ liệu');
       });
   }, []);
+
+  useEffect(() => {
+    hasLoadedInitialReferenceDataRef.current = true;
+  }, []);
+
+  useEffect(() => {
+    if (hasRestoredDraftRef.current) return;
+    if (!hasLoadedInitialReferenceDataRef.current) return;
+
+    try {
+      const rawDraft = window.sessionStorage.getItem(CREATE_ACTIVITY_DRAFT_STORAGE_KEY);
+      if (!rawDraft) {
+        hasRestoredDraftRef.current = true;
+        return;
+      }
+
+      const parsedDraft = JSON.parse(rawDraft) as CreateActivityDraftSnapshot;
+      setTitle(parsedDraft.title || '');
+      setDescription(parsedDraft.description || '');
+      setDate(parsedDraft.date || '');
+      setTime(parsedDraft.time || '');
+      setEndTime(parsedDraft.endTime || '');
+      setLocation(parsedDraft.location || '');
+      setMaxParticipants(parsedDraft.maxParticipants ?? '');
+      setMandatoryClassIds(
+        Array.isArray(parsedDraft.mandatoryClassIds) ? parsedDraft.mandatoryClassIds : []
+      );
+      setVoluntaryClassIds(
+        Array.isArray(parsedDraft.voluntaryClassIds) ? parsedDraft.voluntaryClassIds : []
+      );
+      setMandatoryStudentIds(
+        Array.isArray(parsedDraft.mandatoryStudentIds) ? parsedDraft.mandatoryStudentIds : []
+      );
+      setVoluntaryStudentIds(
+        Array.isArray(parsedDraft.voluntaryStudentIds) ? parsedDraft.voluntaryStudentIds : []
+      );
+      setAppliesToAllStudents(Boolean(parsedDraft.appliesToAllStudents));
+      setActivityTypeId(parsedDraft.activityTypeId ?? '');
+      setOrganizationLevelId(parsedDraft.organizationLevelId ?? '');
+      setQuickTemplateId(parsedDraft.quickTemplateId ?? '');
+      setCurrentTab(parsedDraft.currentTab || 'basic');
+      setClassSearch(parsedDraft.classSearch || '');
+      setStudentSearch(parsedDraft.studentSearch || '');
+
+      if (parsedDraft.studentsLoaded && Array.isArray(parsedDraft.studentOptions)) {
+        setStudentOptions(parsedDraft.studentOptions);
+        setStudentsLoaded(true);
+      }
+
+      toast.success('Da khoi phuc ban nhap dang tao.');
+    } catch (error) {
+      console.error(error);
+      window.sessionStorage.removeItem(CREATE_ACTIVITY_DRAFT_STORAGE_KEY);
+    } finally {
+      hasRestoredDraftRef.current = true;
+    }
+  }, [classes.length, activityTypes.length, organizationLevels.length]);
+
+  useEffect(() => {
+    if (!hasRestoredDraftRef.current) return;
+
+    if (!hasUnsavedDraftData) {
+      window.sessionStorage.removeItem(CREATE_ACTIVITY_DRAFT_STORAGE_KEY);
+      return;
+    }
+
+    const draftSnapshot: CreateActivityDraftSnapshot = {
+      title,
+      description,
+      date,
+      time,
+      endTime,
+      location,
+      maxParticipants,
+      mandatoryClassIds,
+      voluntaryClassIds,
+      mandatoryStudentIds,
+      voluntaryStudentIds,
+      appliesToAllStudents,
+      activityTypeId,
+      organizationLevelId,
+      quickTemplateId,
+      currentTab,
+      classSearch,
+      studentSearch,
+      studentsLoaded,
+      studentOptions: studentsLoaded ? studentOptions : [],
+    };
+
+    window.sessionStorage.setItem(CREATE_ACTIVITY_DRAFT_STORAGE_KEY, JSON.stringify(draftSnapshot));
+  }, [
+    activityTypeId,
+    appliesToAllStudents,
+    classSearch,
+    currentTab,
+    date,
+    description,
+    endTime,
+    hasUnsavedDraftData,
+    location,
+    mandatoryClassIds,
+    mandatoryStudentIds,
+    maxParticipants,
+    organizationLevelId,
+    quickTemplateId,
+    studentOptions,
+    studentSearch,
+    studentsLoaded,
+    time,
+    title,
+    voluntaryClassIds,
+    voluntaryStudentIds,
+  ]);
+
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (!hasUnsavedDraftData || submitting || success) return;
+      event.preventDefault();
+      event.returnValue = '';
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedDraftData, submitting, success]);
 
   const ensureStudentOptionsLoaded = async () => {
     if (studentsLoaded || studentsLoading) return;
@@ -620,11 +903,17 @@ export default function CreateActivityPage() {
   const handleSubmit = async (e: React.FormEvent, mode: 'draft' | 'submit') => {
     e.preventDefault();
     if (!title.trim() || !date || !location.trim()) {
-      toast.error('Vui lòng nhập đầy đủ thông tin bắt buộc');
+      toast.error('Vui long nhap day du thong tin bat buoc');
       return;
     }
     if (hasBlockingClassScheduleConflict) {
-      toast.error('Lớp đã có hoạt động trùng giờ. Vui lòng xử lý xung đột trước khi lưu.');
+      toast.error('Lop da co hoat dong trung gio. Vui long xu ly xung dot truoc khi luu.');
+      return;
+    }
+    if (maxParticipants !== '' && Number(maxParticipants) < maxParticipantsFloor) {
+      toast.error(
+        `So luong toi da khong du. Vui long dat toi thieu ${maxParticipantsFloor} theo pham vi da chon.`
+      );
       return;
     }
     setSubmitting(true);
@@ -659,17 +948,17 @@ export default function CreateActivityPage() {
           const serverConflicts = createData?.details?.class_schedule_conflicts;
           setClassScheduleConflicts(Array.isArray(serverConflicts) ? serverConflicts : []);
           setClassScheduleConflictError(
-            createData?.error || 'Lớp đã có hoạt động trùng giờ. Vui lòng đổi thời gian hoặc phạm vi lớp.'
+            createData?.error || 'Lop da co hoat dong trung gio. Vui long doi thoi gian hoac pham vi lop.'
           );
         }
-        throw new Error(createData?.error || 'Tạo hoạt động thất bại');
+        throw new Error(createData?.error || 'Tao hoat dong that bai');
       }
 
       const createdActivityId =
         createData?.activity?.id ?? createData?.data?.activity?.id ?? createData?.id;
 
       if (!createdActivityId) {
-        throw new Error('Không xác định được hoạt động vừa tạo');
+        throw new Error('Khong xac dinh duoc hoat dong vua tao');
       }
 
       if (files.length > 0) {
@@ -684,7 +973,7 @@ export default function CreateActivityPage() {
         const uploadData = await uploadRes.json().catch(() => null);
 
         if (!uploadRes.ok) {
-          throw new Error(uploadData?.error || 'Hoạt động đã được tạo nhưng tải file lên thất bại');
+          throw new Error(uploadData?.error || 'Hoat dong da duoc tao nhung tai file len that bai');
         }
       }
 
@@ -695,12 +984,12 @@ export default function CreateActivityPage() {
         const submitData = await submitRes.json().catch(() => null);
 
         if (!submitRes.ok) {
-          throw new Error(submitData?.error || 'Hoạt động đã được tạo nhưng gửi duyệt thất bại');
+          throw new Error(submitData?.error || 'Hoat dong da duoc tao nhung gui duyet that bai');
         }
       }
 
       setSuccess(true);
-      toast.success(mode === 'draft' ? 'Lưu nháp thành công!' : 'Gửi duyệt thành công!');
+      toast.success(mode === 'draft' ? 'Luu nhap thanh cong!' : 'Gui duyet thanh cong!');
       setTitle('');
       setDescription('');
       setDate('');
@@ -713,15 +1002,17 @@ export default function CreateActivityPage() {
       setVoluntaryClassIds([]);
       setClassScheduleConflicts([]);
       setClassScheduleConflictError(null);
+      setQuickTemplateId('');
       setActivityTypeId('');
       setOrganizationLevelId('');
       setFiles([]);
+      window.sessionStorage.removeItem(CREATE_ACTIVITY_DRAFT_STORAGE_KEY);
       setTimeout(() => {
-        window.location.href = '/teacher/activities';
+        router.push('/teacher/activities');
       }, 1500);
       return;
     } catch (err: any) {
-      toast.error(err.message || 'Có lỗi xảy ra');
+      toast.error(err.message || 'Co loi xay ra');
       return;
     } finally {
       setSubmitting(false);
@@ -737,35 +1028,76 @@ export default function CreateActivityPage() {
           <div className="border-b border-gray-200 p-6 bg-gradient-to-r from-blue-50 to-indigo-50">
             <h1 className="text-3xl font-bold text-blue-700 flex items-center gap-2">
               <Plus className="w-7 h-7 text-blue-600" />
-              Tạo hoạt động mới
+              Tao hoat dong moi
             </h1>
             <p className="mt-2 text-gray-600">
-              Điền thông tin chi tiết, chọn lớp và đính kèm tài liệu nếu cần.
+              Dien thong tin chi tiet, chon lop va dinh kem tai lieu neu can.
             </p>
 
-            {/* Template Selector */}
-            <div className="mt-4 flex items-center gap-3">
-              <label className="text-sm font-medium text-gray-700">Sử dụng mẫu nhanh:</label>
-              <select
-                onChange={(e) => e.target.value && applyTemplate(Number(e.target.value))}
-                className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-200"
-                defaultValue=""
-              >
-                <option value="">-- Chọn mẫu --</option>
-                {templates.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name}
-                  </option>
-                ))}
-              </select>
-              <button
-                type="button"
-                onClick={() => setShowPreview(!showPreview)}
-                className="ml-auto flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-sm hover:bg-gray-50"
-              >
-                <Eye className="w-4 h-4" />
-                {showPreview ? 'Ẩn xem trước danh sách tham gia' : 'Xem trước danh sách tham gia'}
-              </button>
+            {/* Quick Template + Activity Type */}
+            <div className="mt-4 rounded-xl border border-blue-200 bg-white/80 p-4">
+              <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] lg:items-end">
+                <div>
+                  <label className="mb-1 block text-sm font-semibold text-gray-800">
+                    Mau nhanh (dien tieu de + mo ta)
+                  </label>
+                  <select
+                    value={quickTemplateId}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (!value) {
+                        setQuickTemplateId('');
+                        return;
+                      }
+                      applyTemplate(Number(value));
+                    }}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-200"
+                    disabled={submitting}
+                  >
+                    <option value="">-- Chon mau --</option>
+                    {templates.map((template) => (
+                      <option key={template.id} value={template.id}>
+                        {template.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-sm font-semibold text-gray-800">
+                    Loai hoat dong (anh huong cong thuc diem)
+                  </label>
+                  <select
+                    value={activityTypeId}
+                    onChange={(e) =>
+                      setActivityTypeId(e.target.value === '' ? '' : Number(e.target.value))
+                    }
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-200"
+                    disabled={submitting}
+                  >
+                    <option value="">-- Chon loai --</option>
+                    {activityTypes.map((type) => (
+                      <option key={type.id} value={type.id}>
+                        {type.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowPreview(!showPreview)}
+                  className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm hover:bg-gray-50"
+                >
+                  <Eye className="h-4 w-4" />
+                  {showPreview ? 'An xem truoc danh sach tham gia' : 'Xem truoc danh sach tham gia'}
+                </button>
+              </div>
+
+              <p className="mt-2 text-xs text-gray-600">
+                Goi y: Mau nhanh chi dien nhanh noi dung. Loai hoat dong la truong nghiep vu quan
+                trong de tinh diem, ban co the doi lai bat ky luc nao.
+              </p>
             </div>
           </div>
 
@@ -781,7 +1113,7 @@ export default function CreateActivityPage() {
               }`}
             >
               <BookOpen className="w-4 h-4 inline mr-2" />
-              Bước 1: Thông tin
+              Buoc 1: Thong tin
             </button>
             <button
               type="button"
@@ -793,7 +1125,7 @@ export default function CreateActivityPage() {
               }`}
             >
               <Award className="w-4 h-4 inline mr-2" />
-              Bước 2: Phạm vi và phân loại
+              Buoc 2: Pham vi va phan loai
             </button>
             <button
               type="button"
@@ -805,7 +1137,7 @@ export default function CreateActivityPage() {
               }`}
             >
               <FileText className="w-4 h-4 inline mr-2" />
-              Bước 3: Tài liệu và gửi
+              Buoc 3: Tai lieu va gui
             </button>
           </div>
 
@@ -1207,18 +1539,18 @@ export default function CreateActivityPage() {
                       {!effectiveAppliesToAllStudents && showPreview && (
                         <div className="mt-4 rounded-lg border border-blue-200 bg-blue-50 p-4">
                           <div className="mb-2 text-sm font-semibold text-blue-900">
-                            Xem trước danh sách tham gia hiện tại
+                            Xem truoc danh sach tham gia hien tai
                           </div>
                           {selectedClasses.length === 0 &&
                           mandatoryStudentIds.length === 0 &&
                           voluntaryStudentIds.length === 0 ? (
                             <p className="text-sm text-gray-600">
-                              Chọn ít nhất một lớp hoặc học viên trực tiếp để xem danh sách dự kiến.
+                              Chon it nhat mot lop hoac hoc vien truc tiep de xem danh sach du kien.
                             </p>
                           ) : previewLoading ? (
                             <div className="flex items-center gap-2 text-sm text-blue-700">
                               <Loader2 className="h-4 w-4 animate-spin" />
-                              Đang tải danh sách xem trước...
+                              Dang tai danh sach xem truoc...
                             </div>
                           ) : previewError ? (
                             <p className="text-sm text-red-600">{previewError}</p>
@@ -1226,40 +1558,40 @@ export default function CreateActivityPage() {
                             <div className="space-y-3">
                               <div className="grid grid-cols-2 gap-2 text-sm">
                                 <div className="rounded-lg bg-white p-3">
-                                  <div className="text-gray-500">Số lớp</div>
+                                  <div className="text-gray-500">So lop</div>
                                   <div className="text-lg font-bold text-gray-900">
                                     {participationPreview.total_classes}
                                   </div>
                                 </div>
                                 <div className="rounded-lg bg-white p-3">
-                                  <div className="text-gray-500">Bắt buộc</div>
+                                  <div className="text-gray-500">Bat buoc</div>
                                   <div className="text-lg font-bold text-orange-700">
                                     {participationPreview.mandatory_participants}
                                   </div>
                                 </div>
                                 <div className="rounded-lg bg-white p-3">
-                                  <div className="text-gray-500">Tự nguyện</div>
+                                  <div className="text-gray-500">Tu nguyen</div>
                                   <div className="text-lg font-bold text-sky-700">
                                     {participationPreview.voluntary_participants}
                                   </div>
                                 </div>
                                 <div className="rounded-lg bg-white p-3">
-                                  <div className="text-gray-500">Xung đột phạm vi</div>
+                                  <div className="text-gray-500">Xung dot pham vi</div>
                                   <div className="text-lg font-bold text-amber-700">
                                     {participationPreview.conflict_count}
                                   </div>
                                 </div>
                               </div>
                               <div className="text-xs text-gray-600">
-                                Nếu một lớp hoặc học viên xuất hiện ở cả hai danh sách, hệ thống sẽ
-                                ưu tiên bắt buộc hơn tự nguyện.
+                                Neu mot lop hoac hoc vien xuat hien o ca hai danh sach, he thong se
+                                uu tien bat buoc hon tu nguyen.
                               </div>
                               {participationPreview.direct_students &&
                               participationPreview.direct_students.length > 0 ? (
                                 <details className="rounded-lg border border-emerald-200 bg-white p-3">
                                   <summary className="cursor-pointer list-none font-medium text-gray-800">
-                                    Học viên chọn trực tiếp •{' '}
-                                    {participationPreview.direct_students.length} học viên
+                                    Hoc vien chon truc tiep •{' '}
+                                    {participationPreview.direct_students.length} hoc vien
                                   </summary>
                                   <div className="mt-2 space-y-1 text-sm text-gray-600">
                                     {participationPreview.direct_students.map((student) => (
@@ -1271,8 +1603,8 @@ export default function CreateActivityPage() {
                                           <span>{student.name}</span>
                                           <span className="ml-2 text-xs font-medium text-emerald-700">
                                             {student.resolved_mode === 'mandatory'
-                                              ? 'Bắt buộc'
-                                              : 'Tự nguyện'}
+                                              ? 'Bat buoc'
+                                              : 'Tu nguyen'}
                                           </span>
                                         </div>
                                         <span className="text-xs text-gray-500">
@@ -1290,7 +1622,7 @@ export default function CreateActivityPage() {
                                     className="rounded-lg border border-blue-200 bg-white p-3"
                                   >
                                     <summary className="cursor-pointer list-none font-medium text-gray-800">
-                                      {group.class_name} • {group.mandatory_count} học viên bắt buộc
+                                      {group.class_name} • {group.mandatory_count} hoc vien bat buoc
                                     </summary>
                                     <div className="mt-2 space-y-1 text-sm text-gray-600">
                                       {group.students.map((student) => (
@@ -1321,29 +1653,24 @@ export default function CreateActivityPage() {
 
                 {currentTab === 'details' && (
                   <>
-                    {/* Activity Type, Organization Level, Max Participants */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div>
-                        <label className="block font-medium mb-1">
-                          <Award className="w-4 h-4 inline mr-1" />
-                          Loại hoạt động
-                        </label>
-                        <select
-                          value={activityTypeId}
-                          onChange={(e) =>
-                            setActivityTypeId(e.target.value === '' ? '' : Number(e.target.value))
-                          }
-                          className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-200"
-                          disabled={submitting}
-                        >
-                          <option value="">-- Chọn loại --</option>
-                          {activityTypes.map((type) => (
-                            <option key={type.id} value={type.id}>
-                              {type.name}
-                            </option>
-                          ))}
-                        </select>
+                    <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
+                      <div className="font-medium">Loại hoạt động đã được gộp về Bước 1</div>
+                      <div className="mt-1 text-blue-800">
+                        Hiện tại:{' '}
+                        {activityTypes.find((type) => type.id === activityTypeId)?.name ||
+                          'Chưa chọn'}
                       </div>
+                      <button
+                        type="button"
+                        onClick={() => setCurrentTab('basic')}
+                        className="mt-2 rounded-md border border-blue-300 bg-white px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-100"
+                      >
+                        Quay lại Bước 1 để đổi mẫu nhanh / loại hoạt động
+                      </button>
+                    </div>
+
+                    {/* Organization Level, Max Participants */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="block font-medium mb-1">Cấp tổ chức</label>
                         <select
@@ -1371,26 +1698,32 @@ export default function CreateActivityPage() {
                         </label>
                         <input
                           type="number"
-                          min="1"
+                          min={maxParticipantsFloor}
                           className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-200"
                           value={maxParticipants}
                           onChange={(e) =>
                             setMaxParticipants(e.target.value === '' ? '' : Number(e.target.value))
                           }
                           disabled={submitting}
-                          placeholder="Để trống sẽ dùng 30"
+                          placeholder="Để trống sẽ tự cập nhật theo phạm vi đã chọn"
                         />
                         <div className="text-xs text-gray-500 mt-1">
-                          Để trống nếu muốn dùng giá trị mặc định 30 người.
+                          Min tự động hiện tại: {maxParticipantsFloor} (lớp trong phạm vi + học viên
+                          chỉ định). Bạn có thể nhập lớn hơn để mở rộng quy mô.
                         </div>
+                        {isMaxParticipantsBelowFloor ? (
+                          <div className="mt-1 text-xs font-medium text-red-600">
+                            Số lượng tối đa phải lớn hơn hoặc bằng {maxParticipantsFloor}.
+                          </div>
+                        ) : null}
                       </div>
                     </div>
 
                     {/* Info Box */}
                     <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
                       <p className="text-sm text-blue-800">
-                        💡 <strong>Mẹo:</strong> Chọn loại hoạt động và cấp tổ chức phù hợp để hệ
-                        thống tự động tính điểm theo công thức.
+                        💡 <strong>Mẹo:</strong> Loại hoạt động + cấp tổ chức sẽ ảnh hưởng trực tiếp
+                        đến công thức tính điểm.
                       </p>
                     </div>
                   </>
@@ -1485,7 +1818,7 @@ export default function CreateActivityPage() {
                         {uploading && (
                           <div className="flex items-center gap-2 text-blue-600 mt-2 p-3 bg-blue-50 rounded-lg">
                             <Loader2 className="animate-spin w-5 h-5" />
-                            <span>Đang tải file lên...</span>
+                            <span>Dang tai file len...</span>
                           </div>
                         )}
                       </div>
@@ -1504,22 +1837,22 @@ export default function CreateActivityPage() {
                     disabled={currentTab === 'basic'}
                     className="rounded-lg border bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 disabled:opacity-50"
                   >
-                    Quay lại bước trước
+                    Quay lai buoc truoc
                   </button>
                   <div className="text-center text-sm text-gray-600">
                     <div className="font-medium text-gray-800">
                       {currentTab === 'basic'
-                        ? 'Tiến độ 1/3, đang hoàn thiện thông tin chính.'
+                        ? 'Tien do 1/3, dang hoan thien thong tin chinh.'
                         : currentTab === 'details'
-                          ? 'Tiến độ 2/3, đang chọn phạm vi và phân loại.'
-                          : 'Tiến độ 3/3, đã sẵn sàng kiểm tra và gửi.'}
+                          ? 'Tien do 2/3, dang chon pham vi va phan loai.'
+                          : 'Tien do 3/3, da san sang kiem tra va gui.'}
                     </div>
                     <div className="text-xs text-gray-500">
                       {currentTab === 'basic'
-                        ? 'Hãy đi tiếp sang bước 2 để chọn lớp, học viên và phạm vi áp dụng.'
+                        ? 'Hay di tiep sang buoc 2 de chon lop, hoc vien va pham vi ap dung.'
                         : currentTab === 'details'
-                          ? 'Sau khi chốt phạm vi, sang bước 3 để rà file và bật nút lưu hoặc gửi duyệt.'
-                          : 'Bạn đang ở bước cuối, có thể lưu nháp hoặc gửi duyệt ngay.'}
+                          ? 'Sau khi chot pham vi, sang buoc 3 de ra file va bat nut luu hoac gui duyet.'
+                          : 'Ban dang o buoc cuoi, co the luu nhap hoac gui duyet ngay.'}
                     </div>
                   </div>
                   <button
@@ -1532,7 +1865,7 @@ export default function CreateActivityPage() {
                     disabled={currentTab === 'files'}
                     className="rounded-lg border bg-white px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-50 disabled:opacity-50"
                   >
-                    Sang bước tiếp theo
+                    Sang buoc tiep theo
                   </button>
                 </div>
 
@@ -1541,29 +1874,29 @@ export default function CreateActivityPage() {
                     <div className="flex items-start gap-2">
                       <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />
                       <div className="space-y-1">
-                        <p className="font-semibold">Kiểm tra trùng lịch lớp</p>
+                        <p className="font-semibold">Kiem tra trung lich lop</p>
                         {checkingClassScheduleConflict ? (
-                          <p>Đang kiểm tra xung đột lịch với các hoạt động đã công bố...</p>
+                          <p>Dang kiem tra xung dot lich voi cac hoat dong da cong bo...</p>
                         ) : classScheduleConflictError ? (
                           <p className="text-red-700">{classScheduleConflictError}</p>
                         ) : hasBlockingClassScheduleConflict ? (
                           <>
                             <p>
-                              Có {classScheduleConflicts.length} xung đột lớp. Bạn cần đổi thời gian
-                              hoặc bỏ lớp bị xung đột trước khi lưu.
+                              Co {classScheduleConflicts.length} xung dot lop. Ban can doi thoi gian
+                              hoac bo lop bi xung dot truoc khi luu.
                             </p>
                             <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-amber-900">
                               {classScheduleConflicts.slice(0, 5).map((conflict) => (
                                 <li key={`${conflict.activity_id}-${conflict.class_id}`}>
                                   {conflict.class_name}: "{conflict.title}" lúc{' '}
                                   {formatVietnamDateTime(conflict.date_time)} (
-                                  {conflict.overlap_minutes} phút trùng)
+                                  {conflict.overlap_minutes} phut trung)
                                 </li>
                               ))}
                             </ul>
                           </>
                         ) : (
-                          <p className="text-emerald-700">Không có xung đột lịch lớp.</p>
+                          <p className="text-emerald-700">Khong co xung dot lich lop.</p>
                         )}
                       </div>
                     </div>
@@ -1592,10 +1925,10 @@ export default function CreateActivityPage() {
                       <Save className="w-5 h-5" />
                     )}
                     {submitting
-                      ? 'Đang xử lý...'
+                      ? 'Dang xu ly...'
                       : currentTab !== 'files'
-                        ? 'Đến bước 3 để lưu nháp'
-                        : 'Lưu nháp'}
+                        ? 'Den buoc 3 de luu nhap'
+                        : 'Luu nhap'}
                   </button>
                   <button
                     type="button"
@@ -1617,16 +1950,16 @@ export default function CreateActivityPage() {
                       <Send className="w-5 h-5" />
                     )}
                     {submitting
-                      ? 'Đang xử lý...'
+                      ? 'Dang xu ly...'
                       : currentTab !== 'files'
-                        ? 'Đến bước 3 để gửi duyệt'
-                        : 'Gửi duyệt'}
+                        ? 'Den buoc 3 de gui duyet'
+                        : 'Gui duyet'}
                   </button>
                 </div>
                 {success && (
                   <div className="mt-3 p-4 text-green-600 bg-green-50 rounded-lg border-2 border-green-200 flex items-center gap-2">
                     <CheckCircle2 className="w-5 h-5" />
-                    <span className="font-medium">Thành công! Chuyển hướng...</span>
+                    <span className="font-medium">Thanh cong! Chuyen huong...</span>
                   </div>
                 )}
               </form>
@@ -1637,7 +1970,7 @@ export default function CreateActivityPage() {
               <div className="w-80 border-l border-gray-200 pl-6">
                 <h3 className="font-bold text-lg mb-4 text-gray-700 flex items-center gap-2">
                   <Eye className="w-5 h-5" />
-                  Xem trước
+                  Xem truoc
                 </h3>
                 <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-4 border-2 border-blue-200">
                   <h4 className="font-bold text-xl text-gray-800 mb-2">
