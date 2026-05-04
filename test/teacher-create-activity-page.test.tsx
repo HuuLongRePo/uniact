@@ -484,6 +484,8 @@ describe('CreateActivityPage', () => {
     window.sessionStorage.setItem(
       'teacher:create-activity:draft:v1',
       JSON.stringify({
+        schemaVersion: 1,
+        savedAt: Date.now(),
         title: 'Draft title',
         description: 'Draft description',
         date: '2026-05-12',
@@ -582,5 +584,91 @@ describe('CreateActivityPage', () => {
       expect(toastSuccessMock).toHaveBeenCalled();
       expect(window.sessionStorage.getItem('teacher:create-activity:draft:v1')).toBeNull();
     });
+  });
+
+  it('does not restore expired draft snapshot', async () => {
+    window.sessionStorage.setItem(
+      'teacher:create-activity:draft:v1',
+      JSON.stringify({
+        schemaVersion: 1,
+        savedAt: Date.now() - 13 * 60 * 60 * 1000,
+        title: 'Expired draft',
+        description: 'Old draft',
+        date: '2026-05-12',
+        time: '10:15',
+        endTime: '',
+        location: 'Expired room',
+        maxParticipants: 20,
+        mandatoryClassIds: [],
+        voluntaryClassIds: [],
+        mandatoryStudentIds: [],
+        voluntaryStudentIds: [],
+        appliesToAllStudents: false,
+        activityTypeId: '',
+        organizationLevelId: '',
+        quickTemplateId: '',
+        currentTab: 'basic',
+        classSearch: '',
+        studentSearch: '',
+        studentsLoaded: false,
+        studentOptions: [],
+      })
+    );
+
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url === '/api/activities/check-conflicts' && init?.method === 'POST') {
+        return jsonResponse({ has_class_schedule_conflict: false, class_schedule_conflicts: [] });
+      }
+      if (url === '/api/classes') return jsonResponse({ classes: [{ id: 1, name: 'CNTT K18A' }] });
+      if (url === '/api/activity-types') return jsonResponse({ types: [] });
+      if (url === '/api/organization-levels') return jsonResponse({ levels: [] });
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
+
+    vi.stubGlobal('fetch', fetchMock);
+    window.fetch = fetchMock as typeof fetch;
+
+    const { container } = render(React.createElement(CreateActivityPage));
+    await screen.findAllByText('CNTT K18A');
+
+    const textInputs = container.querySelectorAll('input[type="text"]');
+    expect((textInputs[0] as HTMLInputElement).value).toBe('');
+    expect(window.sessionStorage.getItem('teacher:create-activity:draft:v1')).toBeNull();
+  });
+
+  it('supports manual discard draft action', async () => {
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url === '/api/activities/check-conflicts' && init?.method === 'POST') {
+        return jsonResponse({ has_class_schedule_conflict: false, class_schedule_conflicts: [] });
+      }
+      if (url === '/api/classes') return jsonResponse({ classes: [{ id: 1, name: 'CNTT K18A' }] });
+      if (url === '/api/activity-types') return jsonResponse({ types: [] });
+      if (url === '/api/organization-levels') return jsonResponse({ levels: [] });
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
+
+    vi.stubGlobal('fetch', fetchMock);
+    window.fetch = fetchMock as typeof fetch;
+
+    const { container } = render(React.createElement(CreateActivityPage));
+    await screen.findAllByText('CNTT K18A');
+
+    fillRequiredFields(container, {
+      title: 'Draft to discard',
+      date: '2026-05-22',
+      time: '09:00',
+      location: 'Room Z',
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Xoa ban nhap tam/i }));
+
+    const textInputs = container.querySelectorAll('input[type="text"]');
+    expect((textInputs[0] as HTMLInputElement).value).toBe('');
+    expect(window.sessionStorage.getItem('teacher:create-activity:draft:v1')).toBeNull();
+    expect(confirmSpy).toHaveBeenCalled();
   });
 });

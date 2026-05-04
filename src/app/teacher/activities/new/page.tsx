@@ -57,6 +57,8 @@ interface QuickTemplate {
 }
 
 interface CreateActivityDraftSnapshot {
+  schemaVersion: number;
+  savedAt: number;
   title: string;
   description: string;
   date: string;
@@ -137,6 +139,8 @@ type SelectionChecklistProps = {
 };
 
 const CREATE_ACTIVITY_DRAFT_STORAGE_KEY = 'teacher:create-activity:draft:v1';
+const CREATE_ACTIVITY_DRAFT_SCHEMA_VERSION = 1;
+const CREATE_ACTIVITY_DRAFT_TTL_MS = 12 * 60 * 60 * 1000;
 
 function SelectionChecklist({
   title,
@@ -341,7 +345,7 @@ export default function CreateActivityPage() {
     if (time) return true;
     if (endTime) return true;
     if (location.trim()) return true;
-    if (maxParticipants !== '') return true;
+    if (maxParticipants !== '' && Number(maxParticipants) !== 30) return true;
     if (mandatoryClassIds.length > 0 || voluntaryClassIds.length > 0) return true;
     if (mandatoryStudentIds.length > 0 || voluntaryStudentIds.length > 0) return true;
     if (appliesToAllStudents) return true;
@@ -484,6 +488,44 @@ export default function CreateActivityPage() {
     }
   };
 
+  const clearDraftSnapshot = () => {
+    window.sessionStorage.removeItem(CREATE_ACTIVITY_DRAFT_STORAGE_KEY);
+  };
+
+  const resetCreateActivityForm = () => {
+    setTitle('');
+    setDescription('');
+    setDate('');
+    setTime('');
+    setEndTime('');
+    setLocation('');
+    setMaxParticipants('');
+    setMandatoryClassIds([]);
+    setVoluntaryClassIds([]);
+    setMandatoryStudentIds([]);
+    setVoluntaryStudentIds([]);
+    setClassScheduleConflicts([]);
+    setClassScheduleConflictError(null);
+    setQuickTemplateId('');
+    setActivityTypeId('');
+    setOrganizationLevelId('');
+    setFiles([]);
+    setShowPreview(false);
+    setParticipationPreview(null);
+    setPreviewError(null);
+    setCurrentTab('basic');
+    setClassSearch('');
+    setStudentSearch('');
+  };
+
+  const handleDiscardDraft = () => {
+    const shouldDiscard = window.confirm('Ban co chac muon xoa toan bo noi dung dang nhap?');
+    if (!shouldDiscard) return;
+    resetCreateActivityForm();
+    clearDraftSnapshot();
+    toast.success('Da xoa ban nhap tam.');
+  };
+
   useEffect(() => {
     if (maxParticipantsFloor <= 0) return;
     if (maxParticipants === '' || Number(maxParticipants) < maxParticipantsFloor) {
@@ -525,6 +567,16 @@ export default function CreateActivityPage() {
       }
 
       const parsedDraft = JSON.parse(rawDraft) as CreateActivityDraftSnapshot;
+      const isVersionValid =
+        Number(parsedDraft.schemaVersion) === CREATE_ACTIVITY_DRAFT_SCHEMA_VERSION;
+      const savedAt = Number(parsedDraft.savedAt || 0);
+      const isFresh = Number.isFinite(savedAt) && Date.now() - savedAt <= CREATE_ACTIVITY_DRAFT_TTL_MS;
+      if (!isVersionValid || !isFresh) {
+        clearDraftSnapshot();
+        hasRestoredDraftRef.current = true;
+        return;
+      }
+
       setTitle(parsedDraft.title || '');
       setDescription(parsedDraft.description || '');
       setDate(parsedDraft.date || '');
@@ -560,7 +612,7 @@ export default function CreateActivityPage() {
       toast.success('Da khoi phuc ban nhap dang tao.');
     } catch (error) {
       console.error(error);
-      window.sessionStorage.removeItem(CREATE_ACTIVITY_DRAFT_STORAGE_KEY);
+      clearDraftSnapshot();
     } finally {
       hasRestoredDraftRef.current = true;
     }
@@ -570,11 +622,13 @@ export default function CreateActivityPage() {
     if (!hasRestoredDraftRef.current) return;
 
     if (!hasUnsavedDraftData) {
-      window.sessionStorage.removeItem(CREATE_ACTIVITY_DRAFT_STORAGE_KEY);
+      clearDraftSnapshot();
       return;
     }
 
     const draftSnapshot: CreateActivityDraftSnapshot = {
+      schemaVersion: CREATE_ACTIVITY_DRAFT_SCHEMA_VERSION,
+      savedAt: Date.now(),
       title,
       description,
       date,
@@ -990,23 +1044,8 @@ export default function CreateActivityPage() {
 
       setSuccess(true);
       toast.success(mode === 'draft' ? 'Luu nhap thanh cong!' : 'Gui duyet thanh cong!');
-      setTitle('');
-      setDescription('');
-      setDate('');
-      setTime('');
-      setLocation('');
-      setTime('');
-      setEndTime('');
-      setMaxParticipants('');
-      setMandatoryClassIds([]);
-      setVoluntaryClassIds([]);
-      setClassScheduleConflicts([]);
-      setClassScheduleConflictError(null);
-      setQuickTemplateId('');
-      setActivityTypeId('');
-      setOrganizationLevelId('');
-      setFiles([]);
-      window.sessionStorage.removeItem(CREATE_ACTIVITY_DRAFT_STORAGE_KEY);
+      resetCreateActivityForm();
+      clearDraftSnapshot();
       setTimeout(() => {
         router.push('/teacher/activities');
       }, 1500);
@@ -1094,10 +1133,20 @@ export default function CreateActivityPage() {
                 </button>
               </div>
 
-              <p className="mt-2 text-xs text-gray-600">
-                Goi y: Mau nhanh chi dien nhanh noi dung. Loai hoat dong la truong nghiep vu quan
-                trong de tinh diem, ban co the doi lai bat ky luc nao.
-              </p>
+              <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                <p className="text-xs text-gray-600">
+                  Goi y: Mau nhanh chi dien nhanh noi dung. Loai hoat dong la truong nghiep vu quan
+                  trong de tinh diem, ban co the doi lai bat ky luc nao.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleDiscardDraft}
+                  disabled={!hasUnsavedDraftData || submitting}
+                  className="rounded-md border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Xoa ban nhap tam
+                </button>
+              </div>
             </div>
           </div>
 
