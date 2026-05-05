@@ -77,7 +77,7 @@ function buildAttendanceActionButtons(role: NotificationRecipientRole, activityI
   return [
     {
       id: 'open_checkin',
-      label: 'Điểm danh',
+      label: 'Mở trang quét QR',
       action: 'open_link',
       href: getAttendancePrimaryPath(role, activityId),
       variant: 'primary' as const,

@@ -12,6 +12,10 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const query = searchParams.get('q') || '';
     const type = searchParams.get('type') || 'all'; // all, users, activities, classes, awards
+    const role = searchParams.get('role') || '';
+    const status = searchParams.get('status') || '';
+    const dateFrom = searchParams.get('date_from') || '';
+    const dateTo = searchParams.get('date_to') || '';
     const limit = parseInt(searchParams.get('limit') || '50');
     const offset = parseInt(searchParams.get('offset') || '0');
 
@@ -31,13 +35,21 @@ export async function GET(req: NextRequest) {
 
     // Search users
     if (type === 'all' || type === 'users') {
+      const userWhere = ['(name LIKE ? OR email LIKE ?)'];
+      const userBindings: unknown[] = [searchPattern, searchPattern];
+
+      if (role) {
+        userWhere.push('role = ?');
+        userBindings.push(role);
+      }
+
       const users = await dbAll(
         `SELECT id, name, email, role, created_at
          FROM users
-         WHERE name LIKE ? OR email LIKE ?
+         WHERE ${userWhere.join(' AND ')}
          ORDER BY name
          LIMIT ? OFFSET ?`,
-        [searchPattern, searchPattern, limit, offset]
+        [...userBindings, limit, offset]
       );
       results.users = users || [];
       results.total += results.users.length;
@@ -45,6 +57,22 @@ export async function GET(req: NextRequest) {
 
     // Search activities
     if (type === 'all' || type === 'activities') {
+      const activityWhere = ['(a.title LIKE ? OR a.description LIKE ? OR a.location LIKE ?)'];
+      const activityBindings: unknown[] = [searchPattern, searchPattern, searchPattern];
+
+      if (status) {
+        activityWhere.push('a.status = ?');
+        activityBindings.push(status);
+      }
+      if (dateFrom) {
+        activityWhere.push('date(a.date) >= date(?)');
+        activityBindings.push(dateFrom);
+      }
+      if (dateTo) {
+        activityWhere.push('date(a.date) <= date(?)');
+        activityBindings.push(dateTo);
+      }
+
       const activities = await dbAll(
         `SELECT 
           a.id,
@@ -60,10 +88,10 @@ export async function GET(req: NextRequest) {
          LEFT JOIN activity_types at ON a.type_id = at.id
          LEFT JOIN organization_levels ol ON a.org_level_id = ol.id
          LEFT JOIN users u ON a.created_by = u.id
-         WHERE a.title LIKE ? OR a.description LIKE ? OR a.location LIKE ?
+         WHERE ${activityWhere.join(' AND ')}
          ORDER BY a.date DESC
          LIMIT ? OFFSET ?`,
-        [searchPattern, searchPattern, searchPattern, limit, offset]
+        [...activityBindings, limit, offset]
       );
       results.activities = activities || [];
       results.total += results.activities.length;

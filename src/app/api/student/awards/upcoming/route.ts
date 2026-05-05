@@ -1,47 +1,37 @@
-import { NextRequest } from 'next/server';
 import { getUserFromSession } from '@/lib/auth';
-import { dbGet } from '@/lib/database';
 import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
+import { getFinalScoreLedgerByStudentIds } from '@/lib/score-ledger';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const user = await getUserFromSession();
-    if (!user) return errorResponse(ApiError.unauthorized('Chưa đăng nhập'));
-    if (user.role !== 'student')
-      return errorResponse(ApiError.forbidden('Không có quyền truy cập'));
+    if (!user) return errorResponse(ApiError.unauthorized('Chua dang nhap'));
+    if (user.role !== 'student') {
+      return errorResponse(ApiError.forbidden('Khong co quyen truy cap'));
+    }
 
-    // Tổng điểm hiện tại dựa trên student_scores
-    const result: any = await dbGet(
-      `
-      SELECT COALESCE(SUM(points), 0) as total
-      FROM student_scores
-      WHERE student_id = ?
-    `,
-      [user.id]
-    );
+    const ledger = await getFinalScoreLedgerByStudentIds([Number(user.id)]);
+    const currentPoints = ledger.get(Number(user.id))?.final_total || 0;
 
-    const currentPoints = result?.total || 0;
-
-    // Define award thresholds
     const awardThresholds = [
       {
-        type: 'Giải Xuất Sắc',
+        type: 'Giai Xuat sac',
         points_needed: 500,
-        description: 'Dành cho sinh viên có điểm rèn luyện ≥ 500',
+        description: 'Danh cho hoc vien co tong diem ren luyen tu 500 tro len.',
       },
       {
-        type: 'Giải Khá',
+        type: 'Giai Kha',
         points_needed: 300,
-        description: 'Dành cho sinh viên có điểm rèn luyện ≥ 300',
+        description: 'Danh cho hoc vien co tong diem ren luyen tu 300 tro len.',
       },
       {
-        type: 'Giải Trung Bình Khá',
+        type: 'Giai Tien bo',
         points_needed: 200,
-        description: 'Dành cho sinh viên có điểm rèn luyện ≥ 200',
+        description: 'Danh cho hoc vien dat moc 200 diem va duy tri tham gia deu.',
       },
     ];
 
-    const upcomingAwards = awardThresholds
+    const awards = awardThresholds
       .filter((award) => currentPoints < award.points_needed)
       .map((award) => ({
         ...award,
@@ -50,9 +40,9 @@ export async function GET(request: NextRequest) {
       }))
       .sort((a, b) => a.points_needed - b.points_needed);
 
-    return successResponse({ awards: upcomingAwards });
+    return successResponse({ awards });
   } catch (error: any) {
     console.error('Get upcoming awards error:', error);
-    return errorResponse(ApiError.internalError(error.message || 'Lỗi máy chủ nội bộ'));
+    return errorResponse(ApiError.internalError(error?.message || 'Loi may chu noi bo'));
   }
 }

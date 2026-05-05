@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
       const studentStats = await dbGet(
         `SELECT 
           COUNT(DISTINCT p.id) as total_activities,
-          COUNT(DISTINCT CASE WHEN p.status = 'attended' THEN p.id END) as attended_count,
+          COUNT(DISTINCT CASE WHEN p.attendance_status = 'attended' THEN p.id END) as attended_count,
           COALESCE(SUM(pc.total_points), 0) as total_points,
           (SELECT COUNT(*) FROM student_awards sa WHERE sa.student_id = ?) as awards_count
         FROM participations p

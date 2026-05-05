@@ -22,30 +22,37 @@ export async function GET(request: NextRequest) {
     const exportCsv = params?.get('export') === 'csv';
 
     const whereClauses: string[] = [];
+    const whereClausesAliased: string[] = [];
     const bindings: any[] = [];
 
     if (actor_id) {
       whereClauses.push('actor_id = ?');
+      whereClausesAliased.push('l.actor_id = ?');
       bindings.push(Number(actor_id));
     }
     if (actionLike) {
       whereClauses.push('action LIKE ?');
+      whereClausesAliased.push('l.action LIKE ?');
       bindings.push('%' + actionLike + '%');
     }
     if (target_table) {
       whereClauses.push('target_table = ?');
+      whereClausesAliased.push('l.target_table = ?');
       bindings.push(target_table);
     }
     if (target_id) {
       whereClauses.push('target_id = ?');
+      whereClausesAliased.push('l.target_id = ?');
       bindings.push(Number(target_id));
     }
     if (date_from) {
       whereClauses.push('created_at >= ?');
+      whereClausesAliased.push('l.created_at >= ?');
       bindings.push(date_from);
     }
     if (date_to) {
       whereClauses.push('created_at <= ?');
+      whereClausesAliased.push('l.created_at <= ?');
       bindings.push(date_to);
     }
 
@@ -54,10 +61,15 @@ export async function GET(request: NextRequest) {
       whereClauses.push(
         "(actor_id = ? OR (target_table = 'activities' AND target_id IN (SELECT id FROM activities WHERE teacher_id = ?)))"
       );
+      whereClausesAliased.push(
+        "(l.actor_id = ? OR (l.target_table = 'activities' AND l.target_id IN (SELECT id FROM activities WHERE teacher_id = ?)))"
+      );
       bindings.push(user.id, user.id);
     }
 
     const whereSQL = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+    const whereSQLAliased =
+      whereClausesAliased.length > 0 ? `WHERE ${whereClausesAliased.join(' AND ')}` : '';
 
     const totalRow = (await dbGet(
       `SELECT COUNT(*) as total FROM audit_logs ${whereSQL}`,
@@ -66,7 +78,16 @@ export async function GET(request: NextRequest) {
     const total = totalRow?.total || 0;
 
     const logs = await dbAll(
-      `SELECT * FROM audit_logs ${whereSQL} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+      `SELECT
+         l.*,
+         u.name AS actor_name,
+         u.email AS actor_email,
+         u.role AS actor_role
+       FROM audit_logs l
+       LEFT JOIN users u ON u.id = l.actor_id
+       ${whereSQLAliased}
+       ORDER BY l.created_at DESC
+       LIMIT ? OFFSET ?`,
       [...bindings, per_page, offset]
     );
 

@@ -2,22 +2,21 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromSession } from '@/lib/auth';
 import { dbAll } from '@/lib/database';
 
-// GET /api/student/awards - Danh sách giải thưởng của sinh viên hiện tại
 export async function GET(request: NextRequest) {
   try {
     const user = await getUserFromSession();
-    if (!user) return NextResponse.json({ error: 'Chưa đăng nhập' }, { status: 401 });
-    if (user.role !== 'student')
-      return NextResponse.json({ error: 'Không có quyền truy cập' }, { status: 403 });
+    if (!user) return NextResponse.json({ error: 'Chua dang nhap' }, { status: 401 });
+    if (user.role !== 'student') {
+      return NextResponse.json({ error: 'Khong co quyen truy cap' }, { status: 403 });
+    }
 
     const searchParams = request.nextUrl.searchParams;
-    const typeFilter = searchParams.get('type'); // lọc theo tên loại giải thưởng
-    const from = searchParams.get('from'); // yyyy-mm-dd
+    const typeFilter = searchParams.get('type');
+    const from = searchParams.get('from');
     const to = searchParams.get('to');
 
-    // Build dynamic WHERE conditions
     const conditions: string[] = ['sa.student_id = ?'];
-    const params: any[] = [user.id];
+    const params: Array<string | number> = [user.id];
 
     if (typeFilter) {
       conditions.push('LOWER(at.name) = LOWER(?)');
@@ -32,10 +31,10 @@ export async function GET(request: NextRequest) {
       params.push(to);
     }
 
-    const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+    const whereClause = `WHERE ${conditions.join(' AND ')}`;
 
     const awards = await dbAll(
-      `SELECT 
+      `SELECT
         sa.id,
         sa.reason,
         sa.awarded_at,
@@ -50,9 +49,8 @@ export async function GET(request: NextRequest) {
       params
     );
 
-    // Summary by award type
     const summary = await dbAll(
-      `SELECT 
+      `SELECT
         at.name AS award_type_name,
         COUNT(sa.id) AS total_awards,
         MIN(sa.awarded_at) AS first_awarded_at,
@@ -68,6 +66,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ success: true, data: { awards, summary } });
   } catch (error: any) {
     console.error('Error fetching student awards:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: error?.message || 'Khong the tai danh sach khen thuong' }, { status: 500 });
   }
 }
