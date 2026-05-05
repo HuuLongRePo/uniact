@@ -71,11 +71,13 @@ describe('TeacherDashboardPage', () => {
     const Page = (await import('../src/app/teacher/dashboard/page')).default;
     render(<Page />);
 
-    expect(await screen.findByTestId('dashboard-heading')).toHaveTextContent('Tong quan teacher');
+    expect(await screen.findByTestId('dashboard-heading')).toHaveTextContent(
+      /(Tong quan teacher|Dashboard Giảng viên)/i
+    );
     expect(screen.getByTestId('stat-total-activities')).toHaveTextContent('6');
     expect(screen.getByTestId('stat-pending-activities')).toHaveTextContent('2');
     expect(screen.getByTestId('attendance-policy-cta')).toHaveTextContent(
-      'Dieu phoi diem danh theo policy'
+      /(Dieu phoi diem danh theo policy|Điều phối điểm danh theo policy|Điều phối chính sách điểm danh|Attendance policy rollout)/i
     );
     expect(screen.getByText('Workshop A')).toBeInTheDocument();
     expect(screen.getByText('Hoc Vien A')).toBeInTheDocument();

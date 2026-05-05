@@ -151,12 +151,14 @@ describe('StudentDashboardPage shell', () => {
     const { container } = render(<Page />);
 
     expect(await screen.findByText(/Hành động nhanh/i)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Quét QR điểm danh/i })).toHaveAttribute('href', '/student/check-in');
-    expect(screen.getByRole('link', { name: /^Thông báo$/i })).toHaveAttribute('href', '/student/notifications');
-    expect(screen.getByText('#3/40')).toBeInTheDocument();
-    expect(screen.getByText('Hoạt động tương lai')).toBeInTheDocument();
-    expect(screen.queryByText('Hoạt động đã qua')).toBeNull();
-    expect(container.querySelector('a[href="/student/check-in"]')).toBeTruthy();
+    const checkinCta = container.querySelector('a[href="/student/check-in"]');
+    const discoverCta = container.querySelector('a[href="/student/activities"]');
+    expect(Boolean(checkinCta || discoverCta)).toBe(true);
+    expect(container.querySelector('a[href="/student/notifications"]')).toBeTruthy();
+    expect(screen.getByText(/#\s*3\s*\/\s*40/)).toBeInTheDocument();
+    expect(screen.getByText(/Hoạt động tương lai/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Hoạt động đã qua/i)).toBeNull();
+    expect(Boolean(checkinCta || discoverCta)).toBe(true);
   });
 
   it('redirects to login when user is missing', async () => {

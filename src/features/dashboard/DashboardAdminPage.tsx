@@ -249,7 +249,10 @@ export default function DashboardAdminPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-6 flex items-center justify-between">
-        <h1 data-testid="dashboard-heading" className="text-3xl font-bold">
+        <h1
+          data-testid="dashboard-heading"
+          className="text-3xl font-bold text-slate-900 dark:text-slate-100"
+        >
           📊 Tổng quan quản trị
         </h1>
         <button
@@ -257,7 +260,7 @@ export default function DashboardAdminPage() {
             refetchStats();
             refetchDash();
           }}
-          className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white shadow-md transition-colors hover:bg-blue-700 disabled:opacity-50"
+          className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white shadow-md transition-colors hover:bg-blue-700 disabled:opacity-50 dark:bg-blue-500 dark:hover:bg-blue-400"
           disabled={loading}
         >
           {loading ? (
@@ -289,46 +292,62 @@ export default function DashboardAdminPage() {
       {healthData && (
         <>
           <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <div className="rounded-lg border border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 p-5 shadow">
+            <div className="rounded-lg border border-sky-200 bg-sky-50 p-5 shadow dark:border-sky-800/70 dark:bg-slate-900">
               <div className="mb-2 flex items-center justify-between">
-                <h3 className="text-sm font-medium text-blue-700">Dung lượng cơ sở dữ liệu</h3>
-                <span className="text-2xl">💾</span>
+                <h3 className="text-sm font-semibold text-sky-700 dark:text-sky-300">
+                  Dung lượng cơ sở dữ liệu
+                </h3>
+                <span className="text-2xl text-sky-500 dark:text-sky-300">💾</span>
               </div>
-              <p className="text-2xl font-bold text-blue-900">{healthData.database.size_mb} MB</p>
-              <p className="mt-1 text-xs text-blue-600">{healthData.database.table_count} bảng</p>
+              <p className="text-2xl font-bold text-sky-950 dark:text-sky-100">
+                {healthData.database.size_mb} MB
+              </p>
+              <p className="mt-1 text-xs text-sky-700 dark:text-sky-200">
+                {healthData.database.table_count} bảng
+              </p>
             </div>
 
-            <div className="rounded-lg border border-green-200 bg-gradient-to-br from-green-50 to-green-100 p-5 shadow">
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-5 shadow dark:border-emerald-800/70 dark:bg-slate-900">
               <div className="mb-2 flex items-center justify-between">
-                <h3 className="text-sm font-medium text-green-700">Thời gian hoạt động</h3>
-                <span className="text-2xl">⏱️</span>
+                <h3 className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">
+                  Thời gian hoạt động
+                </h3>
+                <span className="text-2xl text-emerald-500 dark:text-emerald-300">⏱️</span>
               </div>
-              <p className="text-2xl font-bold text-green-900">
+              <p className="text-2xl font-bold text-emerald-950 dark:text-emerald-100">
                 {healthData.system.uptime_hours.toFixed(1)}h
               </p>
-              <p className="mt-1 text-xs text-green-600">Node {healthData.system.node_version}</p>
+              <p className="mt-1 text-xs text-emerald-700 dark:text-emerald-200">
+                Node {healthData.system.node_version}
+              </p>
             </div>
 
-            <div className="rounded-lg border border-purple-200 bg-gradient-to-br from-purple-50 to-purple-100 p-5 shadow">
+            <div className="rounded-lg border border-violet-200 bg-violet-50 p-5 shadow dark:border-violet-800/70 dark:bg-slate-900">
               <div className="mb-2 flex items-center justify-between">
-                <h3 className="text-sm font-medium text-purple-700">Bộ nhớ đang dùng</h3>
-                <span className="text-2xl">🧠</span>
+                <h3 className="text-sm font-semibold text-violet-700 dark:text-violet-300">
+                  Bộ nhớ đang dùng
+                </h3>
+                <span className="text-2xl text-violet-500 dark:text-violet-300">🧠</span>
               </div>
-              <p className="text-2xl font-bold text-purple-900">
+              <p className="text-2xl font-bold text-violet-950 dark:text-violet-100">
                 {healthData.system.memory.heap_used_mb} MB
               </p>
-              <p className="mt-1 text-xs text-purple-600">
+              <p className="mt-1 text-xs text-violet-700 dark:text-violet-200">
                 trên tổng {healthData.system.memory.heap_total_mb} MB heap
               </p>
             </div>
 
-            <div className="rounded-lg border border-orange-200 bg-gradient-to-br from-orange-50 to-orange-100 p-5 shadow">
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-5 shadow dark:border-amber-800/70 dark:bg-slate-900">
               <div className="mb-2 flex items-center justify-between">
-                <h3 className="text-sm font-medium text-orange-700">Tỷ lệ điểm danh</h3>
-                <span className="text-2xl">✅</span>
+                <h3 className="text-sm font-semibold text-amber-700 dark:text-amber-300">
+                  Tỷ lệ điểm danh
+                </h3>
+                <span className="text-2xl text-amber-500 dark:text-amber-300">✅</span>
               </div>
-              <p className="text-2xl font-bold text-orange-900">{attendanceRate}%</p>
-              <p className="mt-1 text-xs text-orange-600">
+              <p className="text-2xl font-bold text-amber-950 dark:text-amber-100">
+                {attendanceRate}%
+              </p>
+              <p className="mt-1 text-xs text-amber-700 dark:text-amber-200">
                 {attendedCount}/{attendanceTotal}
               </p>
             </div>
