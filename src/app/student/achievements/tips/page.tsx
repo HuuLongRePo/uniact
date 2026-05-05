@@ -1,8 +1,40 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Lightbulb, Target, TrendingUp, Award } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import { Award, Lightbulb, Target, TrendingUp } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import LoadingSpinner from '@/components/LoadingSpinner';
+import StudentDailyQuickActions from '@/components/student/StudentDailyQuickActions';
+
+interface StudentStatisticsResponse {
+  statistics?: {
+    registeredActivities: number;
+    attendedActivities: number;
+    totalScore: number;
+  };
+}
+
+interface UpcomingAward {
+  type: string;
+  points_needed: number;
+  current_points: number;
+  progress: number;
+  description: string;
+}
+
+interface HistoryItem {
+  attended: number;
+  date_time: string;
+}
+
+interface StudentTipsStats {
+  currentPoints: number;
+  nextAwardThreshold: number | null;
+  nextAwardName: string | null;
+  activitiesThisMonth: number;
+  attendanceRate: number;
+}
 
 interface Tip {
   id: string;
@@ -13,205 +45,222 @@ interface Tip {
   actionUrl: string;
 }
 
-interface StudentStats {
-  currentPoints: number;
-  nextAwardThreshold: number;
-  nextAwardName: string;
-  activitiesThisMonth: number;
-  attendanceRate: number;
-}
+const DEFAULT_STATS: StudentTipsStats = {
+  currentPoints: 0,
+  nextAwardThreshold: null,
+  nextAwardName: null,
+  activitiesThisMonth: 0,
+  attendanceRate: 0,
+};
 
 export default function AchievementTipsPage() {
-  const router = useRouter();
-  const [stats, setStats] = useState<StudentStats | null>(null);
+  const { user, loading: authLoading } = useAuth();
+  const [stats, setStats] = useState<StudentTipsStats>(DEFAULT_STATS);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchStats();
-  }, []);
+    if (!authLoading && user?.role === 'student') {
+      void fetchStats();
+    }
+  }, [user, authLoading]);
 
   async function fetchStats() {
     try {
       setLoading(true);
-      const res = await fetch('/api/student/stats');
-      const data = await res.json();
-      if (res.ok) {
-        setStats(data.stats || null);
-      }
+
+      const [statisticsRes, upcomingAwardsRes, historyRes] = await Promise.all([
+        fetch('/api/student/statistics'),
+        fetch('/api/student/awards/upcoming'),
+        fetch('/api/student/history'),
+      ]);
+
+      const statisticsJson = (statisticsRes.ok
+        ? ((await statisticsRes.json()) as StudentStatisticsResponse)
+        : {}) as StudentStatisticsResponse;
+      const upcomingAwardsJson = upcomingAwardsRes.ok ? await upcomingAwardsRes.json() : {};
+      const historyJson = historyRes.ok ? await historyRes.json() : {};
+
+      const statistics = statisticsJson.statistics || {
+        registeredActivities: 0,
+        attendedActivities: 0,
+        totalScore: 0,
+      };
+      const upcomingAwards = (upcomingAwardsJson.awards ||
+        upcomingAwardsJson.data?.awards ||
+        []) as UpcomingAward[];
+      const history = (historyJson.data?.history || historyJson.history || []) as HistoryItem[];
+
+      const currentMonth = new Date().getMonth();
+      const currentYear = new Date().getFullYear();
+      const activitiesThisMonth = history.filter((item) => {
+        if (item.attended !== 1) return false;
+        const activityDate = new Date(item.date_time);
+        return (
+          !Number.isNaN(activityDate.getTime()) &&
+          activityDate.getMonth() === currentMonth &&
+          activityDate.getFullYear() === currentYear
+        );
+      }).length;
+
+      const nextAward = upcomingAwards[0] || null;
+      const attendanceRate =
+        statistics.registeredActivities > 0
+          ? (statistics.attendedActivities / statistics.registeredActivities) * 100
+          : 0;
+
+      setStats({
+        currentPoints: statistics.totalScore || 0,
+        nextAwardThreshold: nextAward?.points_needed || null,
+        nextAwardName: nextAward?.type || null,
+        activitiesThisMonth,
+        attendanceRate,
+      });
     } catch (error) {
       console.error('Fetch stats error:', error);
+      setStats(DEFAULT_STATS);
     } finally {
       setLoading(false);
     }
   }
 
-  const tips: Tip[] = [
-    {
-      id: '1',
-      icon: '🎯',
-      title: 'Set Clear Goals',
-      description:
-        'Define your target award and calculate how many activities you need to participate in to reach it.',
-      actionLabel: 'View Upcoming Awards',
-      actionUrl: '/student/awards/upcoming',
-    },
-    {
-      id: '2',
-      icon: '📅',
-      title: 'Plan Ahead',
-      description:
-        'Browse upcoming activities and register early. Activities with QR check-in give bonus points for early arrival.',
-      actionLabel: 'Browse Activities',
-      actionUrl: '/student/activities',
-    },
-    {
-      id: '3',
-      icon: '✅',
-      title: 'Maintain Good Attendance',
-      description: `Your current attendance rate: ${stats?.attendanceRate?.toFixed(1) || '0'}%. Aim for 90%+ to maximize points from attended activities.`,
-      actionLabel: 'View My Registrations',
-      actionUrl: '/student/activities/registered',
-    },
-    {
-      id: '4',
-      icon: '🏆',
-      title: 'Focus on High-Value Activities',
-      description:
-        'City and National level activities have higher point multipliers. Academic and Environmental activities also give bonus points.',
-      actionLabel: 'Filter High-Value Activities',
-      actionUrl: '/student/activities',
-    },
-    {
-      id: '5',
-      icon: '📊',
-      title: 'Track Your Progress',
-      description: `You're ${stats?.nextAwardThreshold && stats?.currentPoints ? stats.nextAwardThreshold - stats.currentPoints : 'N/A'} points away from "${stats?.nextAwardName || 'next award'}".`,
-      actionLabel: 'View Dashboard',
-      actionUrl: '/student/dashboard',
-    },
-    {
-      id: '6',
-      icon: '🔔',
-      title: 'Enable Notifications',
-      description:
-        'Turn on activity reminders to never miss a registration deadline. Get notified 1 day before each activity.',
-      actionLabel: 'Notification Settings',
-      actionUrl: '/student/notifications',
-    },
-    {
-      id: '7',
-      icon: '👥',
-      title: 'Join Diverse Activities',
-      description:
-        'Participate in different types of activities (Environmental, Sports, Cultural, etc.) to gain well-rounded achievements.',
-      actionLabel: 'Explore Activity Types',
-      actionUrl: '/student/activities',
-    },
-    {
-      id: '8',
-      icon: '⚡',
-      title: 'Stay Active This Month',
-      description: `You've participated in ${stats?.activitiesThisMonth || 0} activities this month. Aim for at least 3-5 per month for steady progress.`,
-      actionLabel: 'See My Activities',
-      actionUrl: '/student/activities/registered',
-    },
-  ];
+  const tips = useMemo<Tip[]>(
+    () => [
+      {
+        id: '1',
+        icon: '🎯',
+        title: 'Đặt mục tiêu điểm rõ ràng',
+        description: stats.nextAwardName
+          ? `Bạn đang cách ${Math.max(0, (stats.nextAwardThreshold || 0) - stats.currentPoints)} điểm để đạt mốc "${stats.nextAwardName}".`
+          : 'Theo dõi tổng điểm hiện tại và chọn mốc khen thưởng tiếp theo để hướng tới.',
+        actionLabel: 'Xem giải thưởng sắp đạt',
+        actionUrl: '/student/awards/upcoming',
+      },
+      {
+        id: '2',
+        icon: '🗓️',
+        title: 'Đăng ký hoạt động sớm',
+        description:
+          'Đăng ký sớm giúp bạn chủ động lịch học, tránh hết chỗ và không bỏ lỡ hạn điểm danh.',
+        actionLabel: 'Khám phá hoạt động',
+        actionUrl: '/student/activities',
+      },
+      {
+        id: '3',
+        icon: '✅',
+        title: 'Giữ tỷ lệ tham gia ổn định',
+        description: `Tỷ lệ tham gia hiện tại của bạn là ${stats.attendanceRate.toFixed(1)}%. Duy trì mức cao để không mất điểm vì vắng mặt.`,
+        actionLabel: 'Xem hoạt động của tôi',
+        actionUrl: '/student/my-activities',
+      },
+      {
+        id: '4',
+        icon: '🏆',
+        title: 'Theo dõi tổng điểm đúng màn hình',
+        description:
+          'Tổng điểm tích lũy và các hệ số điểm được tổng hợp đầy đủ trong màn hình điểm rèn luyện.',
+        actionLabel: 'Mở điểm rèn luyện',
+        actionUrl: '/student/points',
+      },
+      {
+        id: '5',
+        icon: '📊',
+        title: 'Tăng nhịp độ theo tháng',
+        description: `Tháng này bạn đã tham gia ${stats.activitiesThisMonth} hoạt động. Duy trì đều trong tháng sẽ dễ đạt mốc điểm hơn.`,
+        actionLabel: 'Xem lịch sử tham gia',
+        actionUrl: '/student/history',
+      },
+      {
+        id: '6',
+        icon: '🔔',
+        title: 'Không bỏ lỡ thông báo',
+        description:
+          'Theo dõi thông báo và cảnh báo để không trễ hạn đăng ký, điểm danh hoặc cập nhật điểm.',
+        actionLabel: 'Mở thông báo',
+        actionUrl: '/student/notifications',
+      },
+    ],
+    [stats]
+  );
+
+  if (authLoading || loading) {
+    return <LoadingSpinner />;
+  }
+
+  if (!user || user.role !== 'student') {
+    return null;
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-6xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <Lightbulb className="w-8 h-8 text-yellow-500" />
-            <h1 className="text-3xl font-bold text-gray-800">Achievement Tips & Strategies</h1>
-          </div>
-          <button
-            onClick={() => router.back()}
-            className="px-4 py-2 text-gray-600 hover:text-gray-800"
-          >
-            Back
-          </button>
-        </div>
-
-        {/* Header Banner */}
-        <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white rounded-lg p-8 mb-6 shadow-lg">
-          <div className="flex items-center gap-4">
-            <Target className="w-16 h-16" />
+    <div className="page-shell">
+      <div className="mx-auto max-w-6xl space-y-6">
+        <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900 sm:p-6">
+          <div className="flex items-start gap-4">
+            <div className="rounded-2xl bg-amber-100 p-3 text-amber-700 dark:bg-amber-500/15 dark:text-amber-200">
+              <Lightbulb className="h-7 w-7" />
+            </div>
             <div>
-              <h2 className="text-2xl font-bold mb-2">Maximize Your Achievement Score</h2>
-              <p className="text-lg opacity-90">
-                Follow these tips to earn more points and unlock awards faster!
+              <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Mẹo thành tích</h1>
+              <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+                Gợi ý nhanh để học viên theo dõi điểm, mốc khen thưởng và tận dụng tốt các hoạt
+                động phù hợp.
               </p>
             </div>
           </div>
         </div>
 
-        {/* Current Progress */}
-        {loading ? (
-          <p className="text-gray-500 mb-6">Loading your stats...</p>
-        ) : (
-          stats && (
-            <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-green-600" />
-                Your Current Progress
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-blue-50 rounded-lg p-4">
-                  <p className="text-sm text-gray-600">Current Points</p>
-                  <p className="text-3xl font-bold text-blue-600">{stats.currentPoints}</p>
-                </div>
-                <div className="bg-green-50 rounded-lg p-4">
-                  <p className="text-sm text-gray-600">Next Award</p>
-                  <p className="text-xl font-bold text-green-600">{stats.nextAwardName}</p>
-                  <p className="text-sm text-gray-500">at {stats.nextAwardThreshold} points</p>
-                </div>
-                <div className="bg-purple-50 rounded-lg p-4">
-                  <p className="text-sm text-gray-600">Activities This Month</p>
-                  <p className="text-3xl font-bold text-purple-600">{stats.activitiesThisMonth}</p>
-                </div>
-              </div>
-            </div>
-          )
-        )}
+        <StudentDailyQuickActions />
 
-        {/* Tips Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid gap-4 md:grid-cols-3">
+          <div className="rounded-3xl border border-blue-100 bg-gradient-to-br from-blue-50 via-white to-sky-50 p-5 shadow-sm dark:border-blue-500/40 dark:from-slate-900 dark:via-slate-900 dark:to-blue-950/30">
+            <div className="flex items-center gap-2 text-sm font-medium text-blue-700">
+              <TrendingUp className="h-4 w-4" />
+              Tổng điểm hiện tại
+            </div>
+            <div className="mt-3 text-3xl font-bold text-slate-900 dark:text-slate-100">{stats.currentPoints}</div>
+          </div>
+
+          <div className="rounded-3xl border border-emerald-100 bg-gradient-to-br from-emerald-50 via-white to-lime-50 p-5 shadow-sm dark:border-emerald-500/40 dark:from-slate-900 dark:via-slate-900 dark:to-emerald-950/30">
+            <div className="flex items-center gap-2 text-sm font-medium text-emerald-700">
+              <Target className="h-4 w-4" />
+              Mốc kế tiếp
+            </div>
+            <div className="mt-3 text-lg font-semibold text-slate-900 dark:text-slate-100">
+              {stats.nextAwardName || 'Chưa có mốc tiếp theo'}
+            </div>
+            <div className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+              {stats.nextAwardThreshold ? `${stats.nextAwardThreshold} điểm` : 'Đang cập nhật'}
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-violet-100 bg-gradient-to-br from-violet-50 via-white to-fuchsia-50 p-5 shadow-sm dark:border-violet-500/40 dark:from-slate-900 dark:via-slate-900 dark:to-violet-950/30">
+            <div className="flex items-center gap-2 text-sm font-medium text-violet-700">
+              <Award className="h-4 w-4" />
+              Tỷ lệ tham gia
+            </div>
+            <div className="mt-3 text-3xl font-bold text-slate-900 dark:text-slate-100">
+              {stats.attendanceRate.toFixed(1)}%
+            </div>
+          </div>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
           {tips.map((tip) => (
-            <div
-              key={tip.id}
-              className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow"
-            >
+            <div key={tip.id} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
               <div className="flex items-start gap-4">
-                <div className="text-4xl">{tip.icon}</div>
-                <div className="flex-1">
-                  <h3 className="text-lg font-bold text-gray-900 mb-2">{tip.title}</h3>
-                  <p className="text-gray-600 mb-4">{tip.description}</p>
-                  <button
-                    onClick={() => router.push(tip.actionUrl)}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+                <div className="text-3xl">{tip.icon}</div>
+                <div className="min-w-0 flex-1">
+                  <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">{tip.title}</h2>
+                  <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">{tip.description}</p>
+                  <Link
+                    href={tip.actionUrl}
+                    className="mt-4 inline-block rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500/40 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-slate-300/60"
                   >
-                    {tip.actionLabel} →
-                  </button>
+                    {tip.actionLabel}
+                  </Link>
                 </div>
               </div>
             </div>
           ))}
-        </div>
-
-        {/* Footer CTA */}
-        <div className="mt-8 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg p-6 text-center">
-          <Award className="w-12 h-12 mx-auto mb-3" />
-          <h3 className="text-xl font-bold mb-2">Ready to Level Up?</h3>
-          <p className="mb-4">
-            Start participating in activities today and watch your achievements grow!
-          </p>
-          <button
-            onClick={() => router.push('/student/activities')}
-            className="px-6 py-3 bg-white text-blue-600 rounded-lg hover:bg-gray-100 font-semibold"
-          >
-            Browse Activities
-          </button>
         </div>
       </div>
     </div>

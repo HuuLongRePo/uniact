@@ -37,6 +37,19 @@ function getErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
 }
 
+function getMethodLabel(method: AttendanceMethod) {
+  switch (method) {
+    case 'manual':
+      return 'Thủ công';
+    case 'qr':
+      return 'QR';
+    case 'face':
+      return 'Khuôn mặt';
+    default:
+      return 'Chưa ghi nhận';
+  }
+}
+
 function getMethodBadge(method: AttendanceMethod) {
   switch (method) {
     case 'manual':
@@ -57,12 +70,12 @@ function getMethodBadge(method: AttendanceMethod) {
       return (
         <span className="flex w-fit items-center gap-1 rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-800">
           <ScanFace className="h-3.5 w-3.5" />
-          Face
+          Khuôn mặt
         </span>
       );
     default:
       return (
-        <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700">
+        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
           Chưa ghi nhận
         </span>
       );
@@ -72,42 +85,126 @@ function getMethodBadge(method: AttendanceMethod) {
 function getStatusBadge(status: AttendanceRecord['status']) {
   switch (status) {
     case 'present':
-      return (
-        <span className="flex w-fit items-center gap-1 rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-800">
-          Có mặt
-        </span>
-      );
+      return <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-800">Có mặt</span>;
     case 'late':
-      return (
-        <span className="flex w-fit items-center gap-1 rounded-full bg-yellow-100 px-3 py-1 text-xs font-medium text-yellow-800">
-          Đi trễ
-        </span>
-      );
+      return <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-800">Đi trễ</span>;
     case 'absent':
-      return (
-        <span className="flex w-fit items-center gap-1 rounded-full bg-red-100 px-3 py-1 text-xs font-medium text-red-800">
-          Vắng
-        </span>
-      );
+      return <span className="rounded-full bg-rose-100 px-3 py-1 text-xs font-medium text-rose-800">Vắng</span>;
     case 'excused':
-      return (
-        <span className="flex w-fit items-center gap-1 rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-800">
-          Có phép
-        </span>
-      );
+      return <span className="rounded-full bg-sky-100 px-3 py-1 text-xs font-medium text-sky-800">Có phép</span>;
     case 'not_participated':
-      return (
-        <span className="flex w-fit items-center gap-1 rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-800">
-          Chưa tham gia
-        </span>
-      );
+      return <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">Chưa tham gia</span>;
     default:
-      return (
-        <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-800">
-          {status}
-        </span>
-      );
+      return <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">{status}</span>;
   }
+}
+
+function SummaryCards({ classSummary }: { classSummary: AttendanceSummary[] }) {
+  if (classSummary.length === 0) {
+    return (
+      <div className="content-card p-12 text-center">
+        <AlertCircle className="mx-auto mb-4 h-14 w-14 text-slate-300" />
+        <p className="text-lg font-medium text-slate-700">Chưa có dữ liệu tổng hợp theo lớp</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid gap-4 lg:grid-cols-2">
+      {classSummary.map((item) => (
+        <article key={item.class_id} className="content-card p-5">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h3 className="text-lg font-semibold text-slate-950">{item.class_name}</h3>
+              <p className="mt-1 text-sm text-slate-500">
+                {item.total_students} học viên · {item.total_activities} hoạt động
+              </p>
+            </div>
+            <span className="rounded-full bg-cyan-100 px-3 py-1 text-xs font-semibold text-cyan-800">
+              {item.present_rate.toFixed(1)}%
+            </span>
+          </div>
+
+          <div className="mt-4 grid grid-cols-2 gap-3 text-sm text-slate-700 sm:grid-cols-5">
+            <div className="rounded-2xl bg-emerald-50 px-3 py-3">
+              <div className="text-xs uppercase tracking-wide text-emerald-700">Có mặt</div>
+              <div className="mt-1 text-lg font-semibold text-emerald-900">{item.present_count}</div>
+            </div>
+            <div className="rounded-2xl bg-amber-50 px-3 py-3">
+              <div className="text-xs uppercase tracking-wide text-amber-700">Đi trễ</div>
+              <div className="mt-1 text-lg font-semibold text-amber-900">{item.late_count}</div>
+            </div>
+            <div className="rounded-2xl bg-sky-50 px-3 py-3">
+              <div className="text-xs uppercase tracking-wide text-sky-700">Có phép</div>
+              <div className="mt-1 text-lg font-semibold text-sky-900">{item.excused_count}</div>
+            </div>
+            <div className="rounded-2xl bg-rose-50 px-3 py-3">
+              <div className="text-xs uppercase tracking-wide text-rose-700">Vắng</div>
+              <div className="mt-1 text-lg font-semibold text-rose-900">{item.absent_count}</div>
+            </div>
+            <div className="rounded-2xl bg-slate-100 px-3 py-3">
+              <div className="text-xs uppercase tracking-wide text-slate-600">Chưa TG</div>
+              <div className="mt-1 text-lg font-semibold text-slate-900">{item.not_participated_count}</div>
+            </div>
+          </div>
+        </article>
+      ))}
+    </div>
+  );
+}
+
+function StudentSummaryCards({ items }: { items: StudentAttendanceSummary[] }) {
+  if (items.length === 0) {
+    return (
+      <div className="content-card p-12 text-center">
+        <AlertCircle className="mx-auto mb-4 h-14 w-14 text-slate-300" />
+        <p className="text-lg font-medium text-slate-700">Chưa có dữ liệu tổng hợp theo học viên</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid gap-4 xl:grid-cols-2">
+      {items.map((item) => (
+        <article key={item.student_id} className="content-card p-5">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h3 className="text-lg font-semibold text-slate-950">{item.student_name}</h3>
+              <p className="mt-1 text-sm text-slate-500">
+                {item.student_code} · {item.class_name}
+              </p>
+            </div>
+            <span className="rounded-full bg-cyan-100 px-3 py-1 text-xs font-semibold text-cyan-800">
+              {item.attendance_rate.toFixed(1)}%
+            </span>
+          </div>
+
+          <div className="mt-4 grid grid-cols-2 gap-3 text-sm text-slate-700 sm:grid-cols-5">
+            <div className="rounded-2xl bg-emerald-50 px-3 py-3">
+              <div className="text-xs uppercase tracking-wide text-emerald-700">Có mặt</div>
+              <div className="mt-1 text-lg font-semibold text-emerald-900">{item.present_count}</div>
+            </div>
+            <div className="rounded-2xl bg-amber-50 px-3 py-3">
+              <div className="text-xs uppercase tracking-wide text-amber-700">Đi trễ</div>
+              <div className="mt-1 text-lg font-semibold text-amber-900">{item.late_count}</div>
+            </div>
+            <div className="rounded-2xl bg-sky-50 px-3 py-3">
+              <div className="text-xs uppercase tracking-wide text-sky-700">Có phép</div>
+              <div className="mt-1 text-lg font-semibold text-sky-900">{item.excused_count}</div>
+            </div>
+            <div className="rounded-2xl bg-rose-50 px-3 py-3">
+              <div className="text-xs uppercase tracking-wide text-rose-700">Vắng</div>
+              <div className="mt-1 text-lg font-semibold text-rose-900">{item.absent_count}</div>
+            </div>
+            <div className="rounded-2xl bg-slate-100 px-3 py-3">
+              <div className="text-xs uppercase tracking-wide text-slate-600">Chưa TG</div>
+              <div className="mt-1 text-lg font-semibold text-slate-900">{item.not_participated_count}</div>
+            </div>
+          </div>
+        </article>
+      ))}
+    </div>
+  );
 }
 
 export default function AttendanceReportsPage() {
@@ -120,7 +217,6 @@ export default function AttendanceReportsPage() {
   const [studentSummary, setStudentSummary] = useState<StudentAttendanceSummary[]>([]);
   const [filteredRecords, setFilteredRecords] = useState<AttendanceRecord[]>([]);
   const [viewMode, setViewMode] = useState<'class' | 'student' | 'details'>('class');
-
   const [filters, setFilters] = useState({
     classId: '',
     status: '',
@@ -166,7 +262,7 @@ export default function AttendanceReportsPage() {
         setStudentSummary(getSummaryFromResponse<StudentAttendanceSummary>(summaryData));
       }
     } catch (error: unknown) {
-      console.error('Error fetching data:', error);
+      console.error('Error fetching attendance report:', error);
       toast.error(getErrorMessage(error, 'Không thể tải dữ liệu'));
     } finally {
       setLoading(false);
@@ -191,24 +287,24 @@ export default function AttendanceReportsPage() {
   }, [authLoading, fetchData, router, user]);
 
   const applyFilters = useCallback(() => {
-    let filtered = [...records];
+    let next = [...records];
 
     if (filters.classId) {
-      filtered = filtered.filter((record) => record.class_name === filters.classId);
+      next = next.filter((record) => record.class_name === filters.classId);
     }
 
     if (filters.status) {
-      filtered = filtered.filter((record) => record.status === filters.status);
+      next = next.filter((record) => record.status === filters.status);
     }
 
     if (filters.method) {
-      filtered = filtered.filter((record) => record.method === filters.method);
+      next = next.filter((record) => record.method === filters.method);
     }
 
     if (filters.dateStart) {
       const startDate = parseVietnamDate(`${filters.dateStart}T00:00`);
       if (startDate) {
-        filtered = filtered.filter(
+        next = next.filter(
           (record) =>
             (parseVietnamDate(record.activity_date)?.getTime() ?? Number.NEGATIVE_INFINITY) >=
             startDate.getTime()
@@ -219,7 +315,7 @@ export default function AttendanceReportsPage() {
     if (filters.dateEnd) {
       const endDate = parseVietnamDate(`${filters.dateEnd}T23:59:59`);
       if (endDate) {
-        filtered = filtered.filter(
+        next = next.filter(
           (record) =>
             (parseVietnamDate(record.activity_date)?.getTime() ?? Number.POSITIVE_INFINITY) <=
             endDate.getTime()
@@ -229,14 +325,14 @@ export default function AttendanceReportsPage() {
 
     if (searchTerm) {
       const normalizedSearch = searchTerm.toLowerCase();
-      filtered = filtered.filter(
+      next = next.filter(
         (record) =>
           record.student_name.toLowerCase().includes(normalizedSearch) ||
           record.activity_name.toLowerCase().includes(normalizedSearch)
       );
     }
 
-    filtered.sort((left, right) => {
+    next.sort((left, right) => {
       let leftValue: string | number = '';
       let rightValue: string | number = '';
 
@@ -247,24 +343,24 @@ export default function AttendanceReportsPage() {
         leftValue = left.student_name;
         rightValue = right.student_name;
       } else if (sortBy === 'status') {
-        const statusOrder: Record<AttendanceRecord['status'], number> = {
+        const order: Record<AttendanceRecord['status'], number> = {
           present: 0,
           late: 1,
           excused: 2,
           absent: 3,
           not_participated: 4,
         };
-        leftValue = statusOrder[left.status];
-        rightValue = statusOrder[right.status];
+        leftValue = order[left.status];
+        rightValue = order[right.status];
       } else if (sortBy === 'method') {
-        const methodOrder: Record<AttendanceMethod, number> = {
+        const order: Record<AttendanceMethod, number> = {
           face: 0,
           qr: 1,
           manual: 2,
           unknown: 3,
         };
-        leftValue = methodOrder[left.method];
-        rightValue = methodOrder[right.method];
+        leftValue = order[left.method];
+        rightValue = order[right.method];
       }
 
       if (sortOrder === 'asc') {
@@ -274,27 +370,19 @@ export default function AttendanceReportsPage() {
       return leftValue < rightValue ? 1 : leftValue > rightValue ? -1 : 0;
     });
 
-    setFilteredRecords(filtered);
+    setFilteredRecords(next);
   }, [filters, records, searchTerm, sortBy, sortOrder]);
 
   useEffect(() => {
     applyFilters();
   }, [applyFilters]);
 
-  const handleSort = (field: AttendanceSortKey) => {
-    setSortOrder((current) => (sortBy === field && current === 'asc' ? 'desc' : 'asc'));
-    setSortBy(field);
-  };
-
   const handleExport = async () => {
     try {
       const response = await fetch('/api/teacher/reports/attendance/export', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          viewMode,
-          filters,
-        }),
+        body: JSON.stringify({ viewMode, filters }),
       });
 
       if (!response.ok) {
@@ -311,9 +399,9 @@ export default function AttendanceReportsPage() {
       );
       anchor.click();
       window.URL.revokeObjectURL(url);
-      toast.success('Đã xuất báo cáo thành công');
+      toast.success('Da xuat bao cao thanh cong');
     } catch (error) {
-      console.error('Error exporting:', error);
+      console.error('Error exporting attendance report:', error);
       toast.error('Không thể xuất báo cáo');
     }
   };
@@ -327,10 +415,11 @@ export default function AttendanceReportsPage() {
   return (
     <div className="page-shell">
       <section className="page-surface overflow-hidden rounded-[1.75rem]">
-        <div className="border-b border-gray-200 px-5 py-5 sm:px-7">
+        <div className="border-b border-slate-200 px-5 py-5 sm:px-7">
           <button
+            type="button"
             onClick={() => router.back()}
-            className="mb-4 inline-flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-700"
+            className="mb-4 inline-flex items-center gap-2 text-sm font-medium text-cyan-700 hover:text-cyan-800"
           >
             <ArrowLeft className="h-4 w-4" />
             Quay lại
@@ -338,20 +427,21 @@ export default function AttendanceReportsPage() {
 
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div className="max-w-3xl">
-              <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-blue-800">
+              <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-cyan-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-cyan-800">
                 <Clock3 className="h-3.5 w-3.5" />
                 Báo cáo vận hành
               </div>
-              <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">Báo cáo điểm danh</h1>
-              <p className="mt-2 text-sm leading-6 text-gray-600 sm:text-base">
-                Theo dõi tỷ lệ có mặt, đi trễ, vắng, chưa tham gia và phương thức điểm danh thực tế
-                theo lớp, theo học viên hoặc theo từng lượt ghi nhận.
+              <h1 className="text-2xl font-bold text-slate-950 sm:text-3xl">Báo cáo điểm danh</h1>
+              <p className="mt-2 text-sm leading-6 text-slate-600 sm:text-base">
+                Theo dõi tỷ lệ có mặt, đi trễ, vắng, chưa tham gia và cách điểm danh được sử dụng
+                trên từng hoạt động, lớp và học viên.
               </p>
             </div>
 
             <button
+              type="button"
               onClick={handleExport}
-              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-cyan-700 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-cyan-800"
             >
               <Download className="h-4 w-4" />
               Xuất Excel
@@ -362,60 +452,47 @@ export default function AttendanceReportsPage() {
         <div className="space-y-6 px-5 py-6 sm:px-7">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-6">
             <div className="content-card p-4">
-              <div className="text-sm text-gray-600">Tổng lượt điểm danh</div>
-              <div className="mt-2 text-3xl font-bold text-blue-600">
-                {overallStats.totalRecords}
-              </div>
+              <div className="text-sm text-slate-500">Tổng lượt điểm danh</div>
+              <div className="mt-2 text-3xl font-bold text-cyan-700">{overallStats.totalRecords}</div>
             </div>
             <div className="content-card p-4">
-              <div className="text-sm text-gray-600">Có mặt</div>
-              <div className="mt-2 text-3xl font-bold text-green-600">{overallStats.present}</div>
+              <div className="text-sm text-slate-500">Có mặt</div>
+              <div className="mt-2 text-3xl font-bold text-emerald-600">{overallStats.present}</div>
             </div>
             <div className="content-card p-4">
-              <div className="text-sm text-gray-600">Đi trễ</div>
-              <div className="mt-2 text-3xl font-bold text-yellow-600">{overallStats.late}</div>
+              <div className="text-sm text-slate-500">Đi trễ</div>
+              <div className="mt-2 text-3xl font-bold text-amber-600">{overallStats.late}</div>
             </div>
             <div className="content-card p-4">
-              <div className="text-sm text-gray-600">Có phép</div>
-              <div className="mt-2 text-3xl font-bold text-blue-500">{overallStats.excused}</div>
+              <div className="text-sm text-slate-500">Có phép</div>
+              <div className="mt-2 text-3xl font-bold text-sky-600">{overallStats.excused}</div>
             </div>
             <div className="content-card p-4">
-              <div className="text-sm text-gray-600">Vắng</div>
-              <div className="mt-2 text-3xl font-bold text-red-600">{overallStats.absent}</div>
+              <div className="text-sm text-slate-500">Vắng</div>
+              <div className="mt-2 text-3xl font-bold text-rose-600">{overallStats.absent}</div>
             </div>
             <div className="content-card p-4" data-testid="not-participated-card">
-              <div className="text-sm text-gray-600">Chưa tham gia</div>
-              <div className="mt-2 text-3xl font-bold text-slate-700">
-                {overallStats.notParticipated}
-              </div>
+              <div className="text-sm text-slate-500">Chưa tham gia</div>
+              <div className="mt-2 text-3xl font-bold text-slate-700">{overallStats.notParticipated}</div>
             </div>
           </div>
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <div
-              className="content-card border-violet-200 bg-violet-50 p-4"
-              data-testid="method-card-qr"
-            >
+            <div className="content-card border-violet-200 bg-violet-50 p-4" data-testid="method-card-qr">
               <div className="flex items-center gap-2 text-sm text-violet-700">
                 <QrCode className="h-4 w-4" />
                 Điểm danh QR
               </div>
               <div className="mt-2 text-2xl font-bold text-violet-900">{overallStats.qr}</div>
             </div>
-            <div
-              className="content-card border-amber-200 bg-amber-50 p-4"
-              data-testid="method-card-manual"
-            >
+            <div className="content-card border-amber-200 bg-amber-50 p-4" data-testid="method-card-manual">
               <div className="flex items-center gap-2 text-sm text-amber-700">
                 <SquarePen className="h-4 w-4" />
                 Thủ công
               </div>
               <div className="mt-2 text-2xl font-bold text-amber-900">{overallStats.manual}</div>
             </div>
-            <div
-              className="content-card border-emerald-200 bg-emerald-50 p-4"
-              data-testid="method-card-face"
-            >
+            <div className="content-card border-emerald-200 bg-emerald-50 p-4" data-testid="method-card-face">
               <div className="flex items-center gap-2 text-sm text-emerald-700">
                 <ScanFace className="h-4 w-4" />
                 Khuôn mặt
@@ -433,11 +510,12 @@ export default function AttendanceReportsPage() {
               ].map((option) => (
                 <button
                   key={option.id}
+                  type="button"
                   onClick={() => setViewMode(option.id as typeof viewMode)}
                   className={`rounded-2xl px-4 py-2.5 text-sm font-semibold transition-colors ${
                     viewMode === option.id
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      ? 'bg-cyan-700 text-white'
+                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                   }`}
                 >
                   {option.label}
@@ -446,333 +524,203 @@ export default function AttendanceReportsPage() {
             </div>
           </div>
 
-          {viewMode === 'details' && (
-            <div className="content-card p-4 sm:p-5">
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700">
+          {viewMode === 'details' ? (
+            <>
+              <div className="content-card p-4 sm:p-5">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+                  <label className="block text-sm font-medium text-slate-700">
                     <Search className="mr-1 inline h-4 w-4" />
                     Tìm kiếm
+                    <input
+                      type="text"
+                      placeholder="Tên học viên hoặc hoạt động..."
+                      value={searchTerm}
+                      onChange={(event) => setSearchTerm(event.target.value)}
+                      className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-2.5 focus:border-transparent focus:ring-2 focus:ring-cyan-500"
+                    />
                   </label>
-                  <input
-                    type="text"
-                    placeholder="Tên học viên hoặc hoạt động..."
-                    value={searchTerm}
-                    onChange={(event) => setSearchTerm(event.target.value)}
-                    className="w-full rounded-2xl border border-gray-300 px-4 py-2.5 focus:border-transparent focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700">
+
+                  <label className="block text-sm font-medium text-slate-700">
                     <Filter className="mr-1 inline h-4 w-4" />
-                    Lớp
-                  </label>
-                  <select
-                    value={filters.classId}
-                    onChange={(event) => setFilters({ ...filters, classId: event.target.value })}
-                    className="w-full rounded-2xl border border-gray-300 px-4 py-2.5 focus:border-transparent focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">Tất cả lớp</option>
-                    {classes.map((classItem) => (
-                      <option key={classItem.id} value={classItem.name}>
-                        {classItem.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700">Trạng thái</label>
-                  <select
-                    value={filters.status}
-                    onChange={(event) => setFilters({ ...filters, status: event.target.value })}
-                    className="w-full rounded-2xl border border-gray-300 px-4 py-2.5 focus:border-transparent focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">Tất cả trạng thái</option>
-                    <option value="present">Có mặt</option>
-                    <option value="late">Đi trễ</option>
-                    <option value="excused">Có phép</option>
-                    <option value="absent">Vắng</option>
-                    <option value="not_participated">Chưa tham gia</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700">
-                    Phương thức
-                  </label>
-                  <select
-                    value={filters.method}
-                    onChange={(event) => setFilters({ ...filters, method: event.target.value })}
-                    className="w-full rounded-2xl border border-gray-300 px-4 py-2.5 focus:border-transparent focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">Tất cả phương thức</option>
-                    <option value="qr">QR</option>
-                    <option value="manual">Thủ công</option>
-                    <option value="face">Face</option>
-                    <option value="unknown">Chưa ghi nhận</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700">Từ ngày</label>
-                  <input
-                    type="date"
-                    value={filters.dateStart}
-                    onChange={(event) => setFilters({ ...filters, dateStart: event.target.value })}
-                    className="w-full rounded-2xl border border-gray-300 px-4 py-2.5 focus:border-transparent focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700">Đến ngày</label>
-                  <input
-                    type="date"
-                    value={filters.dateEnd}
-                    onChange={(event) => setFilters({ ...filters, dateEnd: event.target.value })}
-                    className="w-full rounded-2xl border border-gray-300 px-4 py-2.5 focus:border-transparent focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {viewMode === 'class' ? (
-            <div className="content-card overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="min-w-[860px]">
-                  <thead className="border-b border-gray-200 bg-gray-50">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
-                        Lớp
-                      </th>
-                      <th className="px-4 py-3 text-center text-sm font-semibold text-gray-900">
-                        Tổng học viên
-                      </th>
-                      <th className="px-4 py-3 text-center text-sm font-semibold text-gray-900">
-                        Tổng hoạt động
-                      </th>
-                      <th className="px-4 py-3 text-center text-sm font-semibold text-gray-900">
-                        Có mặt
-                      </th>
-                      <th className="px-4 py-3 text-center text-sm font-semibold text-gray-900">
-                        Đi trễ
-                      </th>
-                      <th className="px-4 py-3 text-center text-sm font-semibold text-gray-900">
-                        Chưa tham gia
-                      </th>
-                      <th className="px-4 py-3 text-center text-sm font-semibold text-gray-900">
-                        Vắng
-                      </th>
-                      <th className="px-4 py-3 text-center text-sm font-semibold text-gray-900">
-                        Tỷ lệ có mặt
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {classSummary.map((item) => (
-                      <tr key={item.class_id} className="transition-colors hover:bg-gray-50">
-                        <td className="px-4 py-4 text-sm font-medium text-gray-900">
-                          {item.class_name}
-                        </td>
-                        <td className="px-4 py-4 text-center text-sm font-medium text-gray-900">
-                          {item.total_students}
-                        </td>
-                        <td className="px-4 py-4 text-center text-sm font-medium text-gray-900">
-                          {item.total_activities}
-                        </td>
-                        <td className="px-4 py-4 text-center text-sm font-medium text-green-600">
-                          {item.present_count}
-                        </td>
-                        <td className="px-4 py-4 text-center text-sm font-medium text-yellow-600">
-                          {item.late_count}
-                        </td>
-                        <td className="px-4 py-4 text-center text-sm font-medium text-slate-700">
-                          {item.not_participated_count}
-                        </td>
-                        <td className="px-4 py-4 text-center text-sm font-medium text-red-600">
-                          {item.absent_count}
-                        </td>
-                        <td className="px-4 py-4 text-center">
-                          <span
-                            className={`rounded-full px-3 py-1 text-xs font-medium ${
-                              item.present_rate >= 80
-                                ? 'bg-green-100 text-green-800'
-                                : item.present_rate >= 50
-                                  ? 'bg-yellow-100 text-yellow-800'
-                                  : 'bg-red-100 text-red-800'
-                            }`}
-                          >
-                            {item.present_rate.toFixed(1)}%
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          ) : viewMode === 'student' ? (
-            <div className="content-card overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="min-w-[980px]">
-                  <thead className="border-b border-gray-200 bg-gray-50">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
-                        Học viên
-                      </th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
-                        Mã sinh viên
-                      </th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
-                        Lớp
-                      </th>
-                      <th className="px-4 py-3 text-center text-sm font-semibold text-gray-900">
-                        Tổng hoạt động
-                      </th>
-                      <th className="px-4 py-3 text-center text-sm font-semibold text-gray-900">
-                        Có mặt
-                      </th>
-                      <th className="px-4 py-3 text-center text-sm font-semibold text-gray-900">
-                        Đi trễ
-                      </th>
-                      <th className="px-4 py-3 text-center text-sm font-semibold text-gray-900">
-                        Chưa tham gia
-                      </th>
-                      <th className="px-4 py-3 text-center text-sm font-semibold text-gray-900">
-                        Vắng
-                      </th>
-                      <th className="px-4 py-3 text-center text-sm font-semibold text-gray-900">
-                        Tỷ lệ tham gia
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {studentSummary.map((item) => (
-                      <tr key={item.student_id} className="transition-colors hover:bg-gray-50">
-                        <td className="px-4 py-4 text-sm font-medium text-gray-900">
-                          {item.student_name}
-                        </td>
-                        <td className="px-4 py-4 text-sm text-gray-600">{item.student_code}</td>
-                        <td className="px-4 py-4 text-sm text-gray-600">{item.class_name}</td>
-                        <td className="px-4 py-4 text-center text-sm font-medium text-gray-900">
-                          {item.total_activities}
-                        </td>
-                        <td className="px-4 py-4 text-center text-sm font-medium text-green-600">
-                          {item.present_count}
-                        </td>
-                        <td className="px-4 py-4 text-center text-sm font-medium text-yellow-600">
-                          {item.late_count}
-                        </td>
-                        <td className="px-4 py-4 text-center text-sm font-medium text-slate-700">
-                          {item.not_participated_count}
-                        </td>
-                        <td className="px-4 py-4 text-center text-sm font-medium text-red-600">
-                          {item.absent_count}
-                        </td>
-                        <td className="px-4 py-4 text-center">
-                          <span
-                            className={`rounded-full px-3 py-1 text-xs font-medium ${
-                              item.attendance_rate >= 80
-                                ? 'bg-green-100 text-green-800'
-                                : item.attendance_rate >= 50
-                                  ? 'bg-yellow-100 text-yellow-800'
-                                  : 'bg-red-100 text-red-800'
-                            }`}
-                          >
-                            {item.attendance_rate.toFixed(1)}%
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          ) : (
-            <>
-              <div className="content-card overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="min-w-[1100px]">
-                    <thead className="border-b border-gray-200 bg-gray-50">
-                      <tr>
-                        <th
-                          onClick={() => handleSort('student')}
-                          className="cursor-pointer px-4 py-3 text-left text-sm font-semibold text-gray-900 hover:bg-gray-100"
-                        >
-                          Học viên {sortBy === 'student' && (sortOrder === 'asc' ? '↑' : '↓')}
-                        </th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
-                          Lớp
-                        </th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
-                          Hoạt động
-                        </th>
-                        <th
-                          onClick={() => handleSort('date')}
-                          className="cursor-pointer px-4 py-3 text-left text-sm font-semibold text-gray-900 hover:bg-gray-100"
-                        >
-                          Ngày {sortBy === 'date' && (sortOrder === 'asc' ? '↑' : '↓')}
-                        </th>
-                        <th
-                          onClick={() => handleSort('status')}
-                          className="cursor-pointer px-4 py-3 text-left text-sm font-semibold text-gray-900 hover:bg-gray-100"
-                        >
-                          Trạng thái {sortBy === 'status' && (sortOrder === 'asc' ? '↑' : '↓')}
-                        </th>
-                        <th
-                          onClick={() => handleSort('method')}
-                          className="cursor-pointer px-4 py-3 text-left text-sm font-semibold text-gray-900 hover:bg-gray-100"
-                        >
-                          Phương thức {sortBy === 'method' && (sortOrder === 'asc' ? '↑' : '↓')}
-                        </th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
-                          Giờ check-in
-                        </th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
-                          Ghi chú
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200">
-                      {filteredRecords.map((record) => (
-                        <tr
-                          key={`${record.student_id}-${record.activity_name}-${record.activity_date}`}
-                          className="transition-colors hover:bg-gray-50"
-                        >
-                          <td className="px-4 py-4 text-sm font-medium text-gray-900">
-                            {record.student_name}
-                          </td>
-                          <td className="px-4 py-4 text-sm text-gray-600">{record.class_name}</td>
-                          <td className="px-4 py-4 text-sm font-medium text-blue-600">
-                            {record.activity_name}
-                          </td>
-                          <td className="px-4 py-4 text-sm text-gray-600">
-                            {formatVietnamDateTime(record.activity_date, 'date')}
-                          </td>
-                          <td className="px-4 py-4">{getStatusBadge(record.status)}</td>
-                          <td className="px-4 py-4" data-testid="attendance-method-cell">
-                            {getMethodBadge(record.method)}
-                          </td>
-                          <td className="px-4 py-4 text-sm text-gray-600">
-                            {record.check_in_time
-                              ? formatVietnamDateTime(record.check_in_time)
-                              : '-'}
-                          </td>
-                          <td className="px-4 py-4 text-sm text-gray-600">{record.notes || '-'}</td>
-                        </tr>
+                    Lop
+                    <select
+                      value={filters.classId}
+                      onChange={(event) => setFilters({ ...filters, classId: event.target.value })}
+                      className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-2.5 focus:border-transparent focus:ring-2 focus:ring-cyan-500"
+                    >
+                      <option value="">Tất cả lớp</option>
+                      {classes.map((classItem) => (
+                        <option key={classItem.id} value={classItem.name}>
+                          {classItem.name}
+                        </option>
                       ))}
-                    </tbody>
-                  </table>
+                    </select>
+                  </label>
+
+                  <label className="block text-sm font-medium text-slate-700">
+                    Trạng thái
+                    <select
+                      value={filters.status}
+                      onChange={(event) => setFilters({ ...filters, status: event.target.value })}
+                      className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-2.5 focus:border-transparent focus:ring-2 focus:ring-cyan-500"
+                    >
+                      <option value="">Tất cả trạng thái</option>
+                      <option value="present">Có mặt</option>
+                      <option value="late">Đi trễ</option>
+                      <option value="excused">Có phép</option>
+                      <option value="absent">Vắng</option>
+                      <option value="not_participated">Chưa tham gia</option>
+                    </select>
+                  </label>
+
+                  <label className="block text-sm font-medium text-slate-700">
+                    Phương thức
+                    <select
+                      value={filters.method}
+                      onChange={(event) => setFilters({ ...filters, method: event.target.value })}
+                      className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-2.5 focus:border-transparent focus:ring-2 focus:ring-cyan-500"
+                    >
+                      <option value="">Tất cả phương thức</option>
+                      <option value="qr">QR</option>
+                      <option value="manual">Thủ công</option>
+                      <option value="face">Khuôn mặt</option>
+                      <option value="unknown">Chưa ghi nhận</option>
+                    </select>
+                  </label>
+                </div>
+
+                <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <label className="block text-sm font-medium text-slate-700">
+                    Từ ngày
+                    <input
+                      type="date"
+                      value={filters.dateStart}
+                      onChange={(event) => setFilters({ ...filters, dateStart: event.target.value })}
+                      className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-2.5 focus:border-transparent focus:ring-2 focus:ring-cyan-500"
+                    />
+                  </label>
+                  <label className="block text-sm font-medium text-slate-700">
+                    Đến ngày
+                    <input
+                      type="date"
+                      value={filters.dateEnd}
+                      onChange={(event) => setFilters({ ...filters, dateEnd: event.target.value })}
+                      className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-2.5 focus:border-transparent focus:ring-2 focus:ring-cyan-500"
+                    />
+                  </label>
                 </div>
               </div>
 
-              {filteredRecords.length === 0 && (
+              {filteredRecords.length === 0 ? (
                 <div className="content-card p-12 text-center">
-                  <AlertCircle className="mx-auto mb-4 h-16 w-16 text-gray-400" />
-                  <p className="text-lg text-gray-600">Không có dữ liệu điểm danh</p>
+                  <AlertCircle className="mx-auto mb-4 h-14 w-14 text-slate-300" />
+                  <p className="text-lg font-medium text-slate-700">Không có dữ liệu điểm danh</p>
+                </div>
+              ) : (
+                <div className="grid gap-4 xl:hidden">
+                  {filteredRecords.map((record) => (
+                    <article
+                      key={`${record.student_id}-${record.activity_name}-${record.activity_date}`}
+                      className="content-card p-5"
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <h3 className="text-base font-semibold text-slate-950">{record.student_name}</h3>
+                          <p className="mt-1 text-sm text-slate-500">
+                            {record.class_name} · {record.activity_name}
+                          </p>
+                        </div>
+                        {getStatusBadge(record.status)}
+                      </div>
+                      <div className="mt-4 flex flex-wrap gap-2">{getMethodBadge(record.method)}</div>
+                      <div className="mt-4 grid gap-2 text-sm text-slate-600">
+                        <div>Ngay: {formatVietnamDateTime(record.activity_date, 'date')}</div>
+                        <div>Check-in: {record.check_in_time ? formatVietnamDateTime(record.check_in_time) : '-'}</div>
+                        <div>Ghi chú: {record.notes || '-'}</div>
+                      </div>
+                    </article>
+                  ))}
                 </div>
               )}
+
+              {filteredRecords.length > 0 ? (
+                <div className="content-card hidden overflow-hidden xl:block">
+                  <div className="overflow-x-auto">
+                    <table className="min-w-[1100px]">
+                      <thead className="border-b border-slate-200 bg-slate-50">
+                        <tr>
+                          <th
+                            onClick={() => {
+                              setSortOrder((current) => (sortBy === 'student' && current === 'asc' ? 'desc' : 'asc'));
+                              setSortBy('student');
+                            }}
+                            className="cursor-pointer px-4 py-3 text-left text-sm font-semibold text-slate-900"
+                          >
+                            Học viên {sortBy === 'student' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
+                          </th>
+                          <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">Lop</th>
+                          <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">Hoạt động</th>
+                          <th
+                            onClick={() => {
+                              setSortOrder((current) => (sortBy === 'date' && current === 'asc' ? 'desc' : 'asc'));
+                              setSortBy('date');
+                            }}
+                            className="cursor-pointer px-4 py-3 text-left text-sm font-semibold text-slate-900"
+                          >
+                            Ngày {sortBy === 'date' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
+                          </th>
+                          <th
+                            onClick={() => {
+                              setSortOrder((current) => (sortBy === 'status' && current === 'asc' ? 'desc' : 'asc'));
+                              setSortBy('status');
+                            }}
+                            className="cursor-pointer px-4 py-3 text-left text-sm font-semibold text-slate-900"
+                          >
+                            Trạng thái {sortBy === 'status' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
+                          </th>
+                          <th
+                            onClick={() => {
+                              setSortOrder((current) => (sortBy === 'method' && current === 'asc' ? 'desc' : 'asc'));
+                              setSortBy('method');
+                            }}
+                            className="cursor-pointer px-4 py-3 text-left text-sm font-semibold text-slate-900"
+                          >
+                            Phương thức {sortBy === 'method' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
+                          </th>
+                          <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">Check-in</th>
+                          <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">Ghi chú</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-200">
+                        {filteredRecords.map((record) => (
+                          <tr
+                            key={`${record.student_id}-${record.activity_name}-${record.activity_date}`}
+                            className="transition-colors hover:bg-slate-50"
+                          >
+                            <td className="px-4 py-4 text-sm font-medium text-slate-900">{record.student_name}</td>
+                            <td className="px-4 py-4 text-sm text-slate-600">{record.class_name}</td>
+                            <td className="px-4 py-4 text-sm font-medium text-cyan-700">{record.activity_name}</td>
+                            <td className="px-4 py-4 text-sm text-slate-600">{formatVietnamDateTime(record.activity_date, 'date')}</td>
+                            <td className="px-4 py-4">{getStatusBadge(record.status)}</td>
+                            <td className="px-4 py-4" data-testid="attendance-method-cell">
+                              {getMethodBadge(record.method)}
+                            </td>
+                            <td className="px-4 py-4 text-sm text-slate-600">
+                              {record.check_in_time ? formatVietnamDateTime(record.check_in_time) : '-'}
+                            </td>
+                            <td className="px-4 py-4 text-sm text-slate-600">{record.notes || '-'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ) : null}
             </>
+          ) : viewMode === 'student' ? (
+            <StudentSummaryCards items={studentSummary} />
+          ) : (
+            <SummaryCards classSummary={classSummary} />
           )}
         </div>
       </section>

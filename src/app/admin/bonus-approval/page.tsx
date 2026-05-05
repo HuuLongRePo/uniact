@@ -1,11 +1,20 @@
 'use client';
 
-import { useAuth } from '@/contexts/AuthContext';
-import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, CheckCircle, XCircle, Eye, Loader, AlertCircle, Download } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import {
+  AlertCircle,
+  ArrowLeft,
+  CheckCircle2,
+  Download,
+  Eye,
+  Loader2,
+  XCircle,
+} from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useAuth } from '@/contexts/AuthContext';
+import LoadingSpinner from '@/components/LoadingSpinner';
 import { resolveDownloadFilename } from '@/lib/download-filename';
 import { formatVietnamDateTime, parseVietnamDate, toVietnamDateStamp } from '@/lib/timezone';
 
@@ -26,179 +35,169 @@ interface BonusProposal {
   updated_at: string;
 }
 
+type ProposalStatus = 'all' | 'pending' | 'approved' | 'rejected';
+type SortBy = 'created' | 'points' | 'student';
+
+function parseProposalsPayload(payload: any): BonusProposal[] {
+  const source = payload?.suggestions || payload?.data?.suggestions || [];
+  return Array.isArray(source) ? source : [];
+}
+
+function getStatusMeta(status: BonusProposal['status']) {
+  if (status === 'approved') {
+    return {
+      label: 'Da duyet',
+      badgeClass: 'bg-emerald-100 text-emerald-700',
+    };
+  }
+  if (status === 'rejected') {
+    return {
+      label: 'Tu choi',
+      badgeClass: 'bg-rose-100 text-rose-700',
+    };
+  }
+  return {
+    label: 'Cho duyet',
+    badgeClass: 'bg-amber-100 text-amber-700',
+  };
+}
+
+function getSourceLabel(sourceType: string) {
+  const labelMap: Record<string, string> = {
+    achievement: 'Thanh tich',
+    activity: 'Hoat dong',
+    development: 'Phat trien',
+    social: 'Xa hoi',
+    special: 'Dac biet',
+  };
+  return labelMap[sourceType] || sourceType || 'Khong ro';
+}
+
 export default function AdminBonusApprovePage() {
-  const { user: currentUser, loading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-
   const [proposals, setProposals] = useState<BonusProposal[]>([]);
-  const [filteredProposals, setFilteredProposals] = useState<BonusProposal[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isProcessing, setIsProcessing] = useState<number | null>(null);
-
-  const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'approved' | 'rejected'>(
-    'pending'
-  );
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [processingId, setProcessingId] = useState<number | null>(null);
+  const [filterStatus, setFilterStatus] = useState<ProposalStatus>('pending');
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState<'created' | 'points' | 'student'>('created');
-  const [sortOrder] = useState<'asc' | 'desc'>('desc');
-
+  const [sortBy, setSortBy] = useState<SortBy>('created');
   const [selectedProposal, setSelectedProposal] = useState<BonusProposal | null>(null);
-  const [showDetailModal, setShowDetailModal] = useState(false);
   const [approvalNote, setApprovalNote] = useState('');
 
   useEffect(() => {
-    if (!loading && (!currentUser || currentUser.role !== 'admin')) {
+    if (!authLoading && (!user || user.role !== 'admin')) {
       router.push('/login');
       return;
     }
 
-    if (currentUser) {
-      fetchProposals();
+    if (user) {
+      void fetchProposals();
     }
-  }, [currentUser, loading, router]);
+  }, [authLoading, router, user]);
 
-  const fetchProposals = async () => {
+  async function fetchProposals() {
     try {
-      setIsLoading(true);
-      const res = await fetch('/api/bonus');
-      if (res.ok) {
-        const data = await res.json();
-        setProposals(data.suggestions || []);
-      } else {
-        toast.error('Không thể tải danh sách đề xuất');
+      setLoading(true);
+      setError('');
+      const response = await fetch('/api/bonus');
+      const payload = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(payload?.error || payload?.message || 'Khong the tai de xuat cong diem');
       }
-    } catch (error) {
-      console.error('Lỗi tải đề xuất:', error);
-      toast.error('Lỗi khi tải dữ liệu');
+
+      setProposals(parseProposalsPayload(payload));
+    } catch (fetchError) {
+      console.error('Fetch bonus proposals error:', fetchError);
+      setProposals([]);
+      setError(
+        fetchError instanceof Error
+          ? fetchError.message
+          : 'Khong the tai de xuat cong diem'
+      );
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
-  };
+  }
 
-  const applyFiltersAndSort = useCallback(() => {
-    let filtered = [...proposals];
+  const filteredProposals = useMemo(() => {
+    let nextItems = [...proposals];
 
-    // Filter by status
     if (filterStatus !== 'all') {
-      filtered = filtered.filter((p) => p.status === filterStatus);
+      nextItems = nextItems.filter((proposal) => proposal.status === filterStatus);
     }
 
-    // Filter by search query
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (p) =>
-          p.student_name?.toLowerCase().includes(query) ||
-          p.student_email?.toLowerCase().includes(query) ||
-          p.author_name?.toLowerCase().includes(query)
+    if (searchQuery.trim()) {
+      const query = searchQuery.trim().toLowerCase();
+      nextItems = nextItems.filter((proposal) =>
+        [proposal.student_name, proposal.student_email, proposal.author_name]
+          .filter(Boolean)
+          .some((value) => String(value).toLowerCase().includes(query))
       );
     }
 
-    // Sort
-    filtered.sort((a, b) => {
-      let comparison = 0;
-      if (sortBy === 'created') {
-        comparison =
-          (parseVietnamDate(a.created_at)?.getTime() ?? 0) -
-          (parseVietnamDate(b.created_at)?.getTime() ?? 0);
-      } else if (sortBy === 'points') {
-        comparison = a.points - b.points;
-      } else if (sortBy === 'student') {
-        comparison = (a.student_name || '').localeCompare(b.student_name || '');
+    nextItems.sort((left, right) => {
+      if (sortBy === 'points') {
+        return right.points - left.points;
       }
-      return sortOrder === 'asc' ? comparison : -comparison;
+      if (sortBy === 'student') {
+        return String(left.student_name || '').localeCompare(String(right.student_name || ''));
+      }
+      return (
+        (parseVietnamDate(right.created_at)?.getTime() ?? 0) -
+        (parseVietnamDate(left.created_at)?.getTime() ?? 0)
+      );
     });
 
-    setFilteredProposals(filtered);
-  }, [filterStatus, proposals, searchQuery, sortBy, sortOrder]);
+    return nextItems;
+  }, [filterStatus, proposals, searchQuery, sortBy]);
 
-  useEffect(() => {
-    applyFiltersAndSort();
-  }, [applyFiltersAndSort]);
+  const stats = useMemo(() => {
+    return {
+      pending: proposals.filter((proposal) => proposal.status === 'pending').length,
+      approved: proposals.filter((proposal) => proposal.status === 'approved').length,
+      rejected: proposals.filter((proposal) => proposal.status === 'rejected').length,
+    };
+  }, [proposals]);
 
-  const handleApprove = async (proposal: BonusProposal) => {
-    setIsProcessing(proposal.id);
+  async function handleDecision(proposal: BonusProposal, action: 'approve' | 'reject') {
     try {
-      const res = await fetch(`/api/bonus/${proposal.id}/approve`, {
+      setProcessingId(proposal.id);
+      const response = await fetch(`/api/bonus/${proposal.id}/approve`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action: 'approve',
+          action,
           note: approvalNote,
         }),
       });
+      const payload = await response.json().catch(() => null);
 
-      if (res.ok) {
-        toast.success(`✅ Đã phê duyệt đề xuất cho ${proposal.student_name}`);
-        setApprovalNote('');
-        setShowDetailModal(false);
-        fetchProposals();
-      } else {
-        const error = await res.json();
-        toast.error(error.error || 'Không thể phê duyệt');
+      if (!response.ok) {
+        throw new Error(payload?.error || payload?.message || 'Khong the cap nhat de xuat');
       }
-    } catch (error) {
-      console.error('Lỗi phê duyệt:', error);
-      toast.error('Lỗi khi phê duyệt');
+
+      toast.success(action === 'approve' ? 'Da phe duyet de xuat cong diem' : 'Da tu choi de xuat cong diem');
+      setApprovalNote('');
+      setSelectedProposal(null);
+      await fetchProposals();
+    } catch (decisionError) {
+      console.error('Handle bonus proposal decision error:', decisionError);
+      toast.error(
+        decisionError instanceof Error
+          ? decisionError.message
+          : 'Khong the cap nhat de xuat cong diem'
+      );
     } finally {
-      setIsProcessing(null);
+      setProcessingId(null);
     }
-  };
+  }
 
-  const handleReject = async (proposal: BonusProposal) => {
-    setIsProcessing(proposal.id);
+  async function handleExport(format: 'csv' | 'json') {
     try {
-      const res = await fetch(`/api/bonus/${proposal.id}/approve`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'reject',
-          note: approvalNote,
-        }),
-      });
-
-      if (res.ok) {
-        toast.success(`❌ Đã từ chối đề xuất`);
-        setApprovalNote('');
-        setShowDetailModal(false);
-        fetchProposals();
-      } else {
-        const error = await res.json();
-        toast.error(error.error || 'Không thể từ chối');
-      }
-    } catch (error) {
-      console.error('Lỗi từ chối:', error);
-      toast.error('Lỗi khi từ chối');
-    } finally {
-      setIsProcessing(null);
-    }
-  };
-
-  const getSourceTypeLabel = (type: string) => {
-    const typeMap: Record<string, string> = {
-      achievement: 'Thành tích',
-      activity: 'Hoạt động',
-      development: 'Phát triển',
-      social: 'Xã hội',
-      special: 'Đặc biệt',
-    };
-    return typeMap[type] || type;
-  };
-
-  const getStatusBadge = (status: string) => {
-    const statusMap: Record<string, { bg: string; text: string; label: string }> = {
-      pending: { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Chờ duyệt' },
-      approved: { bg: 'bg-green-100', text: 'text-green-800', label: 'Đã duyệt' },
-      rejected: { bg: 'bg-red-100', text: 'text-red-800', label: 'Từ chối' },
-    };
-    const style = statusMap[status] || statusMap.pending;
-    return { ...style };
-  };
-
-  const handleExportReport = async (format: 'csv' | 'json') => {
-    try {
-      const url = `/api/bonus/reports?type=semester&format=${format}`;
-      const response = await fetch(url);
+      const response = await fetch(`/api/bonus/reports?type=semester&format=${format}`);
 
       if (!response.ok) {
         throw new Error('Export failed');
@@ -214,200 +213,236 @@ export default function AdminBonusApprovePage() {
       );
       link.click();
       window.URL.revokeObjectURL(downloadUrl);
-
-      toast.success(`✅ Xuất báo cáo ${format.toUpperCase()} thành công`);
-    } catch (error) {
-      console.error('Export error:', error);
-      toast.error('Lỗi khi xuất báo cáo');
+      toast.success(format === 'csv' ? 'Da xuat bao cao CSV' : 'Da xuat bao cao JSON');
+    } catch (exportError) {
+      console.error('Export bonus report error:', exportError);
+      toast.error('Khong the xuat bao cao cong diem');
     }
-  };
+  }
 
-  const stats = {
-    pending: proposals.filter((p) => p.status === 'pending').length,
-    approved: proposals.filter((p) => p.status === 'approved').length,
-    rejected: proposals.filter((p) => p.status === 'rejected').length,
-  };
+  if (authLoading || (loading && proposals.length === 0 && !error)) {
+    return <LoadingSpinner message="Dang tai de xuat cong diem..." />;
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-100 p-6">
-      {/* Header */}
-      <div className="max-w-7xl mx-auto">
-        <div className="flex items-center gap-4 mb-8">
-          <Link href="/admin/dashboard" className="p-2 hover:bg-white/50 rounded-lg transition">
-            <ArrowLeft className="w-6 h-6 text-gray-600" />
-          </Link>
-          <div className="flex-1">
-            <h1 className="text-4xl font-bold text-gray-800">Duyệt Đề Xuất Cộng Điểm</h1>
-            <p className="text-gray-600 mt-1">Quản lý và phê duyệt các đề xuất từ giảng viên</p>
-          </div>
-          <Link
-            href="/admin/bonus-reports"
-            className="bg-indigo-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-indigo-700 transition"
-          >
-            📊 Xem Báo Cáo
-          </Link>
-        </div>
-
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-4 mb-6">
-          <div className="bg-white rounded-lg shadow p-4">
-            <div className="text-yellow-600 font-bold text-2xl">{stats.pending}</div>
-            <div className="text-gray-600 text-sm">Chờ duyệt</div>
-          </div>
-          <div className="bg-white rounded-lg shadow p-4">
-            <div className="text-green-600 font-bold text-2xl">{stats.approved}</div>
-            <div className="text-gray-600 text-sm">Đã duyệt</div>
-          </div>
-          <div className="bg-white rounded-lg shadow p-4">
-            <div className="text-red-600 font-bold text-2xl">{stats.rejected}</div>
-            <div className="text-gray-600 text-sm">Từ chối</div>
-          </div>
-        </div>
-
-        {/* Export Buttons */}
-        <div className="bg-gradient-to-r from-purple-500 to-indigo-600 rounded-lg shadow-lg p-4 mb-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-white font-bold text-lg">Xuất Báo Cáo</h3>
-              <p className="text-purple-100 text-sm">Tải báo cáo tổng hợp cộng điểm theo học kỳ</p>
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => handleExportReport('csv')}
-                className="flex items-center gap-2 bg-white text-purple-600 px-4 py-2 rounded-lg font-semibold hover:bg-gray-100 transition"
+    <div className="page-shell">
+      <div className="mx-auto max-w-7xl space-y-6">
+        <section className="page-surface rounded-[1.75rem] px-5 py-6 sm:px-7">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+            <div className="flex items-start gap-4">
+              <Link
+                href="/admin/dashboard"
+                className="rounded-xl border border-slate-300 p-2 text-slate-600 transition hover:bg-slate-50"
               >
-                <Download className="w-4 h-4" />
+                <ArrowLeft className="h-5 w-5" />
+              </Link>
+
+              <div className="max-w-3xl">
+                <div className="inline-flex rounded-full bg-violet-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-violet-700">
+                  Bonus approval
+                </div>
+                <h1
+                  className="mt-3 text-3xl font-bold text-slate-900"
+                  data-testid="admin-bonus-approval-heading"
+                >
+                  Duyet de xuat cong diem
+                </h1>
+                <p className="mt-2 text-sm text-slate-600">
+                  Doi soat de xuat tu giang vien, xem bang chung va phe duyet theo tung hoc vien.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <button
+                type="button"
+                onClick={() => void handleExport('csv')}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700"
+              >
+                <Download className="h-4 w-4" />
                 CSV
               </button>
               <button
-                onClick={() => handleExportReport('json')}
-                className="flex items-center gap-2 bg-white text-indigo-600 px-4 py-2 rounded-lg font-semibold hover:bg-gray-100 transition"
+                type="button"
+                onClick={() => void handleExport('json')}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
               >
-                <Download className="w-4 h-4" />
+                <Download className="h-4 w-4" />
                 JSON
               </button>
             </div>
           </div>
-        </div>
+        </section>
 
-        {/* Filters */}
-        <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {/* Status Filter */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Trạng thái</label>
-              <select
-                value={filterStatus}
-                onChange={(e) =>
-                  setFilterStatus(e.target.value as 'all' | 'pending' | 'approved' | 'rejected')
-                }
-                className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-              >
-                <option value="all">Tất cả</option>
-                <option value="pending">Chờ duyệt</option>
-                <option value="approved">Đã duyệt</option>
-                <option value="rejected">Từ chối</option>
-              </select>
-            </div>
+        {error ? (
+          <section className="page-surface rounded-[1.75rem] border-rose-200 bg-rose-50 px-5 py-5 sm:px-7">
+            <div className="text-sm font-semibold text-rose-700">Co loi khi tai de xuat</div>
+            <p className="mt-2 text-sm text-rose-800">{error}</p>
+          </section>
+        ) : null}
 
-            {/* Search */}
-            <div className="md:col-span-2">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Tìm kiếm</label>
+        <section className="grid gap-4 md:grid-cols-3">
+          <div className="rounded-[1.5rem] bg-amber-50 px-4 py-4">
+            <div className="text-xs font-semibold uppercase tracking-wide text-amber-700">Cho duyet</div>
+            <div className="mt-3 text-2xl font-semibold text-slate-900">{stats.pending}</div>
+          </div>
+          <div className="rounded-[1.5rem] bg-emerald-50 px-4 py-4">
+            <div className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Da duyet</div>
+            <div className="mt-3 text-2xl font-semibold text-slate-900">{stats.approved}</div>
+          </div>
+          <div className="rounded-[1.5rem] bg-rose-50 px-4 py-4">
+            <div className="text-xs font-semibold uppercase tracking-wide text-rose-700">Tu choi</div>
+            <div className="mt-3 text-2xl font-semibold text-slate-900">{stats.rejected}</div>
+          </div>
+        </section>
+
+        <section className="page-surface rounded-[1.75rem] px-5 py-6 sm:px-7">
+          <div className="grid gap-4 md:grid-cols-[1fr_220px_220px]">
+            <label className="block">
+              <span className="mb-2 block text-sm font-medium text-slate-700">Tim kiem</span>
               <input
                 type="text"
-                placeholder="Tên học viên, email, giảng viên..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="Ten hoc vien, email, giang vien..."
+                className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm text-slate-900"
               />
-            </div>
+            </label>
 
-            {/* Sort */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Sắp xếp</label>
+            <label className="block">
+              <span className="mb-2 block text-sm font-medium text-slate-700">Trang thai</span>
+              <select
+                value={filterStatus}
+                onChange={(event) => setFilterStatus(event.target.value as ProposalStatus)}
+                className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm text-slate-900"
+              >
+                <option value="all">Tat ca</option>
+                <option value="pending">Cho duyet</option>
+                <option value="approved">Da duyet</option>
+                <option value="rejected">Tu choi</option>
+              </select>
+            </label>
+
+            <label className="block">
+              <span className="mb-2 block text-sm font-medium text-slate-700">Sap xep</span>
               <select
                 value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as 'created' | 'points' | 'student')}
-                className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                onChange={(event) => setSortBy(event.target.value as SortBy)}
+                className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm text-slate-900"
               >
-                <option value="created">Mới nhất</option>
-                <option value="points">Điểm</option>
-                <option value="student">Học viên</option>
+                <option value="created">Moi nhat</option>
+                <option value="points">Diem cao</option>
+                <option value="student">Ten hoc vien</option>
               </select>
-            </div>
+            </label>
           </div>
-        </div>
+        </section>
 
-        {/* Proposals Table */}
-        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-          {isLoading ? (
-            <div className="p-12 text-center">
-              <Loader className="w-8 h-8 animate-spin mx-auto text-gray-400 mb-2" />
-              <p className="text-gray-500">Đang tải dữ liệu...</p>
+        {loading ? (
+          <section className="page-surface rounded-[1.75rem] px-5 py-10 text-center sm:px-7">
+            <div className="inline-flex items-center gap-2 text-sm text-slate-500">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Dang tai de xuat...
             </div>
-          ) : filteredProposals.length === 0 ? (
-            <div className="p-12 text-center">
-              <AlertCircle className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-              <p className="text-gray-500">Không có đề xuất nào</p>
+          </section>
+        ) : filteredProposals.length === 0 ? (
+          <section className="page-surface rounded-[1.75rem] border-dashed px-5 py-10 text-center sm:px-7">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-3xl bg-slate-100 text-slate-600">
+              <AlertCircle className="h-7 w-7" />
             </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b">
+            <h2 className="mt-4 text-xl font-semibold text-slate-900">Khong co de xuat nao</h2>
+            <p className="mt-2 text-sm text-slate-600">
+              Thu doi bo loc hoac cho them de xuat moi tu giang vien.
+            </p>
+          </section>
+        ) : (
+          <>
+            <section className="grid gap-4 xl:hidden">
+              {filteredProposals.map((proposal) => {
+                const statusMeta = getStatusMeta(proposal.status);
+                return (
+                  <article key={proposal.id} className="page-surface rounded-[1.75rem] border px-5 py-5 sm:px-7">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <div className="text-sm font-semibold text-slate-900">
+                          {proposal.student_name || 'N/A'}
+                        </div>
+                        <div className="mt-1 text-sm text-slate-500">{proposal.student_email || 'Khong co email'}</div>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+                            {getSourceLabel(proposal.source_type)}
+                          </span>
+                          <span className={`rounded-full px-3 py-1 text-xs font-semibold ${statusMeta.badgeClass}`}>
+                            {statusMeta.label}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="text-right">
+                        <div className="text-2xl font-semibold text-blue-700">+{proposal.points}</div>
+                        <div className="text-xs text-slate-500">diem</div>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 text-xs text-slate-500">
+                      Tao boi {proposal.author_name || 'N/A'} | {formatVietnamDateTime(proposal.created_at)}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedProposal(proposal);
+                        setApprovalNote('');
+                      }}
+                      className="mt-4 inline-flex items-center gap-2 rounded-xl border border-blue-300 px-4 py-2.5 text-sm font-semibold text-blue-700 transition hover:bg-blue-50"
+                    >
+                      <Eye className="h-4 w-4" />
+                      Xem chi tiet
+                    </button>
+                  </article>
+                );
+              })}
+            </section>
+
+            <section className="page-surface hidden overflow-x-auto rounded-[1.75rem] border xl:block">
+              <table className="min-w-full divide-y divide-slate-200">
+                <thead className="bg-slate-50">
                   <tr>
-                    <th className="text-left px-6 py-3 font-semibold text-gray-700">Học viên</th>
-                    <th className="text-left px-6 py-3 font-semibold text-gray-700">Loại</th>
-                    <th className="text-center px-6 py-3 font-semibold text-gray-700">Điểm</th>
-                    <th className="text-left px-6 py-3 font-semibold text-gray-700">Giảng viên</th>
-                    <th className="text-left px-6 py-3 font-semibold text-gray-700">Trạng thái</th>
-                    <th className="text-center px-6 py-3 font-semibold text-gray-700">Hành động</th>
+                    <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Hoc vien</th>
+                    <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Loai</th>
+                    <th className="px-5 py-4 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Diem</th>
+                    <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Giang vien</th>
+                    <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Trang thai</th>
+                    <th className="px-5 py-4 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Chi tiet</th>
                   </tr>
                 </thead>
-                <tbody>
-                  {filteredProposals.map((proposal, idx) => {
-                    const statusStyle = getStatusBadge(proposal.status);
+                <tbody className="divide-y divide-slate-200 bg-white">
+                  {filteredProposals.map((proposal) => {
+                    const statusMeta = getStatusMeta(proposal.status);
                     return (
-                      <tr key={proposal.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                        <td className="px-6 py-4">
-                          <div className="font-semibold text-gray-800">
-                            {proposal.student_name || 'N/A'}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {proposal.student_email || ''}
-                          </div>
+                      <tr key={proposal.id} className="hover:bg-slate-50">
+                        <td className="px-5 py-4">
+                          <div className="text-sm font-semibold text-slate-900">{proposal.student_name || 'N/A'}</div>
+                          <div className="mt-1 text-sm text-slate-500">{proposal.student_email || 'Khong co email'}</div>
                         </td>
-                        <td className="px-6 py-4">
-                          <span className="text-sm text-gray-600">
-                            {getSourceTypeLabel(proposal.source_type)}
+                        <td className="px-5 py-4 text-sm text-slate-600">{getSourceLabel(proposal.source_type)}</td>
+                        <td className="px-5 py-4 text-right text-sm font-semibold text-blue-700">+{proposal.points}</td>
+                        <td className="px-5 py-4 text-sm text-slate-600">{proposal.author_name || 'N/A'}</td>
+                        <td className="px-5 py-4">
+                          <span className={`rounded-full px-3 py-1 text-xs font-semibold ${statusMeta.badgeClass}`}>
+                            {statusMeta.label}
                           </span>
                         </td>
-                        <td className="px-6 py-4 text-center">
-                          <span className="font-bold text-lg text-blue-600">
-                            +{proposal.points}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="text-sm text-gray-600">
-                            {proposal.author_name || 'N/A'}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span
-                            className={`text-xs font-semibold px-3 py-1 rounded-full ${statusStyle.bg} ${statusStyle.text}`}
-                          >
-                            {statusStyle.label}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-center">
+                        <td className="px-5 py-4 text-right">
                           <button
+                            type="button"
                             onClick={() => {
                               setSelectedProposal(proposal);
-                              setShowDetailModal(true);
                               setApprovalNote('');
                             }}
-                            className="inline-flex items-center gap-2 px-3 py-1 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-lg transition text-sm font-semibold"
+                            className="inline-flex items-center gap-2 rounded-xl border border-blue-300 px-4 py-2 text-sm font-semibold text-blue-700 transition hover:bg-blue-50"
                           >
-                            <Eye className="w-4 h-4" />
+                            <Eye className="h-4 w-4" />
                             Xem
                           </button>
                         </td>
@@ -416,142 +451,125 @@ export default function AdminBonusApprovePage() {
                   })}
                 </tbody>
               </table>
-            </div>
-          )}
-        </div>
+            </section>
+          </>
+        )}
       </div>
 
-      {/* Detail Modal */}
-      {showDetailModal && selectedProposal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-96 overflow-y-auto">
-            <div className="sticky top-0 bg-gradient-to-r from-purple-600 to-indigo-600 px-6 py-4 text-white">
-              <h2 className="text-xl font-bold">Chi Tiết Đề Xuất</h2>
-            </div>
-
-            <div className="p-6 space-y-4">
-              {/* Info */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-gray-600">Học viên</p>
-                  <p className="font-semibold text-gray-800">{selectedProposal.student_name}</p>
-                  <p className="text-xs text-gray-500">{selectedProposal.student_email}</p>
+      {selectedProposal ? (
+        <div
+          className="app-modal-backdrop p-4"
+          onClick={() => setSelectedProposal(null)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="admin-bonus-proposal-detail-title"
+            className="app-modal-panel app-modal-panel-scroll w-full max-w-2xl p-6"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-wide text-violet-700">
+                  Proposal detail
                 </div>
-                <div>
-                  <p className="text-sm text-gray-600">Điểm đề xuất</p>
-                  <p className="font-bold text-2xl text-blue-600">+{selectedProposal.points}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Loại hoạt động</p>
-                  <p className="font-semibold text-gray-800">
-                    {getSourceTypeLabel(selectedProposal.source_type)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Trạng thái</p>
-                  <div className="mt-1">
-                    <span
-                      className={`text-xs font-semibold px-3 py-1 rounded-full ${getStatusBadge(selectedProposal.status).bg} ${getStatusBadge(selectedProposal.status).text}`}
-                    >
-                      {getStatusBadge(selectedProposal.status).label}
-                    </span>
-                  </div>
-                </div>
+                <h3 id="admin-bonus-proposal-detail-title" className="mt-2 text-2xl font-bold text-slate-900">
+                  {selectedProposal.student_name || 'N/A'}
+                </h3>
+                <p className="mt-1 text-sm text-slate-500">{selectedProposal.student_email || 'Khong co email'}</p>
               </div>
 
-              {/* Evidence */}
-              {selectedProposal.evidence_url && (
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">Bằng chứng</p>
-                  <a
-                    href={selectedProposal.evidence_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-600 hover:underline text-sm break-all"
-                  >
-                    {selectedProposal.evidence_url}
-                  </a>
-                </div>
-              )}
-
-              {/* Timeline */}
-              <div className="text-xs text-gray-500 space-y-1">
-                <p>🕐 Tạo: {formatVietnamDateTime(selectedProposal.created_at)}</p>
-                {selectedProposal.status !== 'pending' && (
-                  <p>
-                    ✅ Cập nhật: {formatVietnamDateTime(selectedProposal.updated_at)}
-                  </p>
-                )}
-              </div>
-
-              {/* Approval Section */}
-              {selectedProposal.status === 'pending' && (
-                <div className="border-t pt-4 space-y-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Ghi chú (tùy chọn)
-                    </label>
-                    <textarea
-                      value={approvalNote}
-                      onChange={(e) => setApprovalNote(e.target.value)}
-                      placeholder="Thêm ghi chú..."
-                      rows={2}
-                      className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    />
-                  </div>
-
-                  <div className="flex gap-3">
-                    <button
-                      onClick={() => handleApprove(selectedProposal)}
-                      disabled={isProcessing === selectedProposal.id}
-                      className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-semibold py-2 rounded-lg transition flex items-center justify-center gap-2"
-                    >
-                      {isProcessing === selectedProposal.id ? (
-                        <>
-                          <Loader className="w-4 h-4 animate-spin" />
-                          Đang xử lý...
-                        </>
-                      ) : (
-                        <>
-                          <CheckCircle className="w-4 h-4" />
-                          Phê duyệt
-                        </>
-                      )}
-                    </button>
-                    <button
-                      onClick={() => handleReject(selectedProposal)}
-                      disabled={isProcessing === selectedProposal.id}
-                      className="flex-1 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white font-semibold py-2 rounded-lg transition flex items-center justify-center gap-2"
-                    >
-                      {isProcessing === selectedProposal.id ? (
-                        <>
-                          <Loader className="w-4 h-4 animate-spin" />
-                          Đang xử lý...
-                        </>
-                      ) : (
-                        <>
-                          <XCircle className="w-4 h-4" />
-                          Từ chối
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Close Button */}
-            <div className="bg-gray-50 px-6 py-4 border-t text-right">
               <button
-                onClick={() => setShowDetailModal(false)}
-                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold rounded-lg transition"
+                type="button"
+                onClick={() => setSelectedProposal(null)}
+                className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
               >
-                Đóng
+                Dong
               </button>
             </div>
+
+            <div className="mt-6 grid gap-4 md:grid-cols-2">
+              <div className="rounded-[1.5rem] bg-slate-50 px-4 py-4">
+                <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Diem de xuat</div>
+                <div className="mt-2 text-2xl font-semibold text-blue-700">+{selectedProposal.points}</div>
+              </div>
+              <div className="rounded-[1.5rem] bg-slate-50 px-4 py-4">
+                <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Loai nguon</div>
+                <div className="mt-2 text-sm font-semibold text-slate-900">{getSourceLabel(selectedProposal.source_type)}</div>
+              </div>
+            </div>
+
+            <div className="mt-4 rounded-[1.5rem] bg-slate-50 px-4 py-4 text-sm text-slate-700">
+              <div className="font-semibold text-slate-900">Nguoi de xuat</div>
+              <div className="mt-2">{selectedProposal.author_name || 'N/A'}</div>
+              <div className="mt-2 text-xs text-slate-500">
+                Tao luc {formatVietnamDateTime(selectedProposal.created_at)}
+                {selectedProposal.status !== 'pending'
+                  ? ` | Cap nhat ${formatVietnamDateTime(selectedProposal.updated_at)}`
+                  : ''}
+              </div>
+            </div>
+
+            {selectedProposal.evidence_url ? (
+              <div className="mt-4 rounded-[1.5rem] border border-slate-200 bg-white px-4 py-4">
+                <div className="text-sm font-semibold text-slate-900">Bang chung</div>
+                <a
+                  href={selectedProposal.evidence_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-2 block break-all text-sm text-blue-700 hover:underline"
+                >
+                  {selectedProposal.evidence_url}
+                </a>
+              </div>
+            ) : null}
+
+            {selectedProposal.status === 'pending' ? (
+              <div className="mt-6 space-y-4 border-t border-slate-200 pt-4">
+                <label className="block">
+                  <span className="mb-2 block text-sm font-medium text-slate-700">Ghi chu admin</span>
+                  <textarea
+                    rows={3}
+                    value={approvalNote}
+                    onChange={(event) => setApprovalNote(event.target.value)}
+                    placeholder="Nhap ghi chu neu can..."
+                    className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm text-slate-900"
+                  />
+                </label>
+
+                <div className="flex flex-col gap-3 sm:flex-row">
+                  <button
+                    type="button"
+                    disabled={processingId === selectedProposal.id}
+                    onClick={() => void handleDecision(selectedProposal, 'approve')}
+                    className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50"
+                  >
+                    {processingId === selectedProposal.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <CheckCircle2 className="h-4 w-4" />
+                    )}
+                    Phe duyet
+                  </button>
+                  <button
+                    type="button"
+                    disabled={processingId === selectedProposal.id}
+                    onClick={() => void handleDecision(selectedProposal, 'reject')}
+                    className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-rose-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:opacity-50"
+                  >
+                    {processingId === selectedProposal.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <XCircle className="h-4 w-4" />
+                    )}
+                    Tu choi
+                  </button>
+                </div>
+              </div>
+            ) : null}
           </div>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

@@ -14,15 +14,16 @@ interface RejectReasonDialogProps {
 
 export default function RejectReasonDialog({
   isOpen,
-  title = 'Từ chối hoạt động',
-  message = 'Vui lòng nhập lý do từ chối:',
-  confirmText = 'Từ chối',
-  cancelText = 'Hủy',
+  title = 'Tu choi hoat dong',
+  message = 'Vui long nhap ly do tu choi:',
+  confirmText = 'Tu choi',
+  cancelText = 'Huy',
   onConfirm,
   onCancel,
 }: RejectReasonDialogProps) {
   const [reason, setReason] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const titleId = 'admin-pending-reject-dialog-title';
 
   useEffect(() => {
     if (!isOpen) return;
@@ -31,53 +32,58 @@ export default function RejectReasonDialog({
 
   if (!isOpen) return null;
 
-  const handleConfirm = async () => {
-    const trimmed = reason.trim();
-    if (!trimmed) return;
+  async function handleConfirm() {
+    const trimmedReason = reason.trim();
+    if (!trimmedReason) return;
+
     setIsSubmitting(true);
     try {
-      await onConfirm(trimmed);
+      await onConfirm(trimmedReason);
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
-      onClick={onCancel}
-    >
+    <div className="app-modal-backdrop px-4" onClick={onCancel}>
       <div
-        className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4"
-        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="app-modal-panel app-modal-panel-scroll w-full max-w-md p-6"
+        onClick={(event) => event.stopPropagation()}
       >
-        <div className="p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">{title}</h3>
-          <p className="text-gray-600 mb-3">{message}</p>
+        <div>
+          <h3 id={titleId} className="mb-2 text-lg font-semibold text-gray-900">
+            {title}
+          </h3>
+          <p className="mb-3 text-gray-600">{message}</p>
 
           <textarea
             value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            placeholder="Nhập lý do..."
+            onChange={(event) => setReason(event.target.value)}
+            placeholder="Nhap ly do..."
             rows={4}
-            className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full rounded-2xl border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             disabled={isSubmitting}
           />
 
-          <div className="flex gap-3 justify-end mt-5">
+          <div className="mt-5 flex justify-end gap-3">
             <button
+              type="button"
               onClick={onCancel}
               disabled={isSubmitting}
-              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+              className="rounded-lg border border-gray-300 px-4 py-2 hover:bg-gray-50 disabled:opacity-50"
             >
               {cancelText}
             </button>
             <button
-              onClick={handleConfirm}
+              type="button"
+              onClick={() => void handleConfirm()}
               disabled={isSubmitting || !reason.trim()}
-              className="px-4 py-2 text-white rounded-lg bg-red-600 hover:bg-red-700 disabled:opacity-50"
+              className="rounded-lg bg-red-600 px-4 py-2 text-white hover:bg-red-700 disabled:opacity-50"
             >
-              {isSubmitting ? 'Đang xử lý...' : confirmText}
+              {isSubmitting ? 'Dang xu ly...' : confirmText}
             </button>
           </div>
         </div>

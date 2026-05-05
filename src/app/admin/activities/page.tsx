@@ -1,23 +1,28 @@
 'use client';
 
-import { useAuth } from '@/contexts/AuthContext';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { CheckCircle, RefreshCw } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { CheckCircle2, RefreshCw } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
+import { useAuth } from '@/contexts/AuthContext';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useDebounce } from '@/lib/debounce-hooks';
 import ActivityFilters from './ActivityFilters';
 import ActivityStats from './ActivityStats';
 import ActivityTable from './ActivityTable';
 import { Activity } from './types';
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 type ActiveQrSessionSummary = {
   session_id: number;
   expires_at: string;
 };
+
+function parseActivitiesPayload(payload: any) {
+  const activities = payload?.activities || payload?.data?.activities || payload?.data || [];
+  return Array.isArray(activities) ? (activities as Activity[]) : [];
+}
 
 export default function AdminActivitiesPage() {
   const { user, loading: authLoading } = useAuth();
@@ -35,29 +40,50 @@ export default function AdminActivitiesPage() {
   const debouncedSearch = useDebounce(search, 400);
   const effectiveSearch = debouncedSearch.trim().toLowerCase();
 
+  const fetchActivities = useCallback(async () => {
+    try {
+      setIsListLoading(true);
+      const response = await fetch('/api/admin/activities');
+      const body = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(body?.error || body?.message || 'Khong the tai danh sach hoat dong');
+      }
+
+      setActivities(parseActivitiesPayload(body));
+    } catch (error) {
+      console.error('Admin activities fetch error:', error);
+      toast.error(error instanceof Error ? error.message : 'Khong the tai danh sach hoat dong');
+      setActivities([]);
+    } finally {
+      setIsListLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (!authLoading && (!user || user.role !== 'admin')) {
       router.push('/login');
-      return;
     }
+  }, [authLoading, router, user?.id, user?.role]);
 
-    if (user) {
-      fetchActivities();
-    }
-  }, [user, authLoading, router]);
+  useEffect(() => {
+    if (!user || user.role !== 'admin') return;
+    void fetchActivities();
+  }, [fetchActivities, user?.id, user?.role]);
 
   useEffect(() => {
     if (!user || user.role !== 'admin') return;
 
     const intervalId = window.setInterval(() => {
-      fetchActivities();
+      void fetchActivities();
     }, 30000);
 
     return () => window.clearInterval(intervalId);
-  }, [user]);
+  }, [fetchActivities, user?.id, user?.role]);
 
   useEffect(() => {
     if (!user || user.role !== 'admin') return;
+
     if (activities.length === 0) {
       setActiveQrSessions({});
       return;
@@ -67,15 +93,13 @@ export default function AdminActivitiesPage() {
     const now = Date.now();
 
     const candidates = activities
-      .filter(
-        (activity) => activity.status === 'published' && activity.approval_status === 'approved'
-      )
+      .filter((activity) => activity.status === 'published' && activity.approval_status === 'approved')
       .map((activity) => {
         const date = new Date(activity.date_time).getTime();
         return { activity, date, distance: Math.abs(date - now) };
       })
       .filter(({ date }) => Number.isFinite(date))
-      .sort((a, b) => a.distance - b.distance)
+      .sort((left, right) => left.distance - right.distance)
       .slice(0, 30)
       .map(({ activity }) => activity);
 
@@ -122,152 +146,169 @@ export default function AdminActivitiesPage() {
     return () => {
       cancelled = true;
     };
-  }, [activities, user]);
+  }, [activities, user?.id, user?.role]);
 
-  const fetchActivities = async () => {
-    try {
-      setIsListLoading(true);
-      const response = await fetch('/api/admin/activities');
-      if (response.ok) {
-        const data = await response.json();
-        setActivities(data.activities || data.data?.activities || []);
-      }
-    } catch (error) {
-      console.error('Error loading activities:', error);
-      toast.error('Không thể tải danh sách hoạt động');
-    } finally {
-      setIsListLoading(false);
-    }
-  };
-
-  const performDelete = async (id: number) => {
+  async function performDelete(id: number) {
     try {
       const response = await fetch(`/api/admin/activities/${id}`, {
         method: 'DELETE',
       });
+      const body = await response.json().catch(() => null);
 
-      if (response.ok) {
-        const data = await response.json().catch(() => ({}));
-        toast.success(data.message || 'Đã hủy hoạt động');
-        fetchActivities();
-      } else {
-        const data = await response.json();
-        toast.error(data.error || 'Không thể xóa hoạt động');
+      if (!response.ok) {
+        throw new Error(body?.error || body?.message || 'Khong the huy hoat dong');
       }
+
+      toast.success(body?.message || 'Da huy hoat dong');
+      await fetchActivities();
     } catch (error) {
-      console.error('Delete error:', error);
-      toast.error('Lỗi khi xóa hoạt động');
+      console.error('Admin activity delete error:', error);
+      toast.error(error instanceof Error ? error.message : 'Loi khi huy hoat dong');
     }
-  };
+  }
 
-  const filteredActivities = activities.filter((activity) => {
-    const matchSearch =
-      effectiveSearch.length === 0 ||
-      activity.title.toLowerCase().includes(effectiveSearch) ||
-      activity.description.toLowerCase().includes(effectiveSearch) ||
-      activity.teacher_name.toLowerCase().includes(effectiveSearch);
+  const filteredActivities = useMemo(
+    () =>
+      activities.filter((activity) => {
+        const matchSearch =
+          effectiveSearch.length === 0 ||
+          activity.title.toLowerCase().includes(effectiveSearch) ||
+          activity.description.toLowerCase().includes(effectiveSearch) ||
+          activity.teacher_name.toLowerCase().includes(effectiveSearch);
 
-    const matchWorkflow = workflowFilter === 'all' || activity.status === workflowFilter;
-    const matchReview = reviewFilter === 'all' || activity.approval_status === reviewFilter;
+        const matchWorkflow = workflowFilter === 'all' || activity.status === workflowFilter;
+        const matchReview = reviewFilter === 'all' || activity.approval_status === reviewFilter;
 
-    return matchSearch && matchWorkflow && matchReview;
-  });
+        return matchSearch && matchWorkflow && matchReview;
+      }),
+    [activities, effectiveSearch, reviewFilter, workflowFilter]
+  );
 
-  if (authLoading) return <LoadingSpinner />;
-  if (!user || user.role !== 'admin') return null;
+  const archivedCount = useMemo(
+    () =>
+      activities.filter((activity) => {
+        const activityTime = new Date(activity.date_time).getTime();
+        return (
+          (activity.status === 'published' && Number.isFinite(activityTime) && activityTime <= Date.now()) ||
+          activity.status === 'completed' ||
+          activity.status === 'cancelled'
+        );
+      }).length,
+    [activities]
+  );
+
+  if (authLoading) {
+    return <LoadingSpinner message="Dang tai khu quan ly hoat dong..." />;
+  }
+
+  if (!user || user.role !== 'admin') {
+    return null;
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Quản lý hoạt động</h1>
-            <p className="text-gray-600 mt-2">Tất cả hoạt động trong hệ thống</p>
-            <p className="text-sm text-gray-500 mt-1">
-              Danh sách tự làm mới định kỳ để giảm nguy cơ bỏ sót hoạt động vừa được duyệt.
+    <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
+      <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-3xl">
+            <p className="text-sm font-medium uppercase tracking-[0.2em] text-cyan-700">
+              Activity operations
+            </p>
+            <h1 className="mt-3 text-3xl font-semibold text-slate-950">Quan ly hoat dong</h1>
+            <p className="mt-3 text-sm leading-6 text-slate-600 sm:text-base">
+              Admin quan sat workflow tao hoat dong, ra soat trang thai review va nhay nhanh sang
+              diem danh neu QR session dang hoat dong.
             </p>
           </div>
-          <div className="flex items-center gap-3">
+
+          <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              onClick={() => fetchActivities()}
-              className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 bg-white text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              onClick={() => void fetchActivities()}
+              className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
             >
-              <RefreshCw className="w-4 h-4" />
-              Làm mới
+              <RefreshCw className="h-4 w-4" />
+              Tai lai
             </button>
             <Link
               href="/admin/approvals"
-              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="inline-flex items-center gap-2 rounded-2xl bg-cyan-700 px-4 py-2 text-sm font-medium text-white hover:bg-cyan-800"
             >
-              <CheckCircle className="w-5 h-5" />
-              Phê duyệt hoạt động
+              <CheckCircle2 className="h-4 w-4" />
+              Phe duyet hoat dong
             </Link>
           </div>
         </div>
 
-        {/* Filters */}
-        <ActivityFilters
-          search={search}
-          onSearchChange={setSearch}
-          workflowFilter={workflowFilter}
-          onWorkflowFilterChange={setWorkflowFilter}
-          reviewFilter={reviewFilter}
-          onReviewFilterChange={setReviewFilter}
-        />
-
-        {/* Stats Summary */}
-        <ActivityStats activities={activities} />
-
-        {/* Activities Table */}
-        <ActivityTable
-          activities={filteredActivities}
-          loading={isListLoading}
-          onDelete={(activity) => setDeleteActivity(activity)}
-          activeQrSessions={activeQrSessions}
-        />
-
-        {/* Total count */}
-        <div className="mt-4 space-y-2 text-sm text-gray-600 text-center">
-          <div>
-            Hiển thị {filteredActivities.length} / {activities.length} hoạt động
+        <div className="mt-6 grid gap-4 lg:grid-cols-3">
+          <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+            <div className="text-sm font-semibold text-slate-900">Workflow va review tach rieng</div>
+            <p className="mt-2 text-sm text-slate-600">
+              Admin co the loc theo trang thai van hanh cua hoat dong va ket qua review doc lap nhau.
+            </p>
           </div>
-          <div>
-            Trong toàn bộ danh sách hiện có{' '}
-            {
-              activities.filter((activity) => {
-                const activityTime = new Date(activity.date_time).getTime();
-                return (
-                  (activity.status === 'published' &&
-                    Number.isFinite(activityTime) &&
-                    activityTime <= Date.now()) ||
-                  activity.status === 'completed' ||
-                  activity.status === 'cancelled'
-                );
-              }).length
-            }{' '}
-            hoạt động đã qua hoặc đã khép lại.
+          <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+            <div className="text-sm font-semibold text-slate-900">QR shortcut cho van hanh</div>
+            <p className="mt-2 text-sm text-slate-600">
+              Khi co QR session dang mo, bang se hien nut vao thang man diem danh de can thiep nhanh.
+            </p>
+          </div>
+          <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+            <div className="text-sm font-semibold text-slate-900">Canh bao hoat dong da qua</div>
+            <p className="mt-2 text-sm text-slate-600">
+              Cac hoat dong da qua hoac da khep lai duoc danh dau ro de admin ra soat viec close-out.
+            </p>
           </div>
         </div>
+      </section>
 
-        <ConfirmDialog
-          isOpen={!!deleteActivity}
-          title="Xác nhận xóa hoạt động"
-          message={
-            deleteActivity ? `Bạn có chắc chắn muốn hủy hoạt động "${deleteActivity.title}"?` : ''
-          }
-          confirmText="Hủy hoạt động"
-          cancelText="Hủy"
-          variant="danger"
-          onCancel={() => setDeleteActivity(null)}
-          onConfirm={async () => {
-            if (!deleteActivity) return;
-            await performDelete(deleteActivity.id);
-            setDeleteActivity(null);
-          }}
-        />
-      </div>
+      <ActivityFilters
+        search={search}
+        onSearchChange={setSearch}
+        workflowFilter={workflowFilter}
+        onWorkflowFilterChange={setWorkflowFilter}
+        reviewFilter={reviewFilter}
+        onReviewFilterChange={setReviewFilter}
+      />
+
+      <ActivityStats activities={activities} />
+
+      <ActivityTable
+        activities={filteredActivities}
+        loading={isListLoading}
+        onDelete={setDeleteActivity}
+        activeQrSessions={activeQrSessions}
+      />
+
+      <section className="rounded-[2rem] border border-slate-200 bg-white p-4 shadow-sm text-sm text-slate-600">
+        <div>
+          Hien thi <span className="font-semibold text-slate-900">{filteredActivities.length}</span> /
+          <span className="font-semibold text-slate-900"> {activities.length}</span> hoat dong.
+        </div>
+        <div className="mt-2">
+          Trong toan bo danh sach hien co{' '}
+          <span className="font-semibold text-slate-900">{archivedCount}</span> hoat dong da qua
+          hoac da khep lai.
+        </div>
+      </section>
+
+      <ConfirmDialog
+        isOpen={!!deleteActivity}
+        title="Huy hoat dong"
+        message={
+          deleteActivity
+            ? `Ban co chac chan muon huy hoat dong "${deleteActivity.title}"?`
+            : ''
+        }
+        confirmText="Huy hoat dong"
+        cancelText="Dong"
+        variant="danger"
+        onCancel={() => setDeleteActivity(null)}
+        onConfirm={async () => {
+          if (!deleteActivity) return;
+          await performDelete(deleteActivity.id);
+          setDeleteActivity(null);
+        }}
+      />
     </div>
   );
 }

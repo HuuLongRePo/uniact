@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
+import LoginTestPanel from '@/components/LoginTestPanel';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSubmit } from '@/lib/use-submit-hook';
-import LoginTestPanel from '@/components/LoginTestPanel';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -13,61 +13,64 @@ export default function LoginPage() {
   const [loginError, setLoginError] = useState('');
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, login } = useAuth(); // Sử dụng login từ AuthContext
+  const { user, login } = useAuth();
 
   const showDemoAccounts =
     process.env.NODE_ENV !== 'production' || process.env.NEXT_PUBLIC_ENABLE_DEMO_ACCOUNTS === '1';
   const shouldExplainMissingDemoPanel = !showDemoAccounts && process.env.NODE_ENV === 'production';
 
-  const handleQuickLogin = async (email: string, password: string) => {
-    setEmail(email);
-    setPassword(password);
+  const resolvePostLoginTarget = () => {
+    const isSafeInternalPath = (value: string | null) =>
+      Boolean(value && value.startsWith('/') && !value.startsWith('//'));
+
+    const nextPath = searchParams.get('next');
+    if (isSafeInternalPath(nextPath)) {
+      return nextPath as string;
+    }
+
+    const redirectPath = searchParams.get('redirect');
+    if (isSafeInternalPath(redirectPath)) {
+      const passthrough = new URLSearchParams(searchParams.toString());
+      passthrough.delete('next');
+      passthrough.delete('redirect');
+      const query = passthrough.toString();
+      return query ? `${redirectPath}?${query}` : (redirectPath as string);
+    }
+
+    return '/dashboard';
+  };
+
+  const handleQuickLogin = async (nextEmail: string, nextPassword: string) => {
+    setEmail(nextEmail);
+    setPassword(nextPassword);
     setLoginError('');
 
     try {
-      await login(email, password);
+      await login(nextEmail, nextPassword);
     } catch (err: any) {
-      console.warn('❌ Quick login thất bại:', err.message);
-      setLoginError(err.message || 'Đăng nhập thất bại');
+      setLoginError(err?.message || 'Dang nhap that bai');
     }
   };
 
-  // Redirect nếu đã login
   useEffect(() => {
-    if (user) {
-      const nextPath = searchParams.get('next');
-      const safeNext =
-        nextPath && nextPath.startsWith('/') && !nextPath.startsWith('//') ? nextPath : null;
-      console.warn('✅ Đã login, redirect');
-      router.push(safeNext || '/dashboard');
-    }
+    if (!user) return;
+    router.push(resolvePostLoginTarget());
   }, [user, router, searchParams]);
 
-  // useSubmit hook để ngăn double submit
   const { handleSubmit: submitLogin, state } = useSubmit(
     async () => {
-      // Nếu đã login thì không làm gì
       if (user) {
-        router.push('/dashboard');
+        router.push(resolvePostLoginTarget());
         return;
       }
 
-      console.warn('🔐 Đang đăng nhập...');
-
-      // Sử dụng login function từ AuthContext thay vì fetch trực tiếp
       await login(email, password);
-
-      console.warn('✅ Login thành công qua AuthContext');
-
-      // AuthContext sẽ tự động cập nhật user state
-      // useEffect ở trên sẽ xử lý redirect
     },
     {
       debounceMs: 300,
       cooldownMs: 1000,
       onError: (err) => {
-        console.warn('❌ Login thất bại:', err.message);
-        setLoginError(err.message || 'Đăng nhập thất bại');
+        setLoginError(err.message || 'Dang nhap that bai');
       },
     }
   );
@@ -78,13 +81,12 @@ export default function LoginPage() {
     await submitLogin();
   };
 
-  // Nếu đã login, hiển thị loading
   if (user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <div className="text-2xl mb-4">🔄</div>
-          <div className="text-lg text-gray-600">Đang chuyển hướng...</div>
+          <div className="text-2xl mb-4">...</div>
+          <div className="text-lg text-gray-600">Dang chuyen huong...</div>
         </div>
       </div>
     );
@@ -93,20 +95,18 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-6 sm:space-y-8">
-        {/* Header */}
         <div>
           <h2 className="mt-4 sm:mt-6 text-center text-2xl sm:text-3xl font-extrabold text-gray-900">
-            Đăng nhập vào Cổng Hoạt Động
+            Dang nhap vao Cong Hoat Dong
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            Hoặc{' '}
+            Hoac{' '}
             <Link href="/register" className="font-medium text-green-600 hover:text-green-500">
-              đăng ký tài khoản mới
+              dang ky tai khoan moi
             </Link>
           </p>
         </div>
 
-        {/* Login form */}
         <form className="mt-6 sm:mt-8 space-y-5 sm:space-y-6" onSubmit={handleFormSubmit}>
           {loginError && (
             <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded text-sm">
@@ -115,7 +115,6 @@ export default function LoginPage() {
           )}
 
           <div className="space-y-4">
-            {/* Email input */}
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
                 Email
@@ -132,10 +131,9 @@ export default function LoginPage() {
               />
             </div>
 
-            {/* Password input */}
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                Mật khẩu
+                Mat khau
               </label>
               <input
                 id="password"
@@ -145,12 +143,11 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="appearance-none relative block w-full px-3 py-3 sm:py-2 border border-gray-300 rounded-md placeholder-gray-500 text-gray-900 text-base sm:text-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
-                placeholder="••••••••"
+                placeholder="********"
               />
             </div>
           </div>
 
-          {/* Submit button */}
           <div>
             <button
               type="submit"
@@ -160,18 +157,18 @@ export default function LoginPage() {
               {state.buttonText}
             </button>
           </div>
+
           {shouldExplainMissingDemoPanel && (
             <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-              Demo account panel hiện chỉ hiển thị khi bạn bật{' '}
+              Demo account panel chi hien thi khi bat{' '}
               <code className="rounded bg-amber-100 px-1">NEXT_PUBLIC_ENABLE_DEMO_ACCOUNTS=1</code>{' '}
-              và <code className="rounded bg-amber-100 px-1">ENABLE_DEMO_ACCOUNTS=1</code> trên
+              va <code className="rounded bg-amber-100 px-1">ENABLE_DEMO_ACCOUNTS=1</code> tren
               production.
             </div>
           )}
         </form>
       </div>
 
-      {/* Test Accounts Panel - Only in development */}
       {showDemoAccounts && <LoginTestPanel onSelectAccount={handleQuickLogin} />}
     </div>
   );

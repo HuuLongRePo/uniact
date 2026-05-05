@@ -1,101 +1,129 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useEffectEventCompat } from '@/lib/useEffectEventCompat';
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
-import { Trash2, Send, Award, CheckCircle, Clock, X } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Award, CheckCircle2, Clock3, Send, Trash2, XCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { formatVietnamDateTime } from '@/lib/timezone';
 
-interface AwardSuggestion {
+type AwardSuggestion = {
   id: number;
   student_id: number;
   student_name: string;
-  student_code: string;
-  award_type: string;
-  reason: string;
+  student_email: string;
+  class_name: string;
+  award_type_id: number;
+  award_type_name: string;
+  award_min_points: number;
+  score_snapshot: number;
   status: 'pending' | 'approved' | 'rejected';
-  suggested_by: string;
+  note: string;
   suggested_at: string;
-  approved_at?: string;
-  rejected_at?: string;
-  rejection_reason?: string;
-}
+};
 
-interface Student {
+type StudentOption = {
   id: number;
   name: string;
-  student_code: string;
   class_name: string;
+  total_points: number;
+};
+
+type AwardTypeOption = {
+  id: number;
+  name: string;
+  description: string;
+  min_points: number;
+};
+
+function EmptyState({ title, hint }: { title: string; hint: string }) {
+  return (
+    <div className="rounded-[1.5rem] border border-dashed border-slate-300 bg-slate-50 px-5 py-10 text-center">
+      <h3 className="text-lg font-semibold text-slate-900">{title}</h3>
+      <p className="mt-2 text-sm text-slate-600">{hint}</p>
+    </div>
+  );
 }
 
-const AWARD_TYPES = [
-  { key: 'excellence', label: '🏆 Xuất sắc' },
-  { key: 'good_student', label: '⭐ Học viên tốt' },
-  { key: 'discipline', label: '👮 Kỷ luật tốt' },
-  { key: 'volunteer', label: '💚 Tình nguyện viên' },
-  { key: 'leadership', label: '👥 Lãnh đạo' },
-  { key: 'sports', label: '🏅 Thể thao' },
-  { key: 'arts', label: '🎨 Nghệ thuật' },
-  { key: 'other', label: '🎯 Khác' },
-];
+async function parseJson(response: Response, fallbackMessage: string) {
+  const payload = await response.json().catch(() => null);
+  if (!response.ok || payload?.success === false) {
+    throw new Error(payload?.error || payload?.message || fallbackMessage);
+  }
+  return payload;
+}
 
 export default function AwardSuggestionsPage() {
   const [suggestions, setSuggestions] = useState<AwardSuggestion[]>([]);
+  const [students, setStudents] = useState<StudentOption[]>([]);
+  const [awardTypes, setAwardTypes] = useState<AwardTypeOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
-  const [isCreating, setIsCreating] = useState(false);
-  const [suggestionToDelete, setSuggestionToDelete] = useState<AwardSuggestion | null>(null);
-  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
-  const [students, setStudents] = useState<Student[]>([]);
-  const [formData, setFormData] = useState({ awardType: '', reason: '' });
+  const [selectedStudentId, setSelectedStudentId] = useState('');
+  const [selectedAwardTypeId, setSelectedAwardTypeId] = useState('');
   const [saving, setSaving] = useState(false);
+  const [suggestionToDelete, setSuggestionToDelete] = useState<AwardSuggestion | null>(null);
 
-  const getErrorMessage = (error: unknown) => {
-    if (error instanceof Error) return error.message;
-    return 'Đã xảy ra lỗi không xác định';
-  };
-
-  const fetchData = useEffectEventCompat(async () => {
+  const fetchData = async (nextFilter: typeof filter = filter) => {
     try {
       setLoading(true);
-      const [suggestionsRes, studentsRes] = await Promise.all([
-        fetch(`/api/teacher/award-suggestions?status=${filter}`),
-        fetch('/api/classes/my-students'),
+
+      const [suggestionsResponse, studentsResponse, awardTypesResponse] = await Promise.all([
+        fetch(`/api/teacher/award-suggestions?status=${nextFilter === 'all' ? '' : nextFilter}`),
+        fetch('/api/teacher/students'),
+        fetch('/api/teacher/award-types'),
       ]);
 
-      if (!suggestionsRes.ok) throw new Error('Không thể tải danh sách đề xuất');
+      const [suggestionsPayload, studentsPayload, awardTypesPayload] = await Promise.all([
+        parseJson(suggestionsResponse, 'Không thể tải danh sách đề xuất khen thưởng'),
+        parseJson(studentsResponse, 'Không thể tải danh sách học viên'),
+        parseJson(awardTypesResponse, 'Không thể tải danh sách loại khen thưởng'),
+      ]);
 
-      const suggestionsData = await suggestionsRes.json();
-      setSuggestions(suggestionsData.suggestions || []);
-
-      if (studentsRes.ok) {
-        const studentsData = await studentsRes.json();
-        setStudents(studentsData.students || []);
-      }
+      setSuggestions(suggestionsPayload?.data?.suggestions || suggestionsPayload?.suggestions || []);
+      setStudents(
+        (studentsPayload?.data?.students || studentsPayload?.students || []).map((student: any) => ({
+          id: Number(student.id),
+          name: String(student.full_name || student.name || ''),
+          class_name: String(student.class_name || ''),
+          total_points: Number(student.total_points || student.total_score || 0),
+        }))
+      );
+      setAwardTypes(
+        (awardTypesPayload?.data?.awardTypes || awardTypesPayload?.awardTypes || []).map(
+          (awardType: any) => ({
+            id: Number(awardType.id),
+            name: String(awardType.name || ''),
+            description: String(awardType.description || ''),
+            min_points: Number(awardType.min_points || 0),
+          })
+        )
+      );
     } catch (error) {
-      console.error(error);
-      toast.error('Không thể tải dữ liệu');
+      console.error('Fetch teacher award suggestions error:', error);
+      toast.error(
+        error instanceof Error ? error.message : 'Không thể tải dữ liệu đề xuất khen thưởng'
+      );
+      setSuggestions([]);
     } finally {
       setLoading(false);
     }
-  });
+  };
 
   useEffect(() => {
-    fetchData();
-  }, [filter, fetchData]);
+    void fetchData(filter);
+  }, [filter]);
 
   const handleCreateSuggestion = async () => {
-    if (!selectedStudent) {
-      toast.error('Vui lòng chọn học viên');
+    const studentId = Number(selectedStudentId);
+    const awardTypeId = Number(selectedAwardTypeId);
+
+    if (!Number.isInteger(studentId) || studentId <= 0) {
+      toast.error('Hãy chọn học viên');
       return;
     }
-    if (!formData.awardType) {
-      toast.error('Vui lòng chọn loại giải thưởng');
-      return;
-    }
-    if (!formData.reason.trim()) {
-      toast.error('Vui lòng nhập lý do đề xuất');
+
+    if (!Number.isInteger(awardTypeId) || awardTypeId <= 0) {
+      toast.error('Hãy chọn loại khen thưởng');
       return;
     }
 
@@ -105,288 +133,288 @@ export default function AwardSuggestionsPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          student_id: selectedStudent.id,
-          award_type: formData.awardType,
-          reason: formData.reason,
+          student_id: studentId,
+          award_type_id: awardTypeId,
         }),
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Không thể tạo đề xuất');
-      }
-
-      toast.success('Tạo đề xuất thành công');
-      setIsCreating(false);
-      setSelectedStudent(null);
-      setFormData({ awardType: '', reason: '' });
-      fetchData();
-    } catch (error: unknown) {
-      console.error(error);
-      toast.error(getErrorMessage(error));
+      const payload = await parseJson(response, 'Không thể tạo đề xuất khen thưởng');
+      toast.success(payload?.message || 'Tạo đề xuất khen thưởng thành công');
+      setSelectedStudentId('');
+      setSelectedAwardTypeId('');
+      await fetchData(filter);
+    } catch (error) {
+      console.error('Create teacher award suggestion error:', error);
+      toast.error(error instanceof Error ? error.message : 'Không thể tạo đề xuất khen thưởng');
     } finally {
       setSaving(false);
     }
   };
 
-  const handleDeleteSuggestion = async (id: number) => {
+  const handleDeleteSuggestion = async (suggestionId: number) => {
     try {
-      const response = await fetch(`/api/teacher/award-suggestions/${id}`, {
+      const response = await fetch(`/api/teacher/award-suggestions/${suggestionId}`, {
         method: 'DELETE',
       });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Không thể xóa đề xuất');
-      }
-
-      toast.success('Xóa đề xuất thành công');
-      fetchData();
-    } catch (error: unknown) {
-      console.error(error);
-      toast.error(getErrorMessage(error));
+      const payload = await parseJson(response, 'Không thể xóa đề xuất khen thưởng');
+      toast.success(payload?.message || 'Xóa đề xuất khen thưởng thành công');
+      await fetchData(filter);
+    } catch (error) {
+      console.error('Delete teacher award suggestion error:', error);
+      toast.error(error instanceof Error ? error.message : 'Không thể xóa đề xuất khen thưởng');
     }
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'approved':
-        return <CheckCircle className="w-5 h-5 text-green-600" />;
-      case 'pending':
-        return <Clock className="w-5 h-5 text-yellow-600" />;
-      case 'rejected':
-        return <X className="w-5 h-5 text-red-600" />;
-      default:
-        return null;
-    }
-  };
+  const selectedStudent = students.find((student) => String(student.id) === selectedStudentId) || null;
+  const selectedAwardType =
+    awardTypes.find((awardType) => String(awardType.id) === selectedAwardTypeId) || null;
 
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'approved':
-        return 'Đã phê duyệt';
-      case 'pending':
-        return 'Chờ phê duyệt';
-      case 'rejected':
-        return 'Từ chối';
-      default:
-        return status;
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'approved':
-        return 'bg-green-100 text-green-700';
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-700';
-      case 'rejected':
-        return 'bg-red-100 text-red-700';
-      default:
-        return 'bg-gray-100 text-gray-700';
-    }
-  };
-
-  if (loading && !isCreating) {
-    return (
-      <div className="min-h-screen bg-gray-50 py-8">
-        <div className="max-w-6xl mx-auto">
-          <div className="bg-white rounded-lg shadow p-12 text-center">
-            <div className="animate-spin inline-block w-8 h-8 border-4 border-gray-200 border-t-blue-600 rounded-full"></div>
-            <p className="mt-4 text-gray-600">Đang tải...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const stats = useMemo(
+    () => ({
+      total: suggestions.length,
+      pending: suggestions.filter((suggestion) => suggestion.status === 'pending').length,
+      approved: suggestions.filter((suggestion) => suggestion.status === 'approved').length,
+      rejected: suggestions.filter((suggestion) => suggestion.status === 'rejected').length,
+    }),
+    [suggestions]
+  );
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-6xl mx-auto px-4">
-        {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900">Đề xuất giải thưởng</h1>
-          <p className="text-gray-600 mt-2">Đề xuất học viên đáng giành giải thưởng</p>
-        </div>
-
-        {/* Create Button */}
-        {!isCreating ? (
-          <button
-            onClick={() => setIsCreating(true)}
-            className="mb-6 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition flex items-center gap-2"
-          >
-            <Award className="w-5 h-5" />
-            Tạo đề xuất mới
-          </button>
-        ) : (
-          <div className="mb-6 bg-white rounded-lg shadow p-6 border border-gray-200">
-            <h2 className="text-lg font-bold text-gray-900 mb-4">Tạo đề xuất giải thưởng mới</h2>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Học viên *</label>
-                <select
-                  value={selectedStudent?.id || ''}
-                  onChange={(e) => {
-                    const student = students.find((s) => s.id === parseInt(e.target.value));
-                    setSelectedStudent(student || null);
-                  }}
-                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">-- Chọn học viên --</option>
-                  {students.map((student) => (
-                    <option key={student.id} value={student.id}>
-                      {student.name} ({student.student_code}) - {student.class_name}
-                    </option>
-                  ))}
-                </select>
+    <div className="page-shell">
+      <div className="mx-auto max-w-6xl space-y-6">
+        <section className="page-surface rounded-[1.75rem] px-5 py-6 sm:px-7">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+            <div className="max-w-3xl">
+              <div className="inline-flex rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-700">
+                Quy trình khen thưởng
               </div>
+              <h1 className="mt-3 text-3xl font-bold text-slate-900">Đề xuất khen thưởng</h1>
+              <p className="mt-2 text-sm text-slate-600">
+                Giảng viên tạo đề xuất khen thưởng theo loại đã cấu hình sẵn. Biểu mẫu này chỉ gồm các trường backend đang lưu.
+              </p>
+            </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Loại giải thưởng *
-                </label>
-                <select
-                  value={formData.awardType}
-                  onChange={(e) => setFormData({ ...formData, awardType: e.target.value })}
-                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">-- Chọn loại --</option>
-                  {AWARD_TYPES.map((type) => (
-                    <option key={type.key} value={type.key}>
-                      {type.label}
-                    </option>
-                  ))}
-                </select>
+            <div className="grid gap-3 sm:grid-cols-3 lg:w-[28rem]">
+              <div className="rounded-[1.5rem] border border-blue-100 bg-blue-50 p-4">
+                <div className="text-xs font-semibold uppercase tracking-wide text-blue-700">Tổng đề xuất</div>
+                <div className="mt-2 text-2xl font-bold text-slate-900">{stats.total}</div>
               </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Lý do đề xuất *
-                </label>
-                <textarea
-                  value={formData.reason}
-                  onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
-                  placeholder="Nhập lý do và thành tích nổi bật..."
-                  rows={4}
-                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+              <div className="rounded-[1.5rem] border border-amber-100 bg-amber-50 p-4">
+                <div className="text-xs font-semibold uppercase tracking-wide text-amber-700">Đang chờ</div>
+                <div className="mt-2 text-2xl font-bold text-slate-900">{stats.pending}</div>
               </div>
-
-              <div className="flex gap-3">
-                <button
-                  onClick={() => {
-                    setIsCreating(false);
-                    setSelectedStudent(null);
-                    setFormData({ awardType: '', reason: '' });
-                  }}
-                  disabled={saving}
-                  className="flex-1 px-4 py-2 border rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition"
-                >
-                  Hủy
-                </button>
-                <button
-                  onClick={handleCreateSuggestion}
-                  disabled={saving}
-                  className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition disabled:opacity-50 flex items-center justify-center gap-2"
-                >
-                  <Send className="w-5 h-5" />
-                  {saving ? 'Đang tạo...' : 'Tạo đề xuất'}
-                </button>
+              <div className="rounded-[1.5rem] border border-emerald-100 bg-emerald-50 p-4">
+                <div className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Đã duyệt</div>
+                <div className="mt-2 text-2xl font-bold text-slate-900">{stats.approved}</div>
               </div>
             </div>
           </div>
-        )}
+        </section>
 
-        {/* Filter Tabs */}
-        <div className="flex gap-2 mb-6 border-b">
-          {(['all', 'pending', 'approved', 'rejected'] as const).map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setFilter(tab)}
-              className={`py-3 px-4 font-medium transition ${
-                filter === tab
-                  ? 'text-blue-600 border-b-2 border-blue-600'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              {tab === 'all' && '📋 Tất cả'}
-              {tab === 'pending' && '⏳ Chờ duyệt'}
-              {tab === 'approved' && '✓ Đã duyệt'}
-              {tab === 'rejected' && '✗ Từ chối'}
-            </button>
-          ))}
-        </div>
-
-        {/* Suggestions List */}
-        {suggestions.length === 0 ? (
-          <div className="bg-white rounded-lg shadow p-12 text-center border border-gray-200">
-            <p className="text-gray-600">Không có đề xuất nào</p>
+        <section className="page-surface rounded-[1.75rem] px-5 py-6 sm:px-7">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h2 className="text-2xl font-bold text-slate-900">Tạo đề xuất mới</h2>
+              <p className="mt-2 text-sm text-slate-600">
+                Chọn học viên và loại khen thưởng. Điểm snapshot sẽ được backend tự ghi nhận lúc tạo đề xuất.
+              </p>
+            </div>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 gap-4">
-            {suggestions.map((suggestion) => (
-              <div
-                key={suggestion.id}
-                className="bg-white rounded-lg shadow p-6 border border-gray-200 hover:shadow-md transition"
+
+          <div className="mt-6 grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1.1fr)_auto]">
+            <label className="block">
+              <span className="mb-2 block text-sm font-medium text-slate-700">Học viên</span>
+              <select
+                value={selectedStudentId}
+                onChange={(event) => setSelectedStudentId(event.target.value)}
+                className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
               >
-                <div className="flex items-start justify-between gap-4 mb-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <div>
-                        <h3 className="text-lg font-bold text-gray-900">
-                          {suggestion.student_name}
-                        </h3>
-                        <p className="text-sm text-gray-600">Mã: {suggestion.student_code}</p>
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap gap-2 mb-3">
-                      <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-medium">
-                        {AWARD_TYPES.find((t) => t.key === suggestion.award_type)?.label ||
-                          suggestion.award_type}
-                      </span>
-                      <span
-                        className={`px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1 ${getStatusColor(suggestion.status)}`}
-                      >
-                        {getStatusIcon(suggestion.status)}
-                        {getStatusLabel(suggestion.status)}
-                      </span>
-                    </div>
-                    <p className="text-gray-700 whitespace-pre-wrap">{suggestion.reason}</p>
-                  </div>
+                <option value="">Chọn học viên</option>
+                {students.map((student) => (
+                  <option key={student.id} value={student.id}>
+                    {student.name} - {student.class_name || 'Chưa gán lớp'}
+                  </option>
+                ))}
+              </select>
+            </label>
 
-                  {suggestion.status === 'pending' && (
-                    <button
-                      onClick={() => setSuggestionToDelete(suggestion)}
-                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition flex-shrink-0"
-                    >
-                      <Trash2 className="w-5 h-5" />
-                    </button>
-                  )}
+            <label className="block">
+              <span className="mb-2 block text-sm font-medium text-slate-700">Loại khen thưởng</span>
+              <select
+                value={selectedAwardTypeId}
+                onChange={(event) => setSelectedAwardTypeId(event.target.value)}
+                className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
+              >
+                <option value="">Chọn loại khen thưởng</option>
+                {awardTypes.map((awardType) => (
+                  <option key={awardType.id} value={awardType.id}>
+                    {awardType.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <div className="flex items-end">
+              <button
+                type="button"
+                onClick={() => void handleCreateSuggestion()}
+                disabled={saving}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-amber-600 disabled:cursor-not-allowed disabled:bg-slate-300"
+              >
+                <Send className="h-4 w-4" />
+                {saving ? 'Đang tạo...' : 'Tạo đề xuất'}
+              </button>
+            </div>
+          </div>
+
+          {selectedStudent || selectedAwardType ? (
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              <div className="rounded-[1.25rem] border border-slate-200 bg-slate-50 p-4">
+                <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Học viên đã chọn</div>
+                <div className="mt-2 text-base font-semibold text-slate-900">
+                  {selectedStudent ? selectedStudent.name : 'Chưa chọn'}
                 </div>
-
-                <div className="text-xs text-gray-500 border-t pt-3 flex justify-between">
-                  <span>Đề xuất bởi: {suggestion.suggested_by}</span>
-                  <span>{formatVietnamDateTime(suggestion.suggested_at)}</span>
-                </div>
-
-                {suggestion.status === 'rejected' && suggestion.rejection_reason && (
-                  <div className="mt-3 p-3 bg-red-50 rounded border border-red-200">
-                    <p className="text-sm font-medium text-red-700">Lý do từ chối:</p>
-                    <p className="text-sm text-red-600 mt-1">{suggestion.rejection_reason}</p>
-                  </div>
-                )}
+                <p className="mt-1 text-sm text-slate-600">
+                  {selectedStudent
+                    ? `${selectedStudent.class_name || 'Chưa gán lớp'} · ${selectedStudent.total_points} điểm`
+                    : 'Cần chọn học viên trước khi tạo đề xuất'}
+                </p>
               </div>
+              <div className="rounded-[1.25rem] border border-slate-200 bg-slate-50 p-4">
+                <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Loại khen thưởng</div>
+                <div className="mt-2 text-base font-semibold text-slate-900">
+                  {selectedAwardType ? selectedAwardType.name : 'Chưa chọn'}
+                </div>
+                <p className="mt-1 text-sm text-slate-600">
+                  {selectedAwardType
+                    ? `Mốc điểm tối thiểu: ${selectedAwardType.min_points}. ${selectedAwardType.description || 'Không có mô tả bổ sung.'}`
+                    : 'Cần chọn loại khen thưởng phù hợp'}
+                </p>
+              </div>
+            </div>
+          ) : null}
+        </section>
+
+        <section className="page-surface rounded-[1.75rem] px-5 py-6 sm:px-7">
+          <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-4">
+            {(['all', 'pending', 'approved', 'rejected'] as const).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setFilter(tab)}
+                className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                  filter === tab
+                    ? 'bg-slate-900 text-white'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                }`}
+              >
+                {tab === 'all' && 'Tất cả'}
+                {tab === 'pending' && 'Đang chờ'}
+                {tab === 'approved' && 'Đã duyệt'}
+                {tab === 'rejected' && 'Bị từ chối'}
+              </button>
             ))}
           </div>
-        )}
+
+          {loading ? (
+            <div className="mt-6 rounded-[1.5rem] border border-dashed border-slate-300 bg-slate-50 px-4 py-12 text-center text-sm text-slate-500">
+              Đang tải đề xuất khen thưởng...
+            </div>
+          ) : suggestions.length === 0 ? (
+            <div className="mt-6">
+              <EmptyState
+                title="Chưa có đề xuất nào"
+                hint="Sau khi tao de xuat, danh sach se hien tai day de teacher theo doi tien do duyet."
+              />
+            </div>
+          ) : (
+            <div className="mt-6 space-y-4">
+              {suggestions.map((suggestion) => (
+                <article
+                  key={suggestion.id}
+                  className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm"
+                >
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-700">
+                          {suggestion.award_type_name}
+                        </span>
+                        <span
+                          className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide ${
+                            suggestion.status === 'approved'
+                              ? 'bg-emerald-100 text-emerald-700'
+                              : suggestion.status === 'rejected'
+                                ? 'bg-rose-100 text-rose-700'
+                                : 'bg-blue-100 text-blue-700'
+                          }`}
+                        >
+                          {suggestion.status === 'approved' ? <CheckCircle2 className="h-3.5 w-3.5" /> : null}
+                          {suggestion.status === 'pending' ? <Clock3 className="h-3.5 w-3.5" /> : null}
+                          {suggestion.status === 'rejected' ? <XCircle className="h-3.5 w-3.5" /> : null}
+                          {suggestion.status === 'approved' && 'Đã duyệt'}
+                          {suggestion.status === 'pending' && 'Đang chờ'}
+                          {suggestion.status === 'rejected' && 'Bị từ chối'}
+                        </span>
+                        <span className="text-xs text-slate-500">
+                          {formatVietnamDateTime(suggestion.suggested_at)}
+                        </span>
+                      </div>
+
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        <h3 className="text-lg font-semibold text-slate-900">{suggestion.student_name}</h3>
+                        <span className="text-sm text-slate-500">
+                          {suggestion.class_name || 'Chưa gán lớp'}
+                        </span>
+                      </div>
+
+                      <div className="mt-4 grid gap-3 md:grid-cols-3">
+                        <div className="rounded-[1.25rem] border border-slate-200 bg-slate-50 p-3">
+                          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Email</div>
+                          <div className="mt-1 text-sm font-medium text-slate-900">
+                            {suggestion.student_email || 'Chưa cập nhật'}
+                          </div>
+                        </div>
+                        <div className="rounded-[1.25rem] border border-slate-200 bg-slate-50 p-3">
+                          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Score snapshot</div>
+                          <div className="mt-1 text-sm font-medium text-slate-900">{suggestion.score_snapshot}</div>
+                        </div>
+                        <div className="rounded-[1.25rem] border border-slate-200 bg-slate-50 p-3">
+                          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Điểm tối thiểu</div>
+                          <div className="mt-1 text-sm font-medium text-slate-900">{suggestion.award_min_points}</div>
+                        </div>
+                      </div>
+
+                      {suggestion.note ? (
+                        <div className="mt-4 rounded-[1.25rem] border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
+                          Ghi chú phê duyệt: {suggestion.note}
+                        </div>
+                      ) : null}
+                    </div>
+
+                    {suggestion.status === 'pending' ? (
+                      <button
+                        type="button"
+                        onClick={() => setSuggestionToDelete(suggestion)}
+                        className="inline-flex items-center gap-2 rounded-xl border border-rose-200 px-4 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-50"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Xóa đề xuất
+                      </button>
+                    ) : null}
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
       </div>
 
       <ConfirmDialog
         isOpen={suggestionToDelete !== null}
-        title="Xóa đề xuất giải thưởng"
+        title="Xóa đề xuất khen thưởng"
         message={
           suggestionToDelete
-            ? `Bạn có chắc chắn muốn xóa đề xuất dành cho học viên "${suggestionToDelete.student_name}" không?`
+            ? `Bạn có chắc muốn xóa đề xuất "${suggestionToDelete.award_type_name}" cho học viên ${suggestionToDelete.student_name}?`
             : ''
         }
         confirmText="Xóa đề xuất"

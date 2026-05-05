@@ -15,6 +15,15 @@ interface StudentTableProps {
   onRemove: (student: Student) => void;
 }
 
+function StudentMetric({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="rounded-2xl bg-slate-50 p-3">
+      <div className="text-xs uppercase tracking-[0.16em] text-slate-500">{label}</div>
+      <div className="mt-2 text-base font-semibold text-slate-950">{value}</div>
+    </div>
+  );
+}
+
 export default function StudentTable({
   students,
   loading,
@@ -32,108 +41,163 @@ export default function StudentTable({
 
   if (loading) {
     return (
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="text-gray-600">Đang tải danh sách học viên...</div>
+      <div className="rounded-3xl border border-slate-200 bg-slate-50 px-6 py-12 text-center text-sm text-slate-500">
+        Dang tai roster hoc vien...
       </div>
     );
   }
 
   if (isEmpty) {
     return (
-      <div className="text-center py-12 bg-gray-50 rounded-lg">
-        <p className="text-gray-500 text-lg">Không có học viên</p>
+      <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50 px-6 py-12 text-center text-sm text-slate-500">
+        Khong co hoc vien nao trong roster nay.
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-lg shadow overflow-hidden">
-      <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
-          <tr>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-              <input type="checkbox" checked={allSelected} onChange={onToggleSelectAll} />
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">#</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-              Học viên
-            </th>
-            <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">
-              Hoạt động
-            </th>
-            <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">
-              Điểm
-            </th>
-            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
-              Hành động
-            </th>
-          </tr>
-        </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
-          {students.map((student, index) => (
-            <tr key={student.id} className="hover:bg-gray-50">
-              <td className="px-6 py-4 text-sm">
+    <>
+      <div className="grid gap-4 lg:hidden">
+        {students.map((student, index) => (
+          <article key={student.id} className="rounded-3xl border border-slate-200 p-4 shadow-sm">
+            <div className="flex items-start justify-between gap-3">
+              <label className="inline-flex items-center gap-2 text-sm font-medium text-slate-700">
                 <input
                   type="checkbox"
+                  aria-label={`Chon hoc vien ${student.name}`}
                   checked={selectedStudents.has(student.id)}
                   onChange={() => onToggleSelectStudent(student.id)}
                 />
-              </td>
-              <td className="px-6 py-4 text-sm text-gray-500">
-                {(page - 1) * pageSize + index + 1}
-              </td>
-              <td className="px-6 py-4">
-                <div className="flex items-center gap-3">
-                  {student.avatar_url ? (
-                    <img
-                      src={student.avatar_url}
-                      alt={student.name}
-                      className="w-10 h-10 rounded-full"
-                    />
-                  ) : (
-                    <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
-                      <span className="text-gray-600 font-bold">
-                        {student.name.charAt(0).toUpperCase()}
-                      </span>
-                    </div>
-                  )}
-                  <div>
-                    <div className="font-medium">{student.name}</div>
-                    <div className="text-sm text-gray-500">{student.email}</div>
-                  </div>
-                </div>
-              </td>
-              <td className="px-6 py-4 text-center text-sm">{student.activity_count || 0}</td>
-              <td className="px-6 py-4 text-center">
-                <span className="inline-block bg-green-100 text-green-800 px-2 py-1 rounded text-sm font-bold">
-                  {student.total_points || 0}
-                </span>
-              </td>
-              <td className="px-6 py-4 text-right text-sm space-x-2">
-                <button
-                  onClick={() => onView(student)}
-                  className="text-blue-600 hover:text-blue-800"
-                >
-                  Xem
-                </button>
-                <button
-                  onClick={() => onMove(student)}
-                  className="text-purple-600 hover:text-purple-800"
-                  title="Chuyển lớp"
-                >
-                  Chuyển
-                </button>
-                <button
-                  onClick={() => onRemove(student)}
-                  className="text-red-600 hover:text-red-800"
-                >
-                  Xóa khỏi lớp
-                </button>
-              </td>
+                Chon
+              </label>
+              <div className="text-xs font-medium text-slate-400">
+                #{(page - 1) * pageSize + index + 1}
+              </div>
+            </div>
+
+            <div className="mt-4">
+              <div className="text-base font-semibold text-slate-950">{student.name}</div>
+              <div className="mt-1 text-sm text-slate-500">{student.email}</div>
+              <div className="mt-1 text-sm text-slate-500">
+                {student.student_code || 'Chua co ma hoc vien'}
+              </div>
+            </div>
+
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              <StudentMetric label="Hoat dong" value={student.activity_count || 0} />
+              <StudentMetric label="Co mat" value={student.attended_count || 0} />
+              <StudentMetric label="Tong diem" value={student.total_points || 0} />
+              <StudentMetric label="Khen thuong" value={student.award_count || 0} />
+            </div>
+
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => onView(student)}
+                className="rounded-full border border-slate-200 px-3 py-1 text-xs font-medium text-cyan-700 hover:bg-cyan-50"
+              >
+                Chi tiet
+              </button>
+              <button
+                type="button"
+                onClick={() => onMove(student)}
+                className="rounded-full border border-slate-200 px-3 py-1 text-xs font-medium text-violet-700 hover:bg-violet-50"
+              >
+                Chuyen lop
+              </button>
+              <button
+                type="button"
+                onClick={() => onRemove(student)}
+                className="rounded-full border border-rose-200 px-3 py-1 text-xs font-medium text-rose-700 hover:bg-rose-50"
+              >
+                Xoa khoi lop
+              </button>
+            </div>
+          </article>
+        ))}
+      </div>
+
+      <div className="hidden overflow-x-auto lg:block">
+        <table className="min-w-full divide-y divide-slate-200 text-sm">
+          <thead className="bg-slate-50">
+            <tr>
+              <th className="px-4 py-3 text-left font-semibold text-slate-700">
+                <input
+                  type="checkbox"
+                  aria-label="Chon tat ca hoc vien"
+                  checked={allSelected}
+                  onChange={onToggleSelectAll}
+                />
+              </th>
+              <th className="px-4 py-3 text-left font-semibold text-slate-700">#</th>
+              <th className="px-4 py-3 text-left font-semibold text-slate-700">Hoc vien</th>
+              <th className="px-4 py-3 text-left font-semibold text-slate-700">Ma</th>
+              <th className="px-4 py-3 text-right font-semibold text-slate-700">Hoat dong</th>
+              <th className="px-4 py-3 text-right font-semibold text-slate-700">Co mat</th>
+              <th className="px-4 py-3 text-right font-semibold text-slate-700">Tong diem</th>
+              <th className="px-4 py-3 text-right font-semibold text-slate-700">Tac vu</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody className="divide-y divide-slate-100 bg-white">
+            {students.map((student, index) => (
+              <tr key={student.id}>
+                <td className="px-4 py-4">
+                  <input
+                    type="checkbox"
+                    aria-label={`Chon hoc vien ${student.name}`}
+                    checked={selectedStudents.has(student.id)}
+                    onChange={() => onToggleSelectStudent(student.id)}
+                  />
+                </td>
+                <td className="px-4 py-4 text-slate-500">
+                  {(page - 1) * pageSize + index + 1}
+                </td>
+                <td className="px-4 py-4">
+                  <div className="font-medium text-slate-950">{student.name}</div>
+                  <div className="mt-1 text-xs text-slate-500">{student.email}</div>
+                </td>
+                <td className="px-4 py-4 text-slate-600">{student.student_code || '-'}</td>
+                <td className="px-4 py-4 text-right font-medium text-slate-900">
+                  {student.activity_count || 0}
+                </td>
+                <td className="px-4 py-4 text-right font-medium text-slate-900">
+                  {student.attended_count || 0}
+                </td>
+                <td className="px-4 py-4 text-right">
+                  <span className="inline-flex rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800">
+                    {student.total_points || 0}
+                  </span>
+                </td>
+                <td className="px-4 py-4 text-right">
+                  <div className="flex justify-end gap-3">
+                    <button
+                      type="button"
+                      onClick={() => onView(student)}
+                      className="text-sm font-medium text-cyan-700 hover:text-cyan-800"
+                    >
+                      Chi tiet
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onMove(student)}
+                      className="text-sm font-medium text-violet-700 hover:text-violet-800"
+                    >
+                      Chuyen lop
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onRemove(student)}
+                      className="text-sm font-medium text-rose-700 hover:text-rose-800"
+                    >
+                      Xoa khoi lop
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
   );
 }

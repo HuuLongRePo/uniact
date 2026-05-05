@@ -1,7 +1,8 @@
 'use client';
 
-import { AuditLog } from './types';
+import { FileText } from 'lucide-react';
 import { formatVietnamDateTime } from '@/lib/timezone';
+import { AuditLog } from './types';
 
 interface AuditTableProps {
   logs: AuditLog[];
@@ -9,103 +10,164 @@ interface AuditTableProps {
 }
 
 function getActionBadgeClass(action: string) {
-  if (action.includes('CREATE')) return 'bg-green-100 text-green-800';
-  if (action.includes('UPDATE') || action.includes('CHANGE')) return 'bg-blue-100 text-blue-800';
-  if (action.includes('DELETE')) return 'bg-red-100 text-red-800';
-  if (action.includes('APPROVE')) return 'bg-purple-100 text-purple-800';
-  return 'bg-gray-100 text-gray-800';
-}
-
-function getRoleBadgeClass(role: string) {
-  if (role === 'admin') return 'bg-purple-100 text-purple-800';
-  if (role === 'teacher') return 'bg-blue-100 text-blue-800';
-  return 'bg-green-100 text-green-800';
+  const upperAction = action.toUpperCase();
+  if (upperAction.includes('CREATE')) return 'bg-emerald-100 text-emerald-700';
+  if (upperAction.includes('UPDATE') || upperAction.includes('CHANGE'))
+    return 'bg-blue-100 text-blue-700';
+  if (upperAction.includes('DELETE')) return 'bg-rose-100 text-rose-700';
+  if (upperAction.includes('APPROVE') || upperAction.includes('PUBLISH'))
+    return 'bg-violet-100 text-violet-700';
+  return 'bg-slate-100 text-slate-700';
 }
 
 export default function AuditTable({ logs, onViewDetails }: AuditTableProps) {
   if (logs.length === 0) {
     return (
-      <div className="text-center py-12 bg-gray-50 rounded-lg">
-        <p className="text-gray-500 text-lg">Không có audit logs</p>
+      <div className="page-surface rounded-[1.75rem] border-dashed px-5 py-10 text-center sm:px-7">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-3xl bg-slate-100 text-slate-600">
+          <FileText className="h-7 w-7" />
+        </div>
+        <h2 className="mt-4 text-xl font-semibold text-slate-900">Khong co audit log nao</h2>
+        <p className="mt-2 text-sm text-slate-600">
+          Thu mo rong khoang thoi gian hoac bo loc de tim thay su kien can doi soat.
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-lg shadow overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+    <section className="space-y-4">
+      <div className="grid gap-4 xl:hidden">
+        {logs.map((log) => (
+          <article
+            key={log.id}
+            className="page-surface rounded-[1.75rem] border px-5 py-5 sm:px-7"
+          >
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+                  Log #{log.id}
+                </span>
+                <span
+                  className={`rounded-full px-3 py-1 text-xs font-semibold ${getActionBadgeClass(log.action)}`}
+                >
+                  {log.action}
+                </span>
+              </div>
+
+              <div>
+                <div className="text-sm font-semibold text-slate-900">
+                  {log.actor_name || `User #${log.actor_id || '-'}`}
+                </div>
+                <div className="mt-1 text-sm text-slate-500">
+                  {log.actor_email || 'Khong co email'} | {log.actor_role || 'unknown'}
+                </div>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Thoi gian
+                  </div>
+                  <div className="mt-2 text-sm font-semibold text-slate-900">
+                    {formatVietnamDateTime(log.created_at)}
+                  </div>
+                </div>
+                <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Doi tuong
+                  </div>
+                  <div className="mt-2 text-sm font-semibold text-slate-900">
+                    {log.target_table || '-'}
+                    {log.target_id ? ` #${log.target_id}` : ''}
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Tom tat
+                </div>
+                <div className="mt-2 break-words">
+                  {log.details || 'Khong co noi dung chi tiet.'}
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => onViewDetails(log)}
+                className="rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              >
+                Xem chi tiet
+              </button>
+            </div>
+          </article>
+        ))}
+      </div>
+
+      <div className="page-surface hidden overflow-x-auto rounded-[1.75rem] border xl:block">
+        <table className="min-w-full divide-y divide-slate-200">
+          <thead className="bg-slate-50">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                ID
+              <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Log
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                Time
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+              <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
                 Actor
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+              <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
                 Action
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                Target
+              <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Doi tuong
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                Details
+              <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Tom tat
               </th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">
-                Actions
+              <th className="px-5 py-4 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Chi tiet
               </th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="divide-y divide-slate-200 bg-white">
             {logs.map((log) => (
-              <tr key={log.id} className="hover:bg-gray-50">
-                <td className="px-4 py-3 text-sm text-gray-500">#{log.id}</td>
-                <td className="px-4 py-3 text-sm text-gray-600">
-                  {formatVietnamDateTime(log.created_at)}
+              <tr key={log.id} className="align-top hover:bg-slate-50">
+                <td className="px-5 py-4 text-sm text-slate-600">
+                  <div className="font-semibold text-slate-900">#{log.id}</div>
+                  <div className="mt-1">{formatVietnamDateTime(log.created_at)}</div>
                 </td>
-                <td className="px-4 py-3">
-                  <div>
-                    <div className="text-sm font-medium">{log.actor_name || 'Unknown'}</div>
-                    <div className="text-xs text-gray-500">{log.actor_email}</div>
-                    <span
-                      className={`inline-block mt-1 px-2 py-1 text-xs rounded ${getRoleBadgeClass(log.actor_role)}`}
-                    >
-                      {log.actor_role}
-                    </span>
+                <td className="px-5 py-4 text-sm text-slate-600">
+                  <div className="font-semibold text-slate-900">
+                    {log.actor_name || `User #${log.actor_id || '-'}`}
+                  </div>
+                  <div className="mt-1">{log.actor_email || 'Khong co email'}</div>
+                  <div className="mt-1 text-xs uppercase tracking-wide text-slate-400">
+                    {log.actor_role || 'unknown'}
                   </div>
                 </td>
-                <td className="px-4 py-3">
+                <td className="px-5 py-4">
                   <span
-                    className={`inline-block px-2 py-1 text-xs rounded font-medium ${getActionBadgeClass(log.action)}`}
+                    className={`rounded-full px-3 py-1 text-xs font-semibold ${getActionBadgeClass(log.action)}`}
                   >
                     {log.action}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-sm">
-                  <div className="font-medium">{log.target_table}</div>
-                  {log.target_id && (
-                    <div className="text-xs text-gray-500">ID: {log.target_id}</div>
-                  )}
+                <td className="px-5 py-4 text-sm text-slate-600">
+                  {log.target_table || '-'}
+                  {log.target_id ? ` #${log.target_id}` : ''}
                 </td>
-                <td className="px-4 py-3 text-sm text-gray-600 max-w-xs truncate">
-                  {log.details ? (
-                    <span className="cursor-pointer hover:text-blue-600" title={log.details}>
-                      {log.details.substring(0, 50)}...
-                    </span>
-                  ) : (
-                    <span className="text-gray-400">-</span>
-                  )}
+                <td className="max-w-sm px-5 py-4 text-sm text-slate-600">
+                  <div className="line-clamp-2 break-words">
+                    {log.details || 'Khong co noi dung chi tiet.'}
+                  </div>
                 </td>
-                <td className="px-4 py-3 text-right text-sm">
+                <td className="px-5 py-4 text-right">
                   <button
+                    type="button"
                     onClick={() => onViewDetails(log)}
-                    className="text-blue-600 hover:text-blue-800"
+                    className="rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
                   >
-                    View
+                    Xem
                   </button>
                 </td>
               </tr>
@@ -113,6 +175,6 @@ export default function AuditTable({ logs, onViewDetails }: AuditTableProps) {
           </tbody>
         </table>
       </div>
-    </div>
+    </section>
   );
 }

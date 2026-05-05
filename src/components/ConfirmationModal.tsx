@@ -22,31 +22,27 @@ export default function ConfirmationModal({
   onConfirm,
   title,
   message,
-  confirmText = 'Xác nhận',
-  cancelText = 'Hủy',
+  confirmText = 'Xac nhan',
+  cancelText = 'Huy',
   confirmButtonClass = 'bg-red-600 hover:bg-red-700',
   icon,
   details,
 }: ConfirmationModalProps) {
-  // Handle escape key
+  const titleId = 'confirmation-modal-title';
+
   useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === 'Escape' && isOpen) {
         onClose();
       }
-    };
+    }
 
     document.addEventListener('keydown', handleEscape);
     return () => document.removeEventListener('keydown', handleEscape);
   }, [isOpen, onClose]);
 
-  // Prevent body scroll when modal is open
   useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
+    document.body.style.overflow = isOpen ? 'hidden' : 'unset';
     return () => {
       document.body.style.overflow = 'unset';
     };
@@ -55,49 +51,59 @@ export default function ConfirmationModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+    <div className="app-modal-backdrop px-4 py-6" onClick={onClose}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="app-modal-panel app-modal-panel-scroll relative z-10 w-full max-w-lg overflow-hidden"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="border-b border-slate-200 px-5 py-4 sm:px-6">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex min-w-0 items-start gap-3">
+              {icon ? (
+                <div className="mt-0.5 flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-slate-100">
+                  {icon}
+                </div>
+              ) : null}
+              <div className="min-w-0">
+                <h2 id={titleId} className="text-xl font-bold text-slate-900 sm:text-2xl">
+                  {title}
+                </h2>
+                <p className="mt-2 text-sm text-slate-600">{message}</p>
+              </div>
+            </div>
 
-      {/* Modal */}
-      <div className="relative bg-white rounded-lg shadow-2xl max-w-md w-full mx-4 p-6 animate-fade-in">
-        {/* Close button */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
-          aria-label="Close modal"
-        >
-          <X className="w-5 h-5" />
-        </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-full bg-slate-100 p-2 text-slate-500 transition hover:bg-slate-200 hover:text-slate-700"
+              aria-label="Dong hop xac nhan"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
 
-        {/* Icon */}
-        {icon && <div className="flex justify-center mb-4">{icon}</div>}
+        {details ? (
+          <div className="max-h-[50vh] overflow-y-auto px-5 py-4 sm:px-6">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">{details}</div>
+          </div>
+        ) : null}
 
-        {/* Title */}
-        <h2 className="text-xl font-bold text-gray-900 mb-2">{title}</h2>
-
-        {/* Message */}
-        <p className="text-gray-600 mb-4">{message}</p>
-
-        {/* Details */}
-        {details && (
-          <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">{details}</div>
-        )}
-
-        {/* Actions */}
-        <div className="flex gap-3">
+        <div className="flex flex-col gap-3 border-t border-slate-200 px-5 py-4 sm:flex-row sm:justify-end sm:px-6">
           <button
+            type="button"
             onClick={onClose}
-            className="flex-1 px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
+            className="rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
           >
             {cancelText}
           </button>
           <button
-            onClick={() => {
-              onConfirm();
-              onClose();
-            }}
-            className={`flex-1 px-4 py-2.5 text-white rounded-lg transition-colors font-medium ${confirmButtonClass}`}
+            type="button"
+            onClick={onConfirm}
+            className={`rounded-xl px-4 py-3 text-sm font-semibold text-white transition ${confirmButtonClass}`}
           >
             {confirmText}
           </button>

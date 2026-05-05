@@ -25,12 +25,39 @@ type StudentBiometricRow = {
   };
 };
 
+type Summary = {
+  total: number;
+  ready_count: number;
+  missing_count: number;
+};
+
+function SummaryCard({
+  label,
+  value,
+  accent,
+}: {
+  label: string;
+  value: number;
+  accent: string;
+}) {
+  return (
+    <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="text-sm font-medium text-slate-500">{label}</div>
+      <div className={`mt-3 text-3xl font-semibold ${accent}`}>{value}</div>
+    </div>
+  );
+}
+
 export default function AdminBiometricsPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [students, setStudents] = useState<StudentBiometricRow[]>([]);
-  const [summary, setSummary] = useState({ total: 0, ready_count: 0, missing_count: 0 });
+  const [summary, setSummary] = useState<Summary>({
+    total: 0,
+    ready_count: 0,
+    missing_count: 0,
+  });
   const [error, setError] = useState('');
   const [updatingStudentId, setUpdatingStudentId] = useState<number | null>(null);
   const [trainingStudentId, setTrainingStudentId] = useState<number | null>(null);
@@ -56,8 +83,9 @@ export default function AdminBiometricsPage() {
       const res = await fetch('/api/admin/biometrics/students');
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data?.error || data?.message || 'Không thể tải biometric readiness');
+        throw new Error(data?.error || data?.message || 'Khong the tai biometric readiness');
       }
+
       setStudents(data?.data?.students || data?.students || []);
       setSummary(
         data?.data?.summary || data?.summary || { total: 0, ready_count: 0, missing_count: 0 }
@@ -65,7 +93,7 @@ export default function AdminBiometricsPage() {
     } catch (fetchError) {
       console.error('Admin biometrics fetch error:', fetchError);
       setError(
-        fetchError instanceof Error ? fetchError.message : 'Không thể tải biometric readiness'
+        fetchError instanceof Error ? fetchError.message : 'Khong the tai biometric readiness'
       );
     } finally {
       setLoading(false);
@@ -82,14 +110,15 @@ export default function AdminBiometricsPage() {
       });
       const data = await res.json().catch(() => null);
       if (!res.ok) {
-        throw new Error(data?.error || data?.message || 'Không thể cập nhật enrollment');
+        throw new Error(data?.error || data?.message || 'Khong the cap nhat enrollment');
       }
-      toast.success('Đã cập nhật enrollment mẫu cho học viên');
+
+      toast.success('Da cap nhat enrollment mau cho hoc vien');
       await fetchData();
     } catch (updateError) {
       console.error('Admin biometrics enrollment update error:', updateError);
       toast.error(
-        updateError instanceof Error ? updateError.message : 'Không thể cập nhật enrollment'
+        updateError instanceof Error ? updateError.message : 'Khong the cap nhat enrollment'
       );
     } finally {
       setUpdatingStudentId(null);
@@ -112,20 +141,21 @@ export default function AdminBiometricsPage() {
       });
       const data = await res.json().catch(() => null);
       if (!res.ok) {
-        throw new Error(data?.error || data?.message || 'Không thể cập nhật training');
+        throw new Error(data?.error || data?.message || 'Khong the cap nhat training');
       }
+
       toast.success(
         trainingStatus === 'trained'
-          ? 'Đã ghi nhận học viên train thành công'
+          ? 'Da ghi nhan hoc vien train thanh cong'
           : trainingStatus === 'failed'
-            ? 'Đã ghi nhận training thất bại'
-            : 'Đã chuyển học viên sang trạng thái chờ training'
+            ? 'Da ghi nhan training that bai'
+            : 'Da chuyen hoc vien sang trang thai cho training'
       );
       await fetchData();
     } catch (updateError) {
       console.error('Admin biometrics training update error:', updateError);
       toast.error(
-        updateError instanceof Error ? updateError.message : 'Không thể cập nhật training'
+        updateError instanceof Error ? updateError.message : 'Khong the cap nhat training'
       );
     } finally {
       setTrainingStudentId(null);
@@ -137,162 +167,172 @@ export default function AdminBiometricsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="mx-auto max-w-7xl">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900">Biometric readiness theo học viên</h1>
-          <p className="mt-2 text-sm text-gray-600">
-            Theo dõi học viên nào đã sẵn sàng cho enrollment, training và face attendance.
-          </p>
-        </div>
+    <div className="min-h-screen bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl space-y-6">
+        <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="max-w-3xl">
+            <div className="inline-flex rounded-full bg-cyan-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-cyan-700">
+              Biometric readiness
+            </div>
+            <h1 className="mt-3 text-3xl font-semibold text-slate-950">
+              Biometric readiness theo hoc vien
+            </h1>
+            <p className="mt-3 text-sm leading-6 text-slate-600">
+              Theo doi hoc vien nao da san sang cho enrollment, training va face attendance. Man
+              nay giup admin va teacher scope kiem tra tinh san sang tung hoc vien truoc khi mo
+              face attendance.
+            </p>
+          </div>
+        </section>
 
         {error ? (
-          <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <section className="rounded-[2rem] border border-rose-200 bg-rose-50 p-5 text-sm text-rose-700">
             {error}
-          </div>
+          </section>
         ) : null}
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3 mb-6">
-          <div className="rounded-lg bg-white p-6 shadow">
-            <div className="text-sm text-gray-600">Tổng học viên</div>
-            <div className="text-3xl font-bold text-gray-900">{summary.total}</div>
-          </div>
-          <div className="rounded-lg bg-white p-6 shadow">
-            <div className="text-sm text-gray-600">Sẵn sàng face attendance</div>
-            <div className="text-3xl font-bold text-green-600">{summary.ready_count}</div>
-          </div>
-          <div className="rounded-lg bg-white p-6 shadow">
-            <div className="text-sm text-gray-600">Chưa sẵn sàng</div>
-            <div className="text-3xl font-bold text-amber-600">{summary.missing_count}</div>
-          </div>
-        </div>
+        <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <SummaryCard label="Tong hoc vien" value={summary.total} accent="text-slate-950" />
+          <SummaryCard
+            label="San sang face attendance"
+            value={summary.ready_count}
+            accent="text-emerald-600"
+          />
+          <SummaryCard
+            label="Chua san sang"
+            value={summary.missing_count}
+            accent="text-amber-600"
+          />
+        </section>
 
-        <div className="rounded-lg bg-white shadow overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
-                  Học viên
-                </th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Lớp</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
-                  Enrollment
-                </th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
-                  Training
-                </th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
-                  Sample ảnh
-                </th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
-                  Face attendance
-                </th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
-                  Blocker / note
-                </th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
-                  Hành động
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {students.map((student) => (
-                <tr key={student.id}>
-                  <td className="px-4 py-3 text-sm text-gray-900">
-                    <div className="font-medium">{student.name}</div>
-                    <div className="text-xs text-gray-500">
-                      {student.student_code} • {student.email}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-700">{student.class_name || '-'}</td>
-                  <td className="px-4 py-3 text-sm text-amber-700">
-                    {student.biometric_readiness.enrollment_status}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-amber-700">
-                    <div>{student.biometric_readiness.training_status}</div>
-                    {student.biometric_readiness.training_version ? (
-                      <div className="text-xs text-gray-500">
-                        v{student.biometric_readiness.training_version}
-                      </div>
-                    ) : null}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-700">
-                    {student.biometric_readiness.sample_image_count || 0}
-                  </td>
-                  <td className="px-4 py-3 text-sm">
-                    <span
-                      className={
-                        student.biometric_readiness.face_attendance_ready
-                          ? 'text-green-600 font-medium'
-                          : 'text-amber-700 font-medium'
-                      }
-                    >
-                      {student.biometric_readiness.face_attendance_ready ? 'ready' : 'blocked'}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-600">
-                    <div>{student.biometric_readiness.blocker || '-'}</div>
-                    {student.biometric_readiness.notes ? (
-                      <div className="text-xs text-gray-500 mt-1">
-                        {student.biometric_readiness.notes}
-                      </div>
-                    ) : null}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-600">
-                    <div className="flex flex-col gap-2">
-                      <button
-                        type="button"
-                        onClick={() => void markEnrollmentCaptured(student.id)}
-                        disabled={
-                          updatingStudentId === student.id || trainingStudentId === student.id
-                        }
-                        className="rounded bg-blue-600 px-3 py-2 text-white hover:bg-blue-700 disabled:bg-gray-400"
-                      >
-                        {updatingStudentId === student.id
-                          ? 'Đang cập nhật...'
-                          : 'Ghi nhận thêm ảnh mẫu'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => void updateTrainingStatus(student.id, 'pending')}
-                        disabled={
-                          trainingStudentId === student.id || updatingStudentId === student.id
-                        }
-                        className="rounded bg-amber-500 px-3 py-2 text-white hover:bg-amber-600 disabled:bg-gray-400"
-                      >
-                        {trainingStudentId === student.id ? 'Đang cập nhật...' : 'Chờ training'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => void updateTrainingStatus(student.id, 'trained')}
-                        disabled={
-                          trainingStudentId === student.id || updatingStudentId === student.id
-                        }
-                        className="rounded bg-green-600 px-3 py-2 text-white hover:bg-green-700 disabled:bg-gray-400"
-                      >
-                        {trainingStudentId === student.id
-                          ? 'Đang cập nhật...'
-                          : 'Đánh dấu train xong'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => void updateTrainingStatus(student.id, 'failed')}
-                        disabled={
-                          trainingStudentId === student.id || updatingStudentId === student.id
-                        }
-                        className="rounded bg-red-600 px-3 py-2 text-white hover:bg-red-700 disabled:bg-gray-400"
-                      >
-                        {trainingStudentId === student.id
-                          ? 'Đang cập nhật...'
-                          : 'Đánh dấu train lỗi'}
-                      </button>
-                    </div>
-                  </td>
+        <section className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm">
+          <div className="overflow-x-auto">
+            <table className="min-w-full">
+              <thead className="border-b border-slate-200 bg-slate-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">
+                    Hoc vien
+                  </th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">Lop</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">
+                    Enrollment
+                  </th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">
+                    Training
+                  </th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">
+                    Sample anh
+                  </th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">
+                    Face attendance
+                  </th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">
+                    Blocker / note
+                  </th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">
+                    Hanh dong
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-slate-200">
+                {students.map((student) => (
+                  <tr key={student.id} className="align-top">
+                    <td className="px-4 py-3 text-sm text-slate-900">
+                      <div className="font-medium">{student.name}</div>
+                      <div className="text-xs text-slate-500">
+                        {student.student_code} | {student.email}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-slate-700">{student.class_name || '-'}</td>
+                    <td className="px-4 py-3 text-sm text-amber-700">
+                      {student.biometric_readiness.enrollment_status}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-amber-700">
+                      <div>{student.biometric_readiness.training_status}</div>
+                      {student.biometric_readiness.training_version ? (
+                        <div className="text-xs text-slate-500">
+                          v{student.biometric_readiness.training_version}
+                        </div>
+                      ) : null}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-slate-700">
+                      {student.biometric_readiness.sample_image_count || 0}
+                    </td>
+                    <td className="px-4 py-3 text-sm">
+                      <span
+                        className={
+                          student.biometric_readiness.face_attendance_ready
+                            ? 'font-medium text-emerald-600'
+                            : 'font-medium text-amber-700'
+                        }
+                      >
+                        {student.biometric_readiness.face_attendance_ready ? 'ready' : 'blocked'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-slate-600">
+                      <div>{student.biometric_readiness.blocker || '-'}</div>
+                      {student.biometric_readiness.notes ? (
+                        <div className="mt-1 text-xs text-slate-500">
+                          {student.biometric_readiness.notes}
+                        </div>
+                      ) : null}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-slate-600">
+                      <div className="flex min-w-[13rem] flex-col gap-2">
+                        <button
+                          type="button"
+                          onClick={() => void markEnrollmentCaptured(student.id)}
+                          disabled={
+                            updatingStudentId === student.id || trainingStudentId === student.id
+                          }
+                          className="rounded-xl bg-blue-600 px-3 py-2 text-white transition hover:bg-blue-700 disabled:bg-slate-400"
+                        >
+                          {updatingStudentId === student.id
+                            ? 'Dang cap nhat...'
+                            : 'Ghi nhan them anh mau'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void updateTrainingStatus(student.id, 'pending')}
+                          disabled={
+                            trainingStudentId === student.id || updatingStudentId === student.id
+                          }
+                          className="rounded-xl bg-amber-500 px-3 py-2 text-white transition hover:bg-amber-600 disabled:bg-slate-400"
+                        >
+                          {trainingStudentId === student.id ? 'Dang cap nhat...' : 'Cho training'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void updateTrainingStatus(student.id, 'trained')}
+                          disabled={
+                            trainingStudentId === student.id || updatingStudentId === student.id
+                          }
+                          className="rounded-xl bg-emerald-600 px-3 py-2 text-white transition hover:bg-emerald-700 disabled:bg-slate-400"
+                        >
+                          {trainingStudentId === student.id
+                            ? 'Dang cap nhat...'
+                            : 'Danh dau train xong'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void updateTrainingStatus(student.id, 'failed')}
+                          disabled={
+                            trainingStudentId === student.id || updatingStudentId === student.id
+                          }
+                          className="rounded-xl bg-rose-600 px-3 py-2 text-white transition hover:bg-rose-700 disabled:bg-slate-400"
+                        >
+                          {trainingStudentId === student.id
+                            ? 'Dang cap nhat...'
+                            : 'Danh dau train loi'}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
       </div>
     </div>
   );

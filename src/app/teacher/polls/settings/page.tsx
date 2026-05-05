@@ -1,9 +1,23 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Settings, Save, Plus, Trash2, Copy } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import {
+  AlertCircle,
+  CheckCircle2,
+  ClipboardList,
+  Copy,
+  Plus,
+  Save,
+  Settings2,
+  Trash2,
+  X,
+} from 'lucide-react';
 import toast from 'react-hot-toast';
+import LoadingSpinner from '@/components/LoadingSpinner';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { useAuth } from '@/contexts/AuthContext';
+import { formatVietnamDateTime } from '@/lib/timezone';
 
 interface PollTemplate {
   id: number;
@@ -25,50 +39,98 @@ interface PollSettings {
   templates: PollTemplate[];
 }
 
-export default function PollSettingsPage() {
-  const [settings, setSettings] = useState<PollSettings>({
-    id: 1,
-    default_duration_minutes: 60,
-    allow_multiple_answers: false,
-    show_results_before_closing: true,
-    allow_anonymous_responses: false,
-    default_visibility: 'class',
-    templates: [],
-  });
+interface TemplateDraft {
+  name: string;
+  category: string;
+  pollType: string;
+  description: string;
+  options: string[];
+}
 
-  const [newTemplate, setNewTemplate] = useState({
-    name: '',
-    category: 'general',
-    poll_type: 'single_choice',
-    description: '',
-    defaultOptions: ['', '', ''],
-  });
+const EMPTY_TEMPLATE: TemplateDraft = {
+  name: '',
+  category: 'general',
+  pollType: 'single_choice',
+  description: '',
+  options: ['', '', ''],
+};
 
-  const [showTemplateForm, setShowTemplateForm] = useState(false);
-  const [saving, setSaving] = useState(false);
+function getResponseSettings(payload: any): PollSettings | null {
+  return payload?.data?.settings ?? payload?.settings ?? null;
+}
+
+function getErrorMessage(payload: any, fallback: string) {
+  return String(payload?.error || payload?.message || fallback);
+}
+
+function normalizeSettings(settings: PollSettings | null): PollSettings {
+  return {
+    id: Number(settings?.id || 1),
+    default_duration_minutes: Math.max(1, Number(settings?.default_duration_minutes || 60)),
+    allow_multiple_answers: Boolean(settings?.allow_multiple_answers),
+    show_results_before_closing: settings?.show_results_before_closing !== false,
+    allow_anonymous_responses: Boolean(settings?.allow_anonymous_responses),
+    default_visibility:
+      settings?.default_visibility === 'student' || settings?.default_visibility === 'all'
+        ? settings.default_visibility
+        : 'class',
+    templates: Array.isArray(settings?.templates) ? settings.templates : [],
+  };
+}
+
+function pollTypeLabel(type: string) {
+  switch (type) {
+    case 'multiple_choice':
+      return 'Multiple choice';
+    case 'rating':
+      return 'Rating';
+    default:
+      return 'Một lựa chọn';
+  }
+}
+
+export default function TeacherPollSettingsPage() {
+  const { user, loading: authLoading } = useAuth();
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [templateToDelete, setTemplateToDelete] = useState<PollTemplate | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [creatingTemplate, setCreatingTemplate] = useState(false);
+  const [settings, setSettings] = useState<PollSettings>(normalizeSettings(null));
+  const [showTemplateForm, setShowTemplateForm] = useState(false);
+  const [templateDraft, setTemplateDraft] = useState<TemplateDraft>(EMPTY_TEMPLATE);
+  const [templatePendingDelete, setTemplatePendingDelete] = useState<PollTemplate | null>(null);
 
   useEffect(() => {
-    fetchSettings();
-  }, []);
+    if (!authLoading && (!user || (user.role !== 'teacher' && user.role !== 'admin'))) {
+      router.replace('/login');
+      return;
+    }
 
-  const fetchSettings = async () => {
+    if (user) {
+      void fetchSettings();
+    }
+  }, [authLoading, router, user]);
+
+  async function fetchSettings() {
     try {
       setLoading(true);
       const response = await fetch('/api/teacher/polls/settings');
-      const data = await response.json().catch(() => null);
-      if (!response.ok) throw new Error(data?.error || data?.message || 'Không thể tải cấu hình');
-      setSettings(data?.settings || data?.data?.settings || data);
+      const payload = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(getErrorMessage(payload, 'Không thể tải cấu hình khảo sát'));
+      }
+
+      setSettings(normalizeSettings(getResponseSettings(payload)));
     } catch (error) {
-      console.error('Error fetching settings:', error);
-      toast.error(error instanceof Error ? error.message : 'Không thể tải cấu hình');
+      console.error('Teacher poll settings fetch error:', error);
+      toast.error(error instanceof Error ? error.message : 'Không thể tải cấu hình khảo sát');
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  const handleSaveSettings = async () => {
+  async function handleSaveSettings() {
     try {
       setSaving(true);
       const response = await fetch('/api/teacher/polls/settings', {
@@ -82,420 +144,524 @@ export default function PollSettingsPage() {
           default_visibility: settings.default_visibility,
         }),
       });
+      const payload = await response.json().catch(() => null);
 
-      const data = await response.json().catch(() => null);
-      if (!response.ok) throw new Error(data?.error || data?.message || 'Không thể lưu cấu hình');
-      toast.success(data?.message || 'Lưu cấu hình thành công');
+      if (!response.ok) {
+        throw new Error(getErrorMessage(payload, 'Không thể lưu cấu hình khảo sát'));
+      }
+
+      setSettings(normalizeSettings(getResponseSettings(payload)));
+      toast.success(String(payload?.message || 'Đã lưu cấu hình khảo sát'));
     } catch (error) {
-      console.error('Error saving settings:', error);
-      toast.error(error instanceof Error ? error.message : 'Không thể lưu cấu hình');
+      console.error('Teacher poll settings save error:', error);
+      toast.error(error instanceof Error ? error.message : 'Không thể lưu cấu hình khảo sát');
     } finally {
       setSaving(false);
     }
-  };
+  }
 
-  const handleAddTemplate = async () => {
-    if (!newTemplate.name.trim()) {
-      toast.error('Vui lòng nhập tên mẫu');
+  function updateTemplateOption(index: number, value: string) {
+    setTemplateDraft((current) => {
+      const next = [...current.options];
+      next[index] = value;
+      return { ...current, options: next };
+    });
+  }
+
+  function addTemplateOption() {
+    setTemplateDraft((current) => ({
+      ...current,
+      options: [...current.options, ''],
+    }));
+  }
+
+  function removeTemplateOption(index: number) {
+    setTemplateDraft((current) => {
+      if (current.options.length <= 2) return current;
+      return {
+        ...current,
+        options: current.options.filter((_, optionIndex) => optionIndex !== index),
+      };
+    });
+  }
+
+  function resetTemplateDraft() {
+    setTemplateDraft(EMPTY_TEMPLATE);
+  }
+
+  async function handleCreateTemplate() {
+    const cleanName = templateDraft.name.trim();
+    const cleanDescription = templateDraft.description.trim();
+    const cleanOptions = templateDraft.options.map((option) => option.trim()).filter(Boolean);
+
+    if (!cleanName) {
+      toast.error('Cần nhập tên mẫu khảo sát');
       return;
     }
 
-    const validOptions = newTemplate.defaultOptions.filter((opt) => opt.trim());
-    if (validOptions.length < 2) {
-      toast.error('Vui lòng nhập ít nhất 2 tùy chọn');
+    if (cleanOptions.length < 2) {
+      toast.error('Cần ít nhất 2 tùy chọn mặc định');
       return;
     }
 
     try {
+      setCreatingTemplate(true);
       const response = await fetch('/api/teacher/polls/templates', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: newTemplate.name,
-          category: newTemplate.category,
-          poll_type: newTemplate.poll_type,
-          description: newTemplate.description,
-          default_options: validOptions,
+          name: cleanName,
+          category: templateDraft.category,
+          poll_type: templateDraft.pollType,
+          description: cleanDescription,
+          default_options: cleanOptions,
         }),
       });
+      const payload = await response.json().catch(() => null);
 
-      const data = await response.json().catch(() => null);
-      if (!response.ok) throw new Error(data?.error || data?.message || 'Không thể tạo mẫu');
+      if (!response.ok) {
+        throw new Error(getErrorMessage(payload, 'Không thể tạo mẫu khảo sát'));
+      }
 
-      const createdTemplate = data?.template || data?.data?.template || data;
-      setSettings({
-        ...settings,
-        templates: [...settings.templates, createdTemplate],
-      });
+      const template = payload?.data?.template ?? payload?.template ?? null;
+      if (template) {
+        setSettings((current) => ({
+          ...current,
+          templates: [template, ...current.templates],
+        }));
+      }
 
-      setNewTemplate({
-        name: '',
-        category: 'general',
-        poll_type: 'single_choice',
-        description: '',
-        defaultOptions: ['', '', ''],
-      });
+      resetTemplateDraft();
       setShowTemplateForm(false);
-      toast.success(data?.message || 'Tạo mẫu thành công');
+      toast.success(String(payload?.message || 'Đã tạo mẫu khảo sát'));
     } catch (error) {
-      console.error('Error creating template:', error);
-      toast.error(error instanceof Error ? error.message : 'Không thể tạo mẫu');
+      console.error('Teacher poll template create error:', error);
+      toast.error(error instanceof Error ? error.message : 'Không thể tạo mẫu khảo sát');
+    } finally {
+      setCreatingTemplate(false);
     }
-  };
+  }
 
-  const handleDeleteTemplate = async (id: number) => {
+  async function handleDeleteTemplate() {
+    if (!templatePendingDelete) return;
+
     try {
-      const response = await fetch(`/api/teacher/polls/templates/${id}`, {
+      const response = await fetch(`/api/teacher/polls/templates/${templatePendingDelete.id}`, {
         method: 'DELETE',
       });
+      const payload = await response.json().catch(() => null);
 
-      const data = await response.json().catch(() => null);
-      if (!response.ok) throw new Error(data?.error || data?.message || 'Không thể xóa mẫu');
+      if (!response.ok) {
+        throw new Error(getErrorMessage(payload, 'Không thể xóa mẫu khảo sát'));
+      }
 
-      setSettings({
-        ...settings,
-        templates: settings.templates.filter((t) => t.id !== id),
-      });
-      toast.success(data?.message || 'Xóa mẫu thành công');
+      setSettings((current) => ({
+        ...current,
+        templates: current.templates.filter((item) => item.id !== templatePendingDelete.id),
+      }));
+      setTemplatePendingDelete(null);
+      toast.success(String(payload?.message || 'Đã xóa mẫu khảo sát'));
     } catch (error) {
-      console.error('Error deleting template:', error);
-      toast.error(error instanceof Error ? error.message : 'Không thể xóa mẫu');
+      console.error('Teacher poll template delete error:', error);
+      toast.error(error instanceof Error ? error.message : 'Không thể xóa mẫu khảo sát');
     }
-  };
+  }
 
-  const handleCopyTemplate = (template: PollTemplate) => {
-    const templateText = `${template.name}\n${template.description}\nTùy chọn:\n${template.default_options.join('\n')}`;
-    navigator.clipboard.writeText(templateText);
-    toast.success('Đã sao chép mẫu');
-  };
+  async function handleCopyTemplate(template: PollTemplate) {
+    const text = [
+      template.name,
+      template.description,
+      '',
+      'Tùy chọn mặc định:',
+      ...template.default_options.map((option, index) => `${index + 1}. ${option}`),
+    ]
+      .filter(Boolean)
+      .join('\n');
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 p-6">
-        <div className="max-w-4xl mx-auto">
-          <div className="bg-white rounded-lg shadow-sm p-12 text-center">
-            <div className="animate-spin inline-block w-8 h-8 border-4 border-gray-200 border-t-blue-600 rounded-full"></div>
-            <p className="mt-4 text-gray-600">Đang tải dữ liệu...</p>
-          </div>
-        </div>
-      </div>
-    );
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success('Đã sao chép nội dung mẫu khảo sát');
+    } catch (error) {
+      console.error('Teacher poll template copy error:', error);
+      toast.error('Không thể sao chép nội dung mẫu khảo sát');
+    }
+  }
+
+  if (authLoading || loading) {
+    return <LoadingSpinner message="Đang tải cấu hình khảo sát..." />;
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-4xl mx-auto">
-        {/* Header with Save Button */}
-        <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200 mb-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                <Settings className="w-6 h-6 text-blue-600" />
-                Cấu hình bình chọn
-              </h1>
-              <p className="text-gray-600 mt-2">Quản lý mẫu và cài đặt mặc định cho bình chọn</p>
+    <div className="page-shell">
+      <section className="page-surface overflow-hidden rounded-[1.75rem]">
+        <div className="border-b border-slate-200 px-5 py-5 sm:px-7">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="max-w-3xl">
+              <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-cyan-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-cyan-800">
+                <Settings2 className="h-3.5 w-3.5" />
+                Cấu hình mặc định
+              </div>
+              <h1 className="text-2xl font-bold text-slate-950 sm:text-3xl">Cấu hình khảo sát</h1>
+              <p className="mt-2 text-sm leading-6 text-slate-600 sm:text-base">
+                Định nghĩa chính sách mặc định cho khảo sát và quản lý bộ mẫu để giảng viên tạo nhanh
+                các khảo sát lặp đi lặp lại.
+              </p>
             </div>
+
             <button
-              onClick={handleSaveSettings}
+              type="button"
+              onClick={() => void handleSaveSettings()}
               disabled={saving}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg font-medium transition"
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-cyan-700 px-4 py-3 text-sm font-semibold text-white transition hover:bg-cyan-800 disabled:cursor-not-allowed disabled:bg-slate-400"
             >
-              <Save className="w-4 h-4" />
-              {saving ? 'Đang lưu...' : 'Lưu'}
+              <Save className="h-4 w-4" />
+              {saving ? 'Đang lưu...' : 'Lưu cấu hình'}
             </button>
           </div>
         </div>
 
-        {/* General Settings */}
-        <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200 mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-6">Cài đặt chung</h2>
-
-          <div className="space-y-6">
-            {/* Duration Setting */}
-            <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">
-                Thời gian mặc định (phút)
-              </label>
-              <input
-                type="number"
-                min="1"
-                max="1440"
-                value={settings.default_duration_minutes}
-                onChange={(e) =>
-                  setSettings({
-                    ...settings,
-                    default_duration_minutes: parseInt(e.target.value) || 60,
-                  })
-                }
-                className="w-full md:w-64 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <p className="text-sm text-gray-600 mt-1">Thời gian mặc định cho bình chọn mới</p>
+        <div className="space-y-6 px-5 py-6 sm:px-7">
+          <div className="content-card p-5 sm:p-6">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-slate-700">
+                <ClipboardList className="h-5 w-5" />
+              </div>
+              <div>
+                <h2 className="text-xl font-semibold text-slate-950">Mặc định khi tạo khảo sát</h2>
+                <p className="text-sm text-slate-500">
+                  Các giá trị được nạp sẵn khi giảng viên tạo khảo sát mới.
+                </p>
+              </div>
             </div>
 
-            {/* Visibility Setting */}
-            <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">
+            <div className="mt-6 grid gap-4 lg:grid-cols-2">
+              <label className="block text-sm font-medium text-slate-700">
+                Thời lượng mặc định (phút)
+                <input
+                  type="number"
+                  min="1"
+                  max="1440"
+                  value={settings.default_duration_minutes}
+                  onChange={(event) =>
+                    setSettings((current) => ({
+                      ...current,
+                      default_duration_minutes: Number.parseInt(event.target.value, 10) || 60,
+                    }))
+                  }
+                  className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-2.5 focus:border-transparent focus:ring-2 focus:ring-cyan-500"
+                />
+              </label>
+
+              <label className="block text-sm font-medium text-slate-700">
                 Phạm vi hiển thị mặc định
+                <select
+                  value={settings.default_visibility}
+                  onChange={(event) =>
+                    setSettings((current) => ({
+                      ...current,
+                      default_visibility: event.target.value as 'class' | 'student' | 'all',
+                    }))
+                  }
+                  className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-2.5 focus:border-transparent focus:ring-2 focus:ring-cyan-500"
+                >
+                  <option value="class">Trong lớp</option>
+                  <option value="student">Theo học viên</option>
+                  <option value="all">Toàn bộ người xem được cấp phép</option>
+                </select>
               </label>
-              <select
-                value={settings.default_visibility}
-                onChange={(e) =>
-                  setSettings({
-                    ...settings,
-                    default_visibility: e.target.value as 'class' | 'student' | 'all',
-                  })
-                }
-                className="w-full md:w-96 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="class">Lớp học</option>
-                <option value="student">Từng học viên</option>
-                <option value="all">Toàn bộ</option>
-              </select>
-              <p className="text-sm text-gray-600 mt-1">Ai có thể thấy kết quả bình chọn</p>
             </div>
 
-            {/* Multiple Answers */}
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="multiple_answers"
-                checked={settings.allow_multiple_answers}
-                onChange={(e) =>
-                  setSettings({
-                    ...settings,
-                    allow_multiple_answers: e.target.checked,
-                  })
-                }
-                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-              />
-              <label htmlFor="multiple_answers" className="ml-3 text-gray-900 cursor-pointer">
-                Cho phép chọn nhiều câu trả lời
+            <div className="mt-5 grid gap-3 md:grid-cols-3">
+              <label className="rounded-3xl border border-slate-200 px-4 py-4 text-sm text-slate-700">
+                <input
+                  type="checkbox"
+                  checked={settings.allow_multiple_answers}
+                  onChange={(event) =>
+                    setSettings((current) => ({
+                      ...current,
+                      allow_multiple_answers: event.target.checked,
+                    }))
+                  }
+                  className="mr-3 h-4 w-4 rounded border-slate-300 text-cyan-700 focus:ring-cyan-500"
+                />
+                Cho phép chọn nhiều đáp án
               </label>
-              <p className="text-sm text-gray-600 ml-3">Học viên có thể chọn nhiều tùy chọn</p>
-            </div>
 
-            {/* Show Results Before Closing */}
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="show_results_before"
-                checked={settings.show_results_before_closing}
-                onChange={(e) =>
-                  setSettings({
-                    ...settings,
-                    show_results_before_closing: e.target.checked,
-                  })
-                }
-                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-              />
-              <label htmlFor="show_results_before" className="ml-3 text-gray-900 cursor-pointer">
-                Hiển thị kết quả trước khi đóng
+              <label className="rounded-3xl border border-slate-200 px-4 py-4 text-sm text-slate-700">
+                <input
+                  type="checkbox"
+                  checked={settings.show_results_before_closing}
+                  onChange={(event) =>
+                    setSettings((current) => ({
+                      ...current,
+                      show_results_before_closing: event.target.checked,
+                    }))
+                  }
+                  className="mr-3 h-4 w-4 rounded border-slate-300 text-cyan-700 focus:ring-cyan-500"
+                />
+                Hiện kết quả trước khi đóng khảo sát
               </label>
-              <p className="text-sm text-gray-600 ml-3">
-                Học viên có thể xem kết quả trong khi bình chọn đang diễn ra
-              </p>
-            </div>
 
-            {/* Anonymous Responses */}
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="anonymous"
-                checked={settings.allow_anonymous_responses}
-                onChange={(e) =>
-                  setSettings({
-                    ...settings,
-                    allow_anonymous_responses: e.target.checked,
-                  })
-                }
-                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-              />
-              <label htmlFor="anonymous" className="ml-3 text-gray-900 cursor-pointer">
+              <label className="rounded-3xl border border-slate-200 px-4 py-4 text-sm text-slate-700">
+                <input
+                  type="checkbox"
+                  checked={settings.allow_anonymous_responses}
+                  onChange={(event) =>
+                    setSettings((current) => ({
+                      ...current,
+                      allow_anonymous_responses: event.target.checked,
+                    }))
+                  }
+                  className="mr-3 h-4 w-4 rounded border-slate-300 text-cyan-700 focus:ring-cyan-500"
+                />
                 Cho phép phản hồi ẩn danh
               </label>
-              <p className="text-sm text-gray-600 ml-3">
-                Không hiển thị tên học viên trong kết quả
-              </p>
+            </div>
+
+            <div className="mt-5 rounded-3xl border border-cyan-200 bg-cyan-50 p-4 text-sm leading-6 text-cyan-900">
+              Nếu team muốn thay đổi chính sách toàn hệ thống, trang này chỉ ảnh hưởng không gian khảo sát của
+              giảng viên hiện tại, không thay cấu hình quản trị cấp cao hơn.
             </div>
           </div>
-        </div>
 
-        {/* Templates Section */}
-        <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-semibold text-gray-900">Mẫu bình chọn</h2>
-            <button
-              onClick={() => setShowTemplateForm(!showTemplateForm)}
-              className="flex items-center gap-2 px-3 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg text-sm font-medium transition"
-            >
-              <Plus className="w-4 h-4" />
-              {showTemplateForm ? 'Hủy' : 'Thêm mẫu'}
-            </button>
-          </div>
+          <div className="content-card p-5 sm:p-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h2 className="text-xl font-semibold text-slate-950">Mẫu khảo sát</h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  Bộ câu hỏi mẫu để giảng viên tạo khảo sát nhanh mà vẫn đúng khung.
+                </p>
+              </div>
 
-          {/* New Template Form */}
-          {showTemplateForm && (
-            <div className="bg-gray-50 rounded-lg p-6 mb-6 border border-gray-200">
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-900 mb-1">Tên mẫu *</label>
-                  <input
-                    type="text"
-                    value={newTemplate.name}
-                    onChange={(e) => setNewTemplate({ ...newTemplate, name: e.target.value })}
-                    placeholder="ví dụ: Đánh giá bài học"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
+              <button
+                type="button"
+                onClick={() => setShowTemplateForm((current) => !current)}
+                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              >
+                {showTemplateForm ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+                {showTemplateForm ? 'Đóng biểu mẫu' : 'Thêm mẫu'}
+              </button>
+            </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-900 mb-1">Danh mục</label>
+            {showTemplateForm ? (
+              <div className="mt-6 rounded-[1.5rem] border border-slate-200 bg-slate-50 p-5">
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <label className="block text-sm font-medium text-slate-700">
+                    Tên mẫu
+                    <input
+                      type="text"
+                      value={templateDraft.name}
+                      onChange={(event) =>
+                        setTemplateDraft((current) => ({ ...current, name: event.target.value }))
+                      }
+                      placeholder="Ví dụ: Khảo sát buổi học"
+                      className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-2.5 focus:border-transparent focus:ring-2 focus:ring-cyan-500"
+                    />
+                  </label>
+
+                  <label className="block text-sm font-medium text-slate-700">
+                    Danh mục
                     <select
-                      value={newTemplate.category}
-                      onChange={(e) => setNewTemplate({ ...newTemplate, category: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      value={templateDraft.category}
+                      onChange={(event) =>
+                        setTemplateDraft((current) => ({
+                          ...current,
+                          category: event.target.value,
+                        }))
+                      }
+                      className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-2.5 focus:border-transparent focus:ring-2 focus:ring-cyan-500"
                     >
-                      <option value="general">Chung</option>
+                      <option value="general">Tổng quát</option>
                       <option value="feedback">Phản hồi</option>
                       <option value="assessment">Đánh giá</option>
                       <option value="engagement">Tương tác</option>
                     </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-900 mb-1">
-                      Loại bình chọn
-                    </label>
-                    <select
-                      value={newTemplate.poll_type}
-                      onChange={(e) =>
-                        setNewTemplate({ ...newTemplate, poll_type: e.target.value })
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="single_choice">Lựa chọn duy nhất</option>
-                      <option value="multiple_choice">Nhiều lựa chọn</option>
-                      <option value="rating">Đánh giá</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-900 mb-1">Mô tả</label>
-                  <textarea
-                    value={newTemplate.description}
-                    onChange={(e) =>
-                      setNewTemplate({ ...newTemplate, description: e.target.value })
-                    }
-                    placeholder="Mô tả mẫu..."
-                    rows={2}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-900 mb-2">
-                    Tùy chọn mặc định
                   </label>
-                  <div className="space-y-2">
-                    {newTemplate.defaultOptions.map((opt, idx) => (
-                      <input
-                        key={idx}
-                        type="text"
-                        value={opt}
-                        onChange={(e) => {
-                          const updated = [...newTemplate.defaultOptions];
-                          updated[idx] = e.target.value;
-                          setNewTemplate({ ...newTemplate, defaultOptions: updated });
-                        }}
-                        placeholder={`Tùy chọn ${idx + 1}`}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
+
+                  <label className="block text-sm font-medium text-slate-700">
+                    Loại khảo sát
+                    <select
+                      value={templateDraft.pollType}
+                      onChange={(event) =>
+                        setTemplateDraft((current) => ({
+                          ...current,
+                          pollType: event.target.value,
+                        }))
+                      }
+                      className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-2.5 focus:border-transparent focus:ring-2 focus:ring-cyan-500"
+                    >
+                      <option value="single_choice">Một lựa chọn</option>
+                      <option value="multiple_choice">Nhiều lựa chọn</option>
+                      <option value="rating">Rating</option>
+                    </select>
+                  </label>
+
+                  <label className="block text-sm font-medium text-slate-700 lg:col-span-2">
+                    Mô tả
+                    <textarea
+                      value={templateDraft.description}
+                      onChange={(event) =>
+                        setTemplateDraft((current) => ({
+                          ...current,
+                          description: event.target.value,
+                        }))
+                      }
+                      rows={3}
+                      placeholder="Mô tả ngắn để giảng viên biết khi nào nên dùng mẫu này."
+                      className="mt-2 w-full rounded-3xl border border-slate-200 px-4 py-3 leading-6 focus:border-transparent focus:ring-2 focus:ring-cyan-500"
+                    />
+                  </label>
+                </div>
+
+                <div className="mt-5">
+                  <div className="text-sm font-medium text-slate-700">Tùy chọn mặc định</div>
+                  <div className="mt-3 space-y-3">
+                    {templateDraft.options.map((option, index) => (
+                      <div key={`${index}-${templateDraft.options.length}`} className="flex gap-3">
+                        <input
+                          type="text"
+                          value={option}
+                          onChange={(event) => updateTemplateOption(index, event.target.value)}
+                          placeholder={`Tùy chọn ${index + 1}`}
+                          className="flex-1 rounded-2xl border border-slate-200 px-4 py-2.5 focus:border-transparent focus:ring-2 focus:ring-cyan-500"
+                        />
+                        {templateDraft.options.length > 2 ? (
+                          <button
+                            type="button"
+                            onClick={() => removeTemplateOption(index)}
+                            className="rounded-2xl border border-slate-200 px-3 text-slate-500 transition hover:bg-rose-50 hover:text-rose-700"
+                            aria-label={`Xóa tùy chọn ${index + 1}`}
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        ) : null}
+                      </div>
                     ))}
                   </div>
+                  <button
+                    type="button"
+                    onClick={addTemplateOption}
+                    className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-cyan-700 hover:text-cyan-800"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Thêm tùy chọn
+                  </button>
                 </div>
 
-                <button
-                  onClick={handleAddTemplate}
-                  className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition"
-                >
-                  Tạo mẫu
-                </button>
+                <div className="mt-5 flex flex-col gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:justify-end">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      resetTemplateDraft();
+                      setShowTemplateForm(false);
+                    }}
+                    className="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-white"
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void handleCreateTemplate()}
+                    disabled={creatingTemplate}
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-cyan-700 px-4 py-3 text-sm font-semibold text-white transition hover:bg-cyan-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+                  >
+                    <CheckCircle2 className="h-4 w-4" />
+                    {creatingTemplate ? 'Đang tạo...' : 'Tạo mẫu'}
+                  </button>
+                </div>
               </div>
-            </div>
-          )}
+            ) : null}
 
-          {/* Templates List */}
-          {settings.templates.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-gray-600">Chưa có mẫu nào. Tạo mẫu mới để bắt đầu!</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {settings.templates.map((template) => (
-                <div
-                  key={template.id}
-                  className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition"
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <h3 className="font-medium text-gray-900">{template.name}</h3>
-                      <p className="text-sm text-gray-600 mt-1">{template.description}</p>
-                      <div className="flex items-center gap-2 mt-2">
-                        <span className="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-700 text-xs font-medium rounded">
-                          {template.category}
-                        </span>
-                        <span className="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded">
-                          {template.poll_type === 'single_choice' && 'Chọn duy nhất'}
-                          {template.poll_type === 'multiple_choice' && 'Nhiều lựa chọn'}
-                          {template.poll_type === 'rating' && 'Đánh giá'}
-                        </span>
+            {settings.templates.length === 0 ? (
+              <div className="mt-6 rounded-3xl border border-dashed border-slate-200 px-4 py-12 text-center">
+                <AlertCircle className="mx-auto mb-4 h-12 w-12 text-slate-300" />
+                <p className="text-lg font-medium text-slate-700">Chưa có mẫu khảo sát nào</p>
+                <p className="mt-2 text-sm text-slate-500">
+                  Tạo mẫu để rút ngắn thao tác khi lặp lại những khảo sát giống nhau.
+                </p>
+              </div>
+            ) : (
+              <div className="mt-6 grid gap-4 xl:grid-cols-2">
+                {settings.templates.map((template) => (
+                  <article key={template.id} className="rounded-[1.5rem] border border-slate-200 p-5">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="min-w-0 flex-1">
+                        <h3 className="text-lg font-semibold text-slate-950">{template.name}</h3>
+                        <div className="mt-2 flex flex-wrap gap-2 text-xs font-medium">
+                          <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-700">
+                            {template.category}
+                          </span>
+                          <span className="rounded-full bg-cyan-100 px-3 py-1 text-cyan-800">
+                            {pollTypeLabel(template.poll_type)}
+                          </span>
+                        </div>
                       </div>
-                      <div className="text-xs text-gray-500 mt-2">
-                        Tùy chọn: {template.default_options.join(', ')}
+
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => void handleCopyTemplate(template)}
+                          className="rounded-2xl border border-slate-200 p-2 text-slate-500 transition hover:border-cyan-300 hover:bg-cyan-50 hover:text-cyan-700"
+                          aria-label={`Sao chép mẫu ${template.name}`}
+                        >
+                          <Copy className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setTemplatePendingDelete(template)}
+                          className="rounded-2xl border border-slate-200 p-2 text-slate-500 transition hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700"
+                          aria-label={`Xóa mẫu ${template.name}`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => handleCopyTemplate(template)}
-                        className="p-2 hover:bg-blue-100 text-blue-600 rounded transition"
-                        title="Sao chép"
-                      >
-                        <Copy className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => setTemplateToDelete(template)}
-                        className="p-2 hover:bg-red-100 text-red-600 rounded transition"
-                        title="Xóa"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+
+                    {template.description ? (
+                      <p className="mt-4 rounded-3xl bg-slate-50 p-4 text-sm leading-6 text-slate-700">
+                        {template.description}
+                      </p>
+                    ) : null}
+
+                    <div className="mt-4 rounded-3xl border border-slate-200 bg-white p-4">
+                      <div className="text-sm font-medium text-slate-700">Tùy chọn mặc định</div>
+                      <ol className="mt-3 space-y-2 text-sm text-slate-600">
+                        {template.default_options.map((option, index) => (
+                          <li key={`${template.id}-${index}`} className="flex gap-3">
+                            <span className="font-medium text-slate-500">{index + 1}.</span>
+                            <span>{option}</span>
+                          </li>
+                        ))}
+                      </ol>
                     </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+
+                    <div className="mt-4 text-sm text-slate-500">
+                      Tạo lúc: {formatVietnamDateTime(template.created_at)}
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
+      </section>
 
-        <ConfirmDialog
-          isOpen={templateToDelete !== null}
-          title="Xóa mẫu bình chọn"
-          message={
-            templateToDelete ? `Bạn có chắc chắn muốn xóa mẫu "${templateToDelete.name}"?` : ''
-          }
-          confirmText="Xóa mẫu"
-          cancelText="Hủy"
-          variant="danger"
-          onCancel={() => setTemplateToDelete(null)}
-          onConfirm={async () => {
-            if (!templateToDelete) return;
-            await handleDeleteTemplate(templateToDelete.id);
-            setTemplateToDelete(null);
-          }}
-        />
-      </div>
+      <ConfirmDialog
+        isOpen={templatePendingDelete !== null}
+        title="Xóa mẫu khảo sát"
+        message={
+          templatePendingDelete
+            ? `Mẫu "${templatePendingDelete.name}" sẽ bị xóa khỏi không gian khảo sát. Bạn có chắc chắn muốn tiếp tục?`
+            : ''
+        }
+        confirmText="Xóa mẫu"
+        cancelText="Hủy"
+        variant="danger"
+        onCancel={() => setTemplatePendingDelete(null)}
+        onConfirm={async () => {
+          await handleDeleteTemplate();
+        }}
+      />
     </div>
   );
 }

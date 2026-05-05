@@ -1,12 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import StudentDailyQuickActions from '@/components/student/StudentDailyQuickActions';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import toast from 'react-hot-toast';
 import { formatDate } from '@/lib/formatters';
+import { Laptop, ShieldCheck, Smartphone, Tablet, Trash2 } from 'lucide-react';
 
 interface Device {
   id: number;
@@ -17,140 +19,227 @@ interface Device {
   created_at: string;
 }
 
+function resolveDeviceIcon(deviceName: string | null | undefined) {
+  const normalized = (deviceName || '').toLowerCase();
+  if (normalized.includes('tablet') || normalized.includes('ipad')) return Tablet;
+  if (
+    normalized.includes('mobile') ||
+    normalized.includes('iphone') ||
+    normalized.includes('android') ||
+    normalized.includes('phone')
+  ) {
+    return Smartphone;
+  }
+  return Laptop;
+}
+
 export default function DeviceManagementPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [devices, setDevices] = useState<Device[]>([]);
   const [deviceToDelete, setDeviceToDelete] = useState<Device | null>(null);
   const [loading, setLoading] = useState(true);
+  const [removing, setRemoving] = useState(false);
 
   useEffect(() => {
-    if (!authLoading && !user) {
+    if (!authLoading && (!user || user.role !== 'student')) {
       router.push('/login');
       return;
     }
-    if (user) fetchDevices();
+    if (user) {
+      void fetchDevices();
+    }
   }, [user, authLoading, router]);
 
-  const fetchDevices = async () => {
+  async function fetchDevices() {
     try {
       setLoading(true);
       const res = await fetch('/api/user/devices');
       const data = await res.json();
-      if (res.ok) {
-        setDevices(data.data || []);
+      if (!res.ok) {
+        throw new Error(data?.error || data?.message || 'Không thể tải danh sách thiết bị');
       }
+      setDevices(data.devices || data.data?.devices || []);
     } catch (error) {
-      console.error('Lỗi tải danh sách thiết bị:', error);
+      console.error('Fetch devices error:', error);
+      toast.error(error instanceof Error ? error.message : 'Không thể tải danh sách thiết bị');
+      setDevices([]);
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  const handleDelete = async (deviceId: number) => {
+  async function handleDelete(deviceId: number) {
     try {
+      setRemoving(true);
       const res = await fetch(`/api/user/devices?deviceId=${deviceId}`, {
         method: 'DELETE',
       });
+      const data = await res.json().catch(() => null);
 
-      if (res.ok) {
-        toast.success('Đã xóa thiết bị');
-        fetchDevices();
-      } else {
-        const data = await res.json();
-        toast.error(data.error || 'Không thể xóa thiết bị');
+      if (!res.ok) {
+        throw new Error(data?.error || data?.message || 'Không thể xóa thiết bị');
       }
+
+      toast.success(data?.message || 'Đã xóa thiết bị');
+      setDeviceToDelete(null);
+      await fetchDevices();
     } catch (error) {
       console.error('Delete device error:', error);
-      toast.error('Lỗi khi xóa thiết bị');
+      toast.error(error instanceof Error ? error.message : 'Không thể xóa thiết bị');
+    } finally {
+      setRemoving(false);
     }
-  };
+  }
+
+  const approvedCount = useMemo(
+    () => devices.filter((device) => device.approved === 1).length,
+    [devices]
+  );
 
   if (authLoading || loading) {
     return <LoadingSpinner />;
   }
 
   return (
-    <div className="container mx-auto p-6 max-w-4xl">
-      <h1 className="text-3xl font-bold mb-6">🖥️ Quản Lý Thiết Bị</h1>
-
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-        <p className="text-sm text-blue-800">
-          <strong>Lưu ý:</strong> Đây là danh sách các thiết bị đã đăng nhập vào tài khoản của bạn.
-          Bạn có thể xóa các thiết bị không còn sử dụng để tăng cường bảo mật.
-        </p>
-      </div>
-
-      <div className="bg-white rounded-lg shadow">
-        {devices.length === 0 ? (
-          <div className="p-8 text-center text-gray-500">
-            <div className="text-6xl mb-4">📱</div>
-            <p>Chưa có thiết bị nào được đăng ký</p>
-          </div>
-        ) : (
-          <div className="divide-y">
-            {devices.map((device) => (
-              <div key={device.id} className="p-5 hover:bg-gray-50">
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <span className="text-2xl">
-                        {device.device_name?.toLowerCase().includes('mobile')
-                          ? '📱'
-                          : device.device_name?.toLowerCase().includes('tablet')
-                            ? '📱'
-                            : '💻'}
-                      </span>
-                      <div>
-                        <h3 className="font-semibold text-lg">
-                          {device.device_name || 'Thiết bị không xác định'}
-                        </h3>
-                        <div className="text-sm text-gray-600">MAC: {device.mac_address}</div>
-                      </div>
-                    </div>
-                    <div className="flex gap-4 text-xs text-gray-500 ml-11">
-                      <div>
-                        <span className="font-medium">Lần truy cập cuối:</span>{' '}
-                        {device.last_seen ? formatDate(device.last_seen) : 'Chưa có'}
-                      </div>
-                      <div>
-                        <span className="font-medium">Đăng ký:</span>{' '}
-                        {formatDate(device.created_at, 'date')}
-                      </div>
-                    </div>
-                    <div className="mt-2 ml-11">
-                      <span
-                        className={`inline-block px-2 py-1 text-xs rounded-full ${
-                          device.approved === 1
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-yellow-100 text-yellow-800'
-                        }`}
-                      >
-                        {device.approved === 1 ? '✓ Đã phê duyệt' : '⏳ Chờ phê duyệt'}
-                      </span>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setDeviceToDelete(device)}
-                    className="ml-4 px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 text-sm"
-                  >
-                    Xóa
-                  </button>
-                </div>
+    <div className="page-shell">
+      <div className="mx-auto max-w-6xl space-y-6">
+        <section className="page-surface rounded-[1.75rem] px-5 py-6 sm:px-7">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <div className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                Bảo mật tài khoản
               </div>
-            ))}
-          </div>
-        )}
-      </div>
+              <h1 className="mt-3 text-3xl font-bold text-slate-900 dark:text-slate-100">Thiết bị đăng nhập</h1>
+              <p className="mt-2 max-w-3xl text-sm text-slate-600 dark:text-slate-300">
+                Theo dõi các thiết bị đã đăng nhập vào tài khoản, xóa thiết bị cũ và kiểm soát truy
+                cập bất thường.
+              </p>
+            </div>
 
-      <div className="mt-6 bg-gray-50 rounded-lg p-4">
-        <h3 className="font-semibold mb-2">💡 Mẹo bảo mật</h3>
-        <ul className="text-sm text-gray-700 space-y-1">
-          <li>• Xóa các thiết bị bạn không còn sử dụng</li>
-          <li>• Kiểm tra danh sách thiết bị thường xuyên</li>
-          <li>• Nếu phát hiện thiết bị lạ, hãy xóa ngay và đổi mật khẩu</li>
-          <li>• Không chia sẻ thông tin đăng nhập với người khác</li>
-        </ul>
+            <div className="grid gap-3 sm:grid-cols-2 lg:w-[20rem]">
+              <div className="rounded-[1.5rem] border border-blue-100 bg-blue-50 p-4 dark:border-blue-500/40 dark:bg-blue-500/10">
+                <div className="text-xs font-semibold uppercase tracking-wide text-blue-700">
+                  Tổng thiết bị
+                </div>
+                <div className="mt-2 text-3xl font-bold text-slate-900 dark:text-slate-100">{devices.length}</div>
+              </div>
+              <div className="rounded-[1.5rem] border border-emerald-100 bg-emerald-50 p-4 dark:border-emerald-500/40 dark:bg-emerald-500/10">
+                <div className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
+                  Đã phê duyệt
+                </div>
+                <div className="mt-2 text-3xl font-bold text-slate-900 dark:text-slate-100">{approvedCount}</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <StudentDailyQuickActions />
+
+        <section className="page-surface rounded-[1.75rem] px-5 py-6 sm:px-7">
+          <div className="rounded-[1.5rem] border border-blue-200 bg-blue-50 px-4 py-4 text-sm text-blue-900 dark:border-blue-500/40 dark:bg-blue-500/10 dark:text-blue-200">
+            Chỉ giữ lại các thiết bị bạn đang sử dụng. Nếu phát hiện thiết bị lạ, hãy xóa ngay và
+            đổi mật khẩu trong trang hồ sơ.
+          </div>
+
+          {devices.length === 0 ? (
+            <div className="mt-6 rounded-[1.5rem] border border-dashed border-slate-300 bg-slate-50 px-5 py-12 text-center dark:border-slate-600 dark:bg-slate-800/60">
+              <Laptop className="mx-auto h-14 w-14 text-slate-400 dark:text-slate-500" />
+              <h2 className="mt-4 text-xl font-bold text-slate-900 dark:text-slate-100">Chưa có thiết bị nào</h2>
+              <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+                Danh sách sẽ hiện ra sau khi tài khoản đăng nhập trên các thiết bị khác nhau.
+              </p>
+            </div>
+          ) : (
+            <div className="mt-6 space-y-4">
+              {devices.map((device) => {
+                const DeviceIcon = resolveDeviceIcon(device.device_name);
+                const approved = device.approved === 1;
+
+                return (
+                  <article
+                    key={device.id}
+                    className="rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/70"
+                  >
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="flex min-w-0 flex-1 gap-4">
+                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                          <DeviceIcon className="h-5 w-5" />
+                        </div>
+
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h2 className="truncate text-lg font-semibold text-slate-900 dark:text-slate-100">
+                              {device.device_name || 'Thiết bị không xác định'}
+                            </h2>
+                            <span
+                              className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide ${
+                                approved
+                                  ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200'
+                                  : 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-200'
+                              }`}
+                            >
+                              <ShieldCheck className="h-3.5 w-3.5" />
+                              {approved ? 'Đã phê duyệt' : 'Chờ phê duyệt'}
+                            </span>
+                          </div>
+
+                          <div className="mt-3 grid gap-3 text-sm text-slate-600 dark:text-slate-300 sm:grid-cols-2">
+                            <div className="rounded-2xl bg-slate-50 px-4 py-3 dark:bg-slate-800/70">
+                              <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                                MAC
+                              </div>
+                              <div className="mt-1 font-medium text-slate-900 dark:text-slate-100">
+                                {device.mac_address}
+                              </div>
+                            </div>
+                            <div className="rounded-2xl bg-slate-50 px-4 py-3 dark:bg-slate-800/70">
+                              <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                                Lần truy cập cuối
+                              </div>
+                              <div className="mt-1 font-medium text-slate-900 dark:text-slate-100">
+                                {device.last_seen ? formatDate(device.last_seen) : 'Chưa có'}
+                              </div>
+                            </div>
+                            <div className="rounded-2xl bg-slate-50 px-4 py-3 dark:bg-slate-800/70 sm:col-span-2">
+                              <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                                Ngày ghi nhận
+                              </div>
+                              <div className="mt-1 font-medium text-slate-900 dark:text-slate-100">
+                                {formatDate(device.created_at, 'date')}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setDeviceToDelete(device)}
+                        className="inline-flex items-center justify-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700 transition hover:bg-rose-100 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-200 dark:hover:bg-rose-500/20 sm:w-auto"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Xóa thiết bị
+                      </button>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </section>
+
+        <section className="page-surface rounded-[1.75rem] px-5 py-6 sm:px-7">
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Mẹo bảo mật</h2>
+          <div className="mt-4 grid gap-3 text-sm text-slate-600 dark:text-slate-300 sm:grid-cols-2">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 dark:border-slate-700 dark:bg-slate-800/60">
+              Xóa các thiết bị cũ không còn sử dụng để tránh giữ session không cần thiết.
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 dark:border-slate-700 dark:bg-slate-800/60">
+              Nếu thấy thiết bị lạ, hãy xóa thiết bị và đổi mật khẩu ngay trong hồ sơ cá nhân.
+            </div>
+          </div>
+        </section>
       </div>
 
       <ConfirmDialog
@@ -158,17 +247,20 @@ export default function DeviceManagementPage() {
         title="Xóa thiết bị"
         message={
           deviceToDelete
-            ? `Bạn có chắc chắn muốn xóa thiết bị "${deviceToDelete.device_name || deviceToDelete.mac_address}" không? Bạn sẽ cần đăng nhập lại trên thiết bị này.`
+            ? `Bạn có chắc chắn muốn xóa thiết bị "${deviceToDelete.device_name || deviceToDelete.mac_address}" không? Thiết bị này sẽ phải đăng nhập lại nếu muốn truy cập tiếp.`
             : ''
         }
-        confirmText="Xóa thiết bị"
+        confirmText={removing ? 'Đang xóa...' : 'Xóa thiết bị'}
         cancelText="Hủy"
         variant="danger"
-        onCancel={() => setDeviceToDelete(null)}
+        onCancel={() => {
+          if (!removing) {
+            setDeviceToDelete(null);
+          }
+        }}
         onConfirm={async () => {
           if (!deviceToDelete) return;
           await handleDelete(deviceToDelete.id);
-          setDeviceToDelete(null);
         }}
       />
     </div>

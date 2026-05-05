@@ -1,9 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
+import { useEffect, useState } from 'react';
 import { Class, Teacher } from './types';
-import { Button } from '@/components/ui/Button';
 
 interface ClassDialogProps {
   isOpen: boolean;
@@ -35,9 +34,11 @@ export default function ClassDialog({
     description: '',
     teacher_id: '',
   });
+  const titleId = 'admin-class-dialog-title';
 
   useEffect(() => {
     if (!isOpen) return;
+
     if (mode === 'edit' && initialClass) {
       setFormData({
         name: initialClass.name || '',
@@ -45,119 +46,140 @@ export default function ClassDialog({
         description: initialClass.description || '',
         teacher_id: initialClass.teacher_id ? String(initialClass.teacher_id) : '',
       });
-    } else {
-      setFormData({ name: '', grade: '', description: '', teacher_id: '' });
+      return;
     }
-  }, [isOpen, mode, initialClass]);
+
+    setFormData({
+      name: '',
+      grade: '',
+      description: '',
+      teacher_id: '',
+    });
+  }, [initialClass, isOpen, mode]);
 
   if (!isOpen) return null;
 
-  const handleSubmit = async () => {
+  async function handleSubmit() {
     const name = formData.name.trim();
     const grade = formData.grade.trim();
     const description = formData.description.trim();
 
     if (!name) {
-      toast.error('Vui lòng nhập tên lớp');
+      toast.error('Vui long nhap ten lop.');
       return;
     }
 
     if (!grade) {
-      toast.error('Vui lòng nhập khối/lớp (VD: K66)');
+      toast.error('Vui long nhap khoi lop, vi du K66.');
       return;
     }
-
-    const teacherId = formData.teacher_id ? Number(formData.teacher_id) : null;
 
     await onSave({
       name,
       grade,
       description: description || undefined,
-      teacher_id: teacherId,
+      teacher_id: formData.teacher_id ? Number(formData.teacher_id) : null,
     });
-  };
+  }
 
   return (
-    <div
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-      onClick={onClose}
-    >
+    <div className="app-modal-backdrop px-4" onClick={onClose}>
       <div
-        className="bg-white rounded-lg p-6 max-w-lg w-full mx-4"
-        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="app-modal-panel app-modal-panel-scroll w-full max-w-xl p-6"
+        onClick={(event) => event.stopPropagation()}
       >
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-bold">
-            {mode === 'edit' ? 'Cập nhật Lớp Học' : 'Thêm Lớp Học'}
-          </h3>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700" aria-label="Đóng">
-            ✕
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 id={titleId} className="text-2xl font-semibold text-slate-950">
+              {mode === 'edit' ? 'Cap nhat lop hoc' : 'Tao lop hoc'}
+            </h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Khai bao ten lop, khoi va GVCN de dua vao van hanh.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
+          >
+            Dong
           </button>
         </div>
 
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">Tên lớp *</label>
+        <div className="mt-6 space-y-4">
+          <label className="block text-sm font-medium text-slate-700">
+            Ten lop
             <input
               type="text"
               value={formData.name}
-              onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))}
-              placeholder="VD: CNTT K66"
-              className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onChange={(event) => setFormData((prev) => ({ ...prev, name: event.target.value }))}
+              placeholder="VD: CNTT K66A"
+              className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-cyan-300"
             />
-          </div>
+          </label>
 
-          <div>
-            <label className="block text-sm font-medium mb-1">Khối/Lớp *</label>
+          <label className="block text-sm font-medium text-slate-700">
+            Khoi / khoa
             <input
               type="text"
               value={formData.grade}
-              onChange={(e) => setFormData((p) => ({ ...p, grade: e.target.value }))}
+              onChange={(event) => setFormData((prev) => ({ ...prev, grade: event.target.value }))}
               placeholder="VD: K66"
-              className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-cyan-300"
             />
-          </div>
+          </label>
 
-          <div>
-            <label className="block text-sm font-medium mb-1">Giảng viên chủ nhiệm</label>
+          <label className="block text-sm font-medium text-slate-700">
+            Giang vien chu nhiem
             <select
               value={formData.teacher_id}
-              onChange={(e) => setFormData((p) => ({ ...p, teacher_id: e.target.value }))}
-              className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onChange={(event) =>
+                setFormData((prev) => ({ ...prev, teacher_id: event.target.value }))
+              }
+              className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-cyan-300"
             >
-              <option value="">-- Chọn giảng viên --</option>
-              {teachers.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name} ({t.email})
+              <option value="">Chua gan giang vien</option>
+              {teachers.map((teacher) => (
+                <option key={teacher.id} value={teacher.id}>
+                  {teacher.name} ({teacher.email})
                 </option>
               ))}
             </select>
-          </div>
+          </label>
 
-          <div>
-            <label className="block text-sm font-medium mb-1">Mô tả</label>
+          <label className="block text-sm font-medium text-slate-700">
+            Mo ta
             <textarea
               value={formData.description}
-              onChange={(e) => setFormData((p) => ({ ...p, description: e.target.value }))}
-              placeholder="(Không bắt buộc)"
-              rows={3}
-              className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onChange={(event) =>
+                setFormData((prev) => ({ ...prev, description: event.target.value }))
+              }
+              placeholder="Thong tin bo sung, co the bo trong."
+              rows={4}
+              className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-cyan-300"
             />
-          </div>
+          </label>
         </div>
 
-        <div className="flex gap-2 justify-end mt-6">
-          <Button onClick={onClose} variant="secondary" disabled={loading}>
-            Hủy
-          </Button>
-          <Button
-            onClick={handleSubmit}
-            variant="primary"
-            isLoading={loading}
-            loadingText="Đang lưu..."
+        <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50"
           >
-            {mode === 'edit' ? 'Lưu thay đổi' : 'Tạo lớp'}
-          </Button>
+            Huy
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleSubmit()}
+            disabled={loading}
+            className="rounded-2xl bg-cyan-700 px-4 py-3 text-sm font-medium text-white hover:bg-cyan-800 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {loading ? 'Dang luu...' : mode === 'edit' ? 'Luu thay doi' : 'Tao lop'}
+          </button>
         </div>
       </div>
     </div>

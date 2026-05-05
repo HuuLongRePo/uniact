@@ -1,26 +1,29 @@
 'use client';
 
-import { useAuth } from '@/contexts/AuthContext';
+import Link from 'next/link';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
-import { resolveDownloadFilename } from '@/lib/download-filename';
 import {
-  Mail,
-  Database,
   AlertTriangle,
-  Save,
-  Download,
-  Upload,
+  Database,
+  HardDrive,
+  Mail,
   Power,
   RefreshCw,
+  Save,
+  Send,
   Server,
-  HardDrive,
-  Zap,
   Shield,
-  ArrowLeft,
+  Download,
+  Wrench,
+  Zap,
 } from 'lucide-react';
-import { formatVietnamDateTime, toVietnamFileTimestamp } from '@/lib/timezone';
+import { resolveDownloadFilename } from '@/lib/download-filename';
+import { toVietnamFileTimestamp } from '@/lib/timezone';
+import { useAuth } from '@/contexts/AuthContext';
+import LoadingSpinner from '@/components/LoadingSpinner';
+
 interface SystemStats {
   dbSize: string;
   dbPath: string;
@@ -28,609 +31,665 @@ interface SystemStats {
   lastBackup: string | null;
 }
 
+type EmailConfig = {
+  provider: string;
+  smtpHost: string;
+  smtpPort: string;
+  smtpUser: string;
+  smtpPass: string;
+  smtpFrom: string;
+  enabled: boolean;
+};
+
+type BackupConfig = {
+  autoBackup: boolean;
+  backupTime: string;
+  retentionDays: number;
+  backupLocation: string;
+};
+
+type MaintenanceConfig = {
+  enabled: boolean;
+  message: string;
+};
+
+const DEFAULT_EMAIL_CONFIG: EmailConfig = {
+  provider: 'nodemailer',
+  smtpHost: '',
+  smtpPort: '587',
+  smtpUser: '',
+  smtpPass: '',
+  smtpFrom: '',
+  enabled: false,
+};
+
+const DEFAULT_BACKUP_CONFIG: BackupConfig = {
+  autoBackup: true,
+  backupTime: '02:00',
+  retentionDays: 7,
+  backupLocation: '/backups',
+};
+
+const DEFAULT_MAINTENANCE_CONFIG: MaintenanceConfig = {
+  enabled: false,
+  message: 'He thong dang bao tri. Vui long quay lai sau.',
+};
+
+function parseConfigPayload(payload: any) {
+  const source = payload?.data || payload || {};
+  return {
+    email: { ...DEFAULT_EMAIL_CONFIG, ...(source.email || {}) },
+    backup: { ...DEFAULT_BACKUP_CONFIG, ...(source.backup || {}) },
+    maintenance: { ...DEFAULT_MAINTENANCE_CONFIG, ...(source.maintenance || {}) },
+  };
+}
+
+function parseStatsPayload(payload: any): SystemStats | null {
+  const source = payload?.data || payload || {};
+  if (!source.dbSize && !source.uptime && !source.lastBackup && !source.dbPath) {
+    return null;
+  }
+
+  return {
+    dbSize: source.dbSize || '0 MB',
+    dbPath: source.dbPath || '',
+    uptime: source.uptime || '0h 0m',
+    lastBackup: source.lastBackup || null,
+  };
+}
+
 export default function SystemConfigAdvancedPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [savingSection, setSavingSection] = useState<string | null>(null);
   const [stats, setStats] = useState<SystemStats | null>(null);
-
-  // Email settings
-  const [emailConfig, setEmailConfig] = useState({
-    provider: 'nodemailer',
-    smtpHost: '',
-    smtpPort: '587',
-    smtpUser: '',
-    smtpPass: '',
-    smtpFrom: '',
-    enabled: false,
-  });
-
-  // Backup settings
-  const [backupConfig, setBackupConfig] = useState({
-    autoBackup: true,
-    backupTime: '02:00',
-    retentionDays: 7,
-    backupLocation: '/backups',
-  });
-
-  // Maintenance mode
-  const [maintenanceMode, setMaintenanceMode] = useState(false);
-  const [maintenanceMessage, setMaintenanceMessage] = useState(
-    'Hệ thống đang bảo trì. Vui lòng quay lại sau.'
-  );
+  const [emailConfig, setEmailConfig] = useState<EmailConfig>(DEFAULT_EMAIL_CONFIG);
+  const [backupConfig, setBackupConfig] = useState<BackupConfig>(DEFAULT_BACKUP_CONFIG);
+  const [maintenanceConfig, setMaintenanceConfig] =
+    useState<MaintenanceConfig>(DEFAULT_MAINTENANCE_CONFIG);
 
   useEffect(() => {
     if (!authLoading && (!user || user.role !== 'admin')) {
       router.push('/login');
+      return;
     }
-  }, [user, authLoading, router]);
 
-  useEffect(() => {
     if (user?.role === 'admin') {
-      fetchConfig();
+      void fetchConfig();
     }
-  }, [user]);
+  }, [authLoading, router, user]);
 
-  const fetchConfig = async () => {
+  async function fetchConfig() {
     try {
       setLoading(true);
-      const [configRes, statsRes] = await Promise.all([
+      const [configResponse, statsResponse] = await Promise.all([
         fetch('/api/admin/system-config/advanced'),
         fetch('/api/admin/system-stats'),
       ]);
 
-      if (configRes.ok) {
-        const data = await configRes.json();
-        if (data.email) setEmailConfig(data.email);
-        if (data.backup) setBackupConfig(data.backup);
-        if (data.maintenance) {
-          setMaintenanceMode(data.maintenance.enabled);
-          setMaintenanceMessage(data.maintenance.message);
-        }
+      const configBody = await configResponse.json().catch(() => null);
+      const statsBody = await statsResponse.json().catch(() => null);
+
+      if (!configResponse.ok) {
+        throw new Error(configBody?.error || configBody?.message || 'Khong the tai cau hinh nang cao');
       }
 
-      if (statsRes.ok) {
-        const data = await statsRes.json();
-        setStats(data);
+      if (!statsResponse.ok) {
+        throw new Error(statsBody?.error || statsBody?.message || 'Khong the tai thong ke he thong');
       }
-    } catch (error: any) {
-      console.error('Fetch config error:', error);
-      toast.error('Không thể tải cấu hình');
+
+      const parsedConfig = parseConfigPayload(configBody);
+      setEmailConfig(parsedConfig.email);
+      setBackupConfig(parsedConfig.backup);
+      setMaintenanceConfig(parsedConfig.maintenance);
+      setStats(parseStatsPayload(statsBody));
+    } catch (error) {
+      console.error('Fetch advanced settings error:', error);
+      toast.error(error instanceof Error ? error.message : 'Khong the tai cau hinh nang cao');
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  const handleSaveEmail = async () => {
+  async function saveSection(type: 'email' | 'backup' | 'maintenance', data: unknown, successMessage: string) {
     try {
-      setSaving(true);
+      setSavingSection(type);
       const response = await fetch('/api/admin/system-config/advanced', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'email', data: emailConfig }),
+        body: JSON.stringify({ type, data }),
       });
+      const body = await response.json().catch(() => null);
 
-      if (!response.ok) throw new Error('Không thể lưu cấu hình');
+      if (!response.ok) {
+        throw new Error(body?.error || body?.message || 'Khong luu duoc cau hinh');
+      }
 
-      toast.success('Cấu hình email đã lưu!');
-    } catch (error: any) {
-      toast.error('Lỗi: ' + error.message);
+      toast.success(successMessage);
+      await fetchConfig();
+    } catch (error) {
+      console.error(`Save ${type} settings error:`, error);
+      toast.error(error instanceof Error ? error.message : 'Khong luu duoc cau hinh');
     } finally {
-      setSaving(false);
+      setSavingSection(null);
     }
-  };
+  }
 
-  const handleSaveBackup = async () => {
+  async function handleBackupNow() {
     try {
-      setSaving(true);
-      const response = await fetch('/api/admin/system-config/advanced', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'backup', data: backupConfig }),
-      });
+      setSavingSection('backup-now');
+      toast.loading('Dang tao file backup...', { id: 'backup-now' });
 
-      if (!response.ok) throw new Error('Không thể lưu cấu hình');
-
-      toast.success('Cấu hình backup đã lưu!');
-    } catch (error: any) {
-      toast.error('Lỗi: ' + error.message);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleBackupNow = async () => {
-    try {
-      setSaving(true);
-      toast.loading('Đang tạo backup...', { id: 'backup' });
-
-      const response = await fetch('/api/admin/backup', {
-        method: 'POST',
-      });
-
-      if (!response.ok) throw new Error('Backup failed');
+      const response = await fetch('/api/admin/backup', { method: 'POST' });
+      if (!response.ok) {
+        const body = await response.json().catch(() => null);
+        throw new Error(body?.error || body?.message || 'Khong tao duoc backup');
+      }
 
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = resolveDownloadFilename(
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = resolveDownloadFilename(
         response.headers.get('Content-Disposition'),
         `uniact-${toVietnamFileTimestamp(new Date())}.db`
       );
-      document.body.appendChild(a);
-      a.click();
+      document.body.appendChild(anchor);
+      anchor.click();
       window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      document.body.removeChild(anchor);
 
-      toast.success('Backup thành công!', { id: 'backup' });
-      fetchConfig();
-    } catch (error: any) {
-      toast.error('Lỗi: ' + error.message, { id: 'backup' });
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleToggleMaintenance = async () => {
-    try {
-      setSaving(true);
-      const newMode = !maintenanceMode;
-
-      const response = await fetch('/api/admin/system-config/advanced', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type: 'maintenance',
-          data: { enabled: newMode, message: maintenanceMessage },
-        }),
+      toast.success('Da tao backup va tai file ve may', { id: 'backup-now' });
+      await fetchConfig();
+    } catch (error) {
+      console.error('Backup now error:', error);
+      toast.error(error instanceof Error ? error.message : 'Khong tao duoc backup', {
+        id: 'backup-now',
       });
-
-      if (!response.ok) throw new Error('Không thể chuyển trạng thái');
-
-      setMaintenanceMode(newMode);
-      toast.success(newMode ? 'Chế độ bảo trì đã BẬT' : 'Chế độ bảo trì đã TẮT');
-    } catch (error: any) {
-      toast.error('Lỗi: ' + error.message);
     } finally {
-      setSaving(false);
+      setSavingSection(null);
     }
-  };
+  }
 
-  const handleTestEmail = async () => {
+  async function handleTestEmail() {
     try {
-      setSaving(true);
-      toast.loading('Đang gửi email kiểm tra...', { id: 'test-email' });
+      if (!emailConfig.smtpHost || !emailConfig.smtpPort || !emailConfig.smtpUser || !emailConfig.smtpPass) {
+        toast.error('Can nhap du cau hinh SMTP truoc khi gui email test');
+        return;
+      }
+
+      setSavingSection('test-email');
+      toast.loading('Dang gui email test...', { id: 'test-email' });
 
       const response = await fetch('/api/admin/system-config/test-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(emailConfig),
       });
+      const body = await response.json().catch(() => null);
 
-      const data = await response.json();
-
-      if (response.ok) {
-        toast.success('Email test đã gửi thành công!', { id: 'test-email' });
-      } else {
-        toast.error(data.error || 'Gửi thất bại', { id: 'test-email' });
+      if (!response.ok) {
+        throw new Error(body?.error || body?.message || 'Khong gui duoc email test');
       }
-    } catch (error: any) {
-      toast.error('Lỗi: ' + error.message, { id: 'test-email' });
-    } finally {
-      setSaving(false);
-    }
-  };
 
-  if (authLoading || loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">Đang tải...</div>
-    );
+      toast.success(body?.message || 'Da gui email test', { id: 'test-email' });
+    } catch (error) {
+      console.error('Test email error:', error);
+      toast.error(error instanceof Error ? error.message : 'Khong gui duoc email test', {
+        id: 'test-email',
+      });
+    } finally {
+      setSavingSection(null);
+    }
   }
 
-  if (!user || user.role !== 'admin') return null;
+  const maintenanceSummary = useMemo(
+    () => (maintenanceConfig.enabled ? 'Dang bao tri' : 'Dang mo he thong'),
+    [maintenanceConfig.enabled]
+  );
+
+  if (authLoading || loading) {
+    return <LoadingSpinner message="Dang tai cau hinh nang cao..." />;
+  }
+
+  if (!user || user.role !== 'admin') {
+    return null;
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="mb-8">
-          <button
-            onClick={() => router.push('/admin/dashboard')}
-            className="flex items-center text-gray-600 hover:text-gray-900 mb-4"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Quay lại Dashboard
-          </button>
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center">
-            <Server className="w-8 h-8 mr-3 text-purple-600" />
-            Cấu Hình Hệ Thống Nâng Cao
-          </h1>
-          <p className="mt-2 text-gray-600">
-            Quản lý email, backup, bảo trì và các cài đặt hệ thống
-          </p>
-        </div>
-
-        {/* System Stats */}
-        {stats && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-            <div className="bg-white rounded-lg shadow-sm border p-4">
-              <div className="flex items-center">
-                <HardDrive className="w-8 h-8 text-blue-600 mr-3" />
-                <div>
-                  <div className="text-2xl font-bold text-gray-900">{stats.dbSize}</div>
-                  <div className="text-sm text-gray-600">Dung lượng DB</div>
-                </div>
-              </div>
+    <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
+      <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-3xl">
+            <div className="flex items-center gap-3">
+              <Server className="h-8 w-8 text-cyan-700" />
+              <h1 className="text-3xl font-semibold text-slate-950">Cau hinh nang cao</h1>
             </div>
-            <div className="bg-white rounded-lg shadow-sm border p-4">
-              <div className="flex items-center">
-                <Zap className="w-8 h-8 text-green-600 mr-3" />
-                <div>
-                  <div className="text-2xl font-bold text-gray-900">{stats.uptime}</div>
-                  <div className="text-sm text-gray-600">Uptime</div>
-                </div>
-              </div>
-            </div>
-            <div className="bg-white rounded-lg shadow-sm border p-4">
-              <div className="flex items-center">
-                <Database className="w-8 h-8 text-purple-600 mr-3" />
-                <div>
-                  <div className="text-sm font-bold text-gray-900">
-                    {stats.lastBackup || 'Chưa có'}
-                  </div>
-                  <div className="text-sm text-gray-600">Backup cuối</div>
-                </div>
-              </div>
-            </div>
-            <div className="bg-white rounded-lg shadow-sm border p-4">
-              <div className="flex items-center">
-                <Shield className="w-8 h-8 text-yellow-600 mr-3" />
-                <div>
-                  <div
-                    className={`text-xl font-bold ${maintenanceMode ? 'text-red-600' : 'text-green-600'}`}
-                  >
-                    {maintenanceMode ? 'BẢO TRÌ' : 'HOẠT ĐỘNG'}
-                  </div>
-                  <div className="text-sm text-gray-600">Trạng thái</div>
-                </div>
-              </div>
-            </div>
+            <p className="mt-3 text-sm leading-6 text-slate-600 sm:text-base">
+              Dieu phoi email, backup, maintenance mode va cac thao tac van hanh co anh huong
+              rong den toan he thong.
+            </p>
           </div>
-        )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Email Configuration */}
-          <div className="bg-white rounded-lg shadow-sm border p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-              <Mail className="w-5 h-5 mr-2 text-blue-600" />
-              Cấu Hình Email
-            </h2>
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href="/admin/settings"
+              className="rounded-2xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            >
+              Ve settings
+            </Link>
+            <button
+              type="button"
+              onClick={() => void fetchConfig()}
+              className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Tai lai
+            </button>
+          </div>
+        </div>
+      </section>
 
-            <div className="space-y-4">
+      {stats ? (
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <article className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex items-center gap-3">
+              <HardDrive className="h-8 w-8 text-cyan-700" />
               <div>
-                <label className="flex items-center space-x-2 mb-4">
-                  <input
-                    type="checkbox"
-                    checked={emailConfig.enabled}
-                    onChange={(e) => setEmailConfig({ ...emailConfig, enabled: e.target.checked })}
-                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                  />
-                  <span className="text-sm font-medium text-gray-700">Bật dịch vụ email</span>
-                </label>
+                <div className="text-sm text-slate-500">Dung luong DB</div>
+                <div className="mt-1 text-2xl font-semibold text-slate-950">{stats.dbSize}</div>
               </div>
+            </div>
+          </article>
 
+          <article className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex items-center gap-3">
+              <Zap className="h-8 w-8 text-emerald-600" />
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">SMTP Host</label>
-                <input
-                  type="text"
-                  value={emailConfig.smtpHost}
-                  onChange={(e) => setEmailConfig({ ...emailConfig, smtpHost: e.target.value })}
-                  placeholder="smtp.gmail.com"
-                  className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500"
-                  disabled={!emailConfig.enabled}
-                />
+                <div className="text-sm text-slate-500">Uptime</div>
+                <div className="mt-1 text-2xl font-semibold text-slate-950">{stats.uptime}</div>
               </div>
+            </div>
+          </article>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Port</label>
-                  <input
-                    type="text"
-                    value={emailConfig.smtpPort}
-                    onChange={(e) => setEmailConfig({ ...emailConfig, smtpPort: e.target.value })}
-                    placeholder="587"
-                    className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500"
-                    disabled={!emailConfig.enabled}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Provider</label>
-                  <select
-                    value={emailConfig.provider}
-                    onChange={(e) => setEmailConfig({ ...emailConfig, provider: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500"
-                    disabled={!emailConfig.enabled}
-                  >
-                    <option value="nodemailer">Nodemailer (SMTP)</option>
-                    <option value="sendgrid">SendGrid</option>
-                    <option value="local">Local (No email)</option>
-                  </select>
+          <article className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex items-center gap-3">
+              <Database className="h-8 w-8 text-violet-600" />
+              <div>
+                <div className="text-sm text-slate-500">Backup gan nhat</div>
+                <div className="mt-1 text-sm font-semibold text-slate-950">
+                  {stats.lastBackup || 'Chua co backup'}
                 </div>
               </div>
+            </div>
+          </article>
 
+          <article className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex items-center gap-3">
+              <Shield className={`h-8 w-8 ${maintenanceConfig.enabled ? 'text-rose-600' : 'text-amber-600'}`} />
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
-                <input
-                  type="text"
-                  value={emailConfig.smtpUser}
-                  onChange={(e) => setEmailConfig({ ...emailConfig, smtpUser: e.target.value })}
-                  placeholder="user@gmail.com"
-                  className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500"
-                  disabled={!emailConfig.enabled}
-                />
+                <div className="text-sm text-slate-500">Trang thai he thong</div>
+                <div className="mt-1 text-sm font-semibold text-slate-950">{maintenanceSummary}</div>
               </div>
+            </div>
+          </article>
+        </section>
+      ) : null}
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                <input
-                  type="password"
-                  value={emailConfig.smtpPass}
-                  onChange={(e) => setEmailConfig({ ...emailConfig, smtpPass: e.target.value })}
-                  placeholder="••••••••"
-                  className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500"
-                  disabled={!emailConfig.enabled}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">From Email</label>
-                <input
-                  type="email"
-                  value={emailConfig.smtpFrom}
-                  onChange={(e) => setEmailConfig({ ...emailConfig, smtpFrom: e.target.value })}
-                  placeholder="noreply@uniact.local"
-                  className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500"
-                  disabled={!emailConfig.enabled}
-                />
-              </div>
-
-              <div className="flex space-x-3 pt-4">
-                <button
-                  onClick={handleSaveEmail}
-                  disabled={saving || !emailConfig.enabled}
-                  className="flex-1 flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
-                >
-                  <Save className="w-4 h-4 mr-2" />
-                  Lưu cấu hình
-                </button>
-                <button
-                  onClick={handleTestEmail}
-                  disabled={saving || !emailConfig.enabled}
-                  className="px-4 py-2 border border-blue-600 text-blue-600 rounded-md hover:bg-blue-50 disabled:opacity-50"
-                >
-                  Test
-                </button>
-              </div>
-
-              <p className="text-xs text-gray-500 mt-2">
-                ⚠️ Chỉ bật khi server có kết nối Internet
+      <div className="grid gap-6 xl:grid-cols-2">
+        <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="flex items-center gap-3">
+            <Mail className="h-5 w-5 text-cyan-700" />
+            <div>
+              <h2 className="text-lg font-semibold text-slate-950">Email service</h2>
+              <p className="mt-1 text-sm text-slate-500">
+                Cau hinh SMTP de gui thong bao, reset mat khau va email test.
               </p>
             </div>
           </div>
 
-          {/* Backup & Restore */}
-          <div className="bg-white rounded-lg shadow-sm border p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-              <Database className="w-5 h-5 mr-2 text-purple-600" />
-              Backup & Phục Hồi
-            </h2>
-
-            <div className="space-y-4">
+          <div className="mt-5 grid gap-4">
+            <label className="flex items-center gap-3 rounded-3xl border border-slate-200 bg-slate-50 p-4">
+              <input
+                type="checkbox"
+                checked={emailConfig.enabled}
+                onChange={(event) =>
+                  setEmailConfig((current) => ({ ...current, enabled: event.target.checked }))
+                }
+                className="h-4 w-4 text-cyan-700"
+              />
               <div>
-                <label className="flex items-center space-x-2 mb-4">
-                  <input
-                    type="checkbox"
-                    checked={backupConfig.autoBackup}
-                    onChange={(e) =>
-                      setBackupConfig({ ...backupConfig, autoBackup: e.target.checked })
-                    }
-                    className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
-                  />
-                  <span className="text-sm font-medium text-gray-700">
-                    Tự động backup hàng ngày
-                  </span>
-                </label>
+                <div className="font-medium text-slate-950">Bat email service</div>
+                <div className="mt-1 text-sm text-slate-500">
+                  Chi bat khi server da san sang ket noi SMTP that.
+                </div>
               </div>
+            </label>
 
+            <div className="grid gap-4 md:grid-cols-2">
+              <label className="block text-sm font-medium text-slate-700">
+                Provider
+                <select
+                  value={emailConfig.provider}
+                  onChange={(event) =>
+                    setEmailConfig((current) => ({ ...current, provider: event.target.value }))
+                  }
+                  className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-cyan-300"
+                  disabled={!emailConfig.enabled}
+                >
+                  <option value="nodemailer">Nodemailer</option>
+                  <option value="sendgrid">SendGrid</option>
+                  <option value="local">Local only</option>
+                </select>
+              </label>
+
+              <label className="block text-sm font-medium text-slate-700">
+                SMTP port
+                <input
+                  type="text"
+                  value={emailConfig.smtpPort}
+                  onChange={(event) =>
+                    setEmailConfig((current) => ({ ...current, smtpPort: event.target.value }))
+                  }
+                  className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-cyan-300"
+                  placeholder="587"
+                  disabled={!emailConfig.enabled}
+                />
+              </label>
+            </div>
+
+            <label className="block text-sm font-medium text-slate-700">
+              SMTP host
+              <input
+                type="text"
+                value={emailConfig.smtpHost}
+                onChange={(event) =>
+                  setEmailConfig((current) => ({ ...current, smtpHost: event.target.value }))
+                }
+                className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-cyan-300"
+                placeholder="smtp.gmail.com"
+                disabled={!emailConfig.enabled}
+              />
+            </label>
+
+            <label className="block text-sm font-medium text-slate-700">
+              SMTP username
+              <input
+                type="text"
+                value={emailConfig.smtpUser}
+                onChange={(event) =>
+                  setEmailConfig((current) => ({ ...current, smtpUser: event.target.value }))
+                }
+                className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-cyan-300"
+                placeholder="noreply@example.com"
+                disabled={!emailConfig.enabled}
+              />
+            </label>
+
+            <label className="block text-sm font-medium text-slate-700">
+              SMTP password
+              <input
+                type="password"
+                value={emailConfig.smtpPass}
+                onChange={(event) =>
+                  setEmailConfig((current) => ({ ...current, smtpPass: event.target.value }))
+                }
+                className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-cyan-300"
+                placeholder="app-password"
+                disabled={!emailConfig.enabled}
+              />
+            </label>
+
+            <label className="block text-sm font-medium text-slate-700">
+              From email
+              <input
+                type="email"
+                value={emailConfig.smtpFrom}
+                onChange={(event) =>
+                  setEmailConfig((current) => ({ ...current, smtpFrom: event.target.value }))
+                }
+                className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-cyan-300"
+                placeholder="UniAct <noreply@example.com>"
+                disabled={!emailConfig.enabled}
+              />
+            </label>
+
+            <div className="flex flex-wrap justify-end gap-3">
+              <button
+                type="button"
+                onClick={handleTestEmail}
+                disabled={savingSection !== null || !emailConfig.enabled}
+                className="inline-flex items-center gap-2 rounded-2xl border border-cyan-200 px-4 py-3 text-sm font-medium text-cyan-700 hover:bg-cyan-50 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <Send className="h-4 w-4" />
+                Gui email kiem tra
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  void saveSection('email', emailConfig, 'Da luu cau hinh email')
+                }
+                disabled={savingSection !== null}
+                className="inline-flex items-center gap-2 rounded-2xl bg-cyan-700 px-4 py-3 text-sm font-medium text-white hover:bg-cyan-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+              >
+                <Save className="h-4 w-4" />
+                {savingSection === 'email' ? 'Dang luu...' : 'Luu email'}
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="flex items-center gap-3">
+            <Database className="h-5 w-5 text-cyan-700" />
+            <div>
+              <h2 className="text-lg font-semibold text-slate-950">Backup va khoi phuc</h2>
+              <p className="mt-1 text-sm text-slate-500">
+                Dat lich backup va tao file backup tay truoc cac thay doi he thong lon.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-5 grid gap-4">
+            <label className="flex items-center gap-3 rounded-3xl border border-slate-200 bg-slate-50 p-4">
+              <input
+                type="checkbox"
+                checked={backupConfig.autoBackup}
+                onChange={(event) =>
+                  setBackupConfig((current) => ({ ...current, autoBackup: event.target.checked }))
+                }
+                className="h-4 w-4 text-cyan-700"
+              />
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Giờ backup</label>
+                <div className="font-medium text-slate-950">Bat backup tu dong</div>
+                <div className="mt-1 text-sm text-slate-500">
+                  He thong se lap lich backup theo gio va retention phia duoi.
+                </div>
+              </div>
+            </label>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <label className="block text-sm font-medium text-slate-700">
+                Gio backup
                 <input
                   type="time"
                   value={backupConfig.backupTime}
-                  onChange={(e) => setBackupConfig({ ...backupConfig, backupTime: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-purple-500"
+                  onChange={(event) =>
+                    setBackupConfig((current) => ({ ...current, backupTime: event.target.value }))
+                  }
+                  className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-cyan-300"
                   disabled={!backupConfig.autoBackup}
                 />
-              </div>
+              </label>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Lưu giữ (ngày)
-                </label>
+              <label className="block text-sm font-medium text-slate-700">
+                Retention (ngay)
                 <input
                   type="number"
-                  value={backupConfig.retentionDays}
-                  onChange={(e) =>
-                    setBackupConfig({ ...backupConfig, retentionDays: parseInt(e.target.value) })
-                  }
                   min="1"
-                  max="30"
-                  className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-purple-500"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Tự động xóa backup cũ hơn {backupConfig.retentionDays} ngày
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Thư mục lưu</label>
-                <input
-                  type="text"
-                  value={backupConfig.backupLocation}
-                  onChange={(e) =>
-                    setBackupConfig({ ...backupConfig, backupLocation: e.target.value })
+                  max="60"
+                  value={backupConfig.retentionDays}
+                  onChange={(event) =>
+                    setBackupConfig((current) => ({
+                      ...current,
+                      retentionDays: Number.parseInt(event.target.value || '0', 10),
+                    }))
                   }
-                  className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-purple-500"
+                  className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-cyan-300"
                 />
-              </div>
+              </label>
+            </div>
 
-              <div className="flex space-x-3 pt-4">
-                <button
-                  onClick={handleSaveBackup}
-                  disabled={saving}
-                  className="flex-1 flex items-center justify-center px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:opacity-50"
-                >
-                  <Save className="w-4 h-4 mr-2" />
-                  Lưu cấu hình
-                </button>
-              </div>
+            <label className="block text-sm font-medium text-slate-700">
+              Thu muc backup
+              <input
+                type="text"
+                value={backupConfig.backupLocation}
+                onChange={(event) =>
+                  setBackupConfig((current) => ({ ...current, backupLocation: event.target.value }))
+                }
+                className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-cyan-300"
+              />
+            </label>
 
-              <div className="border-t pt-4 space-y-3">
-                <button
-                  onClick={handleBackupNow}
-                  disabled={saving}
-                  className="w-full flex items-center justify-center px-4 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50"
-                >
-                  <Download className="w-5 h-5 mr-2" />
-                  Tạo backup ngay
-                </button>
+            <div className="flex flex-wrap justify-end gap-3">
+              <button
+                type="button"
+                onClick={handleBackupNow}
+                disabled={savingSection !== null}
+                className="inline-flex items-center gap-2 rounded-2xl border border-emerald-200 px-4 py-3 text-sm font-medium text-emerald-700 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <Download className="h-4 w-4" />
+                Tao backup ngay
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  void saveSection('backup', backupConfig, 'Da luu cau hinh backup')
+                }
+                disabled={savingSection !== null}
+                className="inline-flex items-center gap-2 rounded-2xl bg-cyan-700 px-4 py-3 text-sm font-medium text-white hover:bg-cyan-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+              >
+                <Save className="h-4 w-4" />
+                {savingSection === 'backup' ? 'Dang luu...' : 'Luu backup'}
+              </button>
+            </div>
+          </div>
+        </section>
 
-                <button
-                  disabled
-                  className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 text-gray-700 rounded-md opacity-50 cursor-not-allowed"
-                >
-                  <Upload className="w-5 h-5 mr-2" />
-                  Khôi phục từ file (Coming soon)
-                </button>
-              </div>
+        <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="flex items-center gap-3">
+            <AlertTriangle className="h-5 w-5 text-cyan-700" />
+            <div>
+              <h2 className="text-lg font-semibold text-slate-950">Maintenance mode</h2>
+              <p className="mt-1 text-sm text-slate-500">
+                Chu dong khoa truy cap user khong phai admin khi can bao tri hoac hotfix.
+              </p>
             </div>
           </div>
 
-          {/* Maintenance Mode */}
-          <div className="bg-white rounded-lg shadow-sm border p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-              <AlertTriangle className="w-5 h-5 mr-2 text-yellow-600" />
-              Chế Độ Bảo Trì
-            </h2>
-
-            <div className="space-y-4">
-              <div
-                className={`p-4 rounded-lg ${maintenanceMode ? 'bg-red-50 border border-red-200' : 'bg-green-50 border border-green-200'}`}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <Power
-                      className={`w-6 h-6 mr-3 ${maintenanceMode ? 'text-red-600' : 'text-green-600'}`}
-                    />
-                    <div>
-                      <div
-                        className={`font-semibold ${maintenanceMode ? 'text-red-900' : 'text-green-900'}`}
-                      >
-                        {maintenanceMode
-                          ? 'Hệ thống đang bảo trì'
-                          : 'Hệ thống hoạt động bình thường'}
-                      </div>
-                      <div
-                        className={`text-sm ${maintenanceMode ? 'text-red-700' : 'text-green-700'}`}
-                      >
-                        {maintenanceMode
-                          ? 'Người dùng không thể truy cập'
-                          : 'Tất cả chức năng hoạt động'}
-                      </div>
-                    </div>
+          <div className="mt-5 grid gap-4">
+            <div
+              className={`rounded-3xl border p-4 ${
+                maintenanceConfig.enabled
+                  ? 'border-rose-200 bg-rose-50'
+                  : 'border-emerald-200 bg-emerald-50'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <Power
+                  className={`h-5 w-5 ${maintenanceConfig.enabled ? 'text-rose-700' : 'text-emerald-700'}`}
+                />
+                <div>
+                  <div className="font-medium text-slate-950">{maintenanceSummary}</div>
+                  <div className="mt-1 text-sm text-slate-600">
+                    {maintenanceConfig.enabled
+                      ? 'User thuong se bi chan truy cap cho den khi admin tat maintenance.'
+                      : 'He thong dang phuc vu user binh thuong.'}
                   </div>
                 </div>
               </div>
+            </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Thông báo bảo trì
-                </label>
-                <textarea
-                  value={maintenanceMessage}
-                  onChange={(e) => setMaintenanceMessage(e.target.value)}
-                  rows={3}
-                  className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-yellow-500"
-                  placeholder="Thông báo hiển thị cho người dùng khi hệ thống bảo trì..."
-                />
-              </div>
+            <label className="block text-sm font-medium text-slate-700">
+              Thong bao maintenance
+              <textarea
+                value={maintenanceConfig.message}
+                onChange={(event) =>
+                  setMaintenanceConfig((current) => ({ ...current, message: event.target.value }))
+                }
+                rows={4}
+                className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-cyan-300"
+                placeholder="Noi dung hien thi cho user khi he thong dang bao tri"
+              />
+            </label>
 
+            <div className="flex flex-wrap justify-end gap-3">
               <button
-                onClick={handleToggleMaintenance}
-                disabled={saving}
-                className={`w-full flex items-center justify-center px-4 py-3 rounded-md text-white disabled:opacity-50 ${
-                  maintenanceMode
-                    ? 'bg-green-600 hover:bg-green-700'
-                    : 'bg-red-600 hover:bg-red-700'
+                type="button"
+                onClick={() =>
+                  void saveSection(
+                    'maintenance',
+                    { ...maintenanceConfig, enabled: !maintenanceConfig.enabled },
+                    !maintenanceConfig.enabled
+                      ? 'Da bat maintenance mode'
+                      : 'Da tat maintenance mode'
+                  )
+                }
+                disabled={savingSection !== null}
+                className={`inline-flex items-center gap-2 rounded-2xl px-4 py-3 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-slate-400 ${
+                  maintenanceConfig.enabled ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-rose-600 hover:bg-rose-700'
                 }`}
               >
-                <Power className="w-5 h-5 mr-2" />
-                {maintenanceMode ? 'TẮT chế độ bảo trì' : 'BẬT chế độ bảo trì'}
+                <Power className="h-4 w-4" />
+                {maintenanceConfig.enabled ? 'Tat maintenance mode' : 'Bat maintenance mode'}
               </button>
+              <button
+                type="button"
+                onClick={() =>
+                  void saveSection('maintenance', maintenanceConfig, 'Da luu thong bao maintenance')
+                }
+                disabled={savingSection !== null}
+                className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <Save className="h-4 w-4" />
+                Luu thong bao
+              </button>
+            </div>
+          </div>
+        </section>
 
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                <p className="text-sm text-yellow-800">
-                  <strong>⚠️ Cảnh báo:</strong> Khi bật chế độ bảo trì, tất cả người dùng (trừ
-                  admin) sẽ bị đăng xuất và không thể truy cập hệ thống.
-                </p>
-              </div>
+        <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="flex items-center gap-3">
+            <Wrench className="h-5 w-5 text-cyan-700" />
+            <div>
+              <h2 className="text-lg font-semibold text-slate-950">Cong cu van hanh</h2>
+              <p className="mt-1 text-sm text-slate-500">
+                Di nhanh sang cac man kiem tra suc khoe he thong va doi soat logs.
+              </p>
             </div>
           </div>
 
-          {/* System Tools */}
-          <div className="bg-white rounded-lg shadow-sm border p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-              <RefreshCw className="w-5 h-5 mr-2 text-gray-600" />
-              Công Cụ Hệ Thống
-            </h2>
-
-            <div className="space-y-3">
-              <button
-                onClick={() => window.location.reload()}
-                className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50"
-              >
-                <RefreshCw className="w-5 h-5 mr-2" />
-                Làm mới trang
-              </button>
-
-              <button
-                onClick={() => router.push('/admin/audit-logs')}
-                className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50"
-              >
-                <Database className="w-5 h-5 mr-2" />
-                Xem Audit Logs
-              </button>
-
-              <button
-                onClick={() => router.push('/admin/system-health')}
-                className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50"
-              >
-                <Server className="w-5 h-5 mr-2" />
-                System Health Check
-              </button>
-
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
-                <p className="text-sm text-blue-800">
-                  <strong>💡 Mẹo:</strong> Thực hiện backup trước khi cập nhật hệ thống hoặc thay
-                  đổi cấu hình quan trọng.
-                </p>
-              </div>
+          <div className="mt-5 grid gap-3">
+            <Link
+              href="/admin/audit-logs"
+              className="rounded-3xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm font-medium text-slate-800 hover:border-cyan-200 hover:bg-cyan-50"
+            >
+              Mo audit logs
+            </Link>
+            <Link
+              href="/admin/system-health"
+              className="rounded-3xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm font-medium text-slate-800 hover:border-cyan-200 hover:bg-cyan-50"
+            >
+              Mo system health
+            </Link>
+            <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+              <div className="font-medium text-slate-900">Thong tin DB</div>
+              <div className="mt-2 break-all">{stats?.dbPath || 'Chua co du lieu duong dan DB'}</div>
             </div>
           </div>
-        </div>
+        </section>
       </div>
     </div>
   );

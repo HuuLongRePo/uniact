@@ -1,26 +1,68 @@
 'use client';
 
-import { toast } from 'react-hot-toast';
-import { useAuth } from '@/contexts/AuthContext';
-import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Search, ArrowLeft, Filter } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { toast } from 'react-hot-toast';
+import { ArrowLeft, Filter, Search, Users } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import LoadingSpinner from '@/components/LoadingSpinner';
 import { useDebounce } from '@/lib/hooks/useDebounce';
+
+type SortBy = 'name' | 'score' | 'attendance';
+type SortOrder = 'asc' | 'desc';
+
+interface TeacherStudent {
+  id: number;
+  full_name?: string;
+  name?: string;
+  email: string;
+  student_code?: string;
+  class_id?: number;
+  class_name?: string;
+  activity_count?: number;
+  activities_count?: number;
+  attended_count?: number;
+  total_score?: number;
+  total_points?: number;
+  is_homeroom_scope?: boolean;
+}
+
+interface TeacherClass {
+  id: number;
+  name: string;
+}
+
+function studentName(student: TeacherStudent) {
+  return student.full_name || student.name || 'Học viên';
+}
+
+function totalScore(student: TeacherStudent) {
+  return Number(student.total_score ?? student.total_points ?? 0);
+}
+
+function totalActivities(student: TeacherStudent) {
+  return Number(student.activity_count ?? student.activities_count ?? 0);
+}
+
+function attendanceRate(student: TeacherStudent) {
+  const total = Math.max(totalActivities(student), 1);
+  return (Number(student.attended_count ?? 0) / total) * 100;
+}
 
 export default function TeacherStudentsPage() {
   const { user: currentUser, loading } = useAuth();
   const router = useRouter();
-  const [students, setStudents] = useState<any[]>([]);
-  const [filteredStudents, setFilteredStudents] = useState<any[]>([]);
-  const [classes, setClasses] = useState<any[]>([]);
+  const [students, setStudents] = useState<TeacherStudent[]>([]);
+  const [filteredStudents, setFilteredStudents] = useState<TeacherStudent[]>([]);
+  const [classes, setClasses] = useState<TeacherClass[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedClass, setSelectedClass] = useState<string>('');
-  const [sortBy, setSortBy] = useState<'name' | 'score' | 'attendance'>('name');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [selectedClass, setSelectedClass] = useState('');
+  const [sortBy, setSortBy] = useState<SortBy>('name');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(10);
+  const itemsPerPage = 10;
   const debouncedSearch = useDebounce(searchQuery, 300);
 
   useEffect(() => {
@@ -30,423 +72,376 @@ export default function TeacherStudentsPage() {
     }
 
     if (currentUser) {
-      fetchData();
+      void fetchData();
     }
-  }, [currentUser, loading, router]);
+  }, [currentUser?.id, currentUser?.role, loading]);
 
-  const fetchData = async () => {
-    try {
-      const studentsRes = await fetch('/api/teacher/students');
+  useEffect(() => {
+    const nextStudents = [...students];
+    const normalizedSearch = debouncedSearch.trim().toLowerCase();
 
-      if (!studentsRes.ok) {
-        throw new Error('Không thể tải dữ liệu học viên');
+    const filtered = nextStudents.filter((student) => {
+      if (selectedClass && String(student.class_id || '') !== selectedClass) {
+        return false;
       }
 
-      const studentsData = await studentsRes.json();
-      const teacherStudents = studentsData.students || studentsData.data?.students || [];
-      const teacherClasses = studentsData.classes || studentsData.data?.classes || [];
+      if (!normalizedSearch) {
+        return true;
+      }
+
+      return (
+        studentName(student).toLowerCase().includes(normalizedSearch) ||
+        String(student.email || '').toLowerCase().includes(normalizedSearch) ||
+        String(student.student_code || '').toLowerCase().includes(normalizedSearch)
+      );
+    });
+
+    filtered.sort((left, right) => {
+      let leftValue: string | number = '';
+      let rightValue: string | number = '';
+
+      if (sortBy === 'name') {
+        leftValue = studentName(left).toLowerCase();
+        rightValue = studentName(right).toLowerCase();
+      } else if (sortBy === 'score') {
+        leftValue = totalScore(left);
+        rightValue = totalScore(right);
+      } else {
+        leftValue = attendanceRate(left);
+        rightValue = attendanceRate(right);
+      }
+
+      if (sortOrder === 'asc') {
+        return leftValue > rightValue ? 1 : -1;
+      }
+
+      return leftValue < rightValue ? 1 : -1;
+    });
+
+    setFilteredStudents(filtered);
+    setCurrentPage(1);
+  }, [debouncedSearch, selectedClass, sortBy, sortOrder, students]);
+
+  async function fetchData() {
+    try {
+      setIsLoading(true);
+
+      const studentsRes = await fetch('/api/teacher/students');
+      const payload = await studentsRes.json().catch(() => null);
+
+      if (!studentsRes.ok) {
+        throw new Error(payload?.error || payload?.message || 'Không thể tải dữ liệu học viên');
+      }
+
+      const teacherStudents = Array.isArray(payload?.students)
+        ? payload.students
+        : Array.isArray(payload?.data?.students)
+          ? payload.data.students
+          : [];
+      const teacherClasses = Array.isArray(payload?.classes)
+        ? payload.classes
+        : Array.isArray(payload?.data?.classes)
+          ? payload.data.classes
+          : [];
 
       setStudents(teacherStudents);
       setFilteredStudents(teacherStudents);
       setClasses(teacherClasses);
     } catch (error) {
-      console.error('Lỗi tải dữ liệu:', error);
+      console.error('Teacher students fetch error:', error);
       toast.error(error instanceof Error ? error.message : 'Không thể tải dữ liệu học viên');
+      setStudents([]);
+      setFilteredStudents([]);
+      setClasses([]);
     } finally {
       setIsLoading(false);
     }
-  };
+  }
 
-  useEffect(() => {
-    filterStudents(debouncedSearch, selectedClass);
-  }, [debouncedSearch, selectedClass, sortBy, sortOrder]);
-
-  const handleSearch = (query: string) => {
-    setSearchQuery(query);
-    setCurrentPage(1); // Reset to first page on search
-  };
-
-  const handleClassFilter = (classId: string) => {
-    setSelectedClass(classId);
-    setCurrentPage(1); // Reset to first page on filter
-  };
-
-  const handleSort = (column: 'name' | 'score' | 'attendance') => {
+  function handleSort(column: SortBy) {
     if (sortBy === column) {
-      // Toggle order if clicking same column
       setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-    } else {
-      // Default to descending for score/attendance, ascending for name
-      setSortBy(column);
-      setSortOrder(column === 'name' ? 'asc' : 'desc');
-    }
-  };
-
-  const filterStudents = (search: string, classId: string) => {
-    let filtered = students;
-
-    if (search) {
-      filtered = filtered.filter(
-        (s) =>
-          (s.full_name || s.name || '').toLowerCase().includes(search.toLowerCase()) ||
-          (s.email || '').toLowerCase().includes(search.toLowerCase()) ||
-          ((s.student_code || '') &&
-            (s.student_code || '').toLowerCase().includes(search.toLowerCase()))
-      );
+      return;
     }
 
-    if (classId) {
-      filtered = filtered.filter((s) => s.class_id === parseInt(classId));
-    }
+    setSortBy(column);
+    setSortOrder(column === 'name' ? 'asc' : 'desc');
+  }
 
-    // Sort
-    filtered.sort((a, b) => {
-      let aVal, bVal;
-      if (sortBy === 'name') {
-        aVal = (a.full_name || a.name || '').toLowerCase();
-        bVal = (b.full_name || b.name || '').toLowerCase();
-      } else if (sortBy === 'score') {
-        aVal = a.total_score ?? a.total_points ?? 0;
-        bVal = b.total_score ?? b.total_points ?? 0;
-      } else {
-        // attendance
-        const aAttendance =
-          (a.attended_count || 0) / Math.max(a.activity_count || a.activities_count || 1, 1);
-        const bAttendance =
-          (b.attended_count || 0) / Math.max(b.activity_count || b.activities_count || 1, 1);
-        aVal = aAttendance;
-        bVal = bAttendance;
-      }
-
-      if (sortOrder === 'asc') {
-        return aVal > bVal ? 1 : -1;
-      } else {
-        return aVal < bVal ? 1 : -1;
-      }
-    });
-
-    setFilteredStudents(filtered);
-    setCurrentPage(1); // Reset to first page on filter
-  };
-
-  // Pagination
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = filteredStudents.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(filteredStudents.length / itemsPerPage);
+  const totalPages = Math.max(Math.ceil(filteredStudents.length / itemsPerPage), 1);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const currentItems = filteredStudents.slice(startIndex, startIndex + itemsPerPage);
+  const homeroomStudents = filteredStudents.filter((item) => item.is_homeroom_scope).length;
 
   if (loading || isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg">Đang tải...</div>
-      </div>
-    );
+    return <LoadingSpinner message="Đang tải danh sách học viên..." />;
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="mb-8">
-          <Link
-            href="/teacher/dashboard"
-            className="flex items-center text-gray-600 hover:text-gray-900 font-medium mb-4"
-          >
-            <ArrowLeft className="w-5 h-5 mr-2" />
-            Quay lại
-          </Link>
-          <h1 className="text-3xl font-bold text-gray-900">👥 Danh sách học viên</h1>
-          <p className="text-gray-600 mt-2">
-            Theo dõi học viên trên các lớp và phạm vi hoạt động bạn đang quản lý
-          </p>
-        </div>
+    <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
+      <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+        <Link
+          href="/teacher/dashboard"
+          className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Quay lại bảng điều khiển
+        </Link>
 
-        {/* Filters */}
-        <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Search */}
-            <div className="relative">
-              <Search className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Tìm kiếm theo tên, email, hoặc mã học viên..."
-                value={searchQuery}
-                onChange={(e) => handleSearch(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            {/* Filter by Class */}
-            <div className="relative">
-              <Filter className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
-              <select
-                value={selectedClass}
-                onChange={(e) => handleClassFilter(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Tất cả lớp học</option>
-                {classes.map((cls) => (
-                  <option key={cls.id} value={cls.id}>
-                    {cls.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+        <div className="mt-4 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-3xl">
+            <p className="text-sm font-medium uppercase tracking-[0.2em] text-cyan-700">
+              Theo dõi học viên
+            </p>
+            <h1 className="mt-3 text-3xl font-semibold text-slate-950">Danh sách học viên</h1>
+            <p className="mt-3 text-sm leading-6 text-slate-600 sm:text-base">
+              Theo dõi học viên trên các lớp giảng viên đang phụ trách, sắp xếp theo điểm và tìm
+              nhanh học viên cần chăm.
+            </p>
           </div>
-        </div>
 
-        {/* Results Stats */}
-        <div className="mb-6 flex justify-between items-center">
-          <p className="text-sm text-gray-600">
-            Tìm thấy <span className="font-semibold text-gray-900">{filteredStudents.length}</span>{' '}
-            học viên
-            {filteredStudents.length > itemsPerPage && (
-              <span className="ml-2 text-gray-500">
-                (Trang {currentPage}/{totalPages})
-              </span>
-            )}
-          </p>
-          <div className="flex gap-2 items-center">
-            <span className="text-sm text-gray-600">Sắp xếp:</span>
+          <button
+            type="button"
+            onClick={() => void fetchData()}
+            className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+          >
+            <Users className="h-4 w-4" />
+            Tải lại
+          </button>
+        </div>
+      </section>
+
+      <section className="grid gap-4 md:grid-cols-3">
+        <div className="rounded-3xl border border-cyan-200 bg-cyan-50 p-5 shadow-sm">
+          <div className="text-sm font-medium text-cyan-800">Tổng học viên trong phạm vi</div>
+          <div className="mt-3 text-3xl font-semibold text-cyan-950">{students.length}</div>
+        </div>
+        <div className="rounded-3xl border border-emerald-200 bg-emerald-50 p-5 shadow-sm">
+          <div className="text-sm font-medium text-emerald-800">Học viên lớp chủ nhiệm</div>
+          <div className="mt-3 text-3xl font-semibold text-emerald-950">{homeroomStudents}</div>
+        </div>
+        <div className="rounded-3xl border border-violet-200 bg-violet-50 p-5 shadow-sm">
+          <div className="text-sm font-medium text-violet-800">Số lớp đang theo dõi</div>
+          <div className="mt-3 text-3xl font-semibold text-violet-950">{classes.length}</div>
+        </div>
+      </section>
+
+      <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="grid gap-4 lg:grid-cols-[1.2fr_0.9fr_0.9fr]">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Tìm theo tên, email hoặc mã học viên..."
+              className="w-full rounded-2xl border border-slate-200 px-10 py-3 text-sm text-slate-900 outline-none focus:border-cyan-300"
+            />
+          </div>
+
+          <div className="relative">
+            <Filter className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <select
-              value={`${sortBy}-${sortOrder}`}
-              onChange={(e) => {
-                const [col, order] = e.target.value.split('-') as [typeof sortBy, typeof sortOrder];
-                setSortBy(col);
-                setSortOrder(order);
-              }}
-              className="text-sm border border-gray-300 rounded px-2 py-1"
+              value={selectedClass}
+              onChange={(event) => setSelectedClass(event.target.value)}
+              className="w-full appearance-none rounded-2xl border border-slate-200 px-10 py-3 text-sm text-slate-900 outline-none focus:border-cyan-300"
             >
-              <option value="name-asc">Tên A-Z</option>
-              <option value="name-desc">Tên Z-A</option>
-              <option value="score-desc">Điểm cao → thấp</option>
-              <option value="score-asc">Điểm thấp → cao</option>
-              <option value="attendance-desc">Điểm danh cao → thấp</option>
-              <option value="attendance-asc">Điểm danh thấp → cao</option>
+              <option value="">Tất cả lớp học</option>
+              {classes.map((classItem) => (
+                <option key={classItem.id} value={classItem.id}>
+                  {classItem.name}
+                </option>
+              ))}
             </select>
           </div>
+
+          <select
+            value={`${sortBy}-${sortOrder}`}
+            onChange={(event) => {
+              const [nextSort, nextOrder] = event.target.value.split('-') as [SortBy, SortOrder];
+              setSortBy(nextSort);
+              setSortOrder(nextOrder);
+            }}
+            className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-900 outline-none focus:border-cyan-300"
+          >
+            <option value="name-asc">Tên A-Z</option>
+            <option value="name-desc">Tên Z-A</option>
+            <option value="score-desc">Điểm cao đến thấp</option>
+            <option value="score-asc">Điểm thấp đến cao</option>
+            <option value="attendance-desc">Tỷ lệ điểm danh giảm dần</option>
+            <option value="attendance-asc">Tỷ lệ điểm danh tăng dần</option>
+          </select>
         </div>
 
-        {/* Students Table */}
-        <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
-          {filteredStudents.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="text-gray-400 text-4xl mb-2">👥</div>
-              <p className="text-gray-500">Không tìm thấy học viên</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
-                      <button
-                        onClick={() => handleSort('name')}
-                        className="flex items-center hover:text-blue-600"
-                      >
-                        Họ và tên {sortBy === 'name' && (sortOrder === 'asc' ? '↑' : '↓')}
-                      </button>
-                    </th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
-                      Mã học viên
-                    </th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
-                      Email
-                    </th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
-                      Lớp học
-                    </th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
-                      Hoạt động
-                    </th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
-                      <button
-                        onClick={() => handleSort('score')}
-                        className="flex items-center hover:text-blue-600"
-                      >
-                        Điểm {sortBy === 'score' && (sortOrder === 'asc' ? '↑' : '↓')}
-                      </button>
-                    </th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
-                      <button
-                        onClick={() => handleSort('attendance')}
-                        className="flex items-center hover:text-blue-600"
-                      >
-                        Điểm danh % {sortBy === 'attendance' && (sortOrder === 'asc' ? '↑' : '↓')}
-                      </button>
-                    </th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
-                      Hành động
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {currentItems.map((student) => {
-                    const attendanceRate =
-                      student.activity_count > 0
-                        ? (((student.attended_count || 0) / student.activity_count) * 100).toFixed(
-                            1
-                          )
-                        : '0.0';
-
-                    return (
-                      <tr key={student.id} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                          {student.full_name}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-600">
-                          {student.student_code || '-'}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-600">{student.email}</td>
-                        <td className="px-6 py-4 text-sm text-gray-600">
-                          <div className="flex items-center gap-2">
-                            <span>{student.class_name || '-'}</span>
-                            {student.is_homeroom_scope && (
-                              <span
-                                className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800"
-                                title="Học viên thuộc lớp bạn chủ nhiệm"
-                              >
-                                ⭐ Chủ nhiệm
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-900 font-medium">
-                          <span className="inline-block px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
-                            {student.activity_count || 0} hoạt động
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-900 font-semibold">
-                          {student.total_score || 0} điểm
-                        </td>
-                        <td className="px-6 py-4 text-sm">
-                          <div className="flex items-center gap-2">
-                            <span
-                              className={`px-2 py-1 rounded text-xs font-medium ${
-                                parseFloat(attendanceRate) >= 80
-                                  ? 'bg-green-100 text-green-800'
-                                  : parseFloat(attendanceRate) >= 50
-                                    ? 'bg-yellow-100 text-yellow-800'
-                                    : 'bg-red-100 text-red-800'
-                              }`}
-                            >
-                              {attendanceRate}%
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 text-sm">
-                          <Link
-                            href={`/teacher/students/${student.id}`}
-                            className="text-blue-600 hover:text-blue-700 font-medium"
-                          >
-                            Xem chi tiết
-                          </Link>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-
-              {/* Pagination Controls */}
-              {totalPages > 1 && (
-                <div className="flex justify-center items-center gap-2 mt-6 pt-4 border-t">
-                  <button
-                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                    disabled={currentPage === 1}
-                    className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    ← Trước
-                  </button>
-
-                  <div className="flex gap-1">
-                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
-                      // Show first page, last page, current page, and pages around current
-                      const showPage =
-                        page === 1 || page === totalPages || Math.abs(page - currentPage) <= 1;
-
-                      if (!showPage) {
-                        // Show ellipsis
-                        if (page === currentPage - 2 || page === currentPage + 2) {
-                          return (
-                            <span key={page} className="px-2 py-2 text-gray-500">
-                              ...
-                            </span>
-                          );
-                        }
-                        return null;
-                      }
-
-                      return (
-                        <button
-                          key={page}
-                          onClick={() => setCurrentPage(page)}
-                          className={`min-w-[40px] px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                            currentPage === page
-                              ? 'bg-blue-600 text-white'
-                              : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
-                          }`}
-                        >
-                          {page}
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  <button
-                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                    disabled={currentPage === totalPages}
-                    className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    Sau →
-                  </button>
-                </div>
-              )}
-            </div>
+        <div className="mt-4 flex flex-col gap-2 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+          <p>
+            Tìm thấy <span className="font-semibold text-slate-900">{filteredStudents.length}</span>{' '}
+            học viên
+          </p>
+          {filteredStudents.length > itemsPerPage && (
+            <p>
+              Trang <span className="font-semibold text-slate-900">{currentPage}</span>/{totalPages}
+            </p>
           )}
         </div>
 
-        {/* Summary Stats */}
-        <div className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-5">
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <div className="text-2xl font-bold text-blue-600">{filteredStudents.length}</div>
-            <div className="text-sm text-blue-800 mt-1">Học viên hiển thị</div>
+        {filteredStudents.length === 0 ? (
+          <div className="mt-6 rounded-3xl border border-dashed border-slate-200 px-4 py-12 text-center">
+            <div className="text-base font-medium text-slate-900">Không tìm thấy học viên</div>
+            <p className="mt-2 text-sm text-slate-500">
+              Thử đổi từ khóa tìm kiếm hoặc bộ lọc lớp học.
+            </p>
           </div>
-
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-            <div className="text-2xl font-bold text-green-600">
-              {filteredStudents.reduce((sum, s) => sum + (s.activity_count || 0), 0)}
+        ) : (
+          <>
+            <div className="mt-6 grid gap-3 lg:hidden">
+              {currentItems.map((student) => (
+                <Link
+                  key={student.id}
+                  href={`/teacher/students/${student.id}`}
+                  className="rounded-3xl border border-slate-200 p-4 shadow-sm transition hover:border-cyan-300 hover:bg-cyan-50/30"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="truncate text-base font-semibold text-slate-900">
+                        {studentName(student)}
+                      </div>
+                      <div className="mt-1 truncate text-sm text-slate-500">{student.email}</div>
+                    </div>
+                    {student.is_homeroom_scope && (
+                      <span
+                        title="Học viên thuộc lớp chủ nhiệm"
+                        className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800"
+                      >
+                        Chủ nhiệm
+                      </span>
+                    )}
+                  </div>
+                  <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                    <div className="rounded-2xl bg-slate-50 px-3 py-2 text-slate-700">
+                      Lớp: <span className="font-semibold">{student.class_name || '-'}</span>
+                    </div>
+                    <div className="rounded-2xl bg-slate-50 px-3 py-2 text-slate-700">
+                      Mã: <span className="font-semibold">{student.student_code || '-'}</span>
+                    </div>
+                    <div className="rounded-2xl bg-slate-50 px-3 py-2 text-slate-700">
+                      Điểm: <span className="font-semibold">{totalScore(student)}</span>
+                    </div>
+                    <div className="rounded-2xl bg-slate-50 px-3 py-2 text-slate-700">
+                      Điểm danh:{' '}
+                      <span className="font-semibold">{attendanceRate(student).toFixed(1)}%</span>
+                    </div>
+                  </div>
+                </Link>
+              ))}
             </div>
-            <div className="text-sm text-green-800 mt-1">Tham gia tổng</div>
-          </div>
 
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-            <div className="text-2xl font-bold text-yellow-600">
-              {filteredStudents.length > 0
-                ? (
-                    filteredStudents.reduce((sum, s) => sum + (s.total_score || 0), 0) /
-                    filteredStudents.length
-                  ).toFixed(1)
-                : 0}
+            <div className="mt-6 hidden overflow-x-auto lg:block">
+              <table className="min-w-full divide-y divide-slate-200">
+                <thead className="bg-slate-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                      <button type="button" onClick={() => handleSort('name')} className="hover:text-cyan-700">
+                        Họ và tên {sortBy === 'name' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
+                      </button>
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                      Mã học viên
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                      Email
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                      Lớp
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                      Hoạt động
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                      <button type="button" onClick={() => handleSort('score')} className="hover:text-cyan-700">
+                        Điểm {sortBy === 'score' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
+                      </button>
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                      <button
+                        type="button"
+                        onClick={() => handleSort('attendance')}
+                        className="hover:text-cyan-700"
+                      >
+                        Điểm danh {sortBy === 'attendance' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
+                      </button>
+                    </th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                      Chi tiết
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 bg-white">
+                  {currentItems.map((student) => (
+                    <tr key={student.id} className="hover:bg-slate-50">
+                      <td className="px-4 py-4 text-sm font-medium text-slate-900">
+                        <div className="flex items-center gap-2">
+                          <span>{studentName(student)}</span>
+                          {student.is_homeroom_scope && (
+                            <span
+                              title="Học viên thuộc lớp chủ nhiệm"
+                              className="rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-semibold text-amber-800"
+                            >
+                              Chủ nhiệm
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 text-sm text-slate-600">{student.student_code || '-'}</td>
+                      <td className="px-4 py-4 text-sm text-slate-600">{student.email}</td>
+                      <td className="px-4 py-4 text-sm text-slate-600">{student.class_name || '-'}</td>
+                      <td className="px-4 py-4 text-sm text-slate-600">{totalActivities(student)}</td>
+                      <td className="px-4 py-4 text-sm font-semibold text-emerald-700">
+                        {totalScore(student)}
+                      </td>
+                      <td className="px-4 py-4 text-sm text-slate-600">
+                        {attendanceRate(student).toFixed(1)}%
+                      </td>
+                      <td className="px-4 py-4 text-right">
+                        <Link
+                          href={`/teacher/students/${student.id}`}
+                          className="text-sm font-medium text-cyan-700 hover:text-cyan-800"
+                        >
+                          Chi tiết
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-            <div className="text-sm text-yellow-800 mt-1">Điểm trung bình</div>
-          </div>
 
-          <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-            <div className="text-2xl font-bold text-purple-600">
-              {filteredStudents.filter((s) => s.total_score >= 70).length}
-            </div>
-            <div className="text-sm text-purple-800 mt-1">Đạt chuẩn ≥70 điểm</div>
-          </div>
-
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-            <div className="text-2xl font-bold text-amber-700">
-              {filteredStudents.filter((s) => s.is_homeroom_scope).length}
-            </div>
-            <div className="text-sm text-amber-900 mt-1">Học viên lớp chủ nhiệm</div>
-          </div>
-        </div>
-      </div>
+            {filteredStudents.length > itemsPerPage && (
+              <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+                <button
+                  type="button"
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage((page) => Math.max(page - 1, 1))}
+                  className="rounded-2xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Trước
+                </button>
+                <span className="rounded-2xl bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700">
+                  {currentPage}/{totalPages}
+                </span>
+                <button
+                  type="button"
+                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage((page) => Math.min(page + 1, totalPages))}
+                  className="rounded-2xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Sau
+                </button>
+              </div>
+            )}
+          </>
+        )}
+      </section>
     </div>
   );
 }

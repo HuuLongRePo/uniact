@@ -1,7 +1,7 @@
 'use client';
 
-import { Class } from './types';
 import { Button } from '@/components/ui/Button';
+import { Class } from './types';
 
 interface TransferDialogProps {
   isOpen: boolean;
@@ -28,40 +28,69 @@ export default function TransferDialog({
 }: TransferDialogProps) {
   if (!isOpen) return null;
 
+  const titleId = 'admin-class-transfer-dialog-title';
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 max-w-md w-full">
-        <h3 className="text-lg font-bold mb-4">{title}</h3>
-
-        <div className="mb-4">
-          <p className="text-sm text-gray-600 mb-4">
-            Đối tượng: <strong>{subjectLabel}</strong>
-          </p>
-
-          <label className="block text-sm font-medium mb-2">Chọn lớp đích</label>
-          <select
-            value={targetClassId || ''}
-            onChange={(e) => {
-              const v = e.target.value;
-              onTargetClassChange(v ? Number(v) : null);
-            }}
-            className="w-full px-3 py-2 border rounded"
+    <div className="app-modal-backdrop px-4">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="app-modal-panel app-modal-panel-scroll w-full max-w-lg p-6"
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h3 id={titleId} className="text-2xl font-semibold text-slate-950">
+              {title}
+            </h3>
+            <p className="mt-1 text-sm text-slate-500">
+              Doi soat lai lop dich truoc khi cap nhat roster.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onCancel}
+            className="rounded-full border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
           >
-            <option value="">-- Chọn lớp --</option>
-            {classes.map((cls) => (
-              <option key={cls.id} value={cls.id}>
-                {cls.name}
-              </option>
-            ))}
-          </select>
+            Dong
+          </button>
         </div>
 
-        <div className="flex gap-2 justify-end">
+        <div className="mt-6 space-y-4">
+          <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+            <div className="text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
+              Doi tuong duoc chuyen
+            </div>
+            <div className="mt-2 text-sm font-medium text-slate-900">{subjectLabel}</div>
+          </div>
+
+          <label className="block text-sm font-medium text-slate-700">
+            Chon lop dich
+            <select
+              aria-label="Chon lop dich"
+              value={targetClassId || ''}
+              onChange={(event) => {
+                const value = event.target.value;
+                onTargetClassChange(value ? Number(value) : null);
+              }}
+              className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-cyan-300"
+            >
+              <option value="">Chua chon lop</option>
+              {classes.map((cls) => (
+                <option key={cls.id} value={cls.id}>
+                  {cls.name} ({cls.grade || '-'})
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
           <Button onClick={onCancel} variant="secondary">
-            Hủy
+            Huy
           </Button>
-          <Button onClick={onConfirm} disabled={!targetClassId} variant="primary">
-            {confirmText || 'Xác nhận chuyển'}
+          <Button onClick={onConfirm} disabled={!targetClassId}>
+            {confirmText || 'Xac nhan chuyen'}
           </Button>
         </div>
       </div>

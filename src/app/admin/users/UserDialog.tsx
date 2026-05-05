@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { User } from './types';
 import toast from 'react-hot-toast';
+import { User } from './types';
 import { ROLE_OPTIONS } from './roles';
 
 type ClassOption = {
@@ -46,21 +46,14 @@ interface UserDialogProps {
   loading: boolean;
 }
 
-export default function UserDialog({
-  isOpen,
-  user,
-  initialRole,
-  onClose,
-  onSave,
-  loading,
-}: UserDialogProps) {
-  const [formData, setFormData] = useState<UserDialogFormData>({
+function initialForm(role = 'student'): UserDialogFormData {
+  return {
     email: '',
     username: '',
     full_name: '',
     password: '',
     phone: '',
-    role: initialRole || 'student',
+    role,
     student_code: '',
     class_id: '',
     teaching_class_id: '',
@@ -69,65 +62,60 @@ export default function UserDialog({
     academic_degree: '',
     gender: '',
     date_of_birth: '',
-  });
+  };
+}
+
+export default function UserDialog({
+  isOpen,
+  user,
+  initialRole,
+  onClose,
+  onSave,
+  loading,
+}: UserDialogProps) {
+  const [formData, setFormData] = useState<UserDialogFormData>(initialForm(initialRole || 'student'));
   const [classes, setClasses] = useState<ClassOption[]>([]);
+  const dialogTitleId = 'admin-user-dialog-title';
 
   useEffect(() => {
-    if (isOpen) {
-      // Reset or populate form data
-      if (user) {
-        setFormData({
-          email: user.email || '',
-          username: user.username || '',
-          full_name: user.full_name || '',
-          password: '',
-          phone: user.phone || '',
-          role: user.role || 'student',
-          student_code: user.student_code || '',
-          class_id: user.class_id?.toString() || '',
-          teaching_class_id: user.teaching_class_id?.toString() || '',
-          teacher_rank: user.teacher_rank || '',
-          academic_title: user.academic_title || '',
-          academic_degree: user.academic_degree || '',
-          gender: user.gender || '',
-          date_of_birth: user.date_of_birth || '',
-        });
-      } else {
-        setFormData({
-          email: '',
-          username: '',
-          full_name: '',
-          password: '',
-          phone: '',
-          role: initialRole || 'student',
-          student_code: '',
-          class_id: '',
-          teaching_class_id: '',
-          teacher_rank: '',
-          academic_title: '',
-          academic_degree: '',
-          gender: '',
-          date_of_birth: '',
-        });
-      }
-      fetchClasses();
+    if (!isOpen) return;
 
-      // For edit: fetch full user details to ensure teacher fields and teaching class are populated.
-      if (user?.id) {
-        fetchUserDetails(user.id);
-      }
+    if (user) {
+      setFormData({
+        email: user.email || '',
+        username: user.username || '',
+        full_name: user.full_name || '',
+        password: '',
+        phone: user.phone || '',
+        role: user.role || 'student',
+        student_code: user.student_code || '',
+        class_id: user.class_id ? String(user.class_id) : '',
+        teaching_class_id: user.teaching_class_id ? String(user.teaching_class_id) : '',
+        teacher_rank: user.teacher_rank || '',
+        academic_title: user.academic_title || '',
+        academic_degree: user.academic_degree || '',
+        gender: user.gender || '',
+        date_of_birth: user.date_of_birth || '',
+      });
+    } else {
+      setFormData(initialForm(initialRole || 'student'));
     }
-  }, [isOpen, user, initialRole]);
 
-  const fetchUserDetails = async (userId: number) => {
+    void fetchClasses();
+
+    if (user?.id) {
+      void fetchUserDetails(user.id);
+    }
+  }, [initialRole, isOpen, user]);
+
+  async function fetchUserDetails(userId: number) {
     try {
       const res = await fetch(`/api/admin/users/${userId}`);
       if (!res.ok) return;
       const data = await res.json();
-      const resolvedUser = (data?.user ??
-        data?.data?.user ??
-        data?.data ??
-        null) as Partial<User> | null;
+      const resolvedUser = (data?.user ?? data?.data?.user ?? data?.data ?? null) as
+        | Partial<User>
+        | null;
       if (!data?.success || !resolvedUser) return;
 
       setFormData((prev) => ({
@@ -150,9 +138,9 @@ export default function UserDialog({
     } catch (error) {
       console.error('Error fetching user details:', error);
     }
-  };
+  }
 
-  const fetchClasses = async () => {
+  async function fetchClasses() {
     try {
       const params = new URLSearchParams({ page: '1', limit: '1000' });
       const res = await fetch(`/api/admin/classes?${params}`);
@@ -164,9 +152,9 @@ export default function UserDialog({
     } catch (error) {
       console.error('Error fetching classes:', error);
     }
-  };
+  }
 
-  const handleResetPassword = async () => {
+  async function handleResetPassword() {
     if (!user) return;
 
     try {
@@ -177,25 +165,28 @@ export default function UserDialog({
 
       if (res.ok && data.data?.new_password) {
         const newPassword = data.data.new_password;
-        toast.success(`Mật khẩu mới: ${newPassword}`, { duration: 10000 });
-        navigator.clipboard.writeText(newPassword);
-        toast.success('Đã copy mật khẩu vào clipboard', { duration: 3000 });
+        toast.success(`Mat khau moi: ${newPassword}`, { duration: 10000 });
+        try {
+          await navigator?.clipboard?.writeText?.(newPassword);
+          toast.success('Da copy mat khau vao clipboard');
+        } catch {}
       } else {
-        toast.error(data.error || 'Không thể reset mật khẩu');
+        toast.error(data.error || 'Khong the reset mat khau');
       }
     } catch (_error) {
-      toast.error('Lỗi khi reset mật khẩu');
+      toast.error('Loi khi reset mat khau');
     }
-  };
+  }
 
   if (!isOpen) return null;
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  async function handleSubmit(event: React.FormEvent) {
+    event.preventDefault();
+
     const normalizeIntOrNull = (value: string | number | null | undefined) => {
       if (value === '' || value === null || value === undefined) return null;
-      const n = parseInt(String(value), 10);
-      return Number.isFinite(n) ? n : null;
+      const numberValue = parseInt(String(value), 10);
+      return Number.isFinite(numberValue) ? numberValue : null;
     };
 
     await onSave({
@@ -204,245 +195,273 @@ export default function UserDialog({
       class_id: normalizeIntOrNull(formData.class_id),
       teaching_class_id: normalizeIntOrNull(formData.teaching_class_id),
     });
-  };
+  }
 
   const isRoleLocked = Boolean(initialRole) && !user;
   const needsClassSelection = formData.role === 'student' || formData.role === 'class_manager';
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <h2 className="text-xl font-bold mb-4">
-          {user ? 'Chỉnh Sửa Người Dùng' : 'Thêm Người Dùng Mới'}
-        </h2>
+    <div className="app-modal-backdrop px-4">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={dialogTitleId}
+        className="app-modal-panel app-modal-panel-scroll w-full max-w-3xl p-6"
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 id={dialogTitleId} className="text-2xl font-semibold text-slate-950">
+              {user ? 'Cap nhat tai khoan' : 'Tao tai khoan moi'}
+            </h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Dien thong tin co ban va scope hoc tap hoac giang day.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
+          >
+            Dong
+          </button>
+        </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">Vai Trò *</label>
+        <form onSubmit={handleSubmit} className="mt-6 space-y-6">
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="block text-sm font-medium text-slate-700">
+              Vai tro
               <select
                 value={formData.role}
-                onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                className="w-full px-3 py-2 border rounded-lg"
+                onChange={(event) => setFormData({ ...formData, role: event.target.value })}
+                className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-cyan-300"
                 required
                 disabled={isRoleLocked}
               >
-                {ROLE_OPTIONS.map((r) => (
-                  <option key={r.value} value={r.value}>
-                    {r.label}
+                {ROLE_OPTIONS.map((role) => (
+                  <option key={role.value} value={role.value}>
+                    {role.label}
                   </option>
                 ))}
               </select>
-            </div>
+            </label>
 
-            <div>
-              <label className="block text-sm font-medium mb-1">Email *</label>
+            <label className="block text-sm font-medium text-slate-700">
+              Email
               <input
                 type="email"
                 value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="w-full px-3 py-2 border rounded-lg"
+                onChange={(event) => setFormData({ ...formData, email: event.target.value })}
+                className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-cyan-300"
                 required
               />
-            </div>
+            </label>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">Tên Đăng Nhập *</label>
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="block text-sm font-medium text-slate-700">
+              Ten dang nhap
               <input
                 type="text"
                 value={formData.username}
-                onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                className="w-full px-3 py-2 border rounded-lg"
+                onChange={(event) => setFormData({ ...formData, username: event.target.value })}
+                className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-cyan-300"
                 required
               />
-            </div>
+            </label>
 
-            <div>
-              <label className="block text-sm font-medium mb-1">Họ Tên *</label>
+            <label className="block text-sm font-medium text-slate-700">
+              Ho ten
               <input
                 type="text"
                 value={formData.full_name}
-                onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                className="w-full px-3 py-2 border rounded-lg"
+                onChange={(event) => setFormData({ ...formData, full_name: event.target.value })}
+                className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-cyan-300"
                 required
               />
-            </div>
+            </label>
           </div>
 
           {!user && (
-            <div>
-              <label className="block text-sm font-medium mb-1">Mật Khẩu *</label>
+            <label className="block text-sm font-medium text-slate-700">
+              Mat khau
               <input
                 type="password"
                 value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                className="w-full px-3 py-2 border rounded-lg"
+                onChange={(event) => setFormData({ ...formData, password: event.target.value })}
+                className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-cyan-300"
                 required
-                placeholder="Tối thiểu 6 ký tự"
+                placeholder="Toi thieu 6 ky tu"
               />
-            </div>
+            </label>
           )}
 
           {user && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-              <div className="flex items-center justify-between">
+            <div className="rounded-3xl border border-amber-200 bg-amber-50 p-4">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
-                  <p className="text-sm font-medium text-yellow-800">Reset Mật Khẩu</p>
-                  <p className="text-xs text-yellow-600 mt-1">
-                    Tạo mật khẩu ngẫu nhiên mới cho người dùng
+                  <div className="text-sm font-semibold text-amber-900">Reset mat khau</div>
+                  <p className="mt-1 text-sm text-amber-800">
+                    Tao mat khau ngau nhien moi cho tai khoan nay.
                   </p>
                 </div>
                 <button
                   type="button"
-                  onClick={handleResetPassword}
-                  className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700"
+                  onClick={() => void handleResetPassword()}
+                  className="rounded-2xl bg-amber-700 px-4 py-2 text-sm font-medium text-white hover:bg-amber-800"
                 >
-                  🔑 Reset Mật Khẩu
+                  Reset mat khau
                 </button>
               </div>
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">Điện Thoại</label>
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="block text-sm font-medium text-slate-700">
+              So dien thoai
               <input
                 type="tel"
                 value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                className="w-full px-3 py-2 border rounded-lg"
+                onChange={(event) => setFormData({ ...formData, phone: event.target.value })}
+                className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-cyan-300"
                 placeholder="0123456789"
               />
-            </div>
+            </label>
 
-            <div>
-              <label className="block text-sm font-medium mb-1">Giới Tính</label>
+            <label className="block text-sm font-medium text-slate-700">
+              Gioi tinh
               <select
                 value={formData.gender}
-                onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
-                className="w-full px-3 py-2 border rounded-lg"
+                onChange={(event) => setFormData({ ...formData, gender: event.target.value })}
+                className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-cyan-300"
               >
-                <option value="">-- Chọn --</option>
+                <option value="">Chua chon</option>
                 <option value="nam">Nam</option>
-                <option value="nữ">Nữ</option>
+                <option value="nu">Nu</option>
               </select>
-            </div>
+            </label>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">Ngày Sinh</label>
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="block text-sm font-medium text-slate-700">
+              Ngay sinh
               <input
                 type="date"
                 value={formData.date_of_birth}
-                onChange={(e) => setFormData({ ...formData, date_of_birth: e.target.value })}
-                className="w-full px-3 py-2 border rounded-lg"
+                onChange={(event) => setFormData({ ...formData, date_of_birth: event.target.value })}
+                className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-cyan-300"
               />
-            </div>
+            </label>
 
             {formData.role === 'student' && user ? (
-              <div>
-                <label className="block text-sm font-medium mb-1">Mã Học Viên</label>
+              <label className="block text-sm font-medium text-slate-700">
+                Ma hoc vien
                 <input
                   type="text"
                   value={formData.student_code}
-                  onChange={(e) => setFormData({ ...formData, student_code: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg"
-                  placeholder="Hệ thống tự sinh"
+                  onChange={(event) => setFormData({ ...formData, student_code: event.target.value })}
+                  className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-cyan-300"
+                  placeholder="He thong co the tu sinh"
                 />
-              </div>
-            ) : null}
-
-            {needsClassSelection && (
-              <div>
-                <label className="block text-sm font-medium mb-1">Lớp</label>
-                <select
-                  value={formData.class_id}
-                  onChange={(e) => setFormData({ ...formData, class_id: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg"
-                >
-                  <option value="">-- Chọn lớp --</option>
-                  {classes.map((cls) => (
-                    <option key={cls.id} value={cls.id}>
-                      {cls.name} ({cls.grade})
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            {formData.role === 'teacher' && (
-              <div>
-                <label className="block text-sm font-medium mb-1">Lớp Phụ Trách</label>
-                <select
-                  value={formData.teaching_class_id}
-                  onChange={(e) => setFormData({ ...formData, teaching_class_id: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg"
-                >
-                  <option value="">-- Chọn lớp --</option>
-                  {classes.map((cls) => (
-                    <option key={cls.id} value={cls.id}>
-                      {cls.name} ({cls.grade})
-                    </option>
-                  ))}
-                </select>
-              </div>
+              </label>
+            ) : (
+              <div />
             )}
           </div>
 
-          {formData.role === 'teacher' && (
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Cấp Bậc</label>
-                <input
-                  type="text"
-                  value={formData.teacher_rank}
-                  onChange={(e) => setFormData({ ...formData, teacher_rank: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg"
-                  placeholder="Ví dụ: Thượng tá"
-                />
-              </div>
+          {(needsClassSelection || formData.role === 'teacher') && (
+            <div className="grid gap-4 md:grid-cols-2">
+              {needsClassSelection ? (
+                <label className="block text-sm font-medium text-slate-700">
+                  Lop
+                  <select
+                    value={formData.class_id}
+                    onChange={(event) => setFormData({ ...formData, class_id: event.target.value })}
+                    className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-cyan-300"
+                  >
+                    <option value="">Chua gan lop</option>
+                    {classes.map((cls) => (
+                      <option key={cls.id} value={cls.id}>
+                        {cls.name} ({cls.grade || '-'})
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : (
+                <div />
+              )}
 
-              <div>
-                <label className="block text-sm font-medium mb-1">Học Hàm</label>
-                <input
-                  type="text"
-                  value={formData.academic_title}
-                  onChange={(e) => setFormData({ ...formData, academic_title: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg"
-                  placeholder="Ví dụ: PGS"
-                />
-              </div>
-
-              <div className="col-span-2">
-                <label className="block text-sm font-medium mb-1">Học Vị</label>
-                <input
-                  type="text"
-                  value={formData.academic_degree}
-                  onChange={(e) => setFormData({ ...formData, academic_degree: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg"
-                  placeholder="Ví dụ: Tiến sĩ"
-                />
-              </div>
+              {formData.role === 'teacher' ? (
+                <label className="block text-sm font-medium text-slate-700">
+                  Lop phu trach
+                  <select
+                    value={formData.teaching_class_id}
+                    onChange={(event) =>
+                      setFormData({ ...formData, teaching_class_id: event.target.value })
+                    }
+                    className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-cyan-300"
+                  >
+                    <option value="">Chua gan lop phu trach</option>
+                    {classes.map((cls) => (
+                      <option key={cls.id} value={cls.id}>
+                        {cls.name} ({cls.grade || '-'})
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
             </div>
           )}
 
-          <div className="flex gap-2 justify-end pt-4">
+          {formData.role === 'teacher' && (
+            <div className="grid gap-4 md:grid-cols-3">
+              <label className="block text-sm font-medium text-slate-700">
+                Ngach giang day
+                <input
+                  type="text"
+                  value={formData.teacher_rank}
+                  onChange={(event) => setFormData({ ...formData, teacher_rank: event.target.value })}
+                  className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-cyan-300"
+                />
+              </label>
+              <label className="block text-sm font-medium text-slate-700">
+                Hoc ham
+                <input
+                  type="text"
+                  value={formData.academic_title}
+                  onChange={(event) =>
+                    setFormData({ ...formData, academic_title: event.target.value })
+                  }
+                  className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-cyan-300"
+                />
+              </label>
+              <label className="block text-sm font-medium text-slate-700">
+                Hoc vi
+                <input
+                  type="text"
+                  value={formData.academic_degree}
+                  onChange={(event) =>
+                    setFormData({ ...formData, academic_degree: event.target.value })
+                  }
+                  className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-cyan-300"
+                />
+              </label>
+            </div>
+          )}
+
+          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-gray-700 border rounded-lg hover:bg-gray-50"
+              className="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50"
             >
-              Hủy
+              Huy
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              className="rounded-2xl bg-cyan-700 px-4 py-3 text-sm font-medium text-white hover:bg-cyan-800 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {loading ? 'Đang lưu...' : 'Lưu'}
+              {loading ? 'Dang luu...' : user ? 'Luu thay doi' : 'Tao tai khoan'}
             </button>
           </div>
         </form>

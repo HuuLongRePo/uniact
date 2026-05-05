@@ -1,35 +1,72 @@
 'use client';
 
+import { Activity, Award, GraduationCap, Users } from 'lucide-react';
 import { StudentSummary } from './types';
 
 interface StatsProps {
   summary: StudentSummary | null;
 }
 
-export default function Stats({ summary }: StatsProps) {
-  const totalStudents = summary?.total ?? 0;
-  const avgPoints = summary?.avg_points ?? 0;
-  const totalActivities = summary?.activity_count ?? 0;
-  const totalAwards = summary?.award_count ?? 0;
+function StatCard({
+  label,
+  value,
+  icon,
+  tone,
+}: {
+  label: string;
+  value: string;
+  icon: React.ReactNode;
+  tone: 'cyan' | 'emerald' | 'violet' | 'amber';
+}) {
+  const toneMap: Record<typeof tone, string> = {
+    cyan: 'border-cyan-200 bg-cyan-50 text-cyan-950',
+    emerald: 'border-emerald-200 bg-emerald-50 text-emerald-950',
+    violet: 'border-violet-200 bg-violet-50 text-violet-950',
+    amber: 'border-amber-200 bg-amber-50 text-amber-950',
+  };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <div className="text-sm text-blue-600 mb-1">Tổng số học viên</div>
-        <div className="text-2xl font-bold text-blue-700">{totalStudents}</div>
+    <div className={`rounded-3xl border p-5 shadow-sm ${toneMap[tone]}`}>
+      <div className="flex items-center gap-3 text-sm font-medium">
+        <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-white/80 text-slate-800">
+          {icon}
+        </span>
+        <span>{label}</span>
       </div>
-      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-        <div className="text-sm text-green-600 mb-1">Tổng điểm trung bình</div>
-        <div className="text-2xl font-bold text-green-700">{Math.round(avgPoints)}</div>
-      </div>
-      <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-        <div className="text-sm text-purple-600 mb-1">Tổng hoạt động</div>
-        <div className="text-2xl font-bold text-purple-700">{totalActivities}</div>
-      </div>
-      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-        <div className="text-sm text-yellow-600 mb-1">Tổng khen thưởng</div>
-        <div className="text-2xl font-bold text-yellow-700">{totalAwards}</div>
-      </div>
+      <div className="mt-4 text-3xl font-semibold">{value}</div>
     </div>
+  );
+}
+
+export default function Stats({ summary }: StatsProps) {
+  return (
+    <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <StatCard
+        label="Tong hoc vien"
+        value={String(summary?.total ?? 0)}
+        icon={<Users className="h-5 w-5" />}
+        tone="cyan"
+      />
+      <StatCard
+        label="Diem trung binh"
+        value={new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 1 }).format(
+          summary?.avg_points ?? 0
+        )}
+        icon={<GraduationCap className="h-5 w-5" />}
+        tone="emerald"
+      />
+      <StatCard
+        label="Tong hoat dong"
+        value={String(summary?.activity_count ?? 0)}
+        icon={<Activity className="h-5 w-5" />}
+        tone="violet"
+      />
+      <StatCard
+        label="Tong khen thuong"
+        value={String(summary?.award_count ?? 0)}
+        icon={<Award className="h-5 w-5" />}
+        tone="amber"
+      />
+    </section>
   );
 }

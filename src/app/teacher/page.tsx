@@ -31,7 +31,7 @@ export default function LegacyTeacherRootPage() {
       <div className="mx-auto max-w-2xl px-4 sm:px-6 lg:px-8">
         <div className="rounded-lg border border-gray-200 bg-white p-10 text-center shadow-sm">
           <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-blue-600" />
-          <p className="mt-4 text-gray-700">Đang chuyển đến bảng điều khiển giảng viên...</p>
+          <p className="mt-4 text-gray-700">Dang chuyen den bang dieu khien giang vien...</p>
         </div>
       </div>
     </div>

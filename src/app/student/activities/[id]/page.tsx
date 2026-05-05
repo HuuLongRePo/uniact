@@ -1,17 +1,29 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { useEffectEventCompat } from '@/lib/useEffectEventCompat';
+import React, { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
-import LoadingSpinner from '@/components/LoadingSpinner';
+import {
+  AlertTriangle,
+  ArrowLeft,
+  CalendarDays,
+  GraduationCap,
+  MapPin,
+  QrCode,
+  ShieldCheck,
+  Trophy,
+  Users,
+} from 'lucide-react';
 import Countdown from '@/components/Countdown';
 import ConfirmationModal from '@/components/ConfirmationModal';
-import { toast } from '@/lib/toast';
-import { AlertTriangle } from 'lucide-react';
-import { formatDate } from '@/lib/formatters';
+import LoadingSpinner from '@/components/LoadingSpinner';
+import StudentDailyQuickActions from '@/components/student/StudentDailyQuickActions';
+import { useAuth } from '@/contexts/AuthContext';
 import { resolveClientFetchUrl } from '@/lib/client-fetch-url';
+import { formatDate } from '@/lib/formatters';
+import { toast } from '@/lib/toast';
 import { formatVietnamWithOptions, parseVietnamDate } from '@/lib/timezone';
+import { useEffectEventCompat } from '@/lib/useEffectEventCompat';
 
 interface ActivityDetail {
   id: number;
@@ -51,6 +63,27 @@ interface RegistrationConflictItem {
   location: string;
 }
 
+function resolveStatusPresentation(status: string) {
+  switch (status) {
+    case 'published':
+      return { label: 'Đã công bố', className: 'text-emerald-700 bg-emerald-50 border-emerald-200 dark:text-emerald-200 dark:bg-emerald-500/10 dark:border-emerald-500/40' };
+    case 'draft':
+      return { label: 'Bản nháp', className: 'text-slate-700 bg-slate-100 border-slate-200 dark:text-slate-200 dark:bg-slate-800 dark:border-slate-600' };
+    case 'completed':
+      return { label: 'Đã hoàn thành', className: 'text-blue-700 bg-blue-50 border-blue-200 dark:text-blue-200 dark:bg-blue-500/10 dark:border-blue-500/40' };
+    case 'cancelled':
+      return { label: 'Đã hủy', className: 'text-rose-700 bg-rose-50 border-rose-200 dark:text-rose-200 dark:bg-rose-500/10 dark:border-rose-500/40' };
+    default:
+      return { label: status, className: 'text-slate-700 bg-slate-100 border-slate-200 dark:text-slate-200 dark:bg-slate-800 dark:border-slate-600' };
+  }
+}
+
+function resolveParticipationLabel(activity: ActivityDetail) {
+  if (activity.registration_status === 'attended') return 'Đã điểm danh';
+  if (activity.is_mandatory) return 'Bắt buộc với bạn';
+  return 'Đã đăng ký';
+}
+
 export default function StudentActivityDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -68,20 +101,18 @@ export default function StudentActivityDetailPage() {
 
     try {
       setLoading(true);
-      const res = await fetch(resolveClientFetchUrl(`/api/activities/${activityId}`));
-      const data = await res.json();
+      const response = await fetch(resolveClientFetchUrl(`/api/activities/${activityId}`));
+      const payload = await response.json();
+      const resolvedActivity = payload?.activity || payload?.data?.activity || null;
 
-      const resolvedActivity = data.activity || data.data?.activity || null;
-
-      if (res.ok && resolvedActivity) {
-        setActivity(resolvedActivity);
-      } else {
-        toast.error(data.error || 'Không thể tải thông tin hoạt động');
-        router.push('/student/activities');
+      if (!response.ok || !resolvedActivity) {
+        throw new Error(payload?.error || payload?.message || 'Không thể tải thông tin hoạt động');
       }
+
+      setActivity(resolvedActivity);
     } catch (error) {
-      console.error('Error fetching activity:', error);
-      toast.error('Lỗi khi tải dữ liệu');
+      console.error('Fetch activity detail error:', error);
+      toast.error(error instanceof Error ? error.message : 'Không thể tải thông tin hoạt động');
       router.push('/student/activities');
     } finally {
       setLoading(false);
@@ -95,369 +126,409 @@ export default function StudentActivityDetailPage() {
     }
 
     if (user && activityId) {
-      fetchActivity();
+      void fetchActivity();
     }
-  }, [user, authLoading, activityId, fetchActivity]);
+  }, [activityId, authLoading, fetchActivity, router, user]);
 
-  const handleRegister = async (forceRegister: boolean = false) => {
+  async function handleRegister(forceRegister: boolean = false) {
     if (!activity) return;
 
     setRegistering(true);
     try {
-      const res = await fetch(resolveClientFetchUrl(`/api/activities/${activity.id}/register`), {
+      const response = await fetch(resolveClientFetchUrl(`/api/activities/${activity.id}/register`), {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ force_register: forceRegister }),
       });
-      const data = await res.json();
+      const payload = await response.json();
 
-      if (res.ok) {
+      if (response.ok) {
         setRegisterConflict([]);
-        toast.success(data.message || 'Đăng ký thành công!');
+        toast.success(payload?.message || 'Đăng ký thành công');
         await fetchActivity();
-      } else if (
-        data?.code === 'CONFLICT' &&
-        data?.details?.can_override === true &&
-        Array.isArray(data?.details?.conflicts)
-      ) {
-        setRegisterConflict(data.details.conflicts);
-      } else {
-        toast.error(data.error || 'Đăng ký thất bại');
+        return;
       }
+
+      if (
+        payload?.code === 'CONFLICT' &&
+        payload?.details?.can_override === true &&
+        Array.isArray(payload?.details?.conflicts)
+      ) {
+        setRegisterConflict(payload.details.conflicts);
+        return;
+      }
+
+      throw new Error(payload?.error || payload?.message || 'Đăng ký thất bại');
     } catch (error) {
-      console.error('Register error:', error);
-      toast.error('Lỗi khi đăng ký');
+      console.error('Register activity error:', error);
+      toast.error(error instanceof Error ? error.message : 'Đăng ký thất bại');
     } finally {
       setRegistering(false);
     }
-  };
+  }
 
-  const handleCancelRegistration = async () => {
+  async function handleCancelRegistration() {
     if (!activity) return;
 
     setRegistering(true);
     try {
-      const res = await fetch(resolveClientFetchUrl(`/api/activities/${activity.id}/register`), {
+      const response = await fetch(resolveClientFetchUrl(`/api/activities/${activity.id}/register`), {
         method: 'DELETE',
       });
-      const data = await res.json();
+      const payload = await response.json();
 
-      if (res.ok) {
-        toast.success(data.message || 'Hủy đăng ký thành công!');
-        await fetchActivity();
-      } else {
-        toast.error(data.error || 'Hủy đăng ký thất bại');
+      if (!response.ok) {
+        throw new Error(payload?.error || payload?.message || 'Hủy đăng ký thất bại');
       }
+
+      toast.success(payload?.message || 'Hủy đăng ký thành công');
+      setShowCancelModal(false);
+      await fetchActivity();
     } catch (error) {
-      console.error('Cancel error:', error);
-      toast.error('Lỗi khi hủy đăng ký');
+      console.error('Cancel registration error:', error);
+      toast.error(error instanceof Error ? error.message : 'Hủy đăng ký thất bại');
     } finally {
       setRegistering(false);
-      setShowCancelModal(false);
     }
-  };
+  }
+
+  const meta = useMemo(() => {
+    if (!activity) return null;
+
+    const now = new Date();
+    const activityDate = parseVietnamDate(activity.date_time);
+    const registrationDeadline = activity.registration_deadline
+      ? parseVietnamDate(activity.registration_deadline)
+      : null;
+    const isPast = activityDate ? activityDate.getTime() <= now.getTime() : false;
+    const isFull =
+      activity.max_participants !== null && activity.participant_count >= activity.max_participants;
+    const isRegistrationClosed =
+      registrationDeadline !== null && registrationDeadline.getTime() <= now.getTime();
+    const remainingSlots =
+      activity.max_participants === null
+        ? 'Không giới hạn'
+        : String(Math.max(0, activity.max_participants - activity.participant_count));
+    const appliesToStudent = activity.applies_to_student !== false;
+    const applicabilityReason =
+      activity.applicability_reason ||
+      (appliesToStudent
+        ? 'Hoạt động này đang áp dụng cho bạn.'
+        : 'Hoạt động này hiện không áp dụng cho bạn.');
+
+    return {
+      activityDate,
+      registrationDeadline,
+      isPast,
+      isFull,
+      isRegistrationClosed,
+      remainingSlots,
+      appliesToStudent,
+      applicabilityReason,
+      countdownTarget: activity.registration_deadline || activity.date_time,
+      status: resolveStatusPresentation(activity.status),
+      participationLabel: resolveParticipationLabel(activity),
+    };
+  }, [activity]);
 
   if (authLoading || loading) {
     return <LoadingSpinner />;
   }
 
-  if (!activity) {
+  if (!activity || !meta) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center">
-          <p className="text-gray-500 text-lg">Không tìm thấy hoạt động</p>
-        </div>
+      <div className="page-shell">
+        <section className="page-surface rounded-[1.75rem] px-5 py-8 text-center sm:px-7">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Không tìm thấy hoạt động</h1>
+          <p className="mt-3 text-sm text-slate-600 dark:text-slate-300">
+            Bản ghi này có thể đã bị xóa, ẩn hoặc không còn trong phạm vi truy cập của bạn.
+          </p>
+        </section>
       </div>
     );
   }
 
-  const activityDate = parseVietnamDate(activity.date_time);
-  const registrationDeadline = activity.registration_deadline
-    ? parseVietnamDate(activity.registration_deadline)
-    : null;
-  const now = new Date();
-  const activityTimestamp = activityDate?.getTime() ?? Number.NaN;
-  const isPast = activityTimestamp <= now.getTime();
-  const isFull =
-    activity.max_participants !== null && activity.participant_count >= activity.max_participants;
-  const isRegistrationClosed =
-    registrationDeadline !== null && registrationDeadline.getTime() <= now.getTime();
-  const countdownTarget = activity.registration_deadline || activity.date_time;
-  const statusText =
-    activity.status === 'published'
-      ? 'Đã công bố'
-      : activity.status === 'draft'
-        ? 'Bản nháp'
-        : activity.status === 'completed'
-          ? 'Đã hoàn thành'
-          : activity.status === 'cancelled'
-            ? 'Đã hủy'
-            : activity.status;
-  const statusClass =
-    activity.status === 'published'
-      ? 'text-green-600'
-      : activity.status === 'draft'
-        ? 'text-gray-600'
-        : activity.status === 'cancelled'
-          ? 'text-red-600'
-          : 'text-blue-600';
-  const participationLabel =
-    activity.registration_status === 'attended'
-      ? 'Đã điểm danh'
-      : activity.is_mandatory
-        ? 'Bắt buộc với bạn'
-        : 'Đã đăng ký';
-  const remainingSlotsLabel =
-    activity.max_participants === null
-      ? 'Không giới hạn'
-      : String(Math.max(0, activity.max_participants - activity.participant_count));
-
-  const appliesToStudent = activity.applies_to_student !== false;
-  const applicabilityReason =
-    activity.applicability_reason ||
-    (appliesToStudent
-      ? 'Hoạt động này đang áp dụng cho bạn.'
-      : 'Hoạt động này hiện không áp dụng cho bạn.');
-
   return (
-    <div className="container mx-auto px-4 py-8">
-      <button
-        onClick={() => router.back()}
-        className="mb-6 flex items-center gap-2 text-blue-600 hover:text-blue-700"
-      >
-        ← Quay lại
-      </button>
+    <div className="page-shell">
+      <div className="mx-auto max-w-7xl space-y-6">
+        <button
+          type="button"
+          onClick={() => router.back()}
+          className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Quay lại
+        </button>
+        <Link
+          href="/student/activities"
+          className="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 transition hover:bg-blue-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 dark:border-blue-500/40 dark:bg-blue-500/10 dark:text-blue-200 dark:hover:bg-blue-500/20"
+        >
+          Danh sách hoạt động
+        </Link>
 
-      <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg p-8 mb-6">
-        <div className="flex justify-between items-start gap-4">
-          <div className="flex-1">
-            <h1 className="text-3xl font-bold mb-4">{activity.title}</h1>
-            <div className="flex flex-wrap gap-3">
-              {activity.activity_type && (
-                <span className="bg-white/20 px-3 py-1 rounded-full text-sm">
-                  📋 {activity.activity_type}
-                </span>
-              )}
-              {activity.organization_level && (
-                <span className="bg-white/20 px-3 py-1 rounded-full text-sm">
-                  🏆 {activity.organization_level}
-                </span>
-              )}
-              <span className="bg-white/20 px-3 py-1 rounded-full text-sm">
-                ⭐ {activity.base_points} điểm
-              </span>
-              {activity.qr_enabled && (
-                <span className="bg-white/20 px-3 py-1 rounded-full text-sm">📱 Điểm danh QR</span>
-              )}
-              {activity.is_mandatory && (
-                <span className="bg-white/20 px-3 py-1 rounded-full text-sm">Bắt buộc với bạn</span>
-              )}
-            </div>
-          </div>
-
-          {activity.is_registered && (
-            <div className="bg-green-500 px-4 py-2 rounded-lg font-semibold">
-              ✓ {participationLabel}
-            </div>
-          )}
-
-          <div
-            className={`rounded-lg border p-6 ${
-              appliesToStudent ? 'border-green-200 bg-green-50' : 'border-amber-200 bg-amber-50'
-            }`}
-          >
-            <h2 className="mb-2 text-xl font-bold">
-              {appliesToStudent ? 'Phạm vi áp dụng' : 'Không thuộc phạm vi của bạn'}
-            </h2>
-            <p className={appliesToStudent ? 'text-green-700' : 'text-amber-800'}>
-              {applicabilityReason}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-xl font-bold mb-4">📝 Mô tả hoạt động</h2>
-            <p className="text-gray-700 whitespace-pre-wrap">{activity.description}</p>
-          </div>
-
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-xl font-bold mb-4">ℹ️ Thông tin chi tiết</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <div className="text-sm text-gray-600 mb-1">📅 Thời gian diễn ra</div>
-                <div className="font-semibold">
-                  {formatVietnamWithOptions(activity.date_time, {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                </div>
-              </div>
-
-              <div>
-                <div className="text-sm text-gray-600 mb-1">📍 Địa điểm</div>
-                <div className="font-semibold">{activity.location}</div>
-              </div>
-
-              <div>
-                <div className="text-sm text-gray-600 mb-1">👨‍🏫 Giảng viên phụ trách</div>
-                <div className="font-semibold">{activity.teacher_name}</div>
-              </div>
-
-              <div>
-                <div className="text-sm text-gray-600 mb-1">👥 Số lượng tham gia</div>
-                <div className="font-semibold">
-                  <span className={isFull ? 'text-red-600' : 'text-green-600'}>
-                    {activity.participant_count}/
-                    {activity.max_participants === null
-                      ? 'Không giới hạn'
-                      : activity.max_participants}{' '}
-                    người
-                  </span>
-                  {isFull && <span className="text-red-600 ml-2">(Đầy)</span>}
-                </div>
-              </div>
-
-              {activity.registration_deadline && (
-                <div>
-                  <div className="text-sm text-gray-600 mb-1">⏳ Hạn đăng ký</div>
-                  <div className="font-semibold">{formatDate(activity.registration_deadline)}</div>
-                </div>
-              )}
-
-              <div>
-                <div className="text-sm text-gray-600 mb-1">📌 Trạng thái hoạt động</div>
-                <div className={`font-semibold ${statusClass}`}>{statusText}</div>
-              </div>
-            </div>
-          </div>
-
-          {activity.class_names && activity.class_names.length > 0 && (
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-xl font-bold mb-4">🎯 Lớp được tham gia</h2>
+        <section className="overflow-hidden rounded-[1.75rem] bg-gradient-to-br from-sky-600 via-blue-700 to-slate-900 px-5 py-6 text-white shadow-xl sm:px-7">
+          <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+            <div className="min-w-0 flex-1">
               <div className="flex flex-wrap gap-2">
-                {activity.class_names.map((className) => (
-                  <span
-                    key={className}
-                    className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium"
-                  >
-                    {className}
+                {activity.activity_type ? (
+                  <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white">
+                    {activity.activity_type}
                   </span>
-                ))}
+                ) : null}
+                {activity.organization_level ? (
+                  <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white">
+                    {activity.organization_level}
+                  </span>
+                ) : null}
+                <span className="rounded-full bg-amber-300/15 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-100">
+                  {activity.base_points} điểm
+                </span>
+                {activity.qr_enabled ? (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-300/15 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-100">
+                    <QrCode className="h-3.5 w-3.5" />
+                    QR điểm danh
+                  </span>
+                ) : null}
+              </div>
+
+              <h1 className="mt-4 text-3xl font-bold sm:text-4xl">{activity.title}</h1>
+              <p className="mt-3 max-w-3xl text-sm text-sky-50/90">{activity.description}</p>
+
+              <div className="mt-5 grid gap-3 text-sm text-white/90 sm:grid-cols-2 xl:grid-cols-4">
+                <div className="rounded-2xl border border-white/10 bg-white/8 px-4 py-3 backdrop-blur-sm">
+                  <div className="flex items-center gap-2 font-medium">
+                    <CalendarDays className="h-4 w-4" />
+                    <span>Thời gian</span>
+                  </div>
+                  <div className="mt-2">
+                    {formatVietnamWithOptions(activity.date_time, {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </div>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-white/8 px-4 py-3 backdrop-blur-sm">
+                  <div className="flex items-center gap-2 font-medium">
+                    <MapPin className="h-4 w-4" />
+                    <span>Địa điểm</span>
+                  </div>
+                  <div className="mt-2">{activity.location}</div>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-white/8 px-4 py-3 backdrop-blur-sm">
+                  <div className="flex items-center gap-2 font-medium">
+                    <GraduationCap className="h-4 w-4" />
+                    <span>Giảng viên</span>
+                  </div>
+                  <div className="mt-2">{activity.teacher_name}</div>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-white/8 px-4 py-3 backdrop-blur-sm">
+                  <div className="flex items-center gap-2 font-medium">
+                    <Users className="h-4 w-4" />
+                    <span>Số lượng</span>
+                  </div>
+                  <div className="mt-2">
+                    {activity.participant_count}/
+                    {activity.max_participants === null ? 'Không giới hạn' : activity.max_participants}
+                  </div>
+                </div>
               </div>
             </div>
-          )}
-        </div>
 
-        <div className="space-y-6">
-          {!isPast && !activity.is_registered && !isRegistrationClosed && appliesToStudent && (
-            <Countdown targetDate={countdownTarget} label="Thời gian còn lại để đăng ký" />
-          )}
-
-          <div className="bg-white rounded-lg shadow p-6 sticky top-4">
-            <h3 className="font-bold text-lg mb-4">Đăng ký tham gia</h3>
-
-            {isPast ? (
-              <div className="bg-gray-100 text-gray-600 px-4 py-3 rounded text-center">
-                ⏰ Hoạt động đã kết thúc
+            <div className="grid gap-3 sm:grid-cols-2 xl:w-[24rem] xl:grid-cols-1">
+              <div className={`rounded-[1.5rem] border px-4 py-4 ${meta.status.className}`}>
+                <div className="text-xs font-semibold uppercase tracking-wide">Trạng thái hoạt động</div>
+                <div className="mt-2 text-2xl font-bold">{meta.status.label}</div>
               </div>
-            ) : activity.is_registered ? (
-              <div className="space-y-3">
-                <div
-                  className={`border px-4 py-3 rounded text-center font-medium ${
-                    activity.is_mandatory
-                      ? 'bg-orange-50 border-orange-200 text-orange-800'
-                      : 'bg-green-50 border-green-200 text-green-800'
-                  }`}
-                >
-                  {activity.is_mandatory ? 'Bắt buộc với bạn' : '✓ Bạn đã đăng ký'}
+
+              <div
+                className={`rounded-[1.5rem] border px-4 py-4 ${
+                  meta.appliesToStudent
+                    ? 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-200'
+                    : 'border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200'
+                }`}
+              >
+                <div className="mb-2 flex items-center gap-2 text-sm font-semibold">
+                  {meta.appliesToStudent ? (
+                    <ShieldCheck className="h-4 w-4" />
+                  ) : (
+                    <AlertTriangle className="h-4 w-4" />
+                  )}
+                  <span>{meta.appliesToStudent ? 'Phạm vi áp dụng' : 'Không thuộc phạm vi của bạn'}</span>
                 </div>
-                {activity.is_mandatory ? (
-                  <p className="text-xs text-gray-600 text-center">
-                    Hoạt động này đang áp dụng bắt buộc với bạn nên bạn không thể tự hủy đăng ký
-                  </p>
-                ) : activity.can_cancel ? (
-                  <>
-                    <p className="text-xs text-gray-600 text-center">
-                      Bạn có thể hủy đăng ký trước 24 giờ
-                    </p>
-                    <button
-                      onClick={() => setShowCancelModal(true)}
-                      disabled={registering}
-                      className="w-full bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white px-4 py-3 rounded font-semibold transition"
+                <p className="text-sm">{meta.applicabilityReason}</p>
+              </div>
+
+              {activity.is_registered ? (
+                <div className="rounded-[1.5rem] border border-emerald-200 bg-emerald-50 px-4 py-4 text-emerald-800 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-200">
+                  <div className="text-xs font-semibold uppercase tracking-wide">Trạng thái tham gia</div>
+                  <div className="mt-2 text-2xl font-bold">{meta.participationLabel}</div>
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </section>
+
+        <StudentDailyQuickActions />
+
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.65fr)_minmax(20rem,0.95fr)]">
+          <div className="space-y-6">
+            {activity.class_names && activity.class_names.length > 0 ? (
+              <section className="page-surface rounded-[1.75rem] px-5 py-6 sm:px-7">
+                <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Lớp được tham gia</h2>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {activity.class_names.map((className) => (
+                    <span
+                      key={className}
+                      className="rounded-full bg-blue-100 px-3 py-1 text-sm font-semibold text-blue-700 dark:bg-blue-500/15 dark:text-blue-200"
                     >
-                      {registering ? 'Đang xử lý...' : 'Hủy đăng ký'}
+                      {className}
+                    </span>
+                  ))}
+                </div>
+              </section>
+            ) : null}
+
+            <section className="page-surface rounded-[1.75rem] px-5 py-6 sm:px-7">
+              <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Thông tin chi tiết</h2>
+              <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/60">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    Hạn đăng ký
+                  </div>
+                  <div className="mt-2 text-base font-semibold text-slate-900 dark:text-slate-100">
+                    {activity.registration_deadline
+                      ? formatDate(activity.registration_deadline)
+                      : 'Không giới hạn'}
+                  </div>
+                </div>
+                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/60">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    Số chỗ còn lại
+                  </div>
+                  <div className="mt-2 text-base font-semibold text-slate-900 dark:text-slate-100">
+                    {meta.remainingSlots}
+                  </div>
+                </div>
+                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/60">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    Điểm cơ bản
+                  </div>
+                  <div className="mt-2 text-base font-semibold text-slate-900 dark:text-slate-100">
+                    +{activity.base_points}
+                  </div>
+                </div>
+                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/60">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    Cách điểm danh
+                  </div>
+                  <div className="mt-2 text-base font-semibold text-slate-900 dark:text-slate-100">
+                    {activity.qr_enabled ? 'Quét QR trên lớp' : 'Theo quy trình hoạt động'}
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          <div className="space-y-6 xl:sticky xl:top-4 xl:self-start">
+            {!meta.isPast && !activity.is_registered && !meta.isRegistrationClosed && meta.appliesToStudent ? (
+              <Countdown targetDate={meta.countdownTarget} label="Thời gian còn lại để đăng ký" />
+            ) : null}
+
+            <section className="page-surface rounded-[1.75rem] px-5 py-6 sm:px-7">
+              <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Đăng ký tham gia</h2>
+              <div className="mt-5 space-y-4">
+                {meta.isPast ? (
+                  <div className="rounded-2xl bg-slate-100 px-4 py-4 text-center text-sm font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                    Hoạt động đã kết thúc.
+                  </div>
+                ) : activity.is_registered ? (
+                  <div className="space-y-3">
+                    <div
+                      className={`rounded-2xl border px-4 py-4 text-center text-sm font-semibold ${
+                        activity.is_mandatory
+                          ? 'border-orange-200 bg-orange-50 text-orange-800 dark:border-orange-500/40 dark:bg-orange-500/10 dark:text-orange-200'
+                          : 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-200'
+                      }`}
+                    >
+                      {activity.is_mandatory ? 'Bắt buộc với bạn' : 'Bạn đã đăng ký'}
+                    </div>
+                    {activity.is_mandatory ? (
+                      <p className="text-sm text-slate-600 dark:text-slate-300">
+                        Hoạt động này được gán bắt buộc cho bạn, vì vậy không thể tự hủy đăng ký.
+                      </p>
+                    ) : activity.can_cancel ? (
+                      <button
+                        type="button"
+                        onClick={() => setShowCancelModal(true)}
+                        disabled={registering}
+                        className="w-full rounded-xl bg-rose-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {registering ? 'Đang xử lý...' : 'Hủy đăng ký'}
+                      </button>
+                    ) : (
+                      <p className="text-sm text-slate-600 dark:text-slate-300">
+                        Không thể hủy trong vòng 24 giờ trước khi hoạt động bắt đầu hoặc sau khi đã điểm danh.
+                      </p>
+                    )}
+                  </div>
+                ) : !meta.appliesToStudent ? (
+                  <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">
+                    Hoạt động này hiện không áp dụng cho bạn nên không thể tự đăng ký.
+                  </div>
+                ) : meta.isRegistrationClosed ? (
+                  <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">
+                    Đã hết hạn đăng ký.
+                  </div>
+                ) : meta.isFull ? (
+                  <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-800 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-200">
+                    Hoạt động đã đủ số lượng tham gia.
+                  </div>
+                ) : activity.can_register ? (
+                  <div className="space-y-3">
+                    <button
+                      type="button"
+                      onClick={() => void handleRegister()}
+                      disabled={registering}
+                      className="w-full rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:dark:bg-slate-700"
+                    >
+                      {registering ? 'Đang đăng ký...' : 'Đăng ký ngay'}
                     </button>
-                  </>
+                    <div className="rounded-2xl bg-slate-50 px-4 py-4 text-sm text-slate-600 dark:bg-slate-800/60 dark:text-slate-300">
+                      <p>Hệ thống sẽ cảnh báo nếu lịch bắt đầu trùng với hoạt động khác đã tham gia.</p>
+                      <p className="mt-2">Bạn chỉ nên giữ đăng ký nếu có thể có mặt đúng giờ tại lớp.</p>
+                    </div>
+                  </div>
                 ) : (
-                  <p className="text-xs text-gray-600 text-center">
-                    Không thể hủy trong vòng 24 giờ trước hoạt động hoặc sau khi đã điểm danh
-                  </p>
+                  <div className="rounded-2xl bg-slate-100 px-4 py-4 text-sm text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                    Không thể đăng ký hoạt động này.
+                  </div>
                 )}
               </div>
-            ) : !appliesToStudent ? (
-              <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded text-center">
-                Hoạt động này hiện không áp dụng cho bạn nên bạn không thể tự đăng ký
-              </div>
-            ) : isRegistrationClosed ? (
-              <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded text-center">
-                ⏳ Đã hết hạn đăng ký
-              </div>
-            ) : isFull ? (
-              <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded text-center">
-                ❌ Hoạt động đã đủ số lượng
-              </div>
-            ) : activity.can_register ? (
-              <>
-                <button
-                  onClick={() => {
-                    void handleRegister();
-                  }}
-                  disabled={registering}
-                  className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-4 py-3 rounded font-semibold transition mb-3"
-                >
-                  {registering ? 'Đang đăng ký...' : '✓ Đăng ký ngay'}
-                </button>
-                <div className="text-xs text-gray-600 space-y-1">
-                  <p>• Xác nhận đăng ký sau khi nhấn nút</p>
-                  <p>• Có thể hủy trước 24 giờ</p>
-                  <p>• Nhớ tham gia đúng giờ</p>
-                </div>
-              </>
-            ) : (
-              <div className="bg-gray-100 text-gray-600 px-4 py-3 rounded text-center">
-                Không thể đăng ký
-              </div>
-            )}
-          </div>
+            </section>
 
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="font-bold text-lg mb-4">📊 Thống kê nhanh</h3>
-            <div className="space-y-3">
-              <div className="flex justify-between gap-4">
-                <span className="text-gray-600">Điểm cơ bản:</span>
-                <span className="font-bold text-blue-600">{activity.base_points}</span>
+            <section className="page-surface rounded-[1.75rem] px-5 py-6 sm:px-7">
+              <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Thống kê nhanh</h2>
+              <div className="mt-5 space-y-3">
+                <div className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3 dark:bg-slate-800/60">
+                  <span className="text-sm text-slate-600 dark:text-slate-300">Người đã đăng ký</span>
+                  <span className="text-base font-semibold text-slate-900 dark:text-slate-100">{activity.participant_count}</span>
+                </div>
+                <div className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3 dark:bg-slate-800/60">
+                  <span className="text-sm text-slate-600 dark:text-slate-300">Chỗ còn lại</span>
+                  <span className="text-base font-semibold text-slate-900 dark:text-slate-100">{meta.remainingSlots}</span>
+                </div>
+                <div className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3 dark:bg-slate-800/60">
+                  <span className="text-sm text-slate-600 dark:text-slate-300">Điểm cơ bản</span>
+                  <span className="inline-flex items-center gap-1 text-base font-semibold text-amber-700 dark:text-amber-300">
+                    <Trophy className="h-4 w-4" />
+                    +{activity.base_points}
+                  </span>
+                </div>
               </div>
-              <div className="flex justify-between gap-4">
-                <span className="text-gray-600">Đã đăng ký:</span>
-                <span className="font-bold">{activity.participant_count}</span>
-              </div>
-              <div className="flex justify-between gap-4">
-                <span className="text-gray-600">Còn trống:</span>
-                <span className="font-bold text-green-600">{remainingSlotsLabel}</span>
-              </div>
-              <div className="flex justify-between gap-4">
-                <span className="text-gray-600">Trạng thái:</span>
-                <span className={`font-bold ${statusClass}`}>{statusText}</span>
-              </div>
-            </div>
+            </section>
           </div>
         </div>
       </div>
@@ -465,34 +536,26 @@ export default function StudentActivityDetailPage() {
       <ConfirmationModal
         isOpen={showCancelModal}
         onClose={() => setShowCancelModal(false)}
-        onConfirm={handleCancelRegistration}
+        onConfirm={() => void handleCancelRegistration()}
         title="Xác nhận hủy đăng ký"
-        message="Bạn có chắc chắn muốn hủy đăng ký hoạt động này?"
+        message="Bạn có chắc chắn muốn hủy đăng ký hoạt động này không?"
         confirmText="Hủy đăng ký"
-        cancelText="Không, giữ lại"
-        confirmButtonClass="bg-red-600 hover:bg-red-700"
-        icon={
-          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
-            <AlertTriangle className="w-8 h-8 text-red-600" />
-          </div>
-        }
+        cancelText="Giữ lại"
+        confirmButtonClass="bg-rose-600 hover:bg-rose-700"
+        icon={<AlertTriangle className="h-6 w-6 text-rose-600" />}
         details={
           <div className="space-y-2 text-sm">
             <div className="flex justify-between gap-4">
-              <span className="text-gray-600">Hoạt động:</span>
-              <span className="font-semibold text-gray-900 text-right">{activity.title}</span>
+              <span className="text-slate-500 dark:text-slate-400">Hoạt động</span>
+              <span className="text-right font-semibold text-slate-900 dark:text-slate-100">{activity.title}</span>
             </div>
             <div className="flex justify-between gap-4">
-              <span className="text-gray-600">Thời gian:</span>
-              <span className="font-medium text-gray-900">{formatDate(activity.date_time)}</span>
+              <span className="text-slate-500 dark:text-slate-400">Thời gian</span>
+              <span className="font-medium text-slate-900 dark:text-slate-100">{formatDate(activity.date_time)}</span>
             </div>
             <div className="flex justify-between gap-4">
-              <span className="text-gray-600">Địa điểm:</span>
-              <span className="font-medium text-gray-900 text-right">{activity.location}</span>
-            </div>
-            <div className="flex justify-between gap-4">
-              <span className="text-gray-600">Điểm:</span>
-              <span className="font-medium text-yellow-600">+{activity.base_points} điểm</span>
+              <span className="text-slate-500 dark:text-slate-400">Địa điểm</span>
+              <span className="text-right font-medium text-slate-900 dark:text-slate-100">{activity.location}</span>
             </div>
           </div>
         }
@@ -501,40 +564,27 @@ export default function StudentActivityDetailPage() {
       <ConfirmationModal
         isOpen={registerConflict.length > 0}
         onClose={() => setRegisterConflict([])}
-        onConfirm={() => {
-          void handleRegister(true);
-        }}
+        onConfirm={() => void handleRegister(true)}
         title="Xung đột giờ bắt đầu"
-        message="Bạn đang có hoạt động khác trùng giờ bắt đầu. Nếu vẫn tiếp tục, hệ thống sẽ gửi đăng ký với xác nhận override."
+        message="Bạn đang có hoạt động khác trùng giờ bắt đầu. Nếu tiếp tục, hệ thống sẽ ghi nhận đăng ký với xác nhận override."
         confirmText="Vẫn đăng ký"
         cancelText="Xem lại"
         confirmButtonClass="bg-amber-600 hover:bg-amber-700"
-        icon={
-          <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center">
-            <AlertTriangle className="w-8 h-8 text-amber-600" />
-          </div>
-        }
+        icon={<AlertTriangle className="h-6 w-6 text-amber-600" />}
         details={
-          activity && registerConflict.length > 0 ? (
-            <div className="space-y-3 text-sm">
-              <div className="font-semibold text-gray-900">
-                Hoạt động đang đăng ký: {activity.title}
+          <div className="space-y-3 text-sm">
+            <div className="font-semibold text-slate-900 dark:text-slate-100">Hoạt động đang đăng ký: {activity.title}</div>
+            {registerConflict.map((conflict) => (
+              <div
+                key={conflict.id}
+                className="rounded-xl border border-amber-200 bg-amber-50 p-3 dark:border-amber-500/40 dark:bg-amber-500/10"
+              >
+                <div className="font-semibold text-slate-900 dark:text-slate-100">{conflict.title}</div>
+                <div className="text-slate-600 dark:text-slate-300">{formatDate(conflict.date_time)}</div>
+                <div className="text-slate-600 dark:text-slate-300">{conflict.location}</div>
               </div>
-              <div className="text-gray-600">Các hoạt động đang trùng giờ bắt đầu:</div>
-              <div className="space-y-2">
-                {registerConflict.map((conflict) => (
-                  <div
-                    key={conflict.id}
-                    className="rounded border border-amber-200 bg-amber-50 p-3"
-                  >
-                    <div className="font-medium text-gray-900">{conflict.title}</div>
-                    <div className="text-gray-600">{formatDate(conflict.date_time)}</div>
-                    <div className="text-gray-600">{conflict.location}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : null
+            ))}
+          </div>
         }
       />
     </div>

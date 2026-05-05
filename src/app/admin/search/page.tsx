@@ -1,30 +1,33 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import toast from 'react-hot-toast';
-import { useDebounce } from '@/lib/hooks/useDebounce';
+import { useRouter } from 'next/navigation';
 import {
-  Search,
-  Filter,
-  X,
-  Users,
-  Calendar,
-  Trophy,
   BookOpen,
+  Calendar,
+  Filter,
   Save,
-  Trash2,
+  Search,
   Star,
+  Trash2,
+  Trophy,
+  Users,
+  X,
 } from 'lucide-react';
-import { ROLE_OPTIONS, getRoleBadgeClass, getRoleLabel } from '../users/roles';
+import toast from 'react-hot-toast';
+import { useAuth } from '@/contexts/AuthContext';
+import LoadingSpinner from '@/components/LoadingSpinner';
+import { useDebounce } from '@/lib/hooks/useDebounce';
 import { formatVietnamDateTime } from '@/lib/timezone';
+import { ROLE_OPTIONS, getRoleBadgeClass, getRoleLabel } from '../users/roles';
 
 interface SavedSearch {
   id: string;
   name: string;
   query: string;
-  tab: string;
-  filters: Record<string, string>;
+  tab: SearchTab;
+  filters: SearchFilters;
   savedAt: string;
 }
 
@@ -51,10 +54,10 @@ interface SearchResults {
   classes: Array<{
     id: number;
     name: string;
-    major: string;
-    year: number;
-    teacher_name: string;
-    member_count: number;
+    major?: string;
+    year?: number;
+    teacher_name?: string;
+    member_count?: number;
   }>;
   awards: Array<{
     id: number;
@@ -67,46 +70,132 @@ interface SearchResults {
   }>;
 }
 
+type SearchTab = 'all' | 'users' | 'activities' | 'classes' | 'awards';
+
+type SearchFilters = {
+  status: string;
+  date_from: string;
+  date_to: string;
+  role: string;
+};
+
+const INITIAL_FILTERS: SearchFilters = {
+  status: '',
+  date_from: '',
+  date_to: '',
+  role: '',
+};
+
+const TABS: Array<{ id: SearchTab; label: string }> = [
+  { id: 'all', label: 'Tat ca' },
+  { id: 'users', label: 'Nguoi dung' },
+  { id: 'activities', label: 'Hoat dong' },
+  { id: 'classes', label: 'Lop hoc' },
+  { id: 'awards', label: 'Khen thuong' },
+];
+
 export default function AdvancedSearchPage() {
+  const { user, loading: authLoading } = useAuth();
+  const router = useRouter();
   const [query, setQuery] = useState('');
-  const [activeTab, setActiveTab] = useState('all');
+  const [activeTab, setActiveTab] = useState<SearchTab>('all');
   const [searching, setSearching] = useState(false);
   const [results, setResults] = useState<SearchResults | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [savedSearches, setSavedSearches] = useState<SavedSearch[]>([]);
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [searchName, setSearchName] = useState('');
+  const [filters, setFilters] = useState<SearchFilters>(INITIAL_FILTERS);
+  const [error, setError] = useState('');
 
-  const [filters, setFilters] = useState({
-    status: '',
-    date_from: '',
-    date_to: '',
-    role: '',
-    activity_type: '',
-  });
+  const debouncedQuery = useDebounce(query, 400);
 
-  const debouncedQuery = useDebounce(query, 500);
-
-  // Load saved searches from localStorage
   useEffect(() => {
-    const saved = localStorage.getItem('admin-saved-searches');
-    if (saved) {
-      try {
-        setSavedSearches(JSON.parse(saved));
-      } catch (e) {
-        console.error('Failed to load saved searches:', e);
-      }
-    }
-  }, []);
-
-  const saveCurrentSearch = () => {
-    if (!searchName.trim()) {
-      toast.error('Vui lòng nhập tên tìm kiếm');
+    if (!authLoading && (!user || user.role !== 'admin')) {
+      router.push('/login');
       return;
     }
 
-    const newSearch: SavedSearch = {
-      id: Date.now().toString(),
+    const saved = localStorage.getItem('admin-saved-searches');
+    if (!saved) return;
+
+    try {
+      const parsed = JSON.parse(saved);
+      setSavedSearches(Array.isArray(parsed) ? parsed : []);
+    } catch (storageError) {
+      console.error('Load saved search error:', storageError);
+    }
+  }, [authLoading, router, user]);
+
+  async function handleSearch(searchTerm?: string) {
+    const nextQuery = (searchTerm ?? debouncedQuery ?? query).trim();
+    if (!nextQuery) {
+      setResults(null);
+      setError('');
+      return;
+    }
+
+    if (!user) return;
+
+    try {
+      setSearching(true);
+      setError('');
+
+      const params = new URLSearchParams({
+        q: nextQuery,
+        type: activeTab,
+      });
+
+      if (activeTab === 'users' && filters.role) params.set('role', filters.role);
+      if (activeTab === 'activities') {
+        if (filters.status) params.set('status', filters.status);
+        if (filters.date_from) params.set('date_from', filters.date_from);
+        if (filters.date_to) params.set('date_to', filters.date_to);
+      }
+
+      const response = await fetch(`/api/admin/search?${params.toString()}`, {
+        headers: {
+          'x-user-role': user.role,
+        },
+      });
+      const payload = (await response.json().catch(() => null)) as SearchResults & {
+        error?: string;
+      };
+
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Tim kiem that bai');
+      }
+
+      setResults(payload);
+    } catch (searchError) {
+      console.error('Admin search error:', searchError);
+      const message = searchError instanceof Error ? searchError.message : 'Khong the tim kiem';
+      setResults(null);
+      setError(message);
+      toast.error(message);
+    } finally {
+      setSearching(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!user || !debouncedQuery.trim()) return;
+    void handleSearch(debouncedQuery);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedQuery, activeTab, filters, user?.id]);
+
+  function clearFilters() {
+    setFilters(INITIAL_FILTERS);
+  }
+
+  function saveCurrentSearch() {
+    if (!searchName.trim()) {
+      toast.error('Nhap ten de luu cau hinh tim kiem');
+      return;
+    }
+
+    const nextItem: SavedSearch = {
+      id: String(Date.now()),
       name: searchName.trim(),
       query: query.trim(),
       tab: activeTab,
@@ -114,507 +203,468 @@ export default function AdvancedSearchPage() {
       savedAt: new Date().toISOString(),
     };
 
-    const updated = [...savedSearches, newSearch];
-    setSavedSearches(updated);
-    localStorage.setItem('admin-saved-searches', JSON.stringify(updated));
+    const nextItems = [nextItem, ...savedSearches].slice(0, 12);
+    setSavedSearches(nextItems);
+    localStorage.setItem('admin-saved-searches', JSON.stringify(nextItems));
     setShowSaveDialog(false);
     setSearchName('');
-    toast.success(`Đã lưu tìm kiếm "${newSearch.name}"`);
-  };
+    toast.success(`Da luu bo loc "${nextItem.name}"`);
+  }
 
-  const loadSavedSearch = (saved: SavedSearch) => {
+  function loadSavedSearch(saved: SavedSearch) {
     setQuery(saved.query);
     setActiveTab(saved.tab);
-    setFilters({
-      status: saved.filters.status || '',
-      date_from: saved.filters.date_from || '',
-      date_to: saved.filters.date_to || '',
-      role: saved.filters.role || '',
-      activity_type: saved.filters.activity_type || '',
-    });
-    toast.success(`Đã tải tìm kiếm "${saved.name}"`);
-  };
+    setFilters(saved.filters);
+    toast.success(`Da tai bo loc "${saved.name}"`);
+  }
 
-  const deleteSavedSearch = (id: string) => {
-    const updated = savedSearches.filter((s) => s.id !== id);
-    setSavedSearches(updated);
-    localStorage.setItem('admin-saved-searches', JSON.stringify(updated));
-    toast.success('Đã xóa tìm kiếm đã lưu');
-  };
+  function deleteSavedSearch(id: string) {
+    const nextItems = savedSearches.filter((item) => item.id !== id);
+    setSavedSearches(nextItems);
+    localStorage.setItem('admin-saved-searches', JSON.stringify(nextItems));
+    toast.success('Da xoa bo loc da luu');
+  }
 
-  const handleSearch = async () => {
-    const searchTerm = debouncedQuery.trim() || query.trim();
-    if (!searchTerm) {
-      toast.error('Vui lòng nhập từ khóa tìm kiếm');
-      return;
-    }
+  const hasActiveFilters = useMemo(() => {
+    return Object.values(filters).some(Boolean);
+  }, [filters]);
 
-    try {
-      setSearching(true);
-      const params = new URLSearchParams({
-        q: searchTerm,
-        type: activeTab,
-      });
-
-      if (filters.status) params.append('status', filters.status);
-      if (filters.date_from) params.append('date_from', filters.date_from);
-      if (filters.date_to) params.append('date_to', filters.date_to);
-      if (filters.role) params.append('role', filters.role);
-      if (filters.activity_type) params.append('activity_type', filters.activity_type);
-
-      const res = await fetch(`/api/admin/search?${params}`);
-      const data = await res.json();
-      if (res.ok) {
-        setResults(data);
-      } else {
-        toast.error(data.error || 'Tìm kiếm thất bại');
-      }
-    } catch (e) {
-      console.error('Search error:', e);
-      toast.error('Lỗi khi tìm kiếm');
-    } finally {
-      setSearching(false);
-    }
-  };
-
-  useEffect(() => {
-    if (debouncedQuery.trim()) {
-      handleSearch();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedQuery, activeTab, filters]);
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleSearch();
-    }
-  };
-
-  const clearFilters = () => {
-    setFilters({
-      status: '',
-      date_from: '',
-      date_to: '',
-      role: '',
-      activity_type: '',
-    });
-  };
-
-  const hasActiveFilters = Object.values(filters).some((v) => v);
+  if (authLoading) {
+    return <LoadingSpinner message="Dang tai tim kiem nang cao..." />;
+  }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold flex items-center gap-3 mb-2">
-          <Search className="w-8 h-8 text-blue-600" />
-          Tìm Kiếm Nâng Cao
-        </h1>
-        <p className="text-gray-600">Tìm kiếm người dùng, hoạt động, lớp học và khen thưởng</p>
-      </div>
-
-      {/* Search Box */}
-      <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-        <div className="flex gap-3 mb-4">
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder="Nhập từ khóa tìm kiếm..."
-            className="flex-1 p-3 border border-gray-300 rounded-lg text-lg focus:ring-2 focus:ring-blue-500"
-            autoFocus
-          />
-          <button
-            onClick={handleSearch}
-            disabled={searching || !query.trim()}
-            className="px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold rounded-lg transition flex items-center gap-2"
-          >
-            <Search className="w-5 h-5" />
-            {searching ? 'Đang tìm...' : 'Tìm kiếm'}
-          </button>
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className={`px-4 py-3 rounded-lg font-semibold transition flex items-center gap-2 ${
-              showFilters
-                ? 'bg-blue-100 text-blue-700 border border-blue-300'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            <Filter className="w-5 h-5" />
-            Bộ Lọc
-            {hasActiveFilters && (
-              <span className="text-xs bg-red-500 text-white px-2 py-1 rounded-full">
-                {Object.values(filters).filter((v) => v).length}
-              </span>
-            )}
-          </button>
-          <button
-            onClick={() => setShowSaveDialog(true)}
-            disabled={!query.trim()}
-            className="px-4 py-3 bg-green-100 hover:bg-green-200 text-green-700 rounded-lg font-semibold transition flex items-center gap-2 disabled:opacity-50"
-          >
-            <Save className="w-5 h-5" />
-            Lưu
-          </button>
-        </div>
-
-        {/* Advanced Filters */}
-        {showFilters && (
-          <div className="border-t pt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-            {activeTab === 'activities' && (
-              <>
-                <div>
-                  <label className="block text-sm font-medium mb-2">Trạng thái</label>
-                  <select
-                    value={filters.status}
-                    onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-                    className="w-full p-2 border border-gray-300 rounded"
-                  >
-                    <option value="">-- Tất cả --</option>
-                    <option value="draft">Nháp</option>
-                    <option value="pending">Chờ phê duyệt</option>
-                    <option value="approved">Phê duyệt</option>
-                    <option value="ongoing">Đang diễn ra</option>
-                    <option value="completed">Hoàn thành</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2">Từ ngày</label>
-                  <input
-                    type="date"
-                    value={filters.date_from}
-                    onChange={(e) => setFilters({ ...filters, date_from: e.target.value })}
-                    className="w-full p-2 border border-gray-300 rounded"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2">Đến ngày</label>
-                  <input
-                    type="date"
-                    value={filters.date_to}
-                    onChange={(e) => setFilters({ ...filters, date_to: e.target.value })}
-                    className="w-full p-2 border border-gray-300 rounded"
-                  />
-                </div>
-              </>
-            )}
-
-            {activeTab === 'users' && (
-              <div>
-                <label className="block text-sm font-medium mb-2">Vai trò</label>
-                <select
-                  value={filters.role}
-                  onChange={(e) => setFilters({ ...filters, role: e.target.value })}
-                  className="w-full p-2 border border-gray-300 rounded"
-                >
-                  <option value="">-- Tất cả --</option>
-                  {ROLE_OPTIONS.map((r) => (
-                    <option key={r.value} value={r.value}>
-                      {r.label}
-                    </option>
-                  ))}
-                </select>
+    <div className="page-shell">
+      <div className="mx-auto max-w-7xl space-y-6">
+        <section className="page-surface rounded-[1.75rem] px-5 py-6 sm:px-7">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+            <div className="max-w-3xl">
+              <div className="inline-flex rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-blue-700">
+                Search workspace
               </div>
-            )}
-
-            {hasActiveFilters && (
-              <div className="flex items-end">
-                <button
-                  onClick={clearFilters}
-                  className="w-full px-3 py-2 bg-red-100 text-red-700 hover:bg-red-200 rounded font-medium flex items-center justify-center gap-2"
-                >
-                  <X className="w-4 h-4" />
-                  Xóa bộ lọc
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Tabs */}
-        <div className="flex gap-1 mt-4 border-b overflow-x-auto">
-          {[
-            { id: 'all', label: 'Tất cả', icon: '🔍' },
-            { id: 'users', label: 'Users', icon: '👥' },
-            { id: 'activities', label: 'Hoạt động', icon: '🎯' },
-            { id: 'classes', label: 'Lớp học', icon: '🏫' },
-            { id: 'awards', label: 'Khen thưởng', icon: '🏆' },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-2 font-medium flex items-center gap-2 whitespace-nowrap border-b-2 transition ${
-                activeTab === tab.id
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-600 hover:text-gray-800'
-              }`}
-            >
-              <span>{tab.icon}</span>
-              {tab.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Saved Searches */}
-      {savedSearches.length > 0 && (
-        <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg shadow-sm border border-purple-200 p-6 mb-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Star className="w-5 h-5 text-purple-600" />
-            <h2 className="font-semibold text-gray-900">
-              Tìm kiếm đã lưu ({savedSearches.length})
-            </h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {savedSearches.map((saved) => (
-              <div
-                key={saved.id}
-                className="bg-white rounded-lg p-4 border border-purple-200 hover:shadow-md transition"
+              <h1
+                className="mt-3 text-3xl font-bold text-slate-900"
+                data-testid="admin-search-heading"
               >
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-gray-900 mb-1">{saved.name}</h3>
-                    <p className="text-sm text-gray-600 truncate">&quot;{saved.query}&quot;</p>
-                    <div className="flex gap-2 mt-2">
-                      <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
-                        {saved.tab === 'all' ? 'Tất cả' : saved.tab}
-                      </span>
-                      {Object.keys(saved.filters).filter((k) => saved.filters[k]).length > 0 && (
-                        <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded">
-                          {Object.keys(saved.filters).filter((k) => saved.filters[k]).length} bộ lọc
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => deleteSavedSearch(saved.id)}
-                    className="text-gray-400 hover:text-red-600 transition ml-2"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-                <button
-                  onClick={() => loadSavedSearch(saved)}
-                  className="w-full mt-3 px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded font-medium text-sm transition"
-                >
-                  Tải tìm kiếm
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Save Dialog */}
-      {showSaveDialog && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-          onClick={() => setShowSaveDialog(false)}
-        >
-          <div
-            className="bg-white rounded-lg shadow-2xl p-6 max-w-md w-full mx-4"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className="text-xl font-bold mb-4">Lưu Tìm Kiếm</h3>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Tên tìm kiếm</label>
-              <input
-                type="text"
-                value={searchName}
-                onChange={(e) => setSearchName(e.target.value)}
-                placeholder="Ví dụ: Hoạt động tháng 12"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
-                autoFocus
-                onKeyPress={(e) => e.key === 'Enter' && saveCurrentSearch()}
-              />
-            </div>
-            <div className="bg-gray-50 p-3 rounded mb-4 text-sm">
-              <div className="text-gray-700 font-medium mb-1">Sẽ lưu:</div>
-              <div className="text-gray-600">• Từ khóa: &quot;{query}&quot;</div>
-              <div className="text-gray-600">
-                • Tab: {activeTab === 'all' ? 'Tất cả' : activeTab}
-              </div>
-              {hasActiveFilters && (
-                <div className="text-gray-600">
-                  • {Object.values(filters).filter((v) => v).length} bộ lọc
-                </div>
-              )}
-            </div>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowSaveDialog(false)}
-                className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition font-medium"
-              >
-                Hủy
-              </button>
-              <button
-                onClick={saveCurrentSearch}
-                className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium"
-              >
-                Lưu
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Results */}
-      {results && (
-        <div className="space-y-6">
-          <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
-            <p className="text-blue-900 font-medium">
-              ✓ Tìm thấy <strong>{results.total}</strong> kết quả cho &quot;{results.query}&quot;
-            </p>
-          </div>
-
-          {results.total === 0 ? (
-            <div className="bg-gray-50 border border-gray-200 rounded-lg p-12 text-center">
-              <p className="text-lg text-gray-600 font-medium">😔 Không tìm thấy kết quả</p>
-              <p className="text-sm text-gray-500 mt-2">
-                Thử tìm kiếm với từ khóa khác hoặc thay đổi bộ lọc
+                Tim kiem nang cao
+              </h1>
+              <p className="mt-2 text-sm text-slate-600">
+                Tim nguoi dung, hoat dong, lop hoc va khen thuong trong mot workspace duy nhat.
               </p>
             </div>
-          ) : (
-            <>
-              {/* Users Results */}
-              {(activeTab === 'all' || activeTab === 'users') && results.users.length > 0 && (
-                <div className="bg-white rounded-lg shadow-lg p-6">
-                  <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
-                    <Users className="w-6 h-6 text-blue-600" />
-                    Users ({results.users.length})
-                  </h2>
-                  <div className="space-y-2">
-                    {results.users.map((user) => (
-                      <div
-                        key={user.id}
-                        className="flex justify-between items-center p-3 border rounded-lg hover:bg-gray-50 transition"
+          </div>
+        </section>
+
+        <section className="page-surface rounded-[1.75rem] px-5 py-6 sm:px-7">
+          <div className="flex flex-col gap-3 lg:flex-row">
+            <div className="relative flex-1">
+              <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    void handleSearch(query);
+                  }
+                }}
+                placeholder="Nhap tu khoa can tim..."
+                className="w-full rounded-2xl border border-slate-300 py-3 pl-12 pr-4 text-sm text-slate-900 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+              />
+            </div>
+
+            <button
+              type="button"
+              onClick={() => void handleSearch(query)}
+              disabled={!query.trim() || searching}
+              className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
+            >
+              {searching ? 'Dang tim...' : 'Tim kiem'}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setShowFilters((current) => !current)}
+              className={`inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition ${
+                showFilters
+                  ? 'bg-blue-100 text-blue-700'
+                  : 'border border-slate-300 text-slate-700 hover:bg-slate-50'
+              }`}
+            >
+              <Filter className="h-4 w-4" />
+              Bo loc
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setShowSaveDialog(true)}
+              disabled={!query.trim()}
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-300 px-4 py-3 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-50 disabled:opacity-50"
+            >
+              <Save className="h-4 w-4" />
+              Luu bo loc
+            </button>
+          </div>
+
+          <div className="mt-5 flex gap-2 overflow-x-auto pb-1">
+            {TABS.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                  activeTab === tab.id
+                    ? 'bg-slate-900 text-white'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {showFilters ? (
+            <div className="mt-5 rounded-[1.5rem] border border-slate-200 bg-slate-50 p-4">
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                {activeTab === 'users' ? (
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-medium text-slate-700">Vai tro</span>
+                    <select
+                      value={filters.role}
+                      onChange={(event) =>
+                        setFilters((current) => ({ ...current, role: event.target.value }))
+                      }
+                      className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                    >
+                      <option value="">Tat ca</option>
+                      {ROLE_OPTIONS.map((roleOption) => (
+                        <option key={roleOption.value} value={roleOption.value}>
+                          {roleOption.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ) : null}
+
+                {activeTab === 'activities' ? (
+                  <>
+                    <label className="block">
+                      <span className="mb-2 block text-sm font-medium text-slate-700">
+                        Trang thai
+                      </span>
+                      <select
+                        value={filters.status}
+                        onChange={(event) =>
+                          setFilters((current) => ({ ...current, status: event.target.value }))
+                        }
+                        className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
                       >
+                        <option value="">Tat ca</option>
+                        <option value="draft">draft</option>
+                        <option value="pending">pending</option>
+                        <option value="approved">approved</option>
+                        <option value="ongoing">ongoing</option>
+                        <option value="completed">completed</option>
+                        <option value="cancelled">cancelled</option>
+                      </select>
+                    </label>
+
+                    <label className="block">
+                      <span className="mb-2 block text-sm font-medium text-slate-700">Tu ngay</span>
+                      <input
+                        type="date"
+                        value={filters.date_from}
+                        onChange={(event) =>
+                          setFilters((current) => ({
+                            ...current,
+                            date_from: event.target.value,
+                          }))
+                        }
+                        className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                      />
+                    </label>
+
+                    <label className="block">
+                      <span className="mb-2 block text-sm font-medium text-slate-700">Den ngay</span>
+                      <input
+                        type="date"
+                        value={filters.date_to}
+                        onChange={(event) =>
+                          setFilters((current) => ({
+                            ...current,
+                            date_to: event.target.value,
+                          }))
+                        }
+                        className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                      />
+                    </label>
+                  </>
+                ) : null}
+              </div>
+
+              {hasActiveFilters ? (
+                <div className="mt-4 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={clearFilters}
+                    className="inline-flex items-center gap-2 rounded-xl border border-rose-300 px-4 py-2.5 text-sm font-semibold text-rose-700 transition hover:bg-rose-50"
+                  >
+                    <X className="h-4 w-4" />
+                    Xoa bo loc
+                  </button>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+        </section>
+
+        {savedSearches.length > 0 ? (
+          <section className="page-surface rounded-[1.75rem] px-5 py-6 sm:px-7">
+            <div className="flex items-center gap-2 text-slate-900">
+              <Star className="h-5 w-5 text-violet-600" />
+              <h2 className="text-xl font-semibold">Bo loc da luu</h2>
+            </div>
+            <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {savedSearches.map((saved) => (
+                <article
+                  key={saved.id}
+                  className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-4"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <h3 className="text-sm font-semibold text-slate-900">{saved.name}</h3>
+                      <p className="mt-1 truncate text-sm text-slate-600">&quot;{saved.query}&quot;</p>
+                      <div className="mt-2 text-xs text-slate-500">
+                        Luu luc {formatVietnamDateTime(saved.savedAt)}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => deleteSavedSearch(saved.id)}
+                      className="rounded-xl border border-slate-200 p-2 text-slate-500 transition hover:bg-white hover:text-rose-600"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+
+                  <div className="mt-4 flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => loadSavedSearch(saved)}
+                      className="flex-1 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-violet-700"
+                    >
+                      Tai bo loc
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
+        {showSaveDialog ? (
+          <div
+            className="app-modal-backdrop p-4"
+            onClick={() => setShowSaveDialog(false)}
+          >
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="admin-search-save-filter-title"
+              className="app-modal-panel app-modal-panel-scroll w-full max-w-md p-6"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <h3 id="admin-search-save-filter-title" className="text-xl font-semibold text-slate-900">
+                Luu bo loc tim kiem
+              </h3>
+              <p className="mt-2 text-sm text-slate-600">
+                Luu tu khoa, tab va bo loc hien tai de mo lai nhanh sau nay.
+              </p>
+
+              <label className="mt-5 block">
+                <span className="mb-2 block text-sm font-medium text-slate-700">Ten bo loc</span>
+                <input
+                  type="text"
+                  value={searchName}
+                  onChange={(event) => setSearchName(event.target.value)}
+                  placeholder="Vi du: activity pending thang nay"
+                  className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
+                />
+              </label>
+
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={() => setShowSaveDialog(false)}
+                  className="rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                >
+                  Huy
+                </button>
+                <button
+                  type="button"
+                  onClick={saveCurrentSearch}
+                  className="rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700"
+                >
+                  Luu bo loc
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        {error ? (
+          <section className="page-surface rounded-[1.75rem] border-rose-200 bg-rose-50 px-5 py-5 sm:px-7">
+            <div className="text-sm font-semibold text-rose-700">Co loi khi tim kiem</div>
+            <p className="mt-2 text-sm text-rose-800">{error}</p>
+          </section>
+        ) : null}
+
+        {results ? (
+          <section className="space-y-6">
+            <section className="page-surface rounded-[1.75rem] px-5 py-5 sm:px-7">
+              <div className="text-sm text-slate-500">Ket qua hien tai</div>
+              <div className="mt-2 text-xl font-semibold text-slate-900">
+                {results.total} ket qua cho &quot;{results.query}&quot;
+              </div>
+            </section>
+
+            {(activeTab === 'all' || activeTab === 'users') && results.users.length > 0 ? (
+              <section className="page-surface rounded-[1.75rem] px-5 py-6 sm:px-7">
+                <div className="flex items-center gap-2 text-slate-900">
+                  <Users className="h-5 w-5 text-blue-600" />
+                  <h2 className="text-xl font-semibold">Nguoi dung</h2>
+                </div>
+                <div className="mt-5 grid gap-4 md:grid-cols-2">
+                  {results.users.map((resultUser) => (
+                    <article
+                      key={resultUser.id}
+                      className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-4"
+                    >
+                      <div className="flex items-start justify-between gap-3">
                         <div>
-                          <div className="font-medium text-gray-800">{user.name}</div>
-                          <div className="text-sm text-gray-600">{user.email}</div>
+                          <div className="text-sm font-semibold text-slate-900">
+                            {resultUser.name}
+                          </div>
+                          <div className="mt-1 text-sm text-slate-600">{resultUser.email}</div>
+                          <div className="mt-2 text-xs text-slate-500">
+                            Tao luc {formatVietnamDateTime(resultUser.created_at)}
+                          </div>
                         </div>
                         <span
-                          className={`px-3 py-1 rounded-full text-xs font-semibold ${getRoleBadgeClass(
-                            user.role
+                          className={`rounded-full px-3 py-1 text-xs font-semibold ${getRoleBadgeClass(
+                            resultUser.role
                           )}`}
                         >
-                          {getRoleLabel(user.role)}
+                          {getRoleLabel(resultUser.role)}
                         </span>
                       </div>
-                    ))}
-                  </div>
+                    </article>
+                  ))}
                 </div>
-              )}
+              </section>
+            ) : null}
 
-              {/* Activities Results */}
-              {(activeTab === 'all' || activeTab === 'activities') &&
-                results.activities.length > 0 && (
-                  <div className="bg-white rounded-lg shadow-lg p-6">
-                    <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
-                      <Calendar className="w-6 h-6 text-purple-600" />
-                      Hoạt động ({results.activities.length})
-                    </h2>
-                    <div className="space-y-3">
-                      {results.activities.map((activity) => (
-                        <Link
-                          key={activity.id}
-                          href={`/admin/activities/${activity.id}`}
-                          className="block p-4 border rounded-lg hover:bg-blue-50 transition"
-                        >
-                          <div className="font-bold text-lg text-gray-800 mb-2">
-                            {activity.title}
-                          </div>
-                          <div className="text-sm text-gray-600 mb-2 space-y-1">
-                            <div>📍 {activity.location}</div>
-                            <div>📅 {formatVietnamDateTime(activity.date, 'date')}</div>
-                          </div>
-                          <div className="flex flex-wrap gap-2">
-                            <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full font-medium">
-                              {activity.activity_type}
-                            </span>
-                            <span className="text-xs px-2 py-1 bg-purple-100 text-purple-700 rounded-full font-medium">
-                              {activity.org_level}
-                            </span>
-                            <span
-                              className={`text-xs px-2 py-1 rounded-full font-medium ${
-                                activity.status === 'completed'
-                                  ? 'bg-green-100 text-green-700'
-                                  : activity.status === 'ongoing'
-                                    ? 'bg-yellow-100 text-yellow-700'
-                                    : 'bg-gray-100 text-gray-700'
-                              }`}
-                            >
-                              {activity.status}
-                            </span>
-                          </div>
-                        </Link>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-              {/* Classes Results */}
-              {(activeTab === 'all' || activeTab === 'classes') && results.classes.length > 0 && (
-                <div className="bg-white rounded-lg shadow-lg p-6">
-                  <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
-                    <BookOpen className="w-6 h-6 text-green-600" />
-                    Lớp học ({results.classes.length})
-                  </h2>
-                  <div className="space-y-2">
-                    {results.classes.map((cls) => (
-                      <div
-                        key={cls.id}
-                        className="flex justify-between items-center p-3 border rounded-lg hover:bg-green-50 transition"
-                      >
-                        <div>
-                          <div className="font-medium text-gray-800">{cls.name}</div>
-                          <div className="text-sm text-gray-600">
-                            {cls.major} • Năm {cls.year} • GV: {cls.teacher_name}
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <div className="font-bold text-lg text-green-600">{cls.member_count}</div>
-                          <div className="text-xs text-gray-500">học viên</div>
-                        </div>
+            {(activeTab === 'all' || activeTab === 'activities') &&
+            results.activities.length > 0 ? (
+              <section className="page-surface rounded-[1.75rem] px-5 py-6 sm:px-7">
+                <div className="flex items-center gap-2 text-slate-900">
+                  <Calendar className="h-5 w-5 text-violet-600" />
+                  <h2 className="text-xl font-semibold">Hoat dong</h2>
+                </div>
+                <div className="mt-5 grid gap-4 xl:grid-cols-2">
+                  {results.activities.map((activity) => (
+                    <Link
+                      key={activity.id}
+                      href={`/admin/activities/${activity.id}`}
+                      className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-4 transition hover:border-blue-300 hover:bg-blue-50"
+                    >
+                      <div className="text-sm font-semibold text-slate-900">{activity.title}</div>
+                      <div className="mt-2 text-sm text-slate-600">{activity.location || 'Chua co dia diem'}</div>
+                      <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                        <span className="rounded-full bg-blue-100 px-3 py-1 font-semibold text-blue-700">
+                          {activity.activity_type || 'Khong ro loai'}
+                        </span>
+                        <span className="rounded-full bg-violet-100 px-3 py-1 font-semibold text-violet-700">
+                          {activity.org_level || 'Khong ro cap'}
+                        </span>
+                        <span className="rounded-full bg-slate-200 px-3 py-1 font-semibold text-slate-700">
+                          {activity.status}
+                        </span>
                       </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Awards Results */}
-              {(activeTab === 'all' || activeTab === 'awards') && results.awards.length > 0 && (
-                <div className="bg-white rounded-lg shadow-lg p-6">
-                  <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
-                    <Trophy className="w-6 h-6 text-yellow-600" />
-                    Khen thưởng ({results.awards.length})
-                  </h2>
-                  <div className="space-y-3">
-                    {results.awards.map((award) => (
-                      <div
-                        key={award.id}
-                        className="p-4 border rounded-lg bg-yellow-50 hover:bg-yellow-100 transition"
-                      >
-                        <div className="font-bold text-gray-800 mb-2">🏆 {award.type}</div>
-                        <div className="text-sm text-gray-600 mb-2">{award.reason}</div>
-                        <div className="flex justify-between text-xs text-gray-500">
-                          <span>
-                            Người nhận: {award.recipient_name} ({award.recipient_email})
-                          </span>
-                          <span>
-                            Trao bởi: {award.awarded_by_name} •{' '}
-                            {formatVietnamDateTime(award.awarded_at, 'date')}
-                          </span>
-                        </div>
+                      <div className="mt-3 text-xs text-slate-500">
+                        {formatVietnamDateTime(activity.date)} | Tao boi {activity.creator_name || 'Unknown'}
                       </div>
-                    ))}
-                  </div>
+                    </Link>
+                  ))}
                 </div>
-              )}
-            </>
-          )}
-        </div>
-      )}
+              </section>
+            ) : null}
+
+            {(activeTab === 'all' || activeTab === 'classes') && results.classes.length > 0 ? (
+              <section className="page-surface rounded-[1.75rem] px-5 py-6 sm:px-7">
+                <div className="flex items-center gap-2 text-slate-900">
+                  <BookOpen className="h-5 w-5 text-emerald-600" />
+                  <h2 className="text-xl font-semibold">Lop hoc</h2>
+                </div>
+                <div className="mt-5 grid gap-4 md:grid-cols-2">
+                  {results.classes.map((classItem) => (
+                    <article
+                      key={classItem.id}
+                      className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-4"
+                    >
+                      <div className="text-sm font-semibold text-slate-900">{classItem.name}</div>
+                      <div className="mt-2 text-sm text-slate-600">
+                        {classItem.major ? `${classItem.major}` : 'Chua co chuyen nganh'}
+                        {classItem.year ? ` | Nam ${classItem.year}` : ''}
+                      </div>
+                      <div className="mt-2 text-xs text-slate-500">
+                        GVCN: {classItem.teacher_name || 'Chua gan'} | Si so:{' '}
+                        {classItem.member_count ?? 0}
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </section>
+            ) : null}
+
+            {(activeTab === 'all' || activeTab === 'awards') && results.awards.length > 0 ? (
+              <section className="page-surface rounded-[1.75rem] px-5 py-6 sm:px-7">
+                <div className="flex items-center gap-2 text-slate-900">
+                  <Trophy className="h-5 w-5 text-amber-600" />
+                  <h2 className="text-xl font-semibold">Khen thuong</h2>
+                </div>
+                <div className="mt-5 grid gap-4 xl:grid-cols-2">
+                  {results.awards.map((award) => (
+                    <article
+                      key={award.id}
+                      className="rounded-[1.5rem] border border-amber-200 bg-amber-50 p-4"
+                    >
+                      <div className="text-sm font-semibold text-slate-900">{award.type}</div>
+                      <div className="mt-2 text-sm text-slate-700">{award.reason}</div>
+                      <div className="mt-3 text-xs text-slate-500">
+                        Nguoi nhan: {award.recipient_name} ({award.recipient_email})
+                      </div>
+                      <div className="mt-1 text-xs text-slate-500">
+                        Trao boi {award.awarded_by_name || 'Unknown'} |{' '}
+                        {formatVietnamDateTime(award.awarded_at)}
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </section>
+            ) : null}
+
+            {results.total === 0 ? (
+              <section className="page-surface rounded-[1.75rem] border-dashed px-5 py-10 text-center sm:px-7">
+                <div className="text-xl font-semibold text-slate-900">Khong tim thay ket qua</div>
+                <p className="mt-2 text-sm text-slate-600">
+                  Thu doi tu khoa hoac mo rong bo loc de thay them du lieu.
+                </p>
+              </section>
+            ) : null}
+          </section>
+        ) : null}
+      </div>
     </div>
   );
 }

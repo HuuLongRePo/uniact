@@ -1020,6 +1020,43 @@ button:disabled,
   scrollbar-color: var(--app-scrollbar-thumb) var(--app-scrollbar-track);
 }
 
+:root {
+  --app-sidebar-current-width: 18rem;
+  --app-mobile-nav-offset: 6.5rem;
+}
+
+.app-shell-main {
+  min-height: 100vh;
+  transition: margin-left 300ms ease;
+}
+
+.app-shell-main-inner {
+  min-height: 100vh;
+}
+
+.app-shell-content {
+  min-height: 100vh;
+  padding-bottom: calc(env(safe-area-inset-bottom) + 2rem);
+}
+
+.app-shell-content-with-sidebar {
+  padding-top: max(var(--app-mobile-nav-offset), calc(env(safe-area-inset-top) + 4.5rem));
+}
+
+@media (min-width: 1280px) {
+  .app-shell-with-sidebar {
+    margin-left: var(--app-sidebar-current-width);
+  }
+
+  .app-shell-main-inner {
+    padding-inline: 1.5rem;
+  }
+
+  .app-shell-content-with-sidebar {
+    padding-top: 1.5rem;
+  }
+}
+
 .page-shell {
   margin-inline: auto;
   width: min(100%, 88rem);
@@ -1046,6 +1083,52 @@ button:disabled,
     inset 0 1px 0 rgba(148, 163, 184, 0.08);
 }
 
+.app-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-inline: max(1rem, env(safe-area-inset-left)) max(1rem, env(safe-area-inset-right));
+  padding-block: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-bottom));
+  background: var(--app-overlay);
+  backdrop-filter: blur(10px);
+}
+
+.app-modal-panel {
+  width: 100%;
+  margin: auto;
+  border: 1px solid color-mix(in srgb, var(--app-border-default) 78%, transparent);
+  border-radius: 1.75rem;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0.9)),
+    var(--app-surface-base);
+  color: var(--app-text-default);
+  box-shadow:
+    0 26px 60px rgba(15, 23, 42, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+
+.app-modal-panel-scroll {
+  max-height: min(
+    calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 2rem),
+    90vh
+  );
+  overflow-y: auto;
+}
+
+:root[data-theme='dark'] .app-modal-panel {
+  background:
+    linear-gradient(180deg, rgba(15, 23, 42, 0.97), rgba(15, 23, 42, 0.92)),
+    var(--app-surface-base);
+  box-shadow:
+    0 28px 64px rgba(2, 6, 23, 0.52),
+    inset 0 1px 0 rgba(148, 163, 184, 0.08);
+}
+
 .content-card {
   border-radius: 1.5rem;
   border: 1px solid color-mix(in srgb, var(--app-border-default) 72%, transparent);
@@ -1059,6 +1142,11 @@ button:disabled,
   }
 
   .content-card {
+    border-color: var(--app-border-default);
+    background: var(--app-surface-base);
+  }
+
+  .app-modal-panel {
     border-color: var(--app-border-default);
     background: var(--app-surface-base);
   }
@@ -1243,8 +1331,14 @@ button:disabled,
   }
 
   .page-shell {
-    padding-inline: 1rem;
-    padding-block: 1rem;
+    padding-left: calc(env(safe-area-inset-left) + 1rem);
+    padding-right: calc(env(safe-area-inset-right) + 1rem);
+    padding-top: calc(env(safe-area-inset-top) + 1rem);
+    padding-bottom: calc(env(safe-area-inset-bottom) + 1rem);
+  }
+
+  .app-shell-content-with-sidebar .page-shell {
+    padding-top: max(var(--app-mobile-nav-offset), calc(env(safe-area-inset-top) + 0.75rem));
   }
 }
 

@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import toast from 'react-hot-toast';
-import { Clock, AlertCircle, CheckCircle } from 'lucide-react';
+import { AlertCircle, CheckCircle, Clock } from 'lucide-react';
 
 export default function ApprovalDeadlineConfigPage() {
   const { user, loading: authLoading } = useAuth();
@@ -23,7 +24,7 @@ export default function ApprovalDeadlineConfigPage() {
       router.push('/login');
       return;
     }
-    if (user) fetchConfig();
+    if (user) void fetchConfig();
   }, [user, authLoading, router]);
 
   const fetchConfig = async () => {
@@ -37,14 +38,14 @@ export default function ApprovalDeadlineConfigPage() {
         });
         setConfig((prev) => ({
           ...prev,
-          approval_deadline_hours: configMap['approval_deadline_hours'] || '48',
-          warning_threshold_hours: configMap['warning_threshold_hours'] || '24',
-          enable_notifications: configMap['enable_notifications'] || 'true',
+          approval_deadline_hours: configMap.approval_deadline_hours || '48',
+          warning_threshold_hours: configMap.warning_threshold_hours || '24',
+          enable_notifications: configMap.enable_notifications || 'true',
         }));
       }
-    } catch (e) {
-      console.error('Fetch config error:', e);
-      toast.error('Lỗi khi tải cấu hình');
+    } catch (error) {
+      console.error('Fetch config error:', error);
+      toast.error('Khong tai duoc cau hinh han chot');
     } finally {
       setLoading(false);
     }
@@ -53,17 +54,17 @@ export default function ApprovalDeadlineConfigPage() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const deadlineHours = parseInt(config.approval_deadline_hours);
-      const warningThreshold = parseInt(config.warning_threshold_hours);
+      const deadlineHours = parseInt(config.approval_deadline_hours, 10);
+      const warningThreshold = parseInt(config.warning_threshold_hours, 10);
 
       if (deadlineHours <= 0 || warningThreshold <= 0) {
-        toast.error('Giờ phải lớn hơn 0');
+        toast.error('So gio phai lon hon 0');
         setSaving(false);
         return;
       }
 
       if (warningThreshold >= deadlineHours) {
-        toast.error('Ngưỡng cảnh báo phải nhỏ hơn deadline');
+        toast.error('Nguong canh bao phai nho hon deadline');
         setSaving(false);
         return;
       }
@@ -82,166 +83,176 @@ export default function ApprovalDeadlineConfigPage() {
 
       const data = await response.json();
       if (response.ok) {
-        toast.success('Cập nhật cấu hình thành công');
+        toast.success('Da cap nhat han chot phe duyet');
       } else {
-        toast.error(data.error || 'Cập nhật thất bại');
+        toast.error(data.error || 'Cap nhat that bai');
       }
-    } catch (e) {
-      console.error('Save config error:', e);
-      toast.error('Lỗi khi lưu cấu hình');
+    } catch (error) {
+      console.error('Save config error:', error);
+      toast.error('Khong luu duoc cau hinh');
     } finally {
       setSaving(false);
     }
   };
 
-  if (authLoading || loading) return <LoadingSpinner />;
+  const summary = useMemo(
+    () => ({
+      deadline: config.approval_deadline_hours,
+      warning: config.warning_threshold_hours,
+      notifications: config.enable_notifications === 'true' ? 'Bat' : 'Tat',
+    }),
+    [config]
+  );
+
+  if (authLoading || loading) {
+    return <LoadingSpinner message="Dang tai approval deadline..." />;
+  }
+
+  if (!user || user.role !== 'admin') {
+    return null;
+  }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-3xl">
-      <div className="mb-8">
-        <div className="flex items-center gap-3 mb-2">
-          <Clock className="w-8 h-8 text-blue-600" />
-          <h1 className="text-3xl font-bold">Cấu Hình Hạn Chót Phê Duyệt</h1>
-        </div>
-        <p className="text-gray-600">Quản lý thời hạn phê duyệt hoạt động và cảnh báo</p>
-      </div>
-
-      <div className="bg-white rounded-lg shadow-lg p-8 space-y-8">
-        {/* Approval Deadline Hours */}
-        <div className="border-b pb-6">
-          <div className="mb-4">
-            <label className="block text-lg font-semibold text-gray-800 mb-2">
-              ⏱️ Hạn Chót Phê Duyệt (giờ)
-            </label>
-            <p className="text-sm text-gray-600 mb-4">
-              Số giờ tối đa mà hoạt động phải được phê duyệt trước khi bắt đầu
+    <div className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
+      <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-3xl">
+            <div className="flex items-center gap-3">
+              <Clock className="h-8 w-8 text-cyan-700" />
+              <h1 className="text-3xl font-semibold text-slate-950">Han chot phe duyet</h1>
+            </div>
+            <p className="mt-3 text-sm leading-6 text-slate-600 sm:text-base">
+              Quan ly thoi han duyet hoat dong va canh bao som truoc khi workflow cham deadline.
             </p>
           </div>
-          <input
-            type="number"
-            min="1"
-            max="720"
-            step="1"
-            value={config.approval_deadline_hours}
-            onChange={(e) => setConfig({ ...config, approval_deadline_hours: e.target.value })}
-            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            placeholder="48"
-          />
-          <div className="mt-3 p-4 bg-blue-50 rounded-lg">
-            <p className="text-sm text-blue-800">
-              <strong>Ví dụ:</strong> Nếu đặt 48 giờ, hoạt động phải được phê duyệt trước khi bắt
-              đầu ít nhất 48 giờ.
-            </p>
-          </div>
-        </div>
 
-        {/* Warning Threshold */}
-        <div className="border-b pb-6">
-          <div className="mb-4">
-            <label className="block text-lg font-semibold text-gray-800 mb-2">
-              ⚠️ Ngưỡng Cảnh Báo (giờ)
-            </label>
-            <p className="text-sm text-gray-600 mb-4">
-              Nếu hoạt động gần đến deadline mà chưa phê duyệt, hệ thống sẽ gửi cảnh báo
-            </p>
-          </div>
-          <input
-            type="number"
-            min="1"
-            max="720"
-            step="1"
-            value={config.warning_threshold_hours}
-            onChange={(e) => setConfig({ ...config, warning_threshold_hours: e.target.value })}
-            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-            placeholder="24"
-          />
-          <div className="mt-3 p-4 bg-orange-50 rounded-lg">
-            <p className="text-sm text-orange-800">
-              <strong>Ví dụ:</strong> Nếu đặt 24 giờ, cảnh báo sẽ gửi khi còn 24 giờ trước deadline.
-            </p>
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href="/admin/settings"
+              className="rounded-2xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            >
+              Ve settings
+            </Link>
+            <button
+              type="button"
+              onClick={() => void fetchConfig()}
+              className="rounded-2xl bg-cyan-700 px-4 py-2 text-sm font-medium text-white hover:bg-cyan-800"
+            >
+              Tai lai
+            </button>
           </div>
         </div>
+      </section>
 
-        {/* Enable Notifications */}
-        <div className="border-b pb-6">
-          <div className="mb-4">
-            <label className="block text-lg font-semibold text-gray-800 mb-2">
-              🔔 Bật Thông Báo
-            </label>
-            <p className="text-sm text-gray-600 mb-4">
-              Gửi thông báo cho giảng viên khi deadline sắp đến hoặc quá hạn
-            </p>
-          </div>
-          <div className="space-y-3">
-            {[
-              { value: 'true', label: '✅ Bật' },
-              { value: 'false', label: '❌ Tắt' },
-            ].map((option) => (
-              <label
-                key={option.value}
-                className="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50"
-              >
-                <input
-                  type="radio"
-                  name="notifications"
-                  value={option.value}
-                  checked={config.enable_notifications === option.value}
-                  onChange={(e) => setConfig({ ...config, enable_notifications: e.target.value })}
-                  className="w-4 h-4 text-blue-600"
-                />
-                <span className="ml-3 text-gray-700">{option.label}</span>
-              </label>
-            ))}
-          </div>
-        </div>
+      <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="grid gap-6">
+          <label className="block text-sm font-medium text-slate-700">
+            Han chot phe duyet (gio)
+            <input
+              type="number"
+              min="1"
+              max="720"
+              step="1"
+              value={config.approval_deadline_hours}
+              onChange={(event) => setConfig({ ...config, approval_deadline_hours: event.target.value })}
+              className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-cyan-300"
+              placeholder="48"
+            />
+            <span className="mt-2 block text-xs text-slate-500">
+              Hoat dong phai duoc phe duyet truoc luc bat dau it nhat so gio nay.
+            </span>
+          </label>
 
-        {/* Preview/Summary */}
-        <div className="bg-green-50 rounded-lg p-6 border border-green-200">
-          <h3 className="font-semibold text-green-900 mb-4 flex items-center gap-2">
-            <CheckCircle className="w-5 h-5" />
-            Tóm Tắt Cấu Hình
-          </h3>
-          <ul className="space-y-2 text-sm text-green-800">
-            <li>
-              ✓ <strong>Hạn chót phê duyệt:</strong> {config.approval_deadline_hours} giờ trước khi
-              hoạt động bắt đầu
-            </li>
-            <li>
-              ✓ <strong>Cảnh báo:</strong> {config.warning_threshold_hours} giờ trước deadline
-            </li>
-            <li>
-              ✓ <strong>Thông báo:</strong> {config.enable_notifications === 'true' ? 'Bật' : 'Tắt'}
-            </li>
-          </ul>
-        </div>
+          <label className="block text-sm font-medium text-slate-700">
+            Nguong canh bao (gio)
+            <input
+              type="number"
+              min="1"
+              max="720"
+              step="1"
+              value={config.warning_threshold_hours}
+              onChange={(event) => setConfig({ ...config, warning_threshold_hours: event.target.value })}
+              className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-cyan-300"
+              placeholder="24"
+            />
+            <span className="mt-2 block text-xs text-slate-500">
+              Khi con it hon nguong nay truoc deadline, he thong se de xuat canh bao.
+            </span>
+          </label>
 
-        {/* Save Button */}
-        <div className="flex gap-3 pt-4">
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold py-3 rounded-lg transition"
-          >
-            {saving ? '⏳ Đang lưu...' : '💾 Lưu Cấu Hình'}
-          </button>
-          <button
-            onClick={() => window.location.reload()}
-            className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 font-semibold py-3 rounded-lg transition"
-          >
-            🔄 Tải Lại
-          </button>
-        </div>
-
-        {/* Info Box */}
-        <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200 flex gap-3">
-          <AlertCircle className="w-6 h-6 text-yellow-600 flex-shrink-0" />
-          <div className="text-sm text-yellow-800">
-            <p>
-              <strong>Lưu ý:</strong> Những cài đặt này sẽ áp dụng cho tất cả hoạt động mới được tạo
-              sau khi cập nhật.
-            </p>
+          <div>
+            <div className="text-sm font-medium text-slate-700">Thong bao nhac deadline</div>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              {[
+                { value: 'true', label: 'Bat thong bao', helper: 'Gui canh bao khi activity sap cham deadline.' },
+                { value: 'false', label: 'Tat thong bao', helper: 'Chi giu deadline va bo qua nhac nho tu dong.' },
+              ].map((option) => (
+                <label
+                  key={option.value}
+                  className={`rounded-3xl border p-4 ${
+                    config.enable_notifications === option.value
+                      ? 'border-cyan-200 bg-cyan-50'
+                      : 'border-slate-200 bg-white'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="radio"
+                      name="notifications"
+                      value={option.value}
+                      checked={config.enable_notifications === option.value}
+                      onChange={(event) => setConfig({ ...config, enable_notifications: event.target.value })}
+                      className="h-4 w-4 text-cyan-700"
+                    />
+                    <div>
+                      <div className="font-medium text-slate-900">{option.label}</div>
+                      <div className="mt-1 text-sm text-slate-500">{option.helper}</div>
+                    </div>
+                  </div>
+                </label>
+              ))}
+            </div>
           </div>
         </div>
+      </section>
+
+      <section className="rounded-[2rem] border border-emerald-200 bg-emerald-50 p-5 shadow-sm">
+        <div className="flex items-center gap-2 text-emerald-900">
+          <CheckCircle className="h-5 w-5" />
+          <div className="font-medium">Tom tat cau hinh</div>
+        </div>
+        <ul className="mt-3 space-y-2 text-sm text-emerald-900">
+          <li>
+            Han chot phe duyet: <strong>{summary.deadline} gio</strong> truoc khi hoat dong bat dau.
+          </li>
+          <li>
+            Canh bao: <strong>{summary.warning} gio</strong> truoc deadline.
+          </li>
+          <li>
+            Thong bao: <strong>{summary.notifications}</strong>.
+          </li>
+        </ul>
+      </section>
+
+      <section className="rounded-[2rem] border border-amber-200 bg-amber-50 p-5 shadow-sm">
+        <div className="flex gap-3 text-sm text-amber-900">
+          <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
+          <p>
+            Nhung cai dat nay se tac dong den workflow duyet cua hoat dong moi va cac luong canh bao
+            van hanh sap den han.
+          </p>
+        </div>
+      </section>
+
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={saving}
+          className="rounded-2xl bg-cyan-700 px-5 py-3 text-sm font-medium text-white hover:bg-cyan-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+        >
+          {saving ? 'Dang luu...' : 'Luu cau hinh han chot'}
+        </button>
       </div>
     </div>
   );

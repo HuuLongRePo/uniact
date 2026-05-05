@@ -17,15 +17,15 @@ import {
   Clock,
   Database,
   FileText,
-  LayoutDashboard,
   Laptop,
+  LayoutDashboard,
   LogOut,
   Menu,
   Palette,
   PieChart,
   QrCode,
-  School,
   ScanFace,
+  School,
   Search,
   Settings,
   Sliders,
@@ -44,7 +44,6 @@ interface NavItem {
   href: string;
   icon: React.ComponentType<{ className?: string }>;
   badge?: number;
-  keywords?: string[];
 }
 
 interface NavSection {
@@ -60,17 +59,11 @@ function dedupeNavigation(sections: NavSection[]): NavSection[] {
     .map((section) => {
       const seen = new Set<string>();
       const items = section.items.filter((item) => {
-        if (seen.has(item.href)) {
-          return false;
-        }
+        if (seen.has(item.href)) return false;
         seen.add(item.href);
         return true;
       });
-
-      return {
-        ...section,
-        items,
-      };
+      return { ...section, items };
     })
     .filter((section) => section.items.length > 0);
 }
@@ -83,9 +76,7 @@ export default function Sidebar() {
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
-    if (!user) {
-      return;
-    }
+    if (!user) return;
 
     void fetchUnreadCount();
     const interval = setInterval(() => {
@@ -99,7 +90,28 @@ export default function Sidebar() {
     setMobileOpen(false);
   }, [pathname]);
 
-  const fetchUnreadCount = async () => {
+  useEffect(() => {
+    const root = document.documentElement;
+    root.style.setProperty(
+      '--app-sidebar-current-width',
+      collapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_EXPANDED_WIDTH
+    );
+    root.style.setProperty('--app-mobile-nav-offset', user ? '6.5rem' : '0rem');
+
+    return () => {
+      root.style.removeProperty('--app-sidebar-current-width');
+      root.style.removeProperty('--app-mobile-nav-offset');
+    };
+  }, [collapsed, user]);
+
+  useEffect(() => {
+    document.body.style.overflow = mobileOpen ? 'hidden' : '';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [mobileOpen]);
+
+  async function fetchUnreadCount() {
     try {
       const res = await fetch(resolveClientFetchUrl('/api/notifications'));
       const data = await res.json();
@@ -109,11 +121,9 @@ export default function Sidebar() {
     } catch (error) {
       console.error('Fetch unread count error:', error);
     }
-  };
-
-  if (!user) {
-    return null;
   }
+
+  if (!user) return null;
 
   const adminNavigation = dedupeNavigation([
     {
@@ -121,8 +131,11 @@ export default function Sidebar() {
       items: [{ label: 'Bảng điều khiển', href: '/admin/dashboard', icon: LayoutDashboard }],
     },
     {
-      title: 'Thông báo và cảnh báo',
+      title: 'Vận hành hằng ngày',
       items: [
+        { label: 'Quản lý hoạt động', href: '/admin/activities', icon: BookOpen },
+        { label: 'Phê duyệt hoạt động', href: '/admin/approvals', icon: CheckSquare },
+        { label: 'Điểm danh', href: '/admin/attendance', icon: UserCheck },
         { label: 'Thông báo', href: '/admin/notifications', icon: Bell, badge: unreadCount },
         { label: 'Cảnh báo', href: '/admin/alerts', icon: AlertTriangle },
       ],
@@ -130,26 +143,15 @@ export default function Sidebar() {
     {
       title: 'Người dùng và lớp học',
       items: [
-        { label: 'Người dùng', href: '/admin/users', icon: Users },
-        { label: 'Giảng viên', href: '/admin/teachers', icon: User },
         { label: 'Học viên', href: '/admin/students', icon: School },
+        { label: 'Giảng viên', href: '/admin/teachers', icon: User },
+        { label: 'Người dùng', href: '/admin/users', icon: Users },
         { label: 'Lớp học', href: '/admin/classes', icon: School },
-        { label: 'Import người dùng', href: '/admin/users/import', icon: FileText },
+        { label: 'Nhập người dùng', href: '/admin/users/import', icon: FileText },
       ],
     },
     {
-      title: 'Hoạt động và điểm danh',
-      items: [
-        { label: 'Quản lý hoạt động', href: '/admin/activities', icon: BookOpen },
-        { label: 'Phê duyệt hoạt động', href: '/admin/approvals', icon: CheckSquare },
-        { label: 'Mẫu hoạt động', href: '/admin/activity-templates', icon: Sparkles },
-        { label: 'Loại hoạt động', href: '/admin/activity-types', icon: Target },
-        { label: 'Điểm danh', href: '/admin/attendance', icon: UserCheck },
-        { label: 'Khung thời gian', href: '/admin/time-slots', icon: Clock },
-      ],
-    },
-    {
-      title: 'Điểm, thưởng và xếp hạng',
+      title: 'Điểm và xếp hạng',
       items: [
         { label: 'Điểm học viên', href: '/admin/scores', icon: BarChart3 },
         { label: 'Bảng xếp hạng', href: '/admin/leaderboard', icon: Trophy },
@@ -163,32 +165,32 @@ export default function Sidebar() {
       ],
     },
     {
-      title: 'Báo cáo và hệ thống',
+      title: 'Báo cáo và phân tích',
       items: [
-        { label: 'Báo cáo', href: '/admin/reports', icon: FileText },
+        { label: 'Báo cáo tổng quan', href: '/admin/reports', icon: FileText },
         { label: 'Báo cáo hoạt động', href: '/admin/reports/activity-statistics', icon: PieChart },
         { label: 'Báo cáo điểm số', href: '/admin/reports/scores', icon: BarChart3 },
         { label: 'Báo cáo giảng viên', href: '/admin/reports/teachers', icon: Users },
         { label: 'Tìm kiếm nâng cao', href: '/admin/search', icon: Search },
+      ],
+    },
+    {
+      title: 'Cấu hình và hệ thống',
+      items: [
+        { label: 'Mẫu hoạt động', href: '/admin/activity-templates', icon: Sparkles },
+        { label: 'Loại hoạt động', href: '/admin/activity-types', icon: Target },
+        { label: 'Khung thời gian', href: '/admin/time-slots', icon: Clock },
+        { label: 'Cấp độ tổ chức', href: '/admin/organization-levels', icon: Target },
+        { label: 'Chính sách điểm danh', href: '/admin/system-config/attendance-policy', icon: Sliders },
         { label: 'Nhật ký hệ thống', href: '/admin/audit', icon: FileText },
         { label: 'Nhật ký chi tiết', href: '/admin/audit-logs', icon: FileText },
-        { label: 'Cấp độ tổ chức', href: '/admin/organization-levels', icon: Target },
         { label: 'Cài đặt QR', href: '/admin/system-config/qr-settings', icon: QrCode },
         { label: 'Thiết kế QR', href: '/admin/system-config/qr-design', icon: Palette },
-        {
-          label: 'Chính sách điểm danh',
-          href: '/admin/system-config/attendance-policy',
-          icon: Sliders,
-        },
-        {
-          label: 'Hạn chót phê duyệt',
-          href: '/admin/system-config/approval-deadline',
-          icon: Clock,
-        },
+        { label: 'Hạn chót phê duyệt', href: '/admin/system-config/approval-deadline', icon: Clock },
         { label: 'Sinh trắc học', href: '/admin/biometrics', icon: ScanFace },
+        { label: 'Sức khỏe hệ thống', href: '/admin/system-health', icon: BarChart3 },
         { label: 'Cài đặt hệ thống', href: '/admin/settings', icon: Settings },
         { label: 'Cấu hình nâng cao', href: '/admin/system-config/advanced', icon: Sliders },
-        { label: 'Sức khỏe hệ thống', href: '/admin/system-health', icon: BarChart3 },
         { label: 'Sao lưu và phục hồi', href: '/admin/backup', icon: Database },
       ],
     },
@@ -200,39 +202,30 @@ export default function Sidebar() {
       items: [{ label: 'Bảng điều khiển', href: '/teacher/dashboard', icon: LayoutDashboard }],
     },
     {
-      title: 'Thông báo và tương tác',
-      items: [
-        { label: 'Thông báo', href: '/teacher/notifications', icon: Bell, badge: unreadCount },
-        { label: 'Gửi theo học viên', href: '/teacher/notify-students', icon: Bell },
-        { label: 'Gửi theo lớp/khối', href: '/teacher/notifications/broadcast', icon: Bell },
-        { label: 'Lịch sử gửi', href: '/teacher/notifications/history', icon: Clock },
-        { label: 'Cài đặt thông báo', href: '/teacher/notifications/settings', icon: Settings },
-        { label: 'Khảo sát', href: '/teacher/polls', icon: ClipboardCheck },
-        { label: 'Cảnh báo', href: '/teacher/alerts', icon: AlertTriangle },
-      ],
-    },
-    {
-      title: 'Quản lý lớp và hoạt động',
-      items: [
-        { label: 'Hoạt động của tôi', href: '/teacher/activities', icon: BookOpen },
-        { label: 'Phê duyệt', href: '/teacher/approvals', icon: CheckSquare },
-        { label: 'Lớp học', href: '/teacher/classes', icon: School },
-        { label: 'Học viên', href: '/teacher/students', icon: Users },
-        { label: 'Sổ tay học viên', href: '/teacher/students/notes', icon: FileText },
-      ],
-    },
-    {
-      title: 'Điểm danh và đánh giá',
+      title: 'Vận hành hằng ngày',
       items: [
         { label: 'Điểm danh', href: '/teacher/attendance', icon: UserCheck },
         { label: 'Mở QR điểm danh', href: '/teacher/qr', icon: QrCode },
         { label: 'Điểm danh khuôn mặt', href: '/teacher/attendance/face', icon: ScanFace },
-        { label: 'Chính sách điểm danh', href: '/teacher/attendance/policy', icon: Sliders },
-        { label: 'Sinh trắc học', href: '/teacher/biometrics', icon: ScanFace },
+        { label: 'Hoạt động của tôi', href: '/teacher/activities', icon: BookOpen },
+        { label: 'Học viên', href: '/teacher/students', icon: Users },
+        { label: 'Lớp học', href: '/teacher/classes', icon: School },
+        { label: 'Phê duyệt', href: '/teacher/approvals', icon: CheckSquare },
       ],
     },
     {
-      title: 'Báo cáo và thành tích',
+      title: 'Tương tác học viên',
+      items: [
+        { label: 'Thông báo', href: '/teacher/notifications', icon: Bell, badge: unreadCount },
+        { label: 'Gửi theo học viên', href: '/teacher/notify-students', icon: Bell },
+        { label: 'Gửi theo lớp khối', href: '/teacher/notifications/broadcast', icon: Bell },
+        { label: 'Khảo sát', href: '/teacher/polls', icon: ClipboardCheck },
+        { label: 'Cảnh báo', href: '/teacher/alerts', icon: AlertTriangle },
+        { label: 'Sổ tay học viên', href: '/teacher/students/notes', icon: FileText },
+      ],
+    },
+    {
+      title: 'Báo cáo và đề xuất',
       items: [
         { label: 'Báo cáo tham gia', href: '/teacher/reports/participation', icon: FileText },
         { label: 'Báo cáo điểm danh', href: '/teacher/reports/attendance', icon: PieChart },
@@ -241,93 +234,95 @@ export default function Sidebar() {
         { label: 'Đề xuất cộng điểm', href: '/teacher/bonus-proposal', icon: BarChart3 },
       ],
     },
+    {
+      title: 'Cài đặt và sinh trắc học',
+      items: [
+        { label: 'Chính sách điểm danh', href: '/teacher/attendance/policy', icon: Sliders },
+        { label: 'Sinh trắc học', href: '/teacher/biometrics', icon: ScanFace },
+        { label: 'Lịch sử gửi', href: '/teacher/notifications/history', icon: Clock },
+        { label: 'Cài đặt thông báo', href: '/teacher/notifications/settings', icon: Settings },
+      ],
+    },
   ]);
 
   const studentNavigation = dedupeNavigation([
     {
-      title: 'Tổng quan',
-      items: [{ label: 'Bảng điều khiển', href: '/student/dashboard', icon: LayoutDashboard }],
-    },
-    {
-      title: 'Thông báo và tiện ích',
+      title: 'Dùng hằng ngày',
       items: [
+        { label: 'Quét QR điểm danh', href: '/student/check-in', icon: QrCode },
+        { label: 'Hoạt động của tôi', href: '/student/my-activities', icon: BookOpen },
         { label: 'Thông báo', href: '/student/notifications', icon: Bell, badge: unreadCount },
         { label: 'Cảnh báo', href: '/student/alerts', icon: AlertTriangle },
-        { label: 'Quét QR điểm danh', href: '/student/check-in', icon: QrCode },
         { label: 'Khảo sát', href: '/student/polls', icon: ClipboardCheck },
-        { label: 'Thiết bị đăng nhập', href: '/student/devices', icon: Laptop },
-        { label: 'Hồ sơ cá nhân', href: '/student/profile', icon: User },
+        { label: 'Bảng điều khiển', href: '/student/dashboard', icon: LayoutDashboard },
       ],
     },
     {
-      title: 'Hoạt động',
-      items: [
-        { label: 'Khám phá hoạt động', href: '/student/activities', icon: Sparkles },
-        { label: 'Hoạt động của tôi', href: '/student/my-activities', icon: BookOpen },
-        { label: 'Lịch sử tham gia', href: '/student/history', icon: Clock },
-        { label: 'Gợi ý hoạt động', href: '/student/recommendations', icon: Target },
-        { label: 'Mẹo thành tích', href: '/student/achievements/tips', icon: Sparkles },
-      ],
-    },
-    {
-      title: 'Điểm và khen thưởng',
+      title: 'Điểm số và thành tích',
       items: [
         { label: 'Điểm rèn luyện', href: '/student/points', icon: BarChart3 },
         { label: 'Bảng điểm', href: '/student/scores', icon: PieChart },
         { label: 'Bảng xếp hạng', href: '/student/ranking', icon: Trophy },
+        { label: 'Lịch sử tham gia', href: '/student/history', icon: Clock },
         { label: 'Giải thưởng', href: '/student/awards', icon: Award },
-        { label: 'Lịch sử giải thưởng', href: '/student/awards/history', icon: Clock },
         { label: 'Giải thưởng sắp diễn ra', href: '/student/awards/upcoming', icon: Sparkles },
+        { label: 'Lịch sử giải thưởng', href: '/student/awards/history', icon: Clock },
+        { label: 'Mẹo thành tích', href: '/student/achievements/tips', icon: Sparkles },
+      ],
+    },
+    {
+      title: 'Khám phá hoạt động',
+      items: [
+        { label: 'Khám phá hoạt động', href: '/student/activities', icon: Sparkles },
+        { label: 'Gợi ý hoạt động', href: '/student/recommendations', icon: Target },
+      ],
+    },
+    {
+      title: 'Tài khoản',
+      items: [
+        { label: 'Hồ sơ cá nhân', href: '/student/profile', icon: User },
+        { label: 'Thiết bị đăng nhập', href: '/student/devices', icon: Laptop },
       ],
     },
   ]);
 
   const navigation =
-    user.role === 'admin'
-      ? adminNavigation
-      : user.role === 'teacher'
-        ? teacherNavigation
-        : studentNavigation;
+    user.role === 'admin' ? adminNavigation : user.role === 'teacher' ? teacherNavigation : studentNavigation;
 
   const isActive = (path: string) => {
-    if (pathname === path) {
-      return true;
-    }
-
-    if (path === '/teacher/attendance' && pathname?.startsWith('/teacher/attendance/policy')) {
-      return false;
-    }
-
-    if (path === '/teacher/attendance' && pathname?.startsWith('/teacher/attendance/face')) {
-      return false;
-    }
-
-    if (path === '/admin/settings' && pathname?.startsWith('/admin/system-config')) {
-      return false;
-    }
-
-    if (pathname?.startsWith(`${path}/`)) {
-      return true;
-    }
-
-    return false;
+    if (pathname === path) return true;
+    if (path === '/teacher/attendance' && pathname?.startsWith('/teacher/attendance/policy')) return false;
+    if (path === '/teacher/attendance' && pathname?.startsWith('/teacher/attendance/face')) return false;
+    if (path === '/admin/settings' && pathname?.startsWith('/admin/system-config')) return false;
+    return Boolean(pathname?.startsWith(`${path}/`));
   };
 
-  const handleLogout = async () => {
+  async function handleLogout() {
     setMobileOpen(false);
     await logout();
-  };
+  }
 
-  const roleLabel =
-    user.role === 'admin' ? 'Quản trị viên' : user.role === 'teacher' ? 'Giảng viên' : 'Học viên';
+  const roleLabel = user.role === 'admin' ? 'Quản trị viên' : user.role === 'teacher' ? 'Giảng viên' : 'Học viên';
 
   return (
     <>
       <button
         onClick={() => setMobileOpen((current) => !current)}
-        className="fixed left-4 top-4 z-50 rounded-2xl border border-white/20 bg-slate-950/90 p-3 text-white shadow-2xl shadow-slate-950/30 backdrop-blur xl:hidden"
+        className={`fixed top-4 z-[55] rounded-2xl border p-3 text-white shadow-2xl backdrop-blur transition-colors xl:hidden ${
+          mobileOpen
+            ? 'border-cyan-300/40 bg-slate-900/95 shadow-cyan-900/30'
+            : 'border-white/20 bg-slate-950/90 shadow-slate-950/30'
+        }`}
         aria-label="Mở hoặc đóng điều hướng"
-        style={{ minWidth: '48px', minHeight: '48px' }}
+        aria-expanded={mobileOpen}
+        aria-controls="app-sidebar"
+        data-testid="mobile-sidebar-toggle"
+        style={{
+          minWidth: '48px',
+          minHeight: '48px',
+          right: 'max(0.875rem, env(safe-area-inset-right))',
+          top: 'max(0.875rem, env(safe-area-inset-top))',
+        }}
       >
         {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
       </button>
@@ -340,13 +335,17 @@ export default function Sidebar() {
       )}
 
       <aside
-        className={`fixed left-0 top-0 z-40 flex h-screen flex-col overflow-hidden border-r border-white/10 bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.22),_transparent_34%),linear-gradient(180deg,_rgba(15,23,42,0.98),_rgba(15,23,42,0.94))] text-white shadow-2xl shadow-slate-950/30 transition-all duration-300 ease-out ${
-          collapsed ? 'xl:w-[5.5rem]' : 'xl:w-72'
-        } ${mobileOpen ? 'translate-x-0' : '-translate-x-full xl:translate-x-0'} w-72`}
+        id="app-sidebar"
+        data-testid="app-sidebar"
+        className={`fixed left-0 top-0 z-40 flex h-screen w-[18rem] max-w-[calc(100vw-1rem)] flex-col overflow-hidden border-r border-white/10 bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.22),_transparent_34%),linear-gradient(180deg,_rgba(15,23,42,0.98),_rgba(15,23,42,0.94))] text-white shadow-2xl shadow-slate-950/30 transition-all duration-300 ease-out ${
+          collapsed ? 'xl:w-[5.5rem]' : 'xl:w-[18rem]'
+        } ${mobileOpen ? 'translate-x-0' : '-translate-x-full xl:translate-x-0'}`}
         style={
           {
             '--sidebar-expanded-width': SIDEBAR_EXPANDED_WIDTH,
             '--sidebar-collapsed-width': SIDEBAR_COLLAPSED_WIDTH,
+            paddingTop: 'max(0px, env(safe-area-inset-top) - 0.25rem)',
+            paddingBottom: 'env(safe-area-inset-bottom)',
           } as React.CSSProperties
         }
       >
@@ -359,9 +358,7 @@ export default function Sidebar() {
                 </div>
                 <div className="min-w-0">
                   <div className="truncate text-base font-semibold tracking-[0.04em]">UniAct</div>
-                  <div className="truncate text-xs text-slate-300">
-                    Cổng điều phối hoạt động và điểm danh
-                  </div>
+                  <div className="truncate text-xs text-slate-300">Cổng điều phối hoạt động và điểm danh</div>
                 </div>
               </div>
             ) : (
@@ -427,9 +424,7 @@ export default function Sidebar() {
                       />
                       {!collapsed && (
                         <>
-                          <span className="min-w-0 flex-1 truncate text-sm font-medium">
-                            {item.label}
-                          </span>
+                          <span className="min-w-0 flex-1 truncate text-sm font-medium">{item.label}</span>
                           {item.badge && item.badge > 0 && (
                             <span className="ml-3 rounded-full bg-rose-500 px-2 py-0.5 text-[11px] font-semibold text-white shadow-sm shadow-rose-950/30">
                               {item.badge > 9 ? '9+' : item.badge}

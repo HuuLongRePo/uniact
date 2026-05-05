@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { Button } from './Button';
 
 interface ConfirmDialogProps {
@@ -25,28 +25,37 @@ export function ConfirmDialog({
   variant = 'warning',
 }: ConfirmDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const titleId = useId();
 
   if (!isOpen) return null;
 
-  const handleConfirm = async () => {
+  async function handleConfirm() {
     setIsLoading(true);
     try {
       await onConfirm();
     } finally {
       setIsLoading(false);
     }
-  };
+  }
 
   const confirmVariant =
     variant === 'danger' ? 'danger' : variant === 'info' ? 'primary' : 'warning';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+    <div className="app-modal-backdrop px-4" onClick={onCancel}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="app-modal-panel w-full max-w-md"
+        onClick={(event) => event.stopPropagation()}
+      >
         <div className="p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">{title}</h3>
-          <p className="text-gray-600 mb-6">{message}</p>
-          <div className="flex gap-3 justify-end">
+          <h3 id={titleId} className="mb-2 text-lg font-semibold text-gray-900">
+            {title}
+          </h3>
+          <p className="mb-6 text-gray-600">{message}</p>
+          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
             <Button variant="secondary" onClick={onCancel} isLoading={false} disabled={isLoading}>
               {cancelText}
             </Button>

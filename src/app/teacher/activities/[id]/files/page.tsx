@@ -1,12 +1,26 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { FileText, Download, Trash2, Plus, Image as ImageIcon, File, Eye } from 'lucide-react';
+import Link from 'next/link';
+import React, { useEffect, useRef, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import {
+  ArrowLeft,
+  Download,
+  Eye,
+  File as FileIcon,
+  FileSpreadsheet,
+  FileText,
+  Image as ImageIcon,
+  Plus,
+  Trash2,
+  UploadCloud,
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { useAuth } from '@/contexts/AuthContext';
 import { formatVietnamDateTime } from '@/lib/timezone';
 
-interface ActivityFile {
+type ActivityFile = {
   id: number;
   activity_id: number;
   file_path: string;
@@ -15,57 +29,84 @@ interface ActivityFile {
   file_type: string;
   uploaded_at: string;
   uploaded_by: string;
+};
+
+function getFileIcon(fileType: string, fileName: string) {
+  if (/image\/(jpeg|png|gif|webp)/.test(fileType)) {
+    return <ImageIcon className="h-5 w-5 text-emerald-600" />;
+  }
+  if (fileType === 'application/pdf' || fileName.endsWith('.pdf')) {
+    return <FileText className="h-5 w-5 text-rose-600" />;
+  }
+  if (fileType.includes('sheet') || fileName.match(/\.(xlsx?)$/i)) {
+    return <FileSpreadsheet className="h-5 w-5 text-green-600" />;
+  }
+  if (fileType.includes('word') || fileName.match(/\.(docx?)$/i)) {
+    return <FileText className="h-5 w-5 text-blue-600" />;
+  }
+  return <FileIcon className="h-5 w-5 text-slate-600" />;
 }
 
-export default function ActivityFilesPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = React.use(params);
+function formatFileSize(bytes: number) {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const index = Math.floor(Math.log(bytes) / Math.log(k));
+  return `${Math.round((bytes / Math.pow(k, index)) * 100) / 100} ${sizes[index]}`;
+}
+
+function isImageFile(fileType: string) {
+  return /image\/(jpeg|png|gif|webp)/.test(fileType);
+}
+
+export default function ActivityFilesPage() {
+  const router = useRouter();
+  const params = useParams();
+  const activityId = params.id as string;
+  const { user, loading: authLoading } = useAuth();
+
   const [files, setFiles] = useState<ActivityFile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
   const [activityTitle, setActivityTitle] = useState('');
   const [previewFile, setPreviewFile] = useState<ActivityFile | null>(null);
   const [fileToDelete, setFileToDelete] = useState<ActivityFile | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
-    fetchFiles();
-  }, [id]);
+    if (!authLoading && !user) {
+      router.push('/login');
+      return;
+    }
+
+    if (user && user.role !== 'teacher' && user.role !== 'admin') {
+      toast.error('Chi giang vien moi co quyen quan ly tep dinh kem');
+      router.push('/teacher/dashboard');
+      return;
+    }
+
+    if (user && activityId) {
+      void fetchFiles();
+    }
+  }, [activityId, authLoading, router, user]);
 
   const fetchFiles = async () => {
     try {
-      const response = await fetch(`/api/activities/${id}/files`);
-      if (!response.ok) throw new Error('Không thể tải danh sách file');
-      const data = await response.json();
-      setFiles(data.files || []);
-      setActivityTitle(data.activity_title || '');
-    } catch (error) {
-      console.error(error);
-      toast.error('Không thể tải danh sách file');
+      setLoading(true);
+      const response = await fetch(`/api/activities/${activityId}/files`);
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(payload?.error || payload?.message || 'Khong the tai danh sach file');
+      }
+
+      setFiles(payload?.files ?? payload?.data?.files ?? []);
+      setActivityTitle(payload?.activity_title ?? payload?.data?.activity_title ?? '');
+    } catch (error: unknown) {
+      console.error('Error loading activity files:', error);
+      toast.error(error instanceof Error ? error.message : 'Khong the tai danh sach file');
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleDeleteFile = async (fileId: number) => {
-    try {
-      const response = await fetch(`/api/activities/${id}/files/${fileId}`, {
-        method: 'DELETE',
-      });
-      if (!response.ok) throw new Error('Không thể xóa file');
-      setFiles(files.filter((f) => f.id !== fileId));
-      toast.success('Xóa file thành công');
-    } catch (error) {
-      console.error(error);
-      toast.error('Không thể xóa file');
-    }
-  };
-
-  const handleDownloadFile = (file: ActivityFile) => {
-    const link = document.createElement('a');
-    link.href = `/api/activities/${id}/files/${file.id}/download`;
-    link.download = file.file_name;
-    link.click();
-    toast.success('Tải file thành công');
   };
 
   const handleUploadClick = () => {
@@ -73,36 +114,33 @@ export default function ActivityFilesPage({ params }: { params: Promise<{ id: st
     fileInputRef.current?.click();
   };
 
-  const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    // allow selecting the same file again
-    e.target.value = '';
+  const handleFileSelected = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
 
-    if (!file) return;
-    if (uploading) return;
+    if (!file || uploading) return;
 
     const formData = new FormData();
     formData.append('file', file);
 
     setUploading(true);
-    const toastId = toast.loading('Đang tải lên...');
+    const toastId = toast.loading('Dang tai tep len...');
+
     try {
-      const response = await fetch(`/api/activities/${id}/files`, {
+      const response = await fetch(`/api/activities/${activityId}/files`, {
         method: 'POST',
         body: formData,
       });
-
       const payload = await response.json().catch(() => null);
       if (!response.ok) {
-        const message = payload?.error || payload?.message || 'Không thể tải file lên';
-        throw new Error(message);
+        throw new Error(payload?.error || payload?.message || 'Khong the tai tep len');
       }
 
-      toast.success(payload?.message || 'Tải file thành công', { id: toastId });
+      toast.success(payload?.message || 'Tai tep thanh cong', { id: toastId });
       await fetchFiles();
     } catch (error: unknown) {
-      console.error(error);
-      toast.error(error instanceof Error ? error.message : 'Không thể tải file lên', {
+      console.error('Error uploading activity file:', error);
+      toast.error(error instanceof Error ? error.message : 'Khong the tai tep len', {
         id: toastId,
       });
     } finally {
@@ -110,40 +148,70 @@ export default function ActivityFilesPage({ params }: { params: Promise<{ id: st
     }
   };
 
-  const getFileIcon = (fileType: string, fileName: string) => {
-    if (/image\/(jpeg|png|gif|webp)/.test(fileType)) {
-      return <ImageIcon className="w-5 h-5 text-green-600" />;
+  const handleDeleteFile = async (fileId: number) => {
+    try {
+      const response = await fetch(`/api/activities/${activityId}/files/${fileId}`, {
+        method: 'DELETE',
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(payload?.error || payload?.message || 'Khong the xoa file');
+      }
+
+      setFiles((current) => current.filter((item) => item.id !== fileId));
+      toast.success(payload?.message || 'Xoa file thanh cong');
+    } catch (error: unknown) {
+      console.error('Error deleting activity file:', error);
+      toast.error(error instanceof Error ? error.message : 'Khong the xoa file');
     }
-    if (fileType === 'application/pdf' || fileName.endsWith('.pdf')) {
-      return <FileText className="w-5 h-5 text-red-600" />;
-    }
-    if (fileType.includes('word') || fileName.match(/\.(docx?)$/i)) {
-      return <FileText className="w-5 h-5 text-blue-600" />;
-    }
-    if (fileType.includes('sheet') || fileName.match(/\.(xlsx?)$/i)) {
-      return <FileText className="w-5 h-5 text-green-600" />;
-    }
-    return <File className="w-5 h-5 text-gray-600" />;
   };
 
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+  const handleDownloadFile = (file: ActivityFile) => {
+    const link = document.createElement('a');
+    link.href = `/api/activities/${activityId}/files/${file.id}/download`;
+    link.download = file.file_name;
+    link.click();
+    toast.success('Dang tai file');
   };
 
-  const isImageFile = (fileType: string) => /image\/(jpeg|png|gif|webp)/.test(fileType);
+  if (authLoading || loading) {
+    return (
+      <div className="page-shell">
+        <div className="mx-auto max-w-6xl p-6">
+          <div className="page-surface rounded-[1.75rem] px-5 py-10 text-center sm:px-7">
+            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-blue-600" />
+            <p className="mt-3 text-sm text-slate-600">Dang tai tep dinh kem...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-4xl mx-auto">
-        <div className="bg-white rounded-lg shadow p-6 border border-gray-200 mb-6">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Quản lý file</h1>
-              <p className="text-gray-600 mt-1">{activityTitle}</p>
+    <div className="page-shell">
+      <div className="mx-auto max-w-6xl space-y-6">
+        <section className="page-surface rounded-[1.75rem] px-5 py-6 sm:px-7">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+            <div className="max-w-3xl">
+              <Link
+                href={`/teacher/activities/${activityId}`}
+                className="mb-4 inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-700"
+              >
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Quay lai hub hoat dong
+              </Link>
+
+              <div className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-700">
+                Activity files
+              </div>
+              <h1 className="mt-3 text-3xl font-bold text-slate-900">Quan ly tep dinh kem</h1>
+              <p className="mt-2 text-sm text-slate-600">
+                Luu tru tai lieu, bieu mau, hinh anh va file van hanh phuc vu cho hoat dong hien tai.
+              </p>
+              <div className="mt-4 flex flex-wrap gap-3 text-sm text-slate-600">
+                <span>{activityTitle || `Hoat dong #${activityId}`}</span>
+                <span>{files.length} tep hien co</span>
+              </div>
             </div>
 
             <div className="flex items-center gap-2">
@@ -157,107 +225,163 @@ export default function ActivityFilesPage({ params }: { params: Promise<{ id: st
               <button
                 onClick={handleUploadClick}
                 disabled={uploading}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white rounded transition"
-                title="Tải file lên"
+                className="inline-flex items-center justify-center gap-2 rounded-[1rem] bg-blue-600 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                <Plus className="w-5 h-5" />
-                Tải lên
+                {uploading ? <UploadCloud className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+                {uploading ? 'Dang tai len...' : 'Tai tep len'}
               </button>
             </div>
           </div>
-        </div>
+        </section>
 
-        {loading ? (
-          <div className="bg-white rounded-lg shadow p-12 text-center">
-            <div className="animate-spin inline-block w-8 h-8 border-4 border-gray-200 border-t-blue-600 rounded-full"></div>
-            <p className="mt-4 text-gray-600">Đang tải...</p>
+        <section className="grid gap-4 sm:grid-cols-3">
+          <div className="page-surface rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Tong tep</div>
+            <div className="mt-2 text-2xl font-bold text-slate-900">{files.length}</div>
           </div>
-        ) : files.length === 0 ? (
-          <div className="bg-white rounded-lg shadow p-12 text-center border border-gray-200">
-            <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-600 text-lg">Chưa có file nào</p>
+          <div className="page-surface rounded-[1.5rem] border border-emerald-200 bg-emerald-50 p-4 shadow-sm">
+            <div className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Tep hinh anh</div>
+            <div className="mt-2 text-2xl font-bold text-slate-900">
+              {files.filter((file) => isImageFile(file.file_type)).length}
+            </div>
           </div>
-        ) : (
-          <div className="space-y-4">
-            {files.map((file) => (
-              <div
-                key={file.id}
-                className="bg-white rounded-lg shadow p-4 border border-gray-200 hover:shadow-md transition"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-gray-100 rounded">
-                    {getFileIcon(file.file_type, file.file_name)}
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-medium text-gray-900">{file.file_name}</h3>
-                    <div className="flex gap-4 text-sm text-gray-600 mt-1">
-                      <span>{formatFileSize(file.file_size)}</span>
-                      <span>{formatVietnamDateTime(file.uploaded_at, 'date')}</span>
-                      <span>Bởi {file.uploaded_by}</span>
+          <div className="page-surface rounded-[1.5rem] border border-violet-200 bg-violet-50 p-4 shadow-sm">
+            <div className="text-xs font-semibold uppercase tracking-wide text-violet-700">Tong dung luong</div>
+            <div className="mt-2 text-2xl font-bold text-slate-900">
+              {formatFileSize(files.reduce((sum, file) => sum + Number(file.file_size || 0), 0))}
+            </div>
+          </div>
+        </section>
+
+        <section className="page-surface rounded-[1.75rem] px-5 py-6 sm:px-7">
+          <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-xl font-semibold text-slate-900">Danh sach tep</h2>
+              <p className="mt-1 text-sm text-slate-600">
+                Uu tien tai cac file can cho van hanh, sau do xoa bot tep rac hoac tep trung lap.
+              </p>
+            </div>
+            <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-700">
+              {files.length} tep
+            </div>
+          </div>
+
+          {files.length === 0 ? (
+            <div className="rounded-[1.5rem] border border-dashed border-slate-300 bg-slate-50 px-4 py-10 text-center">
+              <FileText className="mx-auto h-12 w-12 text-slate-400" />
+              <div className="mt-4 text-lg font-semibold text-slate-700">Chua co tep nao</div>
+              <p className="mt-2 text-sm text-slate-500">
+                Bat dau bang cach tai bieu mau, tai lieu huong dan, anh su kien hoac danh sach lien quan.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {files.map((file) => (
+                <article
+                  key={file.id}
+                  className="rounded-[1.5rem] border border-slate-200 bg-white p-4 transition hover:bg-slate-50"
+                >
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="flex items-start gap-3">
+                      <div className="rounded-2xl bg-slate-100 p-3">
+                        {getFileIcon(file.file_type, file.file_name)}
+                      </div>
+                      <div>
+                        <div className="text-base font-semibold text-slate-900">{file.file_name}</div>
+                        <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                          <span className="rounded-full bg-slate-100 px-3 py-1 font-semibold text-slate-700">
+                            {formatFileSize(file.file_size)}
+                          </span>
+                          <span className="rounded-full bg-slate-100 px-3 py-1 font-semibold text-slate-700">
+                            {formatVietnamDateTime(file.uploaded_at, 'date')}
+                          </span>
+                          <span className="rounded-full bg-slate-100 px-3 py-1 font-semibold text-slate-700">
+                            {file.uploaded_by || 'Khong ro nguoi tai'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      {isImageFile(file.file_type) ? (
+                        <button
+                          onClick={() => setPreviewFile(file)}
+                          className="inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-100"
+                        >
+                          <Eye className="h-4 w-4" />
+                          Xem truoc
+                        </button>
+                      ) : null}
+                      <button
+                        onClick={() => handleDownloadFile(file)}
+                        className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-100"
+                      >
+                        <Download className="h-4 w-4" />
+                        Tai xuong
+                      </button>
+                      <button
+                        onClick={() => setFileToDelete(file)}
+                        className="inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-100"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Xoa tep
+                      </button>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    {isImageFile(file.file_type) && (
-                      <button
-                        onClick={() => setPreviewFile(file)}
-                        className="p-2 hover:bg-blue-100 text-blue-600 rounded transition"
-                        title="Xem trước"
-                      >
-                        <Eye className="w-5 h-5" />
-                      </button>
-                    )}
-                    <button
-                      onClick={() => handleDownloadFile(file)}
-                      className="p-2 hover:bg-green-100 text-green-600 rounded transition"
-                      title="Tải xuống"
-                    >
-                      <Download className="w-5 h-5" />
-                    </button>
-                    <button
-                      onClick={() => setFileToDelete(file)}
-                      className="p-2 hover:bg-red-100 text-red-600 rounded transition"
-                      title="Xóa"
-                    >
-                      <Trash2 className="w-5 h-5" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
       </div>
 
-      {/* Image Preview Modal */}
-      {previewFile && isImageFile(previewFile.file_type) && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-2xl max-h-96 p-4 relative">
-            <button
-              onClick={() => setPreviewFile(null)}
-              className="absolute top-2 right-2 p-1 hover:bg-gray-100 rounded"
-            >
-              ✕
-            </button>
-            <img
-              src={`/api/activities/${id}/files/${previewFile.id}/preview`}
-              alt={previewFile.file_name}
-              className="max-w-full max-h-96 object-contain"
-            />
-            <p className="text-sm text-gray-600 mt-2">{previewFile.file_name}</p>
+      {previewFile && isImageFile(previewFile.file_type) ? (
+        <div className="app-modal-backdrop p-4" onClick={() => setPreviewFile(null)}>
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="teacher-file-preview-title"
+            className="app-modal-panel app-modal-panel-scroll w-full max-w-4xl p-4"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div>
+                <h3 id="teacher-file-preview-title" className="text-base font-semibold text-slate-900">
+                  {previewFile.file_name}
+                </h3>
+                <div className="mt-1 text-sm text-slate-500">
+                  {formatFileSize(previewFile.file_size)} • {previewFile.uploaded_by}
+                </div>
+              </div>
+              <button
+                onClick={() => setPreviewFile(null)}
+                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              >
+                Dong
+              </button>
+            </div>
+
+            <div className="overflow-hidden rounded-[1rem] bg-slate-100 p-2">
+              <img
+                src={`/api/activities/${activityId}/files/${previewFile.id}/preview`}
+                alt={previewFile.file_name}
+                className="max-h-[70vh] w-full rounded-[0.75rem] object-contain"
+              />
+            </div>
           </div>
         </div>
-      )}
+      ) : null}
 
       <ConfirmDialog
         isOpen={fileToDelete !== null}
-        title="Xóa file"
+        title="Xoa tep dinh kem"
         message={
           fileToDelete
-            ? `Bạn có chắc chắn muốn xóa file "${fileToDelete.file_name}" khỏi hoạt động này?`
+            ? `Ban co chac chan muon xoa tep "${fileToDelete.file_name}" khoi hoat dong nay?`
             : ''
         }
-        confirmText="Xóa file"
-        cancelText="Hủy"
+        confirmText="Xoa tep"
+        cancelText="Huy"
         variant="danger"
         onCancel={() => setFileToDelete(null)}
         onConfirm={async () => {

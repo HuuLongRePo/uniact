@@ -1,82 +1,170 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
-import { useRouter, useParams } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
-import LoadingSpinner from '@/components/LoadingSpinner';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import { AlertCircle, ArrowLeft, CheckCircle2, Loader2, Save } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { AlertCircle, CheckCircle, X } from 'lucide-react';
+import LoadingSpinner from '@/components/LoadingSpinner';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { useAuth } from '@/contexts/AuthContext';
 import { toVietnamDatetimeLocalValue } from '@/lib/timezone';
 
-interface Activity {
+type ActivityRecord = {
   id: number;
   title: string;
-  description: string;
+  description?: string | null;
   date_time: string;
-  location: string;
-  activity_type_id: number;
-  organization_level_id: number;
-  max_participants: number;
-  status: string;
-  created_by: number;
-}
+  end_time?: string | null;
+  location?: string | null;
+  activity_type_id?: number | null;
+  organization_level_id?: number | null;
+  max_participants?: number | null;
+  status?: string | null;
+};
 
-interface ActivityFormData {
+type ActivityType = {
+  id: number;
+  name: string;
+};
+
+type OrganizationLevel = {
+  id: number;
+  name: string;
+};
+
+type FormState = {
   title: string;
   description: string;
   date_time: string;
+  end_time: string;
   location: string;
-  activity_type_id: number;
-  organization_level_id: number;
-  max_participants: number;
+  activity_type_id: string;
+  organization_level_id: string;
+  max_participants: string;
+};
+
+type FieldKey = keyof FormState;
+
+const EMPTY_FORM: FormState = {
+  title: '',
+  description: '',
+  date_time: '',
+  end_time: '',
+  location: '',
+  activity_type_id: '',
+  organization_level_id: '',
+  max_participants: '',
+};
+
+function parseActivityPayload(payload: any): ActivityRecord | null {
+  return payload?.activity || payload?.data?.activity || null;
 }
 
-type ActivityFormField = keyof ActivityFormData;
+function parseActivityTypesPayload(payload: any): ActivityType[] {
+  const source = payload?.types || payload?.data?.types || payload?.data || [];
+  return Array.isArray(source) ? source : [];
+}
+
+function parseOrganizationLevelsPayload(payload: any): OrganizationLevel[] {
+  const source = payload?.levels || payload?.data?.levels || payload?.data || [];
+  return Array.isArray(source) ? source : [];
+}
+
+function normalizeFormFromActivity(activity: ActivityRecord): FormState {
+  return {
+    title: activity.title || '',
+    description: activity.description || '',
+    date_time: toVietnamDatetimeLocalValue(activity.date_time),
+    end_time: toVietnamDatetimeLocalValue(activity.end_time || null),
+    location: activity.location || '',
+    activity_type_id: activity.activity_type_id ? String(activity.activity_type_id) : '',
+    organization_level_id: activity.organization_level_id
+      ? String(activity.organization_level_id)
+      : '',
+    max_participants:
+      typeof activity.max_participants === 'number' && activity.max_participants > 0
+        ? String(activity.max_participants)
+        : '',
+  };
+}
+
+function getFieldLabel(field: FieldKey) {
+  switch (field) {
+    case 'title':
+      return 'Tieu de';
+    case 'description':
+      return 'Mo ta';
+    case 'date_time':
+      return 'Bat dau';
+    case 'end_time':
+      return 'Ket thuc';
+    case 'location':
+      return 'Dia diem';
+    case 'activity_type_id':
+      return 'Loai hoat dong';
+    case 'organization_level_id':
+      return 'Cap to chuc';
+    case 'max_participants':
+      return 'Gioi han tham gia';
+    default:
+      return field;
+  }
+}
 
 export default function AdminEditActivityPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const params = useParams();
-  const activityId = params.id as string;
+  const activityId = String(params?.id || '');
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [activity, setActivity] = useState<Activity | null>(null);
-  const [formData, setFormData] = useState<ActivityFormData>({
-    title: '',
-    description: '',
-    date_time: '',
-    location: '',
-    activity_type_id: 1,
-    organization_level_id: 1,
-    max_participants: 0,
-  });
-  const [changes, setChanges] = useState<Partial<ActivityFormData>>({});
-  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [activity, setActivity] = useState<ActivityRecord | null>(null);
+  const [activityTypes, setActivityTypes] = useState<ActivityType[]>([]);
+  const [organizationLevels, setOrganizationLevels] = useState<OrganizationLevel[]>([]);
+  const [form, setForm] = useState<FormState>(EMPTY_FORM);
+  const [initialForm, setInitialForm] = useState<FormState>(EMPTY_FORM);
+  const [showSaveConfirm, setShowSaveConfirm] = useState(false);
 
-  const fetchActivity = useCallback(async () => {
+  const fetchEditContext = useCallback(async () => {
     try {
-      const response = await fetch(`/api/admin/activities/${activityId}`);
-      const data = await response.json();
-      const resolvedActivity = data.activity || data.data?.activity || null;
-      if (response.ok && resolvedActivity) {
-        setActivity(resolvedActivity);
-        setFormData({
-          title: resolvedActivity.title,
-          description: resolvedActivity.description,
-          date_time: toVietnamDatetimeLocalValue(resolvedActivity.date_time),
-          location: resolvedActivity.location,
-          activity_type_id: resolvedActivity.activity_type_id || 1,
-          organization_level_id: resolvedActivity.organization_level_id || 1,
-          max_participants: resolvedActivity.max_participants || 0,
-        });
-      } else {
-        toast.error(data.error || 'Không thể tải hoạt động');
-        router.push('/admin/activities');
+      setLoading(true);
+      const [activityResponse, typesResponse, levelsResponse] = await Promise.all([
+        fetch(`/api/admin/activities/${activityId}`),
+        fetch('/api/admin/activity-types'),
+        fetch('/api/admin/organization-levels'),
+      ]);
+
+      const activityPayload = await activityResponse.json().catch(() => null);
+      if (!activityResponse.ok) {
+        throw new Error(activityPayload?.error || activityPayload?.message || 'Khong the tai hoat dong');
       }
-    } catch (e) {
-      console.error('Fetch activity error:', e);
-      toast.error('Lỗi khi tải hoạt động');
+
+      const nextActivity = parseActivityPayload(activityPayload);
+      if (!nextActivity) {
+        throw new Error('Khong tim thay du lieu hoat dong');
+      }
+
+      const normalizedForm = normalizeFormFromActivity(nextActivity);
+      setActivity(nextActivity);
+      setForm(normalizedForm);
+      setInitialForm(normalizedForm);
+
+      if (typesResponse.ok) {
+        setActivityTypes(
+          parseActivityTypesPayload(await typesResponse.json().catch(() => null))
+        );
+      }
+
+      if (levelsResponse.ok) {
+        setOrganizationLevels(
+          parseOrganizationLevelsPayload(await levelsResponse.json().catch(() => null))
+        );
+      }
+    } catch (error) {
+      console.error('Fetch admin activity edit context error:', error);
+      toast.error(error instanceof Error ? error.message : 'Khong the tai du lieu chinh sua');
+      router.push('/admin/activities');
     } finally {
       setLoading(false);
     }
@@ -87,270 +175,310 @@ export default function AdminEditActivityPage() {
       router.push('/login');
       return;
     }
-    if (user) {
-      void fetchActivity();
-    }
-  }, [user, authLoading, router, fetchActivity]);
 
-  const handleFieldChange = <K extends ActivityFormField>(field: K, value: ActivityFormData[K]) => {
-    const newFormData = { ...formData, [field]: value };
-    setFormData(newFormData);
+    if (user && activityId) {
+      void fetchEditContext();
+    }
+  }, [activityId, authLoading, fetchEditContext, router, user]);
 
-    // Track changes
-    const newChanges: Partial<ActivityFormData> = {};
-    if (newFormData.title !== activity?.title) newChanges.title = newFormData.title;
-    if (newFormData.description !== activity?.description) {
-      newChanges.description = newFormData.description;
-    }
-    if (newFormData.date_time !== toVietnamDatetimeLocalValue(activity?.date_time)) {
-      newChanges.date_time = newFormData.date_time;
-    }
-    if (newFormData.location !== activity?.location) newChanges.location = newFormData.location;
-    if (newFormData.activity_type_id !== activity?.activity_type_id) {
-      newChanges.activity_type_id = newFormData.activity_type_id;
-    }
-    if (newFormData.organization_level_id !== activity?.organization_level_id) {
-      newChanges.organization_level_id = newFormData.organization_level_id;
-    }
-    if (newFormData.max_participants !== activity?.max_participants) {
-      newChanges.max_participants = newFormData.max_participants;
-    }
-    setChanges(newChanges);
-  };
+  const changedFields = useMemo(() => {
+    const nextChanges: Array<{ field: FieldKey; from: string; to: string }> = [];
 
-  const handleSave = () => {
-    if (Object.keys(changes).length === 0) {
-      toast('Không có thay đổi', { icon: 'ℹ️' });
+    (Object.keys(form) as FieldKey[]).forEach((field) => {
+      if (form[field] !== initialForm[field]) {
+        nextChanges.push({
+          field,
+          from: initialForm[field],
+          to: form[field],
+        });
+      }
+    });
+
+    return nextChanges;
+  }, [form, initialForm]);
+
+  function updateField(field: FieldKey, value: string) {
+    setForm((current) => ({
+      ...current,
+      [field]: value,
+    }));
+  }
+
+  function buildPayload() {
+    const payload: Record<string, string | number | null> = {};
+
+    changedFields.forEach(({ field }) => {
+      const value = form[field];
+
+      if (field === 'activity_type_id' || field === 'organization_level_id') {
+        payload[field] = value ? Number(value) : null;
+        return;
+      }
+
+      if (field === 'max_participants') {
+        payload[field] = value ? Number(value) : null;
+        return;
+      }
+
+      payload[field] = value || null;
+    });
+
+    return payload;
+  }
+
+  async function saveChanges() {
+    if (changedFields.length === 0) {
+      toast.error('Khong co thay doi de luu');
       return;
     }
-    setShowConfirmModal(true);
-  };
 
-  const confirmSave = async () => {
-    setSaving(true);
-    setShowConfirmModal(false);
     try {
+      setSaving(true);
       const response = await fetch(`/api/admin/activities/${activityId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(changes),
+        body: JSON.stringify(buildPayload()),
       });
+      const payload = await response.json().catch(() => null);
 
-      const data = await response.json();
-      const resolvedActivity = data.activity || data.data?.activity || null;
-      if (response.ok) {
-        toast.success(data.message || 'Cập nhật hoạt động thành công');
-        if (resolvedActivity) {
-          setActivity(resolvedActivity);
-        }
-        setChanges({});
-        setTimeout(() => router.push(`/admin/activities/${activityId}`), 1000);
-      } else {
-        toast.error(data.error || 'Cập nhật thất bại');
+      if (!response.ok) {
+        throw new Error(payload?.error || payload?.message || 'Khong the cap nhat hoat dong');
       }
-    } catch (e) {
-      console.error('Save activity error:', e);
-      toast.error('Lỗi khi cập nhật');
+
+      const nextActivity = parseActivityPayload(payload);
+      if (nextActivity) {
+        const normalized = normalizeFormFromActivity(nextActivity);
+        setActivity(nextActivity);
+        setForm(normalized);
+        setInitialForm(normalized);
+      }
+
+      toast.success(payload?.message || 'Da cap nhat hoat dong');
+      setShowSaveConfirm(false);
+      router.push(`/admin/activities/${activityId}`);
+    } catch (error) {
+      console.error('Save admin activity error:', error);
+      toast.error(error instanceof Error ? error.message : 'Khong the cap nhat hoat dong');
     } finally {
       setSaving(false);
     }
-  };
+  }
 
-  if (authLoading || loading) return <LoadingSpinner />;
+  if (authLoading || loading) {
+    return <LoadingSpinner message="Dang tai du lieu chinh sua..." />;
+  }
 
   if (!activity) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-800">
-          Không tìm thấy hoạt động
+      <div className="page-shell">
+        <div className="mx-auto max-w-3xl">
+          <section className="page-surface rounded-[1.75rem] border-rose-200 bg-rose-50 px-5 py-6 sm:px-7">
+            <div className="text-sm font-semibold text-rose-700">Khong tim thay hoat dong</div>
+          </section>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Chỉnh Sửa Hoạt Động</h1>
-        <p className="text-gray-600">
-          ID: {activity.id} | Trạng thái: <span className="font-semibold">{activity.status}</span>
-        </p>
-      </div>
+    <div className="page-shell">
+      <div className="mx-auto max-w-6xl space-y-6">
+        <section className="page-surface rounded-[1.75rem] px-5 py-6 sm:px-7">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+            <div className="flex items-start gap-4">
+              <button
+                type="button"
+                onClick={() => router.push(`/admin/activities/${activityId}`)}
+                className="rounded-xl border border-slate-300 p-2 text-slate-600 transition hover:bg-slate-50"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </button>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Form */}
-        <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            {/* Title */}
-            <div className="mb-6">
-              <label className="block text-lg font-semibold text-gray-800 mb-2">
-                Tiêu Đề Hoạt Động
-              </label>
-              <input
-                type="text"
-                value={formData.title}
-                onChange={(e) => handleFieldChange('title', e.target.value)}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              />
+              <div className="max-w-3xl">
+                <div className="inline-flex rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-blue-700">
+                  Activity edit
+                </div>
+                <h1
+                  className="mt-3 text-3xl font-bold text-slate-900"
+                  data-testid="admin-activity-edit-heading"
+                >
+                  Chinh sua hoat dong
+                </h1>
+                <p className="mt-2 text-sm text-slate-600">
+                  ID {activity.id} | Trang thai hien tai: {activity.status || 'N/A'}
+                </p>
+              </div>
             </div>
 
-            {/* Description */}
-            <div className="mb-6">
-              <label className="block text-lg font-semibold text-gray-800 mb-2">Mô Tả</label>
-              <textarea
-                value={formData.description}
-                onChange={(e) => handleFieldChange('description', e.target.value)}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                rows={4}
-              />
-            </div>
-
-            {/* Date & Time */}
-            <div className="mb-6">
-              <label className="block text-lg font-semibold text-gray-800 mb-2">Ngày & Giờ</label>
-              <input
-                type="datetime-local"
-                value={formData.date_time}
-                onChange={(e) => handleFieldChange('date_time', e.target.value)}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            {/* Location */}
-            <div className="mb-6">
-              <label className="block text-lg font-semibold text-gray-800 mb-2">Địa Điểm</label>
-              <input
-                type="text"
-                value={formData.location}
-                onChange={(e) => handleFieldChange('location', e.target.value)}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            {/* Max Participants */}
-            <div>
-              <label className="block text-lg font-semibold text-gray-800 mb-2">
-                Số Người Tối Đa
-              </label>
-              <input
-                type="number"
-                min="1"
-                value={formData.max_participants}
-                onChange={(e) => handleFieldChange('max_participants', parseInt(e.target.value))}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              />
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <button
+                type="button"
+                onClick={() => setShowSaveConfirm(true)}
+                disabled={changedFields.length === 0 || saving}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
+              >
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                Luu thay doi
+              </button>
             </div>
           </div>
-        </div>
+        </section>
 
-        {/* Changes Preview */}
-        <div className="lg:col-span-1">
-          <div className="bg-white rounded-lg shadow-lg p-6 sticky top-8">
-            <h3 className="text-lg font-semibold mb-4">📝 Thay Đổi</h3>
+        <div className="grid gap-6 xl:grid-cols-[1.4fr_0.8fr]">
+          <section className="page-surface rounded-[1.75rem] px-5 py-6 sm:px-7">
+            <div className="grid gap-5 md:grid-cols-2">
+              <label className="block md:col-span-2">
+                <span className="mb-2 block text-sm font-medium text-slate-700">Tieu de</span>
+                <input
+                  type="text"
+                  value={form.title}
+                  onChange={(event) => updateField('title', event.target.value)}
+                  className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm text-slate-900"
+                />
+              </label>
 
-            {Object.keys(changes).length === 0 ? (
-              <p className="text-gray-500 text-sm">Chưa có thay đổi</p>
+              <label className="block md:col-span-2">
+                <span className="mb-2 block text-sm font-medium text-slate-700">Mo ta</span>
+                <textarea
+                  rows={5}
+                  value={form.description}
+                  onChange={(event) => updateField('description', event.target.value)}
+                  className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm text-slate-900"
+                />
+              </label>
+
+              <label className="block">
+                <span className="mb-2 block text-sm font-medium text-slate-700">Bat dau</span>
+                <input
+                  type="datetime-local"
+                  value={form.date_time}
+                  onChange={(event) => updateField('date_time', event.target.value)}
+                  className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm text-slate-900"
+                />
+              </label>
+
+              <label className="block">
+                <span className="mb-2 block text-sm font-medium text-slate-700">Ket thuc</span>
+                <input
+                  type="datetime-local"
+                  value={form.end_time}
+                  onChange={(event) => updateField('end_time', event.target.value)}
+                  className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm text-slate-900"
+                />
+              </label>
+
+              <label className="block md:col-span-2">
+                <span className="mb-2 block text-sm font-medium text-slate-700">Dia diem</span>
+                <input
+                  type="text"
+                  value={form.location}
+                  onChange={(event) => updateField('location', event.target.value)}
+                  className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm text-slate-900"
+                />
+              </label>
+
+              <label className="block">
+                <span className="mb-2 block text-sm font-medium text-slate-700">Loai hoat dong</span>
+                <select
+                  value={form.activity_type_id}
+                  onChange={(event) => updateField('activity_type_id', event.target.value)}
+                  className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm text-slate-900"
+                >
+                  <option value="">Chon loai</option>
+                  {activityTypes.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="block">
+                <span className="mb-2 block text-sm font-medium text-slate-700">Cap to chuc</span>
+                <select
+                  value={form.organization_level_id}
+                  onChange={(event) => updateField('organization_level_id', event.target.value)}
+                  className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm text-slate-900"
+                >
+                  <option value="">Chon cap</option>
+                  {organizationLevels.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="block">
+                <span className="mb-2 block text-sm font-medium text-slate-700">Gioi han tham gia</span>
+                <input
+                  type="number"
+                  min="0"
+                  value={form.max_participants}
+                  onChange={(event) => updateField('max_participants', event.target.value)}
+                  className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm text-slate-900"
+                />
+              </label>
+            </div>
+          </section>
+
+          <section className="page-surface rounded-[1.75rem] px-5 py-6 sm:px-7">
+            <h2 className="text-lg font-semibold text-slate-900">Preview thay doi</h2>
+            <p className="mt-2 text-sm text-slate-600">
+              Kiem tra cac truong sap cap nhat truoc khi ghi vao he thong.
+            </p>
+
+            {changedFields.length === 0 ? (
+              <div className="mt-6 rounded-[1.5rem] border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500">
+                Chua co thay doi nao so voi ban hien tai.
+              </div>
             ) : (
-              <div className="space-y-3">
-                {Object.entries(changes).map(([key, value]) => (
-                  <div key={key} className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                    <p className="text-xs text-gray-600 font-semibold mb-1">
-                      {key === 'title' && 'Tiêu Đề'}
-                      {key === 'description' && 'Mô Tả'}
-                      {key === 'date_time' && 'Ngày & Giờ'}
-                      {key === 'location' && 'Địa Điểm'}
-                      {key === 'max_participants' && 'Số Người Tối Đa'}
-                    </p>
-                    <div className="space-y-1">
-                      <p className="text-xs text-gray-500">
-                        <strong>Cũ:</strong>{' '}
-                        {String(activity?.[key as keyof Activity] || '-').substring(0, 50)}
-                      </p>
-                      <p className="text-xs text-blue-600">
-                        <strong>Mới:</strong> {String(value || '-').substring(0, 50)}
-                      </p>
+              <div className="mt-6 space-y-3">
+                {changedFields.map((change) => (
+                  <div
+                    key={change.field}
+                    className="rounded-[1.5rem] border border-blue-200 bg-blue-50 px-4 py-4"
+                  >
+                    <div className="text-xs font-semibold uppercase tracking-wide text-blue-700">
+                      {getFieldLabel(change.field)}
+                    </div>
+                    <div className="mt-2 text-xs text-slate-500">Cu: {change.from || '(trong)'}</div>
+                    <div className="mt-1 text-sm font-semibold text-slate-900">
+                      Moi: {change.to || '(trong)'}
                     </div>
                   </div>
                 ))}
               </div>
             )}
 
-            {/* Action Buttons */}
-            <div className="mt-6 space-y-2">
-              <button
-                onClick={handleSave}
-                disabled={Object.keys(changes).length === 0 || saving}
-                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold py-2 rounded-lg transition"
-              >
-                {saving ? '⏳ Đang lưu...' : '💾 Lưu Thay Đổi'}
-              </button>
-              <button
-                onClick={() => router.back()}
-                className="w-full bg-gray-300 hover:bg-gray-400 text-gray-700 font-semibold py-2 rounded-lg transition"
-              >
-                ← Quay Lại
-              </button>
+            <div className="mt-6 rounded-[1.5rem] border border-amber-200 bg-amber-50 px-4 py-4">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="mt-0.5 h-5 w-5 text-amber-700" />
+                <div>
+                  <div className="text-sm font-semibold text-amber-900">Luu y van hanh</div>
+                  <p className="mt-1 text-sm text-amber-800">
+                    Hoat dong sau khi sua van giu nguyen workflow hien tai. Neu can doi quy trinh phe
+                    duyet, hay thao tac o man chi tiet.
+                  </p>
+                </div>
+              </div>
             </div>
-
-            {/* Info Box */}
-            <div className="mt-4 p-3 bg-yellow-50 rounded-lg border border-yellow-200 flex gap-2">
-              <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0" />
-              <p className="text-xs text-yellow-700">
-                Chỉ có thể sửa hoạt động trước khi nó bắt đầu.
-              </p>
-            </div>
-          </div>
+          </section>
         </div>
       </div>
 
-      {/* Confirmation Modal */}
-      {showConfirmModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-8 max-w-md w-full mx-4 space-y-6">
-            <div className="flex items-center gap-3">
-              <AlertCircle className="w-8 h-8 text-orange-600" />
-              <h2 className="text-2xl font-bold">Xác Nhận Thay Đổi</h2>
-            </div>
-
-            <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-              <p className="text-sm text-gray-700">
-                <strong>Hoạt động:</strong> {formData.title}
-              </p>
-              <p className="text-sm text-gray-700">
-                <strong>Số thay đổi:</strong> {Object.keys(changes).length} trường
-              </p>
-            </div>
-
-            <div className="space-y-2 max-h-40 overflow-y-auto">
-              {Object.entries(changes).map(([key, value]) => (
-                <div key={key} className="text-xs p-2 bg-blue-50 rounded border border-blue-200">
-                  <span className="font-semibold text-gray-700">{key}:</span>
-                  <span className="text-blue-600 ml-1">{String(value).substring(0, 40)}</span>
-                </div>
-              ))}
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={confirmSave}
-                disabled={saving}
-                className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-semibold py-2 rounded-lg transition flex items-center justify-center gap-2"
-              >
-                <CheckCircle className="w-5 h-5" />
-                {saving ? 'Đang lưu...' : 'Xác Nhận'}
-              </button>
-              <button
-                onClick={() => setShowConfirmModal(false)}
-                disabled={saving}
-                className="flex-1 bg-gray-300 hover:bg-gray-400 disabled:bg-gray-400 text-gray-700 font-semibold py-2 rounded-lg transition flex items-center justify-center gap-2"
-              >
-                <X className="w-5 h-5" />
-                Hủy
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        isOpen={showSaveConfirm}
+        title="Luu thay doi hoat dong"
+        message={`Ban sap cap nhat ${changedFields.length} truong trong hoat dong nay.`}
+        confirmText="Xac nhan luu"
+        cancelText="Dong"
+        variant="info"
+        onCancel={() => setShowSaveConfirm(false)}
+        onConfirm={async () => {
+          await saveChanges();
+        }}
+      />
     </div>
   );
 }

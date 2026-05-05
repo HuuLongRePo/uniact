@@ -179,8 +179,8 @@ export default function DashboardPage() {
 
   if (loading || isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg">Đang tải...</div>
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
+        <div className="text-lg font-medium text-slate-700 dark:text-slate-200">Đang tải...</div>
       </div>
     );
   }
@@ -190,7 +190,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-slate-50 py-8 dark:bg-slate-950">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Welcome Header */}
         <div className="bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg shadow-lg p-8 mb-8">
@@ -208,68 +208,68 @@ export default function DashboardPage() {
             {/* Admin Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
               {/* Classes */}
-              <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+              <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md dark:border-slate-700 dark:bg-slate-900">
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="text-4xl font-bold text-blue-600">{stats.classCount}</div>
-                    <div className="text-gray-600 text-sm mt-1">Lớp học</div>
+                    <div className="mt-1 text-sm text-slate-600 dark:text-slate-300">Lớp học</div>
                   </div>
                   <div className="text-5xl opacity-30">🏫</div>
                 </div>
                 <Link
                   href="/admin/classes"
-                  className="mt-4 block text-blue-600 hover:text-blue-700 text-sm font-medium"
+                  className="mt-4 block text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-300 dark:hover:text-blue-200"
                 >
                   Quản lý lớp →
                 </Link>
               </div>
 
               {/* Teachers */}
-              <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+              <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md dark:border-slate-700 dark:bg-slate-900">
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="text-4xl font-bold text-purple-600">{stats.teacherCount}</div>
-                    <div className="text-gray-600 text-sm mt-1">Giảng viên</div>
+                    <div className="mt-1 text-sm text-slate-600 dark:text-slate-300">Giảng viên</div>
                   </div>
                   <div className="text-5xl opacity-30">👨‍🏫</div>
                 </div>
                 <Link
                   href="/admin/users"
-                  className="mt-4 block text-purple-600 hover:text-purple-700 text-sm font-medium"
+                  className="mt-4 block text-sm font-medium text-purple-600 hover:text-purple-700 dark:text-purple-300 dark:hover:text-purple-200"
                 >
                   Quản lý giảng viên →
                 </Link>
               </div>
 
               {/* Students */}
-              <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+              <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md dark:border-slate-700 dark:bg-slate-900">
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="text-4xl font-bold text-orange-600">{stats.studentCount}</div>
-                    <div className="text-gray-600 text-sm mt-1">Học viên</div>
+                    <div className="mt-1 text-sm text-slate-600 dark:text-slate-300">Học viên</div>
                   </div>
                   <div className="text-5xl opacity-30">👨‍🎓</div>
                 </div>
                 <Link
                   href="/admin/users?role=student"
-                  className="mt-4 block text-orange-600 hover:text-orange-700 text-sm font-medium"
+                  className="mt-4 block text-sm font-medium text-orange-600 hover:text-orange-700 dark:text-amber-300 dark:hover:text-amber-200"
                 >
                   Quản lý học viên →
                 </Link>
               </div>
 
               {/* Activities */}
-              <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+              <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md dark:border-slate-700 dark:bg-slate-900">
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="text-4xl font-bold text-green-600">{stats.activityCount}</div>
-                    <div className="text-gray-600 text-sm mt-1">Hoạt động</div>
+                    <div className="mt-1 text-sm text-slate-600 dark:text-slate-300">Hoạt động</div>
                   </div>
                   <div className="text-5xl opacity-30">🎯</div>
                 </div>
                 <Link
                   href="/admin/activities"
-                  className="mt-4 block text-green-600 hover:text-green-700 text-sm font-medium"
+                  className="mt-4 block text-sm font-medium text-green-600 hover:text-green-700 dark:text-emerald-300 dark:hover:text-emerald-200"
                 >
                   Quản lý hoạt động →
                 </Link>
@@ -278,53 +278,53 @@ export default function DashboardPage() {
 
             {/* Secondary Stats */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-              <div className="bg-white rounded-lg p-6 shadow-sm border border-red-200 bg-red-50">
+              <div className="rounded-lg border border-red-200 bg-red-50 p-6 shadow-sm dark:border-red-500/40 dark:bg-red-500/10">
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="text-3xl font-bold text-red-600">{stats.pendingApprovals}</div>
-                    <div className="text-gray-600 text-sm mt-1">Chờ phê duyệt</div>
+                    <div className="mt-1 text-sm text-slate-700 dark:text-red-100">Chờ phê duyệt</div>
                   </div>
                   <div className="text-4xl">⏳</div>
                 </div>
                 <Link
                   href="/admin/approvals"
-                  className="mt-4 block text-red-600 hover:text-red-700 text-sm font-medium"
+                  className="mt-4 block text-sm font-medium text-red-600 hover:text-red-700 dark:text-red-200 dark:hover:text-red-100"
                 >
                   Xem chi tiết →
                 </Link>
               </div>
 
-              <div className="bg-white rounded-lg p-6 shadow-sm border border-yellow-200 bg-yellow-50">
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-6 shadow-sm dark:border-amber-500/40 dark:bg-amber-500/10">
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="text-3xl font-bold text-yellow-600">
                       {stats.totalParticipations}
                     </div>
-                    <div className="text-gray-600 text-sm mt-1">Tham gia tổng cộng</div>
+                    <div className="mt-1 text-sm text-slate-700 dark:text-amber-100">Tham gia tổng cộng</div>
                   </div>
                   <div className="text-4xl">📊</div>
                 </div>
                 <Link
                   href="/admin/reports"
-                  className="mt-4 block text-yellow-600 hover:text-yellow-700 text-sm font-medium"
+                  className="mt-4 block text-sm font-medium text-amber-700 hover:text-amber-800 dark:text-amber-200 dark:hover:text-amber-100"
                 >
                   Xem báo cáo →
                 </Link>
               </div>
 
-              <div className="bg-white rounded-lg p-6 shadow-sm border border-green-200 bg-green-50">
+              <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-6 shadow-sm dark:border-emerald-500/40 dark:bg-emerald-500/10">
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="text-3xl font-bold text-green-600">
                       {stats.upcomingActivities}
                     </div>
-                    <div className="text-gray-600 text-sm mt-1">Sắp diễn ra</div>
+                    <div className="mt-1 text-sm text-slate-700 dark:text-emerald-100">Sắp diễn ra</div>
                   </div>
                   <div className="text-4xl">📅</div>
                 </div>
                 <Link
                   href="/admin/activities?filter=upcoming"
-                  className="mt-4 block text-green-600 hover:text-green-700 text-sm font-medium"
+                  className="mt-4 block text-sm font-medium text-green-700 hover:text-green-800 dark:text-emerald-200 dark:hover:text-emerald-100"
                 >
                   Xem chi tiết →
                 </Link>
@@ -334,8 +334,8 @@ export default function DashboardPage() {
             {/* Charts Section */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
               {/* Line Chart - Monthly Participation Trend */}
-              <div className="bg-white rounded-lg shadow-sm border p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+                <h3 className="mb-4 text-lg font-semibold text-slate-900 dark:text-slate-100">
                   📈 Xu hướng tham gia hàng tháng
                 </h3>
                 <ResponsiveContainer width="100%" height={300}>
@@ -364,8 +364,8 @@ export default function DashboardPage() {
               </div>
 
               {/* Pie Chart - Activity Distribution */}
-              <div className="bg-white rounded-lg shadow-sm border p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+                <h3 className="mb-4 text-lg font-semibold text-slate-900 dark:text-slate-100">
                   🎯 Phân bố loại hoạt động
                 </h3>
                 <ResponsiveContainer width="100%" height={300}>
@@ -395,45 +395,45 @@ export default function DashboardPage() {
 
             {/* Quick Actions for Admin */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-              <div className="bg-white rounded-lg shadow-sm border p-6">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">⚡ Thao tác nhanh</h2>
+              <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+                <h2 className="mb-4 text-lg font-semibold text-slate-900 dark:text-slate-100">⚡ Thao tác nhanh</h2>
                 <div className="space-y-3">
                   <Link
                     href="/admin/classes/new"
-                    className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-blue-50 transition-colors group"
+                    className="group flex items-center rounded-lg border border-slate-200 p-4 transition-colors hover:bg-blue-50 dark:border-slate-700 dark:hover:bg-slate-800"
                   >
                     <div className="text-2xl mr-4 group-hover:scale-110 transition-transform">
                       ➕
                     </div>
                     <div>
-                      <div className="font-medium text-gray-900">Tạo lớp học</div>
-                      <div className="text-sm text-gray-600">Thêm lớp học mới vào hệ thống</div>
+                      <div className="font-medium text-slate-900 dark:text-slate-100">Tạo lớp học</div>
+                      <div className="text-sm text-slate-600 dark:text-slate-300">Thêm lớp học mới vào hệ thống</div>
                     </div>
                   </Link>
 
                   <Link
                     href="/admin/users/new"
-                    className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-purple-50 transition-colors group"
+                    className="group flex items-center rounded-lg border border-slate-200 p-4 transition-colors hover:bg-purple-50 dark:border-slate-700 dark:hover:bg-slate-800"
                   >
                     <div className="text-2xl mr-4 group-hover:scale-110 transition-transform">
                       👤
                     </div>
                     <div>
-                      <div className="font-medium text-gray-900">Thêm người dùng</div>
-                      <div className="text-sm text-gray-600">Thêm giảng viên hoặc học viên</div>
+                      <div className="font-medium text-slate-900 dark:text-slate-100">Thêm người dùng</div>
+                      <div className="text-sm text-slate-600 dark:text-slate-300">Thêm giảng viên hoặc học viên</div>
                     </div>
                   </Link>
 
                   <Link
                     href="/admin/approvals"
-                    className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-yellow-50 transition-colors group"
+                    className="group flex items-center rounded-lg border border-slate-200 p-4 transition-colors hover:bg-yellow-50 dark:border-slate-700 dark:hover:bg-slate-800"
                   >
                     <div className="text-2xl mr-4 group-hover:scale-110 transition-transform">
                       ✅
                     </div>
                     <div>
-                      <div className="font-medium text-gray-900">Phê duyệt hoạt động</div>
-                      <div className="text-sm text-gray-600">
+                      <div className="font-medium text-slate-900 dark:text-slate-100">Phê duyệt hoạt động</div>
+                      <div className="text-sm text-slate-600 dark:text-slate-300">
                         {stats.pendingApprovals} chờ xử lý
                       </div>
                     </div>
@@ -441,26 +441,26 @@ export default function DashboardPage() {
 
                   <Link
                     href="/admin/system-health"
-                    className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-green-50 transition-colors group"
+                    className="group flex items-center rounded-lg border border-slate-200 p-4 transition-colors hover:bg-green-50 dark:border-slate-700 dark:hover:bg-slate-800"
                   >
                     <div className="text-2xl mr-4 group-hover:scale-110 transition-transform">
                       🏥
                     </div>
                     <div>
-                      <div className="font-medium text-gray-900">Giám sát hệ thống</div>
-                      <div className="text-sm text-gray-600">Kiểm tra tình trạng hệ thống</div>
+                      <div className="font-medium text-slate-900 dark:text-slate-100">Giám sát hệ thống</div>
+                      <div className="text-sm text-slate-600 dark:text-slate-300">Kiểm tra tình trạng hệ thống</div>
                     </div>
                   </Link>
                 </div>
               </div>
 
               {/* Upcoming Activities */}
-              <div className="bg-white rounded-lg shadow-sm border p-6">
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-lg font-semibold text-gray-900">📅 Hoạt động sắp tới</h2>
+              <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+                <div className="mb-4 flex items-center justify-between">
+                  <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">📅 Hoạt động sắp tới</h2>
                   <Link
                     href="/admin/activities"
-                    className="text-green-600 hover:text-green-700 text-sm font-medium"
+                    className="text-sm font-medium text-green-600 hover:text-green-700 dark:text-emerald-300 dark:hover:text-emerald-200"
                   >
                     Xem tất cả
                   </Link>
@@ -468,23 +468,23 @@ export default function DashboardPage() {
 
                 {recentActivities.length === 0 ? (
                   <div className="text-center py-8">
-                    <div className="text-gray-400 text-4xl mb-2">📅</div>
-                    <p className="text-gray-500">Không có hoạt động sắp tới</p>
+                    <div className="mb-2 text-4xl text-slate-400 dark:text-slate-500">📅</div>
+                    <p className="text-slate-500 dark:text-slate-400">Không có hoạt động sắp tới</p>
                   </div>
                 ) : (
                   <div className="space-y-3 max-h-96 overflow-y-auto">
                     {recentActivities.map((activity) => (
                       <div
                         key={activity.id}
-                        className="flex items-start space-x-3 p-3 border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors"
+                        className="flex items-start space-x-3 rounded-lg border border-slate-100 p-3 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800/70"
                       >
-                        <div className="flex-shrink-0 w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center text-lg">
+                        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-green-100 text-lg dark:bg-emerald-500/15">
                           🎯
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-gray-900 truncate">{activity.title}</p>
-                          <p className="text-xs text-gray-600">{formatDate(activity.date_time)}</p>
-                          <p className="text-xs text-gray-500">{activity.location}</p>
+                          <p className="truncate font-medium text-slate-900 dark:text-slate-100">{activity.title}</p>
+                          <p className="text-xs text-slate-600 dark:text-slate-300">{formatDate(activity.date_time)}</p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">{activity.location}</p>
                         </div>
                       </div>
                     ))}
@@ -494,32 +494,32 @@ export default function DashboardPage() {
             </div>
 
             {/* System Status Card */}
-            <div className="rounded-lg border border-blue-200 bg-gradient-to-r from-blue-50 to-green-50 p-6 dark:border-slate-700 dark:from-slate-900 dark:to-slate-800">
-              <h3 className="mb-2 text-lg font-semibold text-blue-900 dark:text-slate-100">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-6 shadow-sm dark:border-slate-500 dark:bg-slate-900">
+              <h3 className="mb-4 text-lg font-semibold text-slate-900 dark:text-white">
                 📊 Thống kê hệ thống
               </h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-blue-600 dark:text-blue-300">{stats.classCount}</div>
-                  <div className="text-xs text-gray-600 dark:text-slate-300">Lớp học</div>
+                <div className="rounded-xl border border-blue-200 bg-white px-3 py-4 text-center dark:border-blue-400/70 dark:bg-slate-800 dark:shadow-sm dark:shadow-slate-950/30">
+                  <div className="text-2xl font-bold text-blue-700 dark:text-blue-100">{stats.classCount}</div>
+                  <div className="mt-1 text-xs font-medium text-slate-700 dark:text-slate-100">Lớp học</div>
                 </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-purple-600 dark:text-purple-300">
+                <div className="rounded-xl border border-violet-200 bg-white px-3 py-4 text-center dark:border-violet-400/70 dark:bg-slate-800 dark:shadow-sm dark:shadow-slate-950/30">
+                  <div className="text-2xl font-bold text-violet-700 dark:text-violet-100">
                     {stats.teacherCount}
                   </div>
-                  <div className="text-xs text-gray-600 dark:text-slate-300">Giảng viên</div>
+                  <div className="mt-1 text-xs font-medium text-slate-700 dark:text-slate-100">Giảng viên</div>
                 </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-orange-600 dark:text-amber-300">
+                <div className="rounded-xl border border-amber-200 bg-white px-3 py-4 text-center dark:border-amber-400/70 dark:bg-slate-800 dark:shadow-sm dark:shadow-slate-950/30">
+                  <div className="text-2xl font-bold text-amber-700 dark:text-amber-100">
                     {stats.studentCount}
                   </div>
-                  <div className="text-xs text-gray-600 dark:text-slate-300">Học viên</div>
+                  <div className="mt-1 text-xs font-medium text-slate-700 dark:text-slate-100">Học viên</div>
                 </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-green-600 dark:text-emerald-300">
+                <div className="rounded-xl border border-emerald-200 bg-white px-3 py-4 text-center dark:border-emerald-400/70 dark:bg-slate-800 dark:shadow-sm dark:shadow-slate-950/30">
+                  <div className="text-2xl font-bold text-emerald-700 dark:text-emerald-100">
                     {stats.activityCount}
                   </div>
-                  <div className="text-xs text-gray-600 dark:text-slate-300">Hoạt động</div>
+                  <div className="mt-1 text-xs font-medium text-slate-700 dark:text-slate-100">Hoạt động</div>
                 </div>
               </div>
             </div>
@@ -531,52 +531,52 @@ export default function DashboardPage() {
           <>
             {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-              <div className="bg-white rounded-lg p-6 shadow-sm border">
+              <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900">
                 <div className="flex items-center">
                   <div className="flex-shrink-0">
                     <div className="text-2xl">🏫</div>
                   </div>
                   <div className="ml-4">
-                    <div className="text-2xl font-bold text-gray-900">{stats.classCount}</div>
-                    <div className="text-gray-600">Lớp học</div>
+                    <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">{stats.classCount}</div>
+                    <div className="text-slate-600 dark:text-slate-300">Lớp học</div>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-white rounded-lg p-6 shadow-sm border">
+              <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900">
                 <div className="flex items-center">
                   <div className="flex-shrink-0">
                     <div className="text-2xl">🎯</div>
                   </div>
                   <div className="ml-4">
-                    <div className="text-2xl font-bold text-gray-900">{stats.activityCount}</div>
-                    <div className="text-gray-600">Hoạt động</div>
+                    <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">{stats.activityCount}</div>
+                    <div className="text-slate-600 dark:text-slate-300">Hoạt động</div>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-white rounded-lg p-6 shadow-sm border">
+              <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900">
                 <div className="flex items-center">
                   <div className="flex-shrink-0">
                     <div className="text-2xl">📅</div>
                   </div>
                   <div className="ml-4">
-                    <div className="text-2xl font-bold text-gray-900">
+                    <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">
                       {stats.upcomingActivities}
                     </div>
-                    <div className="text-gray-600">Sắp diễn ra</div>
+                    <div className="text-slate-600 dark:text-slate-300">Sắp diễn ra</div>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-white rounded-lg p-6 shadow-sm border">
+              <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900">
                 <div className="flex items-center">
                   <div className="flex-shrink-0">
                     <div className="text-2xl">👥</div>
                   </div>
                   <div className="ml-4">
-                    <div className="text-2xl font-bold text-gray-900">{stats.studentCount}</div>
-                    <div className="text-gray-600">Học viên</div>
+                    <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">{stats.studentCount}</div>
+                    <div className="text-slate-600 dark:text-slate-300">Học viên</div>
                   </div>
                 </div>
               </div>
@@ -584,17 +584,17 @@ export default function DashboardPage() {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               {/* Quick Actions */}
-              <div className="bg-white rounded-lg shadow-sm border p-6">
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">⚡ Truy cập nhanh</h2>
+              <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+                <h2 className="mb-4 text-xl font-semibold text-slate-900 dark:text-slate-100">⚡ Truy cập nhanh</h2>
                 <div className="space-y-3">
                   <Link
                     href="/activities"
-                    className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                    className="flex items-center rounded-lg border border-slate-200 p-4 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800/70"
                   >
                     <div className="text-2xl mr-4">🎯</div>
                     <div>
-                      <div className="font-medium text-gray-900">Hoạt động</div>
-                      <div className="text-sm text-gray-600">
+                      <div className="font-medium text-slate-900 dark:text-slate-100">Hoạt động</div>
+                      <div className="text-sm text-slate-600 dark:text-slate-300">
                         Xem và quản lý hoạt động ngoại khóa
                       </div>
                     </div>
@@ -602,24 +602,24 @@ export default function DashboardPage() {
 
                   <Link
                     href="/classes"
-                    className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                    className="flex items-center rounded-lg border border-slate-200 p-4 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800/70"
                   >
                     <div className="text-2xl mr-4">🏫</div>
                     <div>
-                      <div className="font-medium text-gray-900">Lớp học</div>
-                      <div className="text-sm text-gray-600">Quản lý lớp học và học viên</div>
+                      <div className="font-medium text-slate-900 dark:text-slate-100">Lớp học</div>
+                      <div className="text-sm text-slate-600 dark:text-slate-300">Quản lý lớp học và học viên</div>
                     </div>
                   </Link>
 
                   {user.role === 'teacher' && (
                     <Link
                       href="/teacher/activities"
-                      className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                      className="flex items-center rounded-lg border border-slate-200 p-4 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800/70"
                     >
                       <div className="text-2xl mr-4">➕</div>
                       <div>
-                        <div className="font-medium text-gray-900">Tạo hoạt động</div>
-                        <div className="text-sm text-gray-600">Tạo hoạt động ngoại khóa mới</div>
+                        <div className="font-medium text-slate-900 dark:text-slate-100">Tạo hoạt động</div>
+                        <div className="text-sm text-slate-600 dark:text-slate-300">Tạo hoạt động ngoại khóa mới</div>
                       </div>
                     </Link>
                   )}
@@ -627,12 +627,12 @@ export default function DashboardPage() {
               </div>
 
               {/* Upcoming Activities */}
-              <div className="bg-white rounded-lg shadow-sm border p-6">
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-xl font-semibold text-gray-900">📅 Hoạt động sắp tới</h2>
+              <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+                <div className="mb-4 flex items-center justify-between">
+                  <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100">📅 Hoạt động sắp tới</h2>
                   <Link
                     href="/activities"
-                    className="text-green-600 hover:text-green-700 text-sm font-medium"
+                    className="text-sm font-medium text-green-600 hover:text-green-700 dark:text-emerald-300 dark:hover:text-emerald-200"
                   >
                     Xem tất cả
                   </Link>
@@ -640,23 +640,23 @@ export default function DashboardPage() {
 
                 {recentActivities.length === 0 ? (
                   <div className="text-center py-8">
-                    <div className="text-gray-400 text-4xl mb-2">📅</div>
-                    <p className="text-gray-500">Không có hoạt động sắp tới</p>
+                    <div className="mb-2 text-4xl text-slate-400 dark:text-slate-500">📅</div>
+                    <p className="text-slate-500 dark:text-slate-400">Không có hoạt động sắp tới</p>
                   </div>
                 ) : (
                   <div className="space-y-4">
                     {recentActivities.map((activity) => (
                       <div
                         key={activity.id}
-                        className="flex items-start space-x-4 p-3 border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors"
+                        className="flex items-start space-x-4 rounded-lg border border-slate-100 p-3 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800/70"
                       >
-                        <div className="flex-shrink-0 w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                        <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-green-100 dark:bg-emerald-500/15">
                           <span className="text-lg">🎯</span>
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-gray-900 truncate">{activity.title}</p>
-                          <p className="text-sm text-gray-600">{formatDate(activity.date_time)}</p>
-                          <p className="text-sm text-gray-500">{activity.location}</p>
+                          <p className="truncate font-medium text-slate-900 dark:text-slate-100">{activity.title}</p>
+                          <p className="text-sm text-slate-600 dark:text-slate-300">{formatDate(activity.date_time)}</p>
+                          <p className="text-sm text-slate-500 dark:text-slate-400">{activity.location}</p>
                         </div>
                       </div>
                     ))}
@@ -666,9 +666,9 @@ export default function DashboardPage() {
             </div>
 
             {/* Role-specific Tips */}
-            <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
-              <h3 className="text-lg font-semibold text-blue-900 mb-2">💡 Mẹo sử dụng</h3>
-              <div className="text-blue-800">
+            <div className="mt-8 rounded-lg border border-blue-200 bg-blue-50 p-6 dark:border-blue-500/40 dark:bg-blue-500/10">
+              <h3 className="mb-2 text-lg font-semibold text-blue-900 dark:text-blue-100">💡 Mẹo sử dụng</h3>
+              <div className="text-blue-800 dark:text-blue-200">
                 {user.role === 'teacher' && (
                   <p>
                     Tạo hoạt động ngoại khóa để thu hút học viên tham gia và phát triển kỹ năng.

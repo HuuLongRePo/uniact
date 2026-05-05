@@ -2,6 +2,7 @@ export interface Student {
   id: number;
   name: string;
   email: string;
+  student_code?: string | null;
   avatar_url?: string;
   created_at: string;
   activity_count: number;

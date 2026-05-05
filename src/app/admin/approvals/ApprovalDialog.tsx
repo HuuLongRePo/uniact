@@ -21,55 +21,89 @@ export default function ApprovalDialog({
   loading,
 }: ApprovalDialogProps) {
   const [content, setContent] = useState('');
+  const titleId = 'admin-approval-dialog-title';
 
   useEffect(() => {
     setContent('');
-  }, [isOpen, type, activityId]);
+  }, [activityId, isOpen, type]);
 
   if (!isOpen) return null;
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  async function handleSubmit(event: React.FormEvent) {
+    event.preventDefault();
     await onSubmit({ content });
     setContent('');
-  };
+  }
+
+  const isApprove = type === 'approve';
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-md">
-        <h2 className="text-xl font-bold mb-4">
-          {type === 'approve' ? 'Phê Duyệt Hoạt Động' : 'Từ Chối Hoạt Động'}
-        </h2>
+    <div className="app-modal-backdrop px-4" onClick={onClose}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="app-modal-panel app-modal-panel-scroll w-full max-w-xl p-6"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 id={titleId} className="text-2xl font-semibold text-slate-950">
+              {isApprove ? 'Phe duyet hoat dong' : 'Tu choi hoat dong'}
+            </h2>
+            <p className="mt-1 text-sm text-slate-500">
+              {isApprove
+                ? 'Bo sung ghi chu neu can truoc khi dua hoat dong vao trang thai duoc duyet.'
+                : 'Nhap ly do tu choi de teacher nhin thay va sua lai hoat dong.'}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
+          >
+            Dong
+          </button>
+        </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            placeholder={type === 'approve' ? 'Ghi chú (tùy chọn)...' : 'Lý do từ chối...'}
-            className="w-full px-3 py-2 border rounded-lg"
-            rows={4}
-            required={type === 'reject'}
-          />
+        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+          <label className="block text-sm font-medium text-slate-700">
+            {isApprove ? 'Ghi chu noi bo (tuy chon)' : 'Ly do tu choi'}
+            <textarea
+              value={content}
+              onChange={(event) => setContent(event.target.value)}
+              placeholder={
+                isApprove
+                  ? 'VD: Hop le, co the len lich phat hanh ngay.'
+                  : 'VD: Thieu thong tin, trung lich, sai doi tuong tham gia...'
+              }
+              rows={5}
+              required={!isApprove}
+              className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-cyan-300"
+            />
+          </label>
 
-          <div className="flex gap-2 justify-end">
+          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
             <button
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="px-4 py-2 text-gray-700 border rounded-lg hover:bg-gray-50"
+              className="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Hủy
+              Huy
             </button>
             <button
               type="submit"
               disabled={loading}
-              className={`px-4 py-2 text-white rounded-lg disabled:opacity-50 ${
-                type === 'approve'
-                  ? 'bg-green-600 hover:bg-green-700'
-                  : 'bg-red-600 hover:bg-red-700'
+              className={`rounded-2xl px-4 py-3 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50 ${
+                isApprove ? 'bg-emerald-700 hover:bg-emerald-800' : 'bg-rose-700 hover:bg-rose-800'
               }`}
             >
-              {loading ? 'Đang xử lý...' : type === 'approve' ? 'Phê Duyệt' : 'Từ Chối'}
+              {loading
+                ? 'Dang xu ly...'
+                : isApprove
+                  ? 'Xac nhan phe duyet'
+                  : 'Gui tu choi'}
             </button>
           </div>
         </form>

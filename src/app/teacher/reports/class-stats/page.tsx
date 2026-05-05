@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { ArrowLeft, BarChart3, Calendar, Download, Filter, TrendingUp, Users } from 'lucide-react';
@@ -95,7 +95,6 @@ function getStudentStatsFromResponse(payload: unknown): StudentClassStats | null
 export default function ClassStatsPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
-
   const [loading, setLoading] = useState(true);
   const [classStats, setClassStats] = useState<ClassStats[]>([]);
   const [selectedClass, setSelectedClass] = useState<number | null>(null);
@@ -116,7 +115,6 @@ export default function ClassStatsPage() {
         const classesData = await classesRes.json();
         const normalizedClasses = getClassesFromResponse(classesData);
         setClasses(normalizedClasses);
-
         if (normalizedClasses.length > 0) {
           setSelectedClass((current) => current ?? normalizedClasses[0].id);
         }
@@ -127,8 +125,8 @@ export default function ClassStatsPage() {
         setClassStats(getClassStatsFromResponse(statsData));
       }
     } catch (error: unknown) {
-      console.error('Error fetching data:', error);
-      toast.error(getErrorMessage(error, 'Không thể tải dữ liệu'));
+      console.error('Error fetching class stats:', error);
+      toast.error(getErrorMessage(error, 'Khong the tai du lieu'));
     } finally {
       setLoading(false);
     }
@@ -141,7 +139,7 @@ export default function ClassStatsPage() {
     }
 
     if (user?.role !== 'teacher' && user?.role !== 'admin') {
-      toast.error('Chỉ giảng viên mới có quyền xem báo cáo');
+      toast.error('Chi giang vien moi co quyen xem bao cao');
       router.push('/teacher/dashboard');
       return;
     }
@@ -158,14 +156,12 @@ export default function ClassStatsPage() {
       const response = await fetch(`/api/teacher/reports/class-stats/${classId}`);
       const data = await response.json().catch(() => null);
       if (!response.ok) {
-        throw new Error(
-          getErrorMessage(data?.error || data?.message, 'Không thể tải chi tiết lớp')
-        );
+        throw new Error(getErrorMessage(data?.error || data?.message, 'Khong the tai chi tiet lop'));
       }
       setStudentStats(getStudentStatsFromResponse(data));
     } catch (error) {
-      console.error('Error fetching class details:', error);
-      toast.error(getErrorMessage(error, 'Không thể tải chi tiết lớp'));
+      console.error('Error fetching class detail:', error);
+      toast.error(getErrorMessage(error, 'Khong the tai chi tiet lop'));
     }
   };
 
@@ -181,7 +177,7 @@ export default function ClassStatsPage() {
       });
 
       if (!response.ok) {
-        throw new Error('Export failed');
+        throw new Error('Khong the xuat bao cao');
       }
 
       const blob = await response.blob();
@@ -194,267 +190,279 @@ export default function ClassStatsPage() {
       );
       anchor.click();
       window.URL.revokeObjectURL(url);
-      toast.success('Đã xuất báo cáo thành công');
+      toast.success('Da xuat bao cao thanh cong');
     } catch (error) {
-      console.error('Error exporting:', error);
-      toast.error('Không thể xuất báo cáo');
+      console.error('Error exporting class stats:', error);
+      toast.error('Khong the xuat bao cao');
     }
   };
 
-  if (authLoading || loading) {
-    return <LoadingSpinner />;
-  }
+  const selectedClassData = useMemo(
+    () => classStats.find((item) => item.class_id === selectedClass) ?? null,
+    [classStats, selectedClass]
+  );
 
-  const selectedClassData = classStats.find((item) => item.class_id === selectedClass);
   const maxDistributionCount = Math.max(
     ...(selectedClassData?.score_distribution.map((item) => item.count) ?? [0]),
     1
   );
 
+  if (authLoading || loading) {
+    return <LoadingSpinner />;
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mb-6">
+    <div className="page-shell">
+      <section className="page-surface overflow-hidden rounded-[1.75rem]">
+        <div className="border-b border-slate-200 px-5 py-5 sm:px-7">
           <button
+            type="button"
             onClick={() => router.back()}
-            className="mb-4 flex items-center text-blue-600 hover:text-blue-700"
+            className="mb-4 inline-flex items-center gap-2 text-sm font-medium text-cyan-700 hover:text-cyan-800"
           >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Quay lại
+            <ArrowLeft className="h-4 w-4" />
+            Quay lai
           </button>
 
-          <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="flex items-center gap-2 text-2xl font-bold text-gray-900">
-                  <BarChart3 className="h-6 w-6 text-blue-600" />
-                  Thống kê lớp học
-                </h1>
-                <p className="mt-2 text-gray-600">
-                  Phân tích mức độ tham gia, điểm số và xu hướng hoạt động theo từng lớp.
-                </p>
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="max-w-3xl">
+              <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-cyan-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-cyan-800">
+                <BarChart3 className="h-3.5 w-3.5" />
+                Bao cao lop hoc
               </div>
-              <button
-                onClick={handleExportReport}
-                className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white transition-colors hover:bg-blue-700"
-              >
-                <Download className="h-4 w-4" />
-                Xuất PDF
-              </button>
+              <h1 className="text-2xl font-bold text-slate-950 sm:text-3xl">Thong ke lop hoc</h1>
+              <p className="mt-2 text-sm leading-6 text-slate-600 sm:text-base">
+                Phan tich muc do tham gia, diem so va xu huong hoat dong theo tung lop de giao vien
+                theo doi nhanh luc van hanh.
+              </p>
             </div>
+
+            <button
+              type="button"
+              onClick={handleExportReport}
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-cyan-700 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-cyan-800"
+            >
+              <Download className="h-4 w-4" />
+              Xuat PDF
+            </button>
           </div>
         </div>
 
-        <div className="mb-6 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700">
+        <div className="space-y-6 px-5 py-6 sm:px-7">
+          <div className="content-card p-4 sm:p-5">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              <label className="block text-sm font-medium text-slate-700">
                 <Filter className="mr-1 inline h-4 w-4" />
-                Chọn lớp
+                Chon lop
+                <select
+                  value={selectedClass ?? ''}
+                  onChange={(event) => void handleClassSelect(Number(event.target.value))}
+                  className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-2.5 focus:border-transparent focus:ring-2 focus:ring-cyan-500"
+                >
+                  <option value="">-- Chon lop --</option>
+                  {classes.map((classItem) => (
+                    <option key={classItem.id} value={classItem.id}>
+                      {classItem.name}
+                    </option>
+                  ))}
+                </select>
               </label>
-              <select
-                value={selectedClass ?? ''}
-                onChange={(event) => void handleClassSelect(Number(event.target.value))}
-                className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">-- Chọn lớp --</option>
-                {classes.map((classItem) => (
-                  <option key={classItem.id} value={classItem.id}>
-                    {classItem.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700">Từ ngày</label>
-              <input
-                type="date"
-                value={dateRange.start}
-                onChange={(event) => setDateRange({ ...dateRange, start: event.target.value })}
-                className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700">Đến ngày</label>
-              <input
-                type="date"
-                value={dateRange.end}
-                onChange={(event) => setDateRange({ ...dateRange, end: event.target.value })}
-                className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
-              />
+
+              <label className="block text-sm font-medium text-slate-700">
+                Tu ngay
+                <input
+                  type="date"
+                  value={dateRange.start}
+                  onChange={(event) => setDateRange({ ...dateRange, start: event.target.value })}
+                  className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-2.5 focus:border-transparent focus:ring-2 focus:ring-cyan-500"
+                />
+              </label>
+
+              <label className="block text-sm font-medium text-slate-700">
+                Den ngay
+                <input
+                  type="date"
+                  value={dateRange.end}
+                  onChange={(event) => setDateRange({ ...dateRange, end: event.target.value })}
+                  className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-2.5 focus:border-transparent focus:ring-2 focus:ring-cyan-500"
+                />
+              </label>
             </div>
           </div>
+
+          {selectedClassData ? (
+            <>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <div className="content-card p-5">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <div className="text-sm text-slate-500">Tong hoc vien</div>
+                      <div className="mt-2 text-3xl font-bold text-cyan-700">{selectedClassData.total_students}</div>
+                    </div>
+                    <Users className="h-10 w-10 text-cyan-200" />
+                  </div>
+                </div>
+                <div className="content-card p-5">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <div className="text-sm text-slate-500">Ty le tham gia</div>
+                      <div className="mt-2 text-3xl font-bold text-emerald-600">
+                        {selectedClassData.avg_participation_rate.toFixed(1)}%
+                      </div>
+                    </div>
+                    <TrendingUp className="h-10 w-10 text-emerald-200" />
+                  </div>
+                </div>
+                <div className="content-card p-5">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <div className="text-sm text-slate-500">Diem trung binh</div>
+                      <div className="mt-2 text-3xl font-bold text-violet-600">
+                        {selectedClassData.avg_score.toFixed(1)}
+                      </div>
+                    </div>
+                    <BarChart3 className="h-10 w-10 text-violet-200" />
+                  </div>
+                </div>
+                <div className="content-card p-5">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <div className="text-sm text-slate-500">Tong hoat dong</div>
+                      <div className="mt-2 text-3xl font-bold text-amber-600">{selectedClassData.total_activities}</div>
+                    </div>
+                    <Calendar className="h-10 w-10 text-amber-200" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+                <div className="space-y-6">
+                  <section className="content-card p-5">
+                    <h2 className="text-lg font-semibold text-slate-950">Xu huong tham gia 6 thang</h2>
+                    <div className="mt-5 space-y-4">
+                      {selectedClassData.attendance_trends.length === 0 ? (
+                        <p className="text-sm text-slate-500">Chua co du lieu xu huong.</p>
+                      ) : (
+                        selectedClassData.attendance_trends.map((trend) => (
+                          <div key={trend.month}>
+                            <div className="mb-1 flex items-center justify-between text-sm">
+                              <span className="font-medium text-slate-700">{trend.month}</span>
+                              <span className="font-semibold text-slate-950">{trend.rate.toFixed(1)}%</span>
+                            </div>
+                            <div className="h-2 w-full rounded-full bg-slate-200">
+                              <div
+                                className="h-2 rounded-full bg-cyan-600"
+                                style={{ width: `${trend.rate}%` }}
+                              />
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </section>
+
+                  <section className="content-card p-5">
+                    <h2 className="text-lg font-semibold text-slate-950">Danh sach hoc vien</h2>
+                    {studentStats?.students?.length ? (
+                      <div className="mt-5 grid gap-4 lg:hidden">
+                        {studentStats.students.map((student) => (
+                          <article key={student.student_code || student.student_name} className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                            <h3 className="text-base font-semibold text-slate-950">{student.student_name}</h3>
+                            <p className="mt-1 text-sm text-slate-500">{student.student_code}</p>
+                            <div className="mt-4 grid grid-cols-3 gap-3 text-sm text-slate-700">
+                              <div>
+                                <div className="text-xs uppercase tracking-wide text-slate-500">Lan TG</div>
+                                <div className="mt-1 font-semibold text-slate-900">{student.participation_count}</div>
+                              </div>
+                              <div>
+                                <div className="text-xs uppercase tracking-wide text-slate-500">Ty le</div>
+                                <div className="mt-1 font-semibold text-slate-900">{student.participation_rate.toFixed(1)}%</div>
+                              </div>
+                              <div>
+                                <div className="text-xs uppercase tracking-wide text-slate-500">TB diem</div>
+                                <div className="mt-1 font-semibold text-slate-900">{student.avg_score.toFixed(1)}</div>
+                              </div>
+                            </div>
+                          </article>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="mt-4 text-sm text-slate-500">Chon lop de tai danh sach hoc vien chi tiet.</p>
+                    )}
+
+                    {studentStats?.students?.length ? (
+                      <div className="mt-5 hidden overflow-x-auto lg:block">
+                        <table className="min-w-full">
+                          <thead className="border-b border-slate-200 bg-slate-50">
+                            <tr>
+                              <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">Hoc vien</th>
+                              <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">Ma SV</th>
+                              <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">Lan tham gia</th>
+                              <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">Ty le</th>
+                              <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900">TB diem</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-200">
+                            {studentStats.students.map((student) => (
+                              <tr key={student.student_code || student.student_name} className="hover:bg-slate-50">
+                                <td className="px-4 py-4 text-sm font-medium text-slate-900">{student.student_name}</td>
+                                <td className="px-4 py-4 text-sm text-slate-600">{student.student_code}</td>
+                                <td className="px-4 py-4 text-sm text-slate-600">{student.participation_count}</td>
+                                <td className="px-4 py-4 text-sm text-slate-600">{student.participation_rate.toFixed(1)}%</td>
+                                <td className="px-4 py-4 text-sm font-semibold text-cyan-700">{student.avg_score.toFixed(1)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : null}
+                  </section>
+                </div>
+
+                <aside className="space-y-6">
+                  <section className="content-card p-5">
+                    <h2 className="text-lg font-semibold text-slate-950">Diem tong hop</h2>
+                    <div className="mt-4 rounded-3xl bg-cyan-50 p-4">
+                      <div className="text-sm text-cyan-700">Tong diem lop</div>
+                      <div className="mt-2 text-3xl font-bold text-cyan-900">{selectedClassData.total_points.toFixed(1)}</div>
+                    </div>
+                  </section>
+
+                  <section className="content-card p-5">
+                    <h2 className="text-lg font-semibold text-slate-950">Phan bo diem</h2>
+                    <div className="mt-5 grid grid-cols-2 gap-4">
+                      {selectedClassData.score_distribution.length === 0 ? (
+                        <p className="col-span-2 text-sm text-slate-500">Chua co du lieu phan bo diem.</p>
+                      ) : (
+                        selectedClassData.score_distribution.map((distribution) => (
+                          <div key={distribution.range} className="text-center">
+                            <div className="mb-2 flex h-28 items-end justify-center rounded-2xl bg-slate-100 p-2">
+                              <div
+                                className="w-4/5 rounded-t-2xl bg-gradient-to-t from-cyan-600 to-cyan-400"
+                                style={{
+                                  height: `${Math.max((distribution.count / maxDistributionCount) * 100, 8)}%`,
+                                }}
+                              />
+                            </div>
+                            <div className="text-xs text-slate-500">{distribution.range}</div>
+                            <div className="mt-1 text-lg font-semibold text-slate-900">{distribution.count}</div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </section>
+                </aside>
+              </div>
+            </>
+          ) : (
+            <div className="content-card p-12 text-center">
+              <BarChart3 className="mx-auto mb-4 h-16 w-16 text-slate-300" />
+              <p className="text-lg font-medium text-slate-700">Chon mot lop de xem thong ke</p>
+              <p className="mt-2 text-sm text-slate-500">Chon lop ben tren de xem phan tich chi tiet.</p>
+            </div>
+          )}
         </div>
-
-        {selectedClassData ? (
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-              <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="mb-1 text-sm text-gray-600">Tổng học viên</div>
-                    <div className="text-3xl font-bold text-blue-600">
-                      {selectedClassData.total_students}
-                    </div>
-                  </div>
-                  <Users className="h-12 w-12 text-blue-100" />
-                </div>
-              </div>
-
-              <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="mb-1 text-sm text-gray-600">Tỷ lệ tham gia</div>
-                    <div className="text-3xl font-bold text-green-600">
-                      {selectedClassData.avg_participation_rate.toFixed(1)}%
-                    </div>
-                  </div>
-                  <TrendingUp className="h-12 w-12 text-green-100" />
-                </div>
-              </div>
-
-              <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="mb-1 text-sm text-gray-600">Điểm trung bình</div>
-                    <div className="text-3xl font-bold text-purple-600">
-                      {selectedClassData.avg_score.toFixed(1)}
-                    </div>
-                  </div>
-                  <BarChart3 className="h-12 w-12 text-purple-100" />
-                </div>
-              </div>
-
-              <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="mb-1 text-sm text-gray-600">Tổng hoạt động</div>
-                    <div className="text-3xl font-bold text-orange-600">
-                      {selectedClassData.total_activities}
-                    </div>
-                  </div>
-                  <Calendar className="h-12 w-12 text-orange-100" />
-                </div>
-              </div>
-            </div>
-
-            <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-              <h3 className="mb-4 text-lg font-semibold text-gray-900">
-                Xu hướng tỷ lệ tham gia trong 6 tháng
-              </h3>
-              <div className="space-y-3">
-                {selectedClassData.attendance_trends.map((trend) => (
-                  <div key={trend.month}>
-                    <div className="mb-1 flex items-center justify-between">
-                      <span className="text-sm font-medium text-gray-700">{trend.month}</span>
-                      <span className="text-sm font-semibold text-gray-900">
-                        {trend.rate.toFixed(1)}%
-                      </span>
-                    </div>
-                    <div className="h-2 w-full rounded-full bg-gray-200">
-                      <div
-                        className="h-2 rounded-full bg-blue-600 transition-all"
-                        style={{ width: `${trend.rate}%` }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-              <h3 className="mb-4 text-lg font-semibold text-gray-900">Phân bổ điểm</h3>
-              <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
-                {selectedClassData.score_distribution.map((distribution) => (
-                  <div key={distribution.range} className="text-center">
-                    <div className="mb-2 flex h-32 items-end justify-center rounded-lg bg-gray-100 p-2">
-                      <div
-                        className="w-4/5 rounded-t bg-gradient-to-t from-blue-500 to-blue-400"
-                        style={{
-                          height: `${Math.max((distribution.count / maxDistributionCount) * 100, 5)}%`,
-                        }}
-                      />
-                    </div>
-                    <div className="mb-1 text-xs text-gray-600">{distribution.range}</div>
-                    <div className="text-lg font-bold text-gray-900">{distribution.count}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {studentStats && (
-              <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-                <h3 className="mb-4 text-lg font-semibold text-gray-900">Chi tiết học viên</h3>
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="border-b border-gray-200 bg-gray-50">
-                      <tr>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
-                          Học viên
-                        </th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
-                          Mã sinh viên
-                        </th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
-                          Lần tham gia
-                        </th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
-                          Tỷ lệ tham gia
-                        </th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
-                          Điểm trung bình
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200">
-                      {studentStats.students.map((student) => (
-                        <tr
-                          key={student.student_code || student.student_name}
-                          className="transition-colors hover:bg-gray-50"
-                        >
-                          <td className="px-4 py-4 text-sm font-medium text-gray-900">
-                            {student.student_name}
-                          </td>
-                          <td className="px-4 py-4 text-sm text-gray-600">
-                            {student.student_code}
-                          </td>
-                          <td className="px-4 py-4 text-sm text-gray-600">
-                            {student.participation_count}
-                          </td>
-                          <td className="px-4 py-4">
-                            <span
-                              className={`rounded-full px-3 py-1 text-xs font-medium ${
-                                student.participation_rate >= 80
-                                  ? 'bg-green-100 text-green-800'
-                                  : student.participation_rate >= 50
-                                    ? 'bg-yellow-100 text-yellow-800'
-                                    : 'bg-red-100 text-red-800'
-                              }`}
-                            >
-                              {student.participation_rate.toFixed(1)}%
-                            </span>
-                          </td>
-                          <td className="px-4 py-4 text-sm font-semibold text-blue-600">
-                            {student.avg_score.toFixed(1)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="rounded-lg border border-gray-200 bg-white p-12 text-center shadow-sm">
-            <BarChart3 className="mx-auto mb-4 h-16 w-16 text-gray-400" />
-            <p className="mb-2 text-lg text-gray-600">Chọn một lớp để xem thống kê</p>
-            <p className="text-sm text-gray-500">
-              Chọn lớp từ danh sách bên trên để xem phân tích chi tiết.
-            </p>
-          </div>
-        )}
-      </div>
+      </section>
     </div>
   );
 }

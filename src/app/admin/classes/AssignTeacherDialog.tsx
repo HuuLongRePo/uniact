@@ -1,7 +1,6 @@
 'use client';
 
 import { Class, Teacher } from './types';
-import { Button } from '@/components/ui/Button';
 
 interface AssignTeacherDialogProps {
   selectedClass: Class | null;
@@ -22,49 +21,56 @@ export default function AssignTeacherDialog({
 }: AssignTeacherDialogProps) {
   if (!selectedClass) return null;
 
+  const titleId = 'admin-assign-teacher-dialog-title';
+
   return (
-    <div
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-      onClick={onCancel}
-    >
+    <div className="app-modal-backdrop px-4" onClick={onCancel}>
       <div
-        className="bg-white rounded-lg p-6 max-w-md w-full mx-4"
-        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="app-modal-panel app-modal-panel-scroll w-full max-w-lg p-6"
+        onClick={(event) => event.stopPropagation()}
       >
-        <h3 className="text-lg font-bold mb-4">Gán GVCN cho lớp {selectedClass.name}</h3>
+        <h2 id={titleId} className="text-2xl font-semibold text-slate-950">
+          Gan GVCN cho lop {selectedClass.name}
+        </h2>
+        <p className="mt-2 text-sm text-slate-500">
+          GVCN hien tai: <span className="font-medium text-slate-700">{selectedClass.teacher_name || 'Chua co'}</span>
+        </p>
 
-        <div className="mb-4">
-          <p className="text-sm text-gray-600 mb-2">
-            GVCN hiện tại:{' '}
-            {selectedClass.teacher_name || <span className="text-gray-400">Chưa có</span>}
-          </p>
-
-          <label className="block text-sm font-medium mb-2">Chọn giảng viên</label>
+        <label className="mt-6 block text-sm font-medium text-slate-700">
+          Chon giang vien
           <select
             value={selectedTeacherId || ''}
-            onChange={(e) => onTeacherSelect(Number(e.target.value))}
-            className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
+            onChange={(event) => onTeacherSelect(Number(event.target.value))}
+            className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-cyan-300"
           >
-            <option value="">-- Chọn giảng viên --</option>
+            <option value="">Chon giang vien</option>
             {teachers.map((teacher) => (
               <option key={teacher.id} value={teacher.id}>
                 {teacher.name} ({teacher.email})
               </option>
             ))}
           </select>
-        </div>
+        </label>
 
-        <div className="flex gap-2 justify-end">
-          <Button onClick={onCancel} variant="secondary">
-            Hủy
-          </Button>
-          <Button
+        <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50"
+          >
+            Huy
+          </button>
+          <button
+            type="button"
             onClick={onConfirm}
             disabled={!selectedTeacherId || selectedTeacherId === selectedClass.teacher_id}
-            variant="primary"
+            className="rounded-2xl bg-cyan-700 px-4 py-3 text-sm font-medium text-white hover:bg-cyan-800 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Xác nhận
-          </Button>
+            Xac nhan gan
+          </button>
         </div>
       </div>
     </div>

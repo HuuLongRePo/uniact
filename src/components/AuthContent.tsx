@@ -20,13 +20,19 @@ export default function AuthContent({ children }: { children: React.ReactNode })
   }
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.16),_transparent_26%),radial-gradient(circle_at_bottom_right,_rgba(52,211,153,0.14),_transparent_22%),linear-gradient(180deg,_var(--app-shell-bg-start),_var(--app-shell-bg-end))] text-[color:var(--app-text-default)]">
+    <div
+      className="app-shell-root min-h-screen bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.16),_transparent_26%),radial-gradient(circle_at_bottom_right,_rgba(52,211,153,0.14),_transparent_22%),linear-gradient(180deg,_var(--app-shell-bg-start),_var(--app-shell-bg-end))] text-[color:var(--app-text-default)]"
+      data-sidebar-enabled={shouldShowSidebar ? 'true' : 'false'}
+    >
       {shouldShowSidebar && <Sidebar />}
       {user && <RealtimeNotificationBridge />}
 
-      <div className={shouldShowSidebar ? 'xl:ml-72 ml-0' : ''}>
-        <main className="min-h-screen px-0 pb-8 pt-0 transition-all duration-300 xl:px-6">
-          <div className={shouldShowSidebar ? 'pt-20 xl:pt-6' : ''}>
+      <div
+        className={`app-shell-main ${shouldShowSidebar ? 'app-shell-with-sidebar' : ''}`}
+        data-testid="app-shell-main"
+      >
+        <main className="app-shell-main-inner">
+          <div className={`app-shell-content ${shouldShowSidebar ? 'app-shell-content-with-sidebar' : ''}`}>
             <ErrorBoundary>{children}</ErrorBoundary>
           </div>
         </main>

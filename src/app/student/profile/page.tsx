@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
-import LoadingSpinner from '@/components/LoadingSpinner';
 import toast from 'react-hot-toast';
+import LoadingSpinner from '@/components/LoadingSpinner';
+import StudentDailyQuickActions from '@/components/student/StudentDailyQuickActions';
+import { useAuth } from '@/contexts/AuthContext';
 import { formatVietnamDateTime } from '@/lib/timezone';
 
 interface UserProfile {
@@ -12,18 +13,72 @@ interface UserProfile {
   email: string;
   name: string;
   role: string;
-  avatar_url?: string;
-  class_id?: number;
-  class_name?: string;
+  avatar_url?: string | null;
+  class_id?: number | null;
+  class_name?: string | null;
   activity_count: number;
   total_points: number;
   created_at: string;
-  gender?: string;
-  date_of_birth?: string;
-  province?: string;
-  district?: string;
-  ward?: string;
-  address_detail?: string;
+  gender?: string | null;
+  date_of_birth?: string | null;
+  province?: string | null;
+  district?: string | null;
+  ward?: string | null;
+  address_detail?: string | null;
+}
+
+type ProfileFormState = {
+  name: string;
+  email: string;
+};
+
+type PasswordFormState = {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+};
+
+const EMPTY_PASSWORD_FORM: PasswordFormState = {
+  currentPassword: '',
+  newPassword: '',
+  confirmPassword: '',
+};
+
+function resolveGenderLabel(value: string | null | undefined) {
+  if (!value) return 'Chưa cập nhật';
+  if (value === 'male' || value === 'nam') return 'Nam';
+  if (value === 'female' || value === 'nu') return 'Nữ';
+  return value;
+}
+
+function resolveAddress(profile: UserProfile) {
+  return [profile.address_detail, profile.ward, profile.district, profile.province]
+    .filter(Boolean)
+    .join(', ');
+}
+
+function StatCard({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: string | number;
+  tone: 'blue' | 'emerald' | 'amber';
+}) {
+  const toneClasses =
+    tone === 'emerald'
+      ? 'border-emerald-100 bg-emerald-50 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-200'
+      : tone === 'amber'
+        ? 'border-amber-100 bg-amber-50 text-amber-700 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200'
+        : 'border-blue-100 bg-blue-50 text-blue-700 dark:border-blue-500/40 dark:bg-blue-500/10 dark:text-blue-200';
+
+  return (
+    <div className={`rounded-3xl border p-4 shadow-sm ${toneClasses}`}>
+      <div className="text-xs font-semibold uppercase tracking-wide">{label}</div>
+      <div className="mt-2 text-3xl font-bold text-slate-900 dark:text-slate-100">{value}</div>
+    </div>
+  );
 }
 
 export default function StudentProfilePage() {
@@ -31,17 +86,12 @@ export default function StudentProfilePage() {
   const router = useRouter();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [changingPassword, setChangingPassword] = useState(false);
   const [editing, setEditing] = useState(false);
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-  });
-  const [showPasswordModal, setShowPasswordModal] = useState(false);
-  const [passwordData, setPasswordData] = useState({
-    current_password: '',
-    new_password: '',
-    confirm_password: '',
-  });
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [formData, setFormData] = useState<ProfileFormState>({ name: '', email: '' });
+  const [passwordForm, setPasswordForm] = useState<PasswordFormState>(EMPTY_PASSWORD_FORM);
 
   useEffect(() => {
     if (!authLoading && (!user || user.role !== 'student')) {
@@ -50,352 +100,467 @@ export default function StudentProfilePage() {
     }
 
     if (user) {
-      fetchProfile();
+      void fetchProfile();
     }
-  }, [user, authLoading, router]);
+  }, [authLoading, router, user]);
 
-  const fetchProfile = async () => {
+  async function fetchProfile() {
     try {
-      const response = await fetch('/api/users/me');
-      const data = await response.json();
+      setLoading(true);
+      const response = await fetch('/api/user/profile');
+      const payload = await response.json();
+      const resolvedProfile = payload?.data?.user || payload?.user;
 
-      if (response.ok) {
-        setProfile(data.user);
-        setFormData({
-          name: data.user.name,
-          email: data.user.email,
-        });
+      if (!response.ok || !resolvedProfile) {
+        throw new Error(payload?.error || payload?.message || 'Không thể tải hồ sơ');
       }
+
+      setProfile(resolvedProfile as UserProfile);
+      setFormData({
+        name: resolvedProfile.name || '',
+        email: resolvedProfile.email || '',
+      });
     } catch (error) {
       console.error('Fetch profile error:', error);
+      toast.error(error instanceof Error ? error.message : 'Không thể tải hồ sơ');
+      setProfile(null);
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  const handleUpdateProfile = async (e: React.FormEvent) => {
-    e.preventDefault();
+  async function handleSaveProfile(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
 
     try {
-      const response = await fetch('/api/users/me', {
+      setSaving(true);
+      const response = await fetch('/api/user/profile', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          name: formData.name.trim(),
+          email: formData.email.trim(),
+        }),
       });
+      const payload = await response.json().catch(() => null);
 
-      const data = await response.json();
-
-      if (response.ok) {
-        toast.success('Cập nhật thông tin thành công');
-        setEditing(false);
-        fetchProfile();
-      } else {
-        toast.error(data.error || 'Cập nhật thất bại');
+      if (!response.ok) {
+        throw new Error(payload?.error || payload?.message || 'Không thể cập nhật hồ sơ');
       }
+
+      toast.success('Đã cập nhật hồ sơ');
+      setEditing(false);
+      await fetchProfile();
     } catch (error) {
-      console.error('Update profile error:', error);
-      toast.error('Lỗi khi cập nhật thông tin');
+      console.error('Save profile error:', error);
+      toast.error(error instanceof Error ? error.message : 'Không thể cập nhật hồ sơ');
+    } finally {
+      setSaving(false);
     }
-  };
+  }
 
-  const handleChangePassword = async (e: React.FormEvent) => {
-    e.preventDefault();
+  async function handleChangePassword(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
 
-    if (passwordData.new_password !== passwordData.confirm_password) {
+    if (!profile) return;
+
+    if (passwordForm.newPassword.length < 6) {
+      toast.error('Mật khẩu mới phải có ít nhất 6 ký tự');
+      return;
+    }
+
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
       toast.error('Mật khẩu mới không khớp');
       return;
     }
 
     try {
-      const response = await fetch('/api/auth/change-password', {
-        method: 'POST',
+      setChangingPassword(true);
+      const response = await fetch('/api/user/profile', {
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(passwordData),
+        body: JSON.stringify({
+          name: profile.name,
+          email: profile.email,
+          currentPassword: passwordForm.currentPassword,
+          newPassword: passwordForm.newPassword,
+        }),
       });
+      const payload = await response.json().catch(() => null);
 
-      const data = await response.json();
-
-      if (response.ok) {
-        toast.success('Đổi mật khẩu thành công');
-        setShowPasswordModal(false);
-        setPasswordData({
-          current_password: '',
-          new_password: '',
-          confirm_password: '',
-        });
-      } else {
-        toast.error(data.error || 'Đổi mật khẩu thất bại');
+      if (!response.ok) {
+        throw new Error(payload?.error || payload?.message || 'Không thể đổi mật khẩu');
       }
+
+      toast.success('Đã đổi mật khẩu');
+      setShowPasswordDialog(false);
+      setPasswordForm(EMPTY_PASSWORD_FORM);
     } catch (error) {
       console.error('Change password error:', error);
-      toast.error('Lỗi khi đổi mật khẩu');
+      toast.error(error instanceof Error ? error.message : 'Không thể đổi mật khẩu');
+    } finally {
+      setChangingPassword(false);
     }
-  };
+  }
+
+  const address = useMemo(() => (profile ? resolveAddress(profile) : ''), [profile]);
 
   if (authLoading || loading) {
     return <LoadingSpinner />;
   }
 
   if (!profile) {
-    return <div className="text-center py-12">Không tìm thấy thông tin</div>;
+    return (
+      <div className="page-shell">
+        <section className="page-surface rounded-[1.75rem] px-5 py-8 text-center sm:px-7">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Hồ sơ cá nhân</h1>
+          <p className="mt-3 text-sm text-slate-600 dark:text-slate-300">Không thể tải thông tin tài khoản lúc này.</p>
+          <button
+            type="button"
+            onClick={() => void fetchProfile()}
+            className="mt-5 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+          >
+            Thử tải lại
+          </button>
+        </section>
+      </div>
+    );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-6">👤 Hồ Sơ Cá Nhân</h1>
-
-      <div className="grid md:grid-cols-3 gap-6">
-        {/* Left: Avatar & Stats */}
-        <div className="md:col-span-1">
-          <div className="bg-white rounded-lg shadow-md p-6 text-center">
-            <div className="w-32 h-32 mx-auto mb-4 bg-blue-100 rounded-full flex items-center justify-center text-6xl">
-              {profile.avatar_url ? (
-                <img
-                  src={profile.avatar_url}
-                  alt={profile.name}
-                  className="w-full h-full rounded-full object-cover"
-                />
-              ) : (
-                '👨‍🎓'
-              )}
-            </div>
-            <h2 className="text-2xl font-bold mb-2">{profile.name}</h2>
-            <p className="text-gray-600 mb-4">{profile.email}</p>
-            <span className="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded text-sm">
-              Học viên
-            </span>
-
-            <div className="mt-6 space-y-3">
-              <div className="bg-green-50 p-4 rounded">
-                <div className="text-3xl font-bold text-green-600">{profile.total_points || 0}</div>
-                <div className="text-sm text-gray-600">Tổng điểm</div>
+    <div className="page-shell">
+      <div className="mx-auto max-w-6xl space-y-6">
+        <section className="page-surface rounded-[1.75rem] px-5 py-6 sm:px-7">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+              <div className="flex h-24 w-24 items-center justify-center rounded-3xl bg-gradient-to-br from-blue-100 via-cyan-50 to-emerald-50 text-3xl font-bold text-slate-700 shadow-sm dark:from-blue-950/50 dark:via-slate-900 dark:to-emerald-950/40 dark:text-slate-100">
+                {profile.avatar_url ? (
+                  <img
+                    src={profile.avatar_url}
+                    alt={profile.name}
+                    className="h-full w-full rounded-3xl object-cover"
+                  />
+                ) : (
+                  profile.name.slice(0, 2).toUpperCase()
+                )}
               </div>
-              <div className="bg-blue-50 p-4 rounded">
-                <div className="text-3xl font-bold text-blue-600">{profile.activity_count}</div>
-                <div className="text-sm text-gray-600">Hoạt động tham gia</div>
-              </div>
-              {profile.class_name && (
-                <div className="bg-purple-50 p-4 rounded">
-                  <div className="text-lg font-bold text-purple-600">{profile.class_name}</div>
-                  <div className="text-sm text-gray-600">Lớp</div>
+
+              <div>
+                <div className="inline-flex rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-blue-700 dark:bg-blue-500/15 dark:text-blue-200">
+                  Tài khoản học viên
                 </div>
-              )}
+                <h1 className="mt-3 text-3xl font-bold text-slate-900 dark:text-slate-100">Hồ sơ cá nhân</h1>
+                <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+                  Theo dõi thông tin tài khoản, lớp học và tổng điểm đang được hệ thống ghi nhận.
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2 text-sm text-slate-600 dark:text-slate-300">
+                  <span className="rounded-full bg-slate-100 px-3 py-1 dark:bg-slate-800">{profile.email}</span>
+                  <span className="rounded-full bg-slate-100 px-3 py-1 dark:bg-slate-800">
+                    Lớp: {profile.class_name || 'Chưa xếp lớp'}
+                  </span>
+                </div>
+              </div>
             </div>
 
-            <button
-              onClick={() => setShowPasswordModal(true)}
-              className="mt-6 w-full bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded"
-            >
-              🔒 Đổi mật khẩu
-            </button>
+            <StudentDailyQuickActions includeDevices className="lg:w-[28rem]" />
           </div>
-        </div>
+        </section>
 
-        {/* Right: Details & Edit */}
-        <div className="md:col-span-2">
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-bold">Thông Tin Chi Tiết</h3>
-              {!editing ? (
-                <button
-                  onClick={() => setEditing(true)}
-                  className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
-                >
-                  ✏️ Chỉnh sửa
-                </button>
-              ) : (
-                <button
-                  onClick={() => {
-                    setEditing(false);
-                    setFormData({ name: profile.name, email: profile.email });
-                  }}
-                  className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded"
-                >
-                  ✖️ Hủy
-                </button>
-              )}
+        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <StatCard label="Tổng điểm cuối cùng" value={profile.total_points || 0} tone="emerald" />
+          <StatCard label="Hoạt động đã tham gia" value={profile.activity_count || 0} tone="blue" />
+          <StatCard
+            label="Ngày tham gia"
+            value={formatVietnamDateTime(profile.created_at, 'date')}
+            tone="amber"
+          />
+          <StatCard label="Lớp hiện tại" value={profile.class_name || 'Chưa có'} tone="blue" />
+        </section>
+
+        <section className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+          <div className="page-surface rounded-[1.75rem] px-5 py-6 sm:px-7">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Thông tin cơ bản</h2>
+                <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+                  Cập nhật tên và email đang dùng cho học viên.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setEditing((current) => {
+                    const next = !current;
+                    if (!next) {
+                      setFormData({ name: profile.name, email: profile.email });
+                    }
+                    return next;
+                  });
+                }}
+                className={`rounded-xl px-4 py-2 text-sm font-semibold ${
+                  editing
+                    ? 'bg-slate-200 text-slate-700 hover:bg-slate-300 dark:bg-slate-700 dark:text-slate-100 dark:hover:bg-slate-600'
+                    : 'bg-blue-600 text-white hover:bg-blue-700'
+                }`}
+              >
+                {editing ? 'Hủy chỉnh sửa' : 'Chỉnh sửa'}
+              </button>
             </div>
 
             {!editing ? (
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Họ và tên</label>
-                  <div className="text-lg">{profile.name}</div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                  <div className="text-lg">{profile.email}</div>
-                </div>
-                {profile.gender && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Giới tính
-                    </label>
-                    <div className="text-lg">{profile.gender === 'nam' ? 'Nam' : 'Nữ'}</div>
+              <div className="mt-6 grid gap-4 sm:grid-cols-2">
+                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/60">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    Họ và tên
                   </div>
-                )}
-                {profile.date_of_birth && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Ngày sinh
-                    </label>
-                    <div className="text-lg">
-                      {formatVietnamDateTime(profile.date_of_birth, 'date')}
-                    </div>
-                  </div>
-                )}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Lớp</label>
-                  <div className="text-lg">{profile.class_name || 'Chưa có'}</div>
+                  <div className="mt-2 text-lg font-semibold text-slate-900 dark:text-slate-100">{profile.name}</div>
                 </div>
-                {(profile.province ||
-                  profile.district ||
-                  profile.ward ||
-                  profile.address_detail) && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Địa chỉ</label>
-                    <div className="text-lg">
-                      {[profile.address_detail, profile.ward, profile.district, profile.province]
-                        .filter(Boolean)
-                        .join(', ')}
-                    </div>
+                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/60">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    Email
                   </div>
-                )}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Ngày tham gia
-                  </label>
-                  <div className="text-lg">
-                    {formatVietnamDateTime(profile.created_at, 'date')}
+                  <div className="mt-2 break-all text-lg font-semibold text-slate-900 dark:text-slate-100">
+                    {profile.email}
+                  </div>
+                </div>
+                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/60">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    Giới tính
+                  </div>
+                  <div className="mt-2 text-base font-semibold text-slate-900 dark:text-slate-100">
+                    {resolveGenderLabel(profile.gender)}
+                  </div>
+                </div>
+                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/60">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    Ngày sinh
+                  </div>
+                  <div className="mt-2 text-base font-semibold text-slate-900 dark:text-slate-100">
+                    {profile.date_of_birth
+                      ? formatVietnamDateTime(profile.date_of_birth, 'date')
+                      : 'Chưa cập nhật'}
                   </div>
                 </div>
               </div>
             ) : (
-              <form onSubmit={handleUpdateProfile} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Họ và tên</label>
+              <form onSubmit={handleSaveProfile} className="mt-6 space-y-4">
+                <label className="block">
+                  <span className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200">Họ và tên</span>
                   <input
                     type="text"
                     value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full px-3 py-2 border rounded"
+                    onChange={(event) =>
+                      setFormData((current) => ({ ...current, name: event.target.value }))
+                    }
+                    className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:focus:ring-blue-500/20"
                     required
                   />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                </label>
+
+                <label className="block">
+                  <span className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200">Email</span>
                   <input
                     type="email"
                     value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="w-full px-3 py-2 border rounded"
+                    onChange={(event) =>
+                      setFormData((current) => ({ ...current, email: event.target.value }))
+                    }
+                    className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:focus:ring-blue-500/20"
                     required
                   />
+                </label>
+
+                <div className="flex flex-col gap-3 sm:flex-row">
+                  <button
+                    type="submit"
+                    disabled={saving}
+                    className="rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditing(false);
+                      setFormData({ name: profile.name, email: profile.email });
+                    }}
+                    className="rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800"
+                  >
+                    Hoàn tác
+                  </button>
                 </div>
-                <button
-                  type="submit"
-                  className="w-full bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
-                >
-                  💾 Lưu thay đổi
-                </button>
               </form>
             )}
           </div>
 
-          {/* Activity History */}
-          <div className="bg-white rounded-lg shadow-md p-6 mt-6">
-            <h3 className="text-xl font-bold mb-4">📊 Thống Kê</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="border rounded p-4 text-center">
-                <div className="text-2xl font-bold text-blue-600">{profile.activity_count}</div>
-                <div className="text-sm text-gray-600">Hoạt động tham gia</div>
-              </div>
-              <div className="border rounded p-4 text-center">
-                <div className="text-2xl font-bold text-green-600">{profile.total_points || 0}</div>
-                <div className="text-sm text-gray-600">Tổng điểm tích lũy</div>
-              </div>
-            </div>
+          <div className="space-y-6">
+            <section className="page-surface rounded-[1.75rem] px-5 py-6 sm:px-7">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Thông tin hệ thống</h2>
+                  <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+                    Các thông tin này được đồng bộ từ tài khoản và lớp học hiện tại.
+                  </p>
+                </div>
 
-            <div className="mt-4 text-center">
-              <button
-                onClick={() => router.push('/student/my-activities')}
-                className="text-blue-600 hover:text-blue-800 underline"
-              >
-                Xem lịch sử hoạt động chi tiết →
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Change Password Modal */}
-      {showPasswordModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full">
-            <h2 className="text-xl font-bold mb-4">🔒 Đổi Mật Khẩu</h2>
-            <form onSubmit={handleChangePassword} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Mật khẩu hiện tại
-                </label>
-                <input
-                  type="password"
-                  value={passwordData.current_password}
-                  onChange={(e) =>
-                    setPasswordData({ ...passwordData, current_password: e.target.value })
-                  }
-                  className="w-full px-3 py-2 border rounded"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Mật khẩu mới</label>
-                <input
-                  type="password"
-                  value={passwordData.new_password}
-                  onChange={(e) =>
-                    setPasswordData({ ...passwordData, new_password: e.target.value })
-                  }
-                  className="w-full px-3 py-2 border rounded"
-                  required
-                  minLength={6}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Xác nhận mật khẩu mới
-                </label>
-                <input
-                  type="password"
-                  value={passwordData.confirm_password}
-                  onChange={(e) =>
-                    setPasswordData({ ...passwordData, confirm_password: e.target.value })
-                  }
-                  className="w-full px-3 py-2 border rounded"
-                  required
-                  minLength={6}
-                />
-              </div>
-              <div className="flex gap-2">
                 <button
-                  type="submit"
-                  className="flex-1 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
+                  type="button"
+                  onClick={() => setShowPasswordDialog(true)}
+                  className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200"
                 >
                   Đổi mật khẩu
                 </button>
+              </div>
+
+              <div className="mt-6 space-y-3">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-800/60">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    Lớp học
+                  </div>
+                  <div className="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
+                    {profile.class_name || 'Chưa xếp lớp'}
+                  </div>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-800/60">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    Địa chỉ
+                  </div>
+                  <div className="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
+                    {address || 'Chưa cập nhật'}
+                  </div>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-800/60">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    Ngày tạo tài khoản
+                  </div>
+                  <div className="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
+                    {formatVietnamDateTime(profile.created_at, 'date')}
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section className="page-surface rounded-[1.75rem] px-5 py-6 sm:px-7">
+              <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Lưu ý sử dụng</h2>
+              <div className="mt-4 space-y-3 text-sm text-slate-600 dark:text-slate-300">
+                <p>Nếu thay đổi email, hãy dùng email đăng nhập chính xác để nhận thông báo.</p>
+                <p>
+                  Tổng điểm trong hồ sơ được đồng bộ từ score ledger, cùng nguồn với bảng điểm và
+                  bảng xếp hạng.
+                </p>
+                <p>Nếu thông tin lớp học sai, cần cập nhật ở phía quản trị dữ liệu hoặc cố vấn.</p>
+              </div>
+            </section>
+          </div>
+        </section>
+      </div>
+
+      {showPasswordDialog && (
+        <div
+          className="app-modal-backdrop px-4 py-6"
+          onClick={() => {
+            setShowPasswordDialog(false);
+            setPasswordForm(EMPTY_PASSWORD_FORM);
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="student-password-dialog-title"
+            className="app-modal-panel app-modal-panel-scroll w-full max-w-lg p-6"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 id="student-password-dialog-title" className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                  Đổi mật khẩu
+                </h2>
+                <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+                  Mật khẩu mới phải có ít nhất 6 ký tự và được lưu cho tài khoản hiện tại.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowPasswordDialog(false);
+                  setPasswordForm(EMPTY_PASSWORD_FORM);
+                }}
+                className="rounded-full bg-slate-100 px-3 py-1 text-sm font-semibold text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+              >
+                Đóng
+              </button>
+            </div>
+
+            <form onSubmit={handleChangePassword} className="mt-6 space-y-4">
+              <label className="block">
+                <span className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200">
+                  Mật khẩu hiện tại
+                </span>
+                <input
+                  type="password"
+                  value={passwordForm.currentPassword}
+                  onChange={(event) =>
+                    setPasswordForm((current) => ({
+                      ...current,
+                      currentPassword: event.target.value,
+                    }))
+                  }
+                  className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:focus:ring-blue-500/20"
+                  required
+                />
+              </label>
+
+              <label className="block">
+                <span className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200">Mật khẩu mới</span>
+                <input
+                  type="password"
+                  value={passwordForm.newPassword}
+                  onChange={(event) =>
+                    setPasswordForm((current) => ({ ...current, newPassword: event.target.value }))
+                  }
+                  className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:focus:ring-blue-500/20"
+                  minLength={6}
+                  required
+                />
+              </label>
+
+              <label className="block">
+                <span className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200">
+                  Nhập lại mật khẩu mới
+                </span>
+                <input
+                  type="password"
+                  value={passwordForm.confirmPassword}
+                  onChange={(event) =>
+                    setPasswordForm((current) => ({
+                      ...current,
+                      confirmPassword: event.target.value,
+                    }))
+                  }
+                  className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:focus:ring-blue-500/20"
+                  minLength={6}
+                  required
+                />
+              </label>
+
+              <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
                 <button
                   type="button"
                   onClick={() => {
-                    setShowPasswordModal(false);
-                    setPasswordData({
-                      current_password: '',
-                      new_password: '',
-                      confirm_password: '',
-                    });
+                    setShowPasswordDialog(false);
+                    setPasswordForm(EMPTY_PASSWORD_FORM);
                   }}
-                  className="flex-1 bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded"
+                  className="rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800"
                 >
                   Hủy
+                </button>
+                <button
+                  type="submit"
+                  disabled={changingPassword}
+                  className="rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 disabled:dark:bg-slate-700 disabled:dark:text-slate-300"
+                >
+                  {changingPassword ? 'Đang đổi mật khẩu...' : 'Cập nhật mật khẩu'}
                 </button>
               </div>
             </form>

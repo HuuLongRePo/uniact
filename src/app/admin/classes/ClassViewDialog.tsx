@@ -1,8 +1,7 @@
 'use client';
 
-import { Class } from './types';
-import { Button } from '@/components/ui/Button';
 import { formatVietnamDateTime } from '@/lib/timezone';
+import { Class } from './types';
 
 interface ClassViewDialogProps {
   isOpen: boolean;
@@ -13,63 +12,64 @@ interface ClassViewDialogProps {
 export default function ClassViewDialog({ isOpen, cls, onClose }: ClassViewDialogProps) {
   if (!isOpen || !cls) return null;
 
+  const titleId = 'admin-class-view-dialog-title';
+
   return (
-    <div
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-      onClick={onClose}
-    >
+    <div className="app-modal-backdrop px-4" onClick={onClose}>
       <div
-        className="bg-white rounded-lg p-6 max-w-lg w-full mx-4"
-        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="app-modal-panel app-modal-panel-scroll w-full max-w-xl p-6"
+        onClick={(event) => event.stopPropagation()}
       >
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-bold">Chi tiết lớp học</h3>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700" aria-label="Đóng">
-            ✕
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 id={titleId} className="text-2xl font-semibold text-slate-950">
+              Chi tiet lop hoc
+            </h2>
+            <p className="mt-1 text-sm text-slate-500">Thong tin tong quan de admin kiem tra nhanh.</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
+          >
+            Dong
           </button>
         </div>
 
-        <div className="space-y-3">
-          <div>
-            <div className="text-xs text-gray-500">Tên lớp</div>
-            <div className="text-base font-semibold text-gray-900">{cls.name}</div>
+        <div className="mt-6 space-y-4">
+          <div className="rounded-3xl border border-slate-200 p-4">
+            <div className="text-xs font-medium uppercase tracking-[0.16em] text-slate-500">Ten lop</div>
+            <div className="mt-2 text-lg font-semibold text-slate-950">{cls.name}</div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <div className="text-xs text-gray-500">Khối/Lớp</div>
-              <div className="text-sm text-gray-900">{cls.grade}</div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="rounded-3xl border border-slate-200 p-4">
+              <div className="text-xs font-medium uppercase tracking-[0.16em] text-slate-500">Khoi</div>
+              <div className="mt-2 text-sm text-slate-800">{cls.grade}</div>
             </div>
-            <div>
-              <div className="text-xs text-gray-500">Số học viên</div>
-              <div className="text-sm text-gray-900">{cls.student_count || 0}</div>
+            <div className="rounded-3xl border border-slate-200 p-4">
+              <div className="text-xs font-medium uppercase tracking-[0.16em] text-slate-500">So hoc vien</div>
+              <div className="mt-2 text-sm text-slate-800">{cls.student_count || 0}</div>
             </div>
-          </div>
-
-          <div>
-            <div className="text-xs text-gray-500">Giảng viên chủ nhiệm</div>
-            <div className="text-sm text-gray-900">{cls.teacher_name || 'Chưa có giảng viên'}</div>
-          </div>
-
-          <div>
-            <div className="text-xs text-gray-500">Ngày tạo</div>
-            <div className="text-sm text-gray-900">
-              {formatVietnamDateTime(cls.created_at, 'date')}
+            <div className="rounded-3xl border border-slate-200 p-4">
+              <div className="text-xs font-medium uppercase tracking-[0.16em] text-slate-500">GVCN</div>
+              <div className="mt-2 text-sm text-slate-800">{cls.teacher_name || 'Chua co giang vien'}</div>
+            </div>
+            <div className="rounded-3xl border border-slate-200 p-4">
+              <div className="text-xs font-medium uppercase tracking-[0.16em] text-slate-500">Ngay tao</div>
+              <div className="mt-2 text-sm text-slate-800">{formatVietnamDateTime(cls.created_at, 'date')}</div>
             </div>
           </div>
 
-          <div>
-            <div className="text-xs text-gray-500">Mô tả</div>
-            <div className="text-sm text-gray-900 whitespace-pre-wrap">
-              {cls.description || '(Không có)'}
+          <div className="rounded-3xl border border-slate-200 p-4">
+            <div className="text-xs font-medium uppercase tracking-[0.16em] text-slate-500">Mo ta</div>
+            <div className="mt-2 whitespace-pre-wrap text-sm text-slate-800">
+              {cls.description || 'Khong co mo ta bo sung.'}
             </div>
           </div>
-        </div>
-
-        <div className="flex justify-end mt-6">
-          <Button onClick={onClose} variant="secondary">
-            Đóng
-          </Button>
         </div>
       </div>
     </div>

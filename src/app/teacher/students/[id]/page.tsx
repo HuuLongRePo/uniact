@@ -1,24 +1,34 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import {
+  ArrowLeft,
+  CalendarDays,
+  FileText,
+  Medal,
+  NotebookPen,
+  Sparkles,
+  Trophy,
+  UserRound,
+} from 'lucide-react';
+import toast from 'react-hot-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { formatVietnamDateTime, formatVietnamWithOptions, parseVietnamDate } from '@/lib/timezone';
-import toast from 'react-hot-toast';
 
 interface StudentProfile {
   id: number;
   name: string;
   email: string;
   class_name: string;
-  major: string;
-  academic_year: string;
+  major?: string;
+  academic_year?: string;
   stats: {
     total_activities: number;
     attended_count: number;
-    cancelled_count: number;
+    cancelled_count?: number;
     total_points: number;
     class_rank: number;
     awards_count: number;
@@ -29,9 +39,9 @@ interface Activity {
   id: number;
   title: string;
   date_time: string;
-  location: string;
-  activity_type: string;
-  org_level: string;
+  location?: string;
+  activity_type?: string;
+  org_level?: string;
   attendance_status: string;
   points: number;
 }
@@ -58,21 +68,45 @@ interface Note {
   created_by_name: string;
 }
 
+type TabId = 'overview' | 'attendance' | 'scores' | 'timeline' | 'notes';
+
+const tabs: Array<{ id: TabId; label: string; icon: typeof Sparkles }> = [
+  { id: 'overview', label: 'Tong quan', icon: Sparkles },
+  { id: 'attendance', label: 'Diem danh', icon: CalendarDays },
+  { id: 'scores', label: 'Diem so', icon: Trophy },
+  { id: 'timeline', label: 'Timeline', icon: Medal },
+  { id: 'notes', label: 'Ghi chu', icon: NotebookPen },
+];
+
+function statusBadge(status: string) {
+  switch (status) {
+    case 'attended':
+      return { label: 'Co mat', className: 'bg-emerald-100 text-emerald-800' };
+    case 'registered':
+      return { label: 'Da dang ky', className: 'bg-cyan-100 text-cyan-800' };
+    case 'absent':
+      return { label: 'Vang', className: 'bg-rose-100 text-rose-800' };
+    default:
+      return { label: 'Khac', className: 'bg-slate-100 text-slate-700' };
+  }
+}
+
 export default function StudentProfilePage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const params = useParams();
   const id = params.id as string;
+
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [student, setStudent] = useState<StudentProfile | null>(null);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [awards, setAwards] = useState<Award[]>([]);
   const [monthlyStats, setMonthlyStats] = useState<MonthStat[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
   const [noteToDelete, setNoteToDelete] = useState<Note | null>(null);
-  const [activeTab, setActiveTab] = useState<
-    'overview' | 'attendance' | 'scores' | 'timeline' | 'notes'
-  >('overview');
+  const [activeTab, setActiveTab] = useState<TabId>('overview');
   const [newNote, setNewNote] = useState('');
   const [savingNote, setSavingNote] = useState(false);
 
@@ -81,432 +115,550 @@ export default function StudentProfilePage() {
       router.push('/login');
       return;
     }
-    if (user) fetchProfile();
-  }, [user, authLoading, router, id]);
 
-  const fetchProfile = async () => {
+    if (user) {
+      void fetchProfile();
+    }
+  }, [authLoading, id, user?.id, user?.role]);
+
+  useEffect(() => {
+    const nextTab = searchParams.get('tab');
+    if (
+      nextTab === 'overview' ||
+      nextTab === 'attendance' ||
+      nextTab === 'scores' ||
+      nextTab === 'timeline' ||
+      nextTab === 'notes'
+    ) {
+      setActiveTab(nextTab);
+      return;
+    }
+
+    setActiveTab('overview');
+  }, [searchParams]);
+
+  async function fetchProfile() {
     try {
       setLoading(true);
+      setError('');
+
       const res = await fetch(`/api/students/${id}/profile`);
-      const data = await res.json();
-      if (res.ok) {
-        setStudent(data.student || data.data?.student || null);
-        setActivities(data.activities || data.data?.activities || []);
-        setAwards(data.awards || data.data?.awards || []);
-        setMonthlyStats(data.monthlyStats || data.data?.monthlyStats || []);
-        setNotes(data.notes || data.data?.notes || []);
-      } else {
-        toast.error(data.error || data.message || 'Không thể tải hồ sơ học viên');
+      const payload = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        throw new Error(payload?.error || payload?.message || 'Khong the tai ho so hoc vien');
       }
-    } catch (e) {
-      console.error('Fetch profile error:', e);
-      toast.error(e instanceof Error ? e.message : 'Không thể tải hồ sơ học viên');
+
+      const raw = payload?.data ?? payload;
+      const nextStudent = raw?.student || null;
+      if (!nextStudent) {
+        throw new Error('Khong tim thay ho so hoc vien');
+      }
+
+      setStudent(nextStudent);
+      setActivities(Array.isArray(raw?.activities) ? raw.activities : []);
+      setAwards(Array.isArray(raw?.awards) ? raw.awards : []);
+      setMonthlyStats(Array.isArray(raw?.monthlyStats) ? raw.monthlyStats : []);
+      setNotes(Array.isArray(raw?.notes) ? raw.notes : []);
+    } catch (fetchError) {
+      console.error('Teacher student profile fetch error:', fetchError);
+      setStudent(null);
+      setActivities([]);
+      setAwards([]);
+      setMonthlyStats([]);
+      setNotes([]);
+      const message =
+        fetchError instanceof Error ? fetchError.message : 'Khong the tai ho so hoc vien';
+      setError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  const handleAddNote = async () => {
+  async function handleAddNote() {
     if (!newNote.trim()) return;
+
     try {
       setSavingNote(true);
-      const res = await fetch(`/api/students/${params.id}/notes`, {
+
+      const res = await fetch(`/api/students/${id}/notes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content: newNote }),
       });
-      const data = await res.json();
-      if (res.ok) {
-        setNewNote('');
-        fetchProfile(); // Reload để lấy note mới
-      } else {
-        toast.error(data.error || data.message || 'Không thể thêm ghi chú');
+      const payload = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        throw new Error(payload?.error || payload?.message || 'Khong the them ghi chu');
       }
-    } catch (e) {
-      console.error('Add note error:', e);
-      toast.error(e instanceof Error ? e.message : 'Không thể thêm ghi chú');
+
+      setNewNote('');
+      await fetchProfile();
+    } catch (noteError) {
+      console.error('Add note error:', noteError);
+      toast.error(noteError instanceof Error ? noteError.message : 'Khong the them ghi chu');
     } finally {
       setSavingNote(false);
     }
-  };
+  }
 
-  const handleDeleteNote = async (noteId: number) => {
+  async function handleDeleteNote(noteId: number) {
     try {
-      const res = await fetch(`/api/students/${params.id}/notes?noteId=${noteId}`, {
+      const res = await fetch(`/api/students/${id}/notes?noteId=${noteId}`, {
         method: 'DELETE',
       });
-      if (res.ok) {
-        fetchProfile();
-      } else {
-        const data = await res.json();
-        toast.error(data.error || data.message || 'Không thể xóa ghi chú');
-      }
-    } catch (e) {
-      console.error('Delete note error:', e);
-      toast.error(e instanceof Error ? e.message : 'Không thể xóa ghi chú');
-    }
-  };
+      const payload = await res.json().catch(() => null);
 
-  if (authLoading || loading || !student) return <LoadingSpinner />;
+      if (!res.ok) {
+        throw new Error(payload?.error || payload?.message || 'Khong the xoa ghi chu');
+      }
+
+      await fetchProfile();
+    } catch (noteError) {
+      console.error('Delete note error:', noteError);
+      toast.error(noteError instanceof Error ? noteError.message : 'Khong the xoa ghi chu');
+    }
+  }
+
+  if (authLoading || loading) {
+    return <LoadingSpinner message="Dang tai ho so hoc vien..." />;
+  }
+
+  if (!student) {
+    return (
+      <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6 lg:px-8">
+        <div className="rounded-[2rem] border border-rose-200 bg-rose-50 p-6 text-rose-900">
+          <h1 className="text-2xl font-semibold">Ho so hoc vien tam thoi chua san sang</h1>
+          <p className="mt-2 text-sm text-rose-800">
+            {error || 'Khong the tai du lieu cho hoc vien nay.'}
+          </p>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={() => router.back()}
+              className="rounded-2xl border border-rose-200 px-4 py-2 text-sm font-medium text-rose-900 hover:bg-rose-100"
+            >
+              Quay lai
+            </button>
+            <button
+              type="button"
+              onClick={() => void fetchProfile()}
+              className="rounded-2xl bg-rose-600 px-4 py-2 text-sm font-medium text-white hover:bg-rose-700"
+            >
+              Thu tai lai
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const attendanceRate =
     student.stats.total_activities > 0
       ? ((student.stats.attended_count / student.stats.total_activities) * 100).toFixed(1)
       : '0.0';
+  const averageScore =
+    student.stats.attended_count > 0
+      ? (student.stats.total_points / student.stats.attended_count).toFixed(1)
+      : '0.0';
+
+  const timeline = [
+    ...activities.map((activity) => ({
+      id: `activity-${activity.id}`,
+      date: activity.date_time,
+      type: 'activity' as const,
+      title: activity.title,
+      subtitle: [activity.activity_type, activity.org_level].filter(Boolean).join(' • '),
+      status: activity.attendance_status,
+      points: activity.points,
+    })),
+    ...awards.map((award) => ({
+      id: `award-${award.id}`,
+      date: award.awarded_date,
+      type: 'award' as const,
+      title: award.award_type,
+      subtitle: award.reason,
+      awardedBy: award.awarded_by_name,
+    })),
+  ].sort(
+    (left, right) =>
+      (parseVietnamDate(right.date)?.getTime() ?? 0) - (parseVietnamDate(left.date)?.getTime() ?? 0)
+  );
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <button onClick={() => router.back()} className="mb-4 text-blue-600 hover:underline">
-        ← Quay lại
-      </button>
+    <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
+      <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+        <button
+          type="button"
+          onClick={() => router.back()}
+          className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Quay lai
+        </button>
 
-      <div className="bg-white rounded-lg shadow p-6 mb-6">
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">{student.name}</h1>
-            <p className="text-gray-600 mt-1">{student.email}</p>
-            <p className="text-sm text-gray-500 mt-1">
-              Lớp: {student.class_name} | {student.major} | K{student.academic_year}
-            </p>
+        <div className="mt-4 flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
+          <div className="flex items-start gap-4">
+            <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-cyan-100 text-cyan-800">
+              <UserRound className="h-8 w-8" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-semibold text-slate-950">{student.name}</h1>
+              <p className="mt-1 text-sm text-slate-500">{student.email}</p>
+              <p className="mt-2 text-sm text-slate-600">
+                Lop {student.class_name || '-'}
+                {student.major ? ` • ${student.major}` : ''}
+                {student.academic_year ? ` • K${student.academic_year}` : ''}
+              </p>
+            </div>
           </div>
-          <div className="text-right">
-            <div className="text-sm text-gray-500">Xếp hạng lớp</div>
-            <div className="text-4xl font-bold text-blue-600">#{student.stats.class_rank}</div>
+
+          <div className="rounded-3xl border border-slate-200 bg-slate-50 px-5 py-4 text-center xl:min-w-[180px]">
+            <div className="text-sm text-slate-500">Xep hang trong lop</div>
+            <div className="mt-2 text-4xl font-semibold text-cyan-700">#{student.stats.class_rank}</div>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-          <div className="bg-blue-50 p-4 rounded">
-            <div className="text-sm text-gray-600">Tổng điểm</div>
-            <div className="text-2xl font-bold text-blue-600">{student.stats.total_points}</div>
+        <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <div className="rounded-3xl border border-cyan-200 bg-cyan-50 p-5 shadow-sm">
+            <div className="text-sm font-medium text-cyan-800">Tong diem</div>
+            <div className="mt-3 text-3xl font-semibold text-cyan-950">{student.stats.total_points}</div>
           </div>
-          <div className="bg-green-50 p-4 rounded">
-            <div className="text-sm text-gray-600">Hoạt động</div>
-            <div className="text-2xl font-bold text-green-600">
+          <div className="rounded-3xl border border-emerald-200 bg-emerald-50 p-5 shadow-sm">
+            <div className="text-sm font-medium text-emerald-800">Tong hoat dong</div>
+            <div className="mt-3 text-3xl font-semibold text-emerald-950">
               {student.stats.total_activities}
             </div>
           </div>
-          <div className="bg-purple-50 p-4 rounded">
-            <div className="text-sm text-gray-600">Tỷ lệ điểm danh</div>
-            <div className="text-2xl font-bold text-purple-600">{attendanceRate}%</div>
+          <div className="rounded-3xl border border-violet-200 bg-violet-50 p-5 shadow-sm">
+            <div className="text-sm font-medium text-violet-800">Ty le diem danh</div>
+            <div className="mt-3 text-3xl font-semibold text-violet-950">{attendanceRate}%</div>
           </div>
-          <div className="bg-yellow-50 p-4 rounded">
-            <div className="text-sm text-gray-600">Khen thưởng</div>
-            <div className="text-2xl font-bold text-yellow-600">{student.stats.awards_count}</div>
+          <div className="rounded-3xl border border-amber-200 bg-amber-50 p-5 shadow-sm">
+            <div className="text-sm font-medium text-amber-800">So lan duoc khen thuong</div>
+            <div className="mt-3 text-3xl font-semibold text-amber-950">{student.stats.awards_count}</div>
           </div>
         </div>
-      </div>
+      </section>
 
-      <div className="bg-white rounded-lg shadow">
-        <div className="border-b flex gap-4 px-6">
-          {[
-            { id: 'overview', label: 'Tổng quan', icon: '📊' },
-            { id: 'attendance', label: 'Lịch sử điểm danh', icon: '📅' },
-            { id: 'scores', label: 'Phân tích điểm', icon: '🏆' },
-            { id: 'timeline', label: 'Dòng thời gian', icon: '⏱️' },
-            { id: 'notes', label: `Ghi chú (${notes.length})`, icon: '📝' },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() =>
-                setActiveTab(tab.id as 'overview' | 'attendance' | 'scores' | 'timeline' | 'notes')
-              }
-              className={`py-3 px-4 font-medium flex items-center gap-2 ${
-                activeTab === tab.id ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-600'
-              }`}
-            >
-              <span>{tab.icon}</span>
-              {tab.label}
-            </button>
-          ))}
+      <section className="rounded-[2rem] border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+        <div className="flex gap-2 overflow-x-auto pb-2">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            const active = activeTab === tab.id;
+
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={`inline-flex items-center gap-2 rounded-2xl px-4 py-2 text-sm font-medium whitespace-nowrap ${
+                  active
+                    ? 'bg-cyan-700 text-white'
+                    : 'border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
+                }`}
+              >
+                <Icon className="h-4 w-4" />
+                {tab.label}
+                {tab.id === 'notes' ? ` (${notes.length})` : ''}
+              </button>
+            );
+          })}
         </div>
 
-        <div className="p-6">
+        <div className="mt-6">
           {activeTab === 'overview' && (
-            <div>
-              <h2 className="text-xl font-bold mb-4">Thống kê theo tháng (6 tháng gần nhất)</h2>
-              {monthlyStats.length > 0 ? (
-                <div className="space-y-3">
-                  {monthlyStats.map((stat) => (
-                    <div key={stat.month} className="border rounded p-4">
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="font-medium">{stat.month}</span>
-                        <span className="text-sm text-gray-600">
-                          {stat.activity_count} hoạt động | {stat.attended_count} điểm danh |{' '}
-                          {stat.points_earned} điểm
-                        </span>
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <Sparkles className="h-5 w-5 text-cyan-700" />
+                <div>
+                  <h2 className="text-xl font-semibold text-slate-950">Tong quan 6 thang gan day</h2>
+                  <p className="text-sm text-slate-500">
+                    Nhin nhanh tan suat tham gia va diem tich luy theo thang.
+                  </p>
+                </div>
+              </div>
+
+              {monthlyStats.length === 0 ? (
+                <div className="rounded-3xl border border-dashed border-slate-200 px-4 py-10 text-center text-sm text-slate-500">
+                  Chua co du lieu thong ke theo thang.
+                </div>
+              ) : (
+                monthlyStats.map((item) => {
+                  const rate =
+                    item.activity_count > 0 ? (item.attended_count / item.activity_count) * 100 : 0;
+                  return (
+                    <div key={item.month} className="rounded-3xl border border-slate-200 p-4">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="text-base font-semibold text-slate-900">{item.month}</div>
+                        <div className="text-sm text-slate-500">
+                          {item.activity_count} HD • {item.attended_count} diem danh • {item.points_earned} diem
+                        </div>
                       </div>
-                      <div className="h-2 bg-gray-200 rounded">
+                      <div className="mt-4 h-2 rounded-full bg-slate-200">
                         <div
-                          className="h-full bg-blue-500 rounded"
-                          style={{
-                            width: `${stat.activity_count > 0 ? (stat.attended_count / stat.activity_count) * 100 : 0}%`,
-                          }}
+                          className="h-2 rounded-full bg-cyan-600"
+                          style={{ width: `${rate}%` }}
                         />
                       </div>
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-gray-500">Chưa có dữ liệu</p>
+                  );
+                })
               )}
             </div>
           )}
 
-          {/* Tab 2: Attendance History */}
           {activeTab === 'attendance' && (
-            <div>
-              <h2 className="text-xl font-bold mb-4">Lịch sử điểm danh</h2>
-              <div className="overflow-x-auto">
-                <table className="w-full border border-gray-200 rounded-lg">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-sm font-semibold">Ngày</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold">Hoạt động</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold">Loại</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold">Trạng thái</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold">Điểm</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {activities
-                      .filter((a) => a.attendance_status === 'attended')
-                      .map((act) => (
-                        <tr key={act.id} className="hover:bg-gray-50">
-                          <td className="px-4 py-3 text-sm">
-                            {formatVietnamDateTime(act.date_time, 'date')}
-                          </td>
-                          <td className="px-4 py-3 text-sm font-medium">{act.title}</td>
-                          <td className="px-4 py-3 text-sm text-gray-600">{act.activity_type}</td>
-                          <td className="px-4 py-3">
-                            <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
-                              ✓ Có mặt
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-sm font-semibold text-blue-600">
-                            {act.points > 0 ? `+${act.points}` : '-'}
-                          </td>
-                        </tr>
-                      ))}
-                  </tbody>
-                </table>
-                {activities.filter((a) => a.attendance_status === 'attended').length === 0 && (
-                  <p className="text-gray-500 text-center py-12">Chưa có dữ liệu điểm danh</p>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Tab 3: Score Analysis */}
-          {activeTab === 'scores' && (
-            <div>
-              <h2 className="text-xl font-bold mb-4">Phân tích điểm số</h2>
-
-              {/* Score summary */}
-              <div className="grid grid-cols-3 gap-4 mb-6">
-                <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-                  <div className="text-sm text-gray-600 mb-1">Tổng điểm</div>
-                  <div className="text-3xl font-bold text-blue-600">
-                    {student.stats.total_points}
-                  </div>
-                </div>
-                <div className="bg-green-50 rounded-lg p-4 border border-green-200">
-                  <div className="text-sm text-gray-600 mb-1">Điểm TB/hoạt động</div>
-                  <div className="text-3xl font-bold text-green-600">
-                    {student.stats.total_activities > 0
-                      ? (student.stats.total_points / student.stats.attended_count).toFixed(1)
-                      : '0'}
-                  </div>
-                </div>
-                <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
-                  <div className="text-sm text-gray-600 mb-1">Xếp hạng lớp</div>
-                  <div className="text-3xl font-bold text-purple-600">
-                    #{student.stats.class_rank}
-                  </div>
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <CalendarDays className="h-5 w-5 text-cyan-700" />
+                <div>
+                  <h2 className="text-xl font-semibold text-slate-950">Lich su diem danh</h2>
+                  <p className="text-sm text-slate-500">
+                    Theo doi cac activity ma hoc vien da co mat, dang ky hoac vang.
+                  </p>
                 </div>
               </div>
 
-              {/* Score breakdown */}
-              <h3 className="font-semibold text-lg mb-3">Chi tiết điểm theo hoạt động</h3>
-              <div className="space-y-3">
-                {activities
-                  .filter((a) => a.points > 0)
-                  .sort((a, b) => b.points - a.points)
-                  .map((act) => (
-                    <div key={act.id} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <h4 className="font-semibold text-gray-900">{act.title}</h4>
-                          <p className="text-sm text-gray-500 mt-1">
-                            {formatVietnamDateTime(act.date_time, 'date')} •{' '}
-                            {act.activity_type} • {act.org_level}
-                          </p>
+              {activities.length === 0 ? (
+                <div className="rounded-3xl border border-dashed border-slate-200 px-4 py-10 text-center text-sm text-slate-500">
+                  Chua co du lieu diem danh.
+                </div>
+              ) : (
+                activities.map((activity) => {
+                  const badge = statusBadge(activity.attendance_status);
+
+                  return (
+                    <div key={activity.id} className="rounded-3xl border border-slate-200 p-4">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                          <div className="text-base font-semibold text-slate-900">{activity.title}</div>
+                          <div className="mt-1 text-sm text-slate-500">
+                            {formatVietnamDateTime(activity.date_time)} • {activity.activity_type || 'Khac'}
+                          </div>
+                          {activity.location && (
+                            <div className="mt-1 text-sm text-slate-500">{activity.location}</div>
+                          )}
                         </div>
-                        <div className="text-right">
-                          <div className="text-2xl font-bold text-blue-600">+{act.points}</div>
-                          <div className="text-xs text-gray-500 mt-1">điểm</div>
-                        </div>
-                      </div>
-                      {/* Progress bar */}
-                      <div className="mt-3">
-                        <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div
-                            className="bg-blue-600 h-2 rounded-full"
-                            style={{ width: `${Math.min((act.points / 10) * 100, 100)}%` }}
-                          />
-                        </div>
+                        <span
+                          className={`inline-flex w-fit rounded-full px-3 py-1 text-xs font-semibold ${badge.className}`}
+                        >
+                          {badge.label}
+                        </span>
                       </div>
                     </div>
-                  ))}
-                {activities.filter((a) => a.points > 0).length === 0 && (
-                  <p className="text-gray-500 text-center py-12">Chưa có dữ liệu điểm</p>
+                  );
+                })
+              )}
+            </div>
+          )}
+
+          {activeTab === 'scores' && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <Trophy className="h-5 w-5 text-cyan-700" />
+                <div>
+                  <h2 className="text-xl font-semibold text-slate-950">Phan tich diem so</h2>
+                  <p className="text-sm text-slate-500">
+                    Xem tong diem, diem trung binh va cac activity dong gop nhieu diem nhat.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="rounded-3xl border border-cyan-200 bg-cyan-50 p-5 shadow-sm">
+                  <div className="text-sm font-medium text-cyan-800">Tong diem</div>
+                  <div className="mt-3 text-3xl font-semibold text-cyan-950">{student.stats.total_points}</div>
+                </div>
+                <div className="rounded-3xl border border-emerald-200 bg-emerald-50 p-5 shadow-sm">
+                  <div className="text-sm font-medium text-emerald-800">Diem TB moi lan co mat</div>
+                  <div className="mt-3 text-3xl font-semibold text-emerald-950">{averageScore}</div>
+                </div>
+                <div className="rounded-3xl border border-violet-200 bg-violet-50 p-5 shadow-sm">
+                  <div className="text-sm font-medium text-violet-800">Xep hang trong lop</div>
+                  <div className="mt-3 text-3xl font-semibold text-violet-950">#{student.stats.class_rank}</div>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                {activities.filter((activity) => Number(activity.points) > 0).length === 0 ? (
+                  <div className="rounded-3xl border border-dashed border-slate-200 px-4 py-10 text-center text-sm text-slate-500">
+                    Chua co diem tu activity nao.
+                  </div>
+                ) : (
+                  activities
+                    .filter((activity) => Number(activity.points) > 0)
+                    .sort((left, right) => Number(right.points) - Number(left.points))
+                    .map((activity) => (
+                      <div key={activity.id} className="rounded-3xl border border-slate-200 p-4">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                          <div>
+                            <div className="text-base font-semibold text-slate-900">{activity.title}</div>
+                            <div className="mt-1 text-sm text-slate-500">
+                              {formatVietnamDateTime(activity.date_time, 'date')}
+                              {activity.org_level ? ` • ${activity.org_level}` : ''}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-2xl font-semibold text-cyan-700">+{activity.points}</div>
+                            <div className="text-xs text-slate-500">diem</div>
+                          </div>
+                        </div>
+                      </div>
+                    ))
                 )}
               </div>
             </div>
           )}
 
-          {/* Tab 4: Timeline */}
           {activeTab === 'timeline' && (
-            <div>
-              <h2 className="text-xl font-bold mb-6">Dòng thời gian hoạt động</h2>
-              <div className="space-y-6">
-                {/* Combine activities and awards into timeline */}
-                {[
-                  ...activities.map((a) => ({
-                    date: a.date_time,
-                    type: 'activity' as const,
-                    title: a.title,
-                    subtitle: `${a.activity_type} • ${a.org_level}`,
-                    status: a.attendance_status,
-                    points: a.points,
-                    id: `activity-${a.id}`,
-                  })),
-                  ...awards.map((aw) => ({
-                    date: aw.awarded_date,
-                    type: 'award' as const,
-                    title: aw.award_type,
-                    subtitle: aw.reason,
-                    awardedBy: aw.awarded_by_name,
-                    id: `award-${aw.id}`,
-                  })),
-                ]
-                  .sort(
-                    (a, b) =>
-                      (parseVietnamDate(b.date)?.getTime() ?? 0) -
-                      (parseVietnamDate(a.date)?.getTime() ?? 0)
-                  )
-                  .map((event) => (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <Medal className="h-5 w-5 text-cyan-700" />
+                <div>
+                  <h2 className="text-xl font-semibold text-slate-950">Timeline hoat dong</h2>
+                  <p className="text-sm text-slate-500">
+                    Gop activity va khen thuong de nhin duoc toan canh.
+                  </p>
+                </div>
+              </div>
+
+              {timeline.length === 0 ? (
+                <div className="rounded-3xl border border-dashed border-slate-200 px-4 py-10 text-center text-sm text-slate-500">
+                  Chua co su kien nao trong timeline.
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {timeline.map((event) => (
                     <div key={event.id} className="flex gap-4">
                       <div
-                        className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center text-xl ${
-                          event.type === 'activity' ? 'bg-blue-100' : 'bg-yellow-100'
+                        className={`mt-1 flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl ${
+                          event.type === 'activity'
+                            ? 'bg-cyan-100 text-cyan-800'
+                            : 'bg-amber-100 text-amber-800'
                         }`}
                       >
-                        {event.type === 'activity' ? '📅' : '🏆'}
+                        {event.type === 'activity' ? (
+                          <CalendarDays className="h-5 w-5" />
+                        ) : (
+                          <Trophy className="h-5 w-5" />
+                        )}
                       </div>
-                      <div className="flex-grow border-l-2 border-gray-200 pl-6 pb-6">
-                        <div className="text-xs text-gray-500 mb-1">
+                      <div className="min-w-0 flex-1 rounded-3xl border border-slate-200 p-4">
+                        <div className="text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
                           {formatVietnamWithOptions(event.date, {
                             year: 'numeric',
                             month: 'long',
                             day: 'numeric',
                           })}
                         </div>
-                        <h3 className="font-semibold text-lg text-gray-900">{event.title}</h3>
-                        <p className="text-sm text-gray-600 mt-1">{event.subtitle}</p>
-                        {event.type === 'activity' && (
-                          <div className="mt-2 flex items-center gap-3">
+                        <div className="mt-2 text-base font-semibold text-slate-900">{event.title}</div>
+                        <div className="mt-1 text-sm text-slate-500">{event.subtitle}</div>
+                        {event.type === 'activity' ? (
+                          <div className="mt-3 flex flex-wrap gap-2">
                             <span
-                              className={`px-2 py-1 text-xs rounded-full ${
-                                event.status === 'attended'
-                                  ? 'bg-green-100 text-green-800'
-                                  : event.status === 'registered'
-                                    ? 'bg-blue-100 text-blue-800'
-                                    : 'bg-gray-100 text-gray-800'
+                              className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                                statusBadge(event.status).className
                               }`}
                             >
-                              {event.status === 'attended'
-                                ? '✓ Đã tham gia'
-                                : event.status === 'registered'
-                                  ? 'Đã đăng ký'
-                                  : 'Đã hủy'}
+                              {statusBadge(event.status).label}
                             </span>
                             {event.points > 0 && (
-                              <span className="text-sm font-semibold text-blue-600">
-                                +{event.points} điểm
+                              <span className="rounded-full bg-cyan-100 px-3 py-1 text-xs font-semibold text-cyan-800">
+                                +{event.points} diem
                               </span>
                             )}
                           </div>
-                        )}
-                        {event.type === 'award' && (
-                          <p className="text-xs text-gray-500 mt-2">Người cấp: {event.awardedBy}</p>
+                        ) : (
+                          <div className="mt-3 text-sm text-slate-500">
+                            Nguoi cap: {event.awardedBy || 'Khong ro'}
+                          </div>
                         )}
                       </div>
                     </div>
                   ))}
-                {activities.length === 0 && awards.length === 0 && (
-                  <p className="text-gray-500 text-center py-12">Chưa có hoạt động nào</p>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           )}
 
-          {/* Tab 5: Notes */}
           {activeTab === 'notes' && (
-            <div>
-              <h2 className="text-xl font-bold mb-4">Ghi chú của giảng viên</h2>
-              <div className="mb-4">
-                <textarea
-                  value={newNote}
-                  onChange={(e) => setNewNote(e.target.value)}
-                  placeholder="Nhập ghi chú mới..."
-                  className="w-full p-3 border rounded h-24"
-                />
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <FileText className="h-5 w-5 text-cyan-700" />
+                <div>
+                  <h2 className="text-xl font-semibold text-slate-950">Ghi chu noi bo</h2>
+                  <p className="text-sm text-slate-500">
+                    Luu y follow-up, canh bao va nhan xet teacher theo tung hoc vien.
+                  </p>
+                </div>
+              </div>
+
+              <div className="rounded-3xl border border-slate-200 p-4">
+                <label className="block text-sm font-medium text-slate-700">
+                  Them ghi chu moi
+                  <textarea
+                    value={newNote}
+                    onChange={(event) => setNewNote(event.target.value)}
+                    placeholder="Nhap noi dung can luu y ve hoc vien..."
+                    className="mt-2 h-28 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-cyan-300"
+                  />
+                </label>
                 <button
-                  onClick={handleAddNote}
+                  type="button"
+                  onClick={() => void handleAddNote()}
                   disabled={savingNote || !newNote.trim()}
-                  className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                  className="mt-4 rounded-2xl bg-cyan-700 px-4 py-2 text-sm font-medium text-white hover:bg-cyan-800 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {savingNote ? 'Đang lưu...' : '+ Thêm ghi chú'}
+                  {savingNote ? 'Dang luu...' : 'Them ghi chu'}
                 </button>
               </div>
-              <div className="space-y-3">
-                {notes.map((note) => (
-                  <div key={note.id} className="border rounded p-4 bg-yellow-50">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <p className="whitespace-pre-wrap">{note.content}</p>
-                        <p className="text-xs text-gray-500 mt-2">
-                          {note.created_by_name} |{' '}
-                          {formatVietnamDateTime(note.created_at)}
-                        </p>
+
+              {notes.length === 0 ? (
+                <div className="rounded-3xl border border-dashed border-slate-200 px-4 py-10 text-center text-sm text-slate-500">
+                  Chua co ghi chu nao.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {notes.map((note) => (
+                    <div key={note.id} className="rounded-3xl border border-amber-200 bg-amber-50 p-4">
+                      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="min-w-0 flex-1">
+                          <div className="whitespace-pre-wrap text-sm leading-6 text-slate-800">
+                            {note.content}
+                          </div>
+                          <div className="mt-3 text-xs text-slate-500">
+                            {note.created_by_name} • {formatVietnamDateTime(note.created_at)}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setNoteToDelete(note)}
+                          className="rounded-full border border-rose-200 px-3 py-1 text-xs font-semibold text-rose-700 hover:bg-rose-50"
+                        >
+                          Xoa
+                        </button>
                       </div>
-                      <button
-                        onClick={() => setNoteToDelete(note)}
-                        className="ml-4 text-red-600 hover:text-red-800 text-sm"
-                      >
-                        Xóa
-                      </button>
                     </div>
-                  </div>
-                ))}
-                {notes.length === 0 && <p className="text-gray-500">Chưa có ghi chú nào</p>}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
-      </div>
+      </section>
 
       <ConfirmDialog
         isOpen={noteToDelete !== null}
-        title="Xóa ghi chú"
+        title="Xoa ghi chu"
         message={
           noteToDelete
-            ? `Bạn có chắc chắn muốn xóa ghi chú do "${noteToDelete.created_by_name}" tạo không?`
+            ? `Ban co chac muon xoa ghi chu do "${noteToDelete.created_by_name}" tao?`
             : ''
         }
-        confirmText="Xóa ghi chú"
-        cancelText="Hủy"
+        confirmText="Xoa ghi chu"
+        cancelText="Huy"
         variant="danger"
         onCancel={() => setNoteToDelete(null)}
         onConfirm={async () => {

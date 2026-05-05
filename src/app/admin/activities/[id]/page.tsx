@@ -1,104 +1,217 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { useRouter, useParams } from 'next/navigation';
-import LoadingSpinner from '@/components/LoadingSpinner';
-import { useEffectEventCompat } from '@/lib/useEffectEventCompat';
+import Link from 'next/link';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
 import {
-  Calendar,
-  MapPin,
-  Users,
-  Clock,
-  FileText,
-  CheckCircle,
-  XCircle,
   AlertCircle,
-  History,
-  Download,
-  Edit,
-  Trash2,
   ArrowLeft,
+  Calendar,
+  CheckCircle2,
+  Clock3,
+  Download,
+  FileText,
+  History,
+  Loader2,
+  MapPin,
   Search,
-  Filter,
+  Trash2,
+  Users,
+  XCircle,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import LoadingSpinner from '@/components/LoadingSpinner';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
-import { formatDate } from '@/lib/formatters';
-import { toVietnamDateStamp } from '@/lib/timezone';
+import { useAuth } from '@/contexts/AuthContext';
+import { formatVietnamDateTime, toVietnamDateStamp } from '@/lib/timezone';
 
-interface Activity {
+type ActivityStatus =
+  | 'draft'
+  | 'pending'
+  | 'published'
+  | 'rejected'
+  | 'completed'
+  | 'cancelled';
+
+type Activity = {
   id: number;
   title: string;
   description: string | null;
-  activity_type_id: number;
-  activity_type_name: string;
-  organization_level_id: number;
-  organization_level_name: string;
+  activity_type_name?: string | null;
+  organization_level_name?: string | null;
   date_time: string;
-  end_time: string;
-  location: string | null;
-  max_participants: number | null;
-  status: 'draft' | 'pending' | 'published' | 'rejected' | 'completed' | 'cancelled';
-  approval_status: 'draft' | 'requested' | 'approved' | 'rejected' | null;
-  approval_notes: string | null;
-  approved_by: number | null;
-  approved_at: string | null;
-  created_by: number;
-  creator_name: string;
-  created_at: string;
-  updated_at: string;
-}
+  end_time?: string | null;
+  location?: string | null;
+  max_participants?: number | null;
+  status: ActivityStatus;
+  approval_status?: 'draft' | 'requested' | 'approved' | 'rejected' | null;
+  approval_notes?: string | null;
+  creator_name?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+};
 
-interface Participant {
+type Participant = {
   id: number;
   user_id: number;
   user_name: string;
   user_email: string;
-  class_name: string | null;
+  class_name?: string | null;
   registered_at: string;
-  attendance_status: 'present' | 'absent' | 'registered' | 'not_participated' | null;
-  achievement_level: 'excellent' | 'good' | 'average' | 'participated' | null;
-  points_earned: number;
-}
+  attendance_status?: 'present' | 'absent' | 'registered' | 'not_participated' | null;
+  achievement_level?: string | null;
+  points_earned?: number | null;
+};
 
-interface ApprovalHistory {
+type ApprovalHistoryEntry = {
   id: number;
   status: string;
-  status_label?: string;
+  status_label?: string | null;
   is_pending_request?: boolean;
-  notes: string | null;
-  changed_by: number;
-  changed_by_name: string;
+  notes?: string | null;
+  changed_by_name?: string | null;
   changed_at: string;
+};
+
+type DetailTab = 'overview' | 'participants' | 'history';
+
+function parseActivityPayload(payload: any): Activity | null {
+  return payload?.activity || payload?.data?.activity || null;
+}
+
+function parseParticipantsPayload(payload: any): Participant[] {
+  const source = payload?.participants || payload?.data?.participants || [];
+  return Array.isArray(source) ? source : [];
+}
+
+function parseHistoryPayload(payload: any): ApprovalHistoryEntry[] {
+  const source = payload?.history || payload?.data?.history || [];
+  return Array.isArray(source) ? source : [];
+}
+
+function getStatusMeta(status: ActivityStatus) {
+  switch (status) {
+    case 'published':
+      return { label: 'Published', badgeClass: 'bg-emerald-100 text-emerald-700' };
+    case 'pending':
+      return { label: 'Pending', badgeClass: 'bg-amber-100 text-amber-700' };
+    case 'rejected':
+      return { label: 'Rejected', badgeClass: 'bg-rose-100 text-rose-700' };
+    case 'completed':
+      return { label: 'Completed', badgeClass: 'bg-violet-100 text-violet-700' };
+    case 'cancelled':
+      return { label: 'Cancelled', badgeClass: 'bg-slate-200 text-slate-700' };
+    default:
+      return { label: 'Draft', badgeClass: 'bg-slate-100 text-slate-700' };
+  }
+}
+
+function getAttendanceMeta(status?: Participant['attendance_status']) {
+  if (status === 'present') {
+    return { label: 'Co mat', badgeClass: 'bg-emerald-100 text-emerald-700' };
+  }
+  if (status === 'absent') {
+    return { label: 'Vang', badgeClass: 'bg-rose-100 text-rose-700' };
+  }
+  if (status === 'not_participated') {
+    return { label: 'Khong tham gia', badgeClass: 'bg-slate-200 text-slate-700' };
+  }
+  return { label: 'Da dang ky', badgeClass: 'bg-blue-100 text-blue-700' };
+}
+
+function getHistoryMeta(entry: ApprovalHistoryEntry) {
+  if (entry.status === 'approved') {
+    return {
+      label: entry.status_label || 'Da phe duyet',
+      icon: <CheckCircle2 className="h-5 w-5 text-emerald-600" />,
+    };
+  }
+
+  if (entry.status === 'rejected') {
+    return {
+      label: entry.status_label || 'Da tu choi',
+      icon: <XCircle className="h-5 w-5 text-rose-600" />,
+    };
+  }
+
+  return {
+    label: entry.status_label || 'Da gui duyet',
+    icon: <AlertCircle className="h-5 w-5 text-amber-600" />,
+  };
 }
 
 export default function AdminActivityDetailPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const params = useParams();
-  const activityId = params?.id as string;
+  const activityId = String(params?.id || '');
 
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [activity, setActivity] = useState<Activity | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
-  const [approvalHistory, setApprovalHistory] = useState<ApprovalHistory[]>([]);
-  const [activeTab, setActiveTab] = useState<'details' | 'participants' | 'history'>('details');
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [approvalHistory, setApprovalHistory] = useState<ApprovalHistoryEntry[]>([]);
+  const [activeTab, setActiveTab] = useState<DetailTab>('overview');
   const [participantSearch, setParticipantSearch] = useState('');
-  const [participantStatusFilter, setParticipantStatusFilter] = useState<string>('all');
-  const [participantClassFilter, setParticipantClassFilter] = useState<string>('all');
-  const [participantPage, setParticipantPage] = useState(1);
-
+  const [participantStatusFilter, setParticipantStatusFilter] = useState('all');
+  const [participantClassFilter, setParticipantClassFilter] = useState('all');
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [approvalAction, setApprovalAction] = useState<'approve' | 'reject'>('approve');
   const [approvalNotes, setApprovalNotes] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const participantsPerPage = 10;
+
+  const fetchActivity = useCallback(async () => {
+    try {
+      setLoading(true);
+      const [activityResponse, participantsResponse, historyResponse] = await Promise.all([
+        fetch(`/api/admin/activities/${activityId}`),
+        fetch(`/api/admin/activities/${activityId}/participants`),
+        fetch(`/api/admin/activities/${activityId}/approval-history`),
+      ]);
+
+      const activityPayload = await activityResponse.json().catch(() => null);
+      if (!activityResponse.ok) {
+        throw new Error(
+          activityPayload?.error || activityPayload?.message || 'Khong the tai chi tiet hoat dong'
+        );
+      }
+
+      setActivity(parseActivityPayload(activityPayload));
+
+      if (participantsResponse.ok) {
+        setParticipants(parseParticipantsPayload(await participantsResponse.json().catch(() => null)));
+      } else {
+        setParticipants([]);
+      }
+
+      if (historyResponse.ok) {
+        setApprovalHistory(parseHistoryPayload(await historyResponse.json().catch(() => null)));
+      } else {
+        setApprovalHistory([]);
+      }
+    } catch (error) {
+      console.error('Fetch admin activity detail error:', error);
+      setActivity(null);
+      setParticipants([]);
+      setApprovalHistory([]);
+      toast.error(
+        error instanceof Error ? error.message : 'Khong the tai chi tiet hoat dong'
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [activityId]);
 
   useEffect(() => {
-    setParticipantPage(1);
-  }, [participantSearch, participantStatusFilter, participantClassFilter, activeTab]);
+    if (!authLoading && (!user || user.role !== 'admin')) {
+      router.push('/login');
+      return;
+    }
+
+    if (user && activityId) {
+      void fetchActivity();
+    }
+  }, [activityId, authLoading, fetchActivity, router, user]);
 
   const participantClasses = useMemo(
     () =>
@@ -117,78 +230,26 @@ export default function AdminActivityDetailPage() {
         participant.user_name.toLowerCase().includes(normalizedSearch) ||
         participant.user_email.toLowerCase().includes(normalizedSearch);
 
-      const normalizedAttendance =
-        participant.attendance_status === 'present'
-          ? 'present'
-          : participant.attendance_status === 'absent'
-            ? 'absent'
-            : 'registered';
-
       const matchesStatus =
-        participantStatusFilter === 'all' || normalizedAttendance === participantStatusFilter;
+        participantStatusFilter === 'all' ||
+        (participant.attendance_status || 'registered') === participantStatusFilter;
+
       const matchesClass =
         participantClassFilter === 'all' || participant.class_name === participantClassFilter;
 
       return matchesSearch && matchesStatus && matchesClass;
     });
-  }, [participants, participantSearch, participantStatusFilter, participantClassFilter]);
+  }, [participantClassFilter, participantSearch, participantStatusFilter, participants]);
 
-  const fetchActivity = useEffectEventCompat(async () => {
-    try {
-      setLoading(true);
-      const [activityRes, participantsRes, historyRes] = await Promise.all([
-        fetch(`/api/admin/activities/${activityId}`),
-        fetch(`/api/admin/activities/${activityId}/participants`),
-        fetch(`/api/admin/activities/${activityId}/approval-history`),
-      ]);
-
-      if (!activityRes.ok) throw new Error('Không thể tải thông tin hoạt động');
-
-      const activityData = await activityRes.json();
-      setActivity(activityData.activity || activityData.data?.activity || null);
-
-      if (participantsRes.ok) {
-        const participantsData = await participantsRes.json();
-        setParticipants(participantsData.participants || participantsData.data?.participants || []);
-      }
-
-      if (historyRes.ok) {
-        const historyData = await historyRes.json();
-        setApprovalHistory(historyData.history || historyData.data?.history || []);
-      }
-    } catch (error) {
-      console.error('Error fetching activity:', error);
-      toast.error('Không thể tải thông tin hoạt động');
-    } finally {
-      setLoading(false);
-    }
-  });
-
-  useEffect(() => {
-    if (!authLoading && (!user || user.role !== 'admin')) {
-      router.push('/login');
-      return;
-    }
-    if (user && activityId) {
-      void fetchActivity();
-    }
-  }, [user, authLoading, activityId, router, fetchActivity]);
-
-  const handleApprovalAction = (action: 'approve' | 'reject') => {
-    setApprovalAction(action);
-    setApprovalNotes('');
-    setShowApprovalModal(true);
-  };
-
-  const submitApproval = async () => {
+  async function handleApprovalSubmit() {
     if (approvalAction === 'reject' && !approvalNotes.trim()) {
-      toast.error('Vui lòng nhập lý do từ chối');
+      toast.error('Nhap ly do tu choi truoc khi tiep tuc');
       return;
     }
 
-    setSubmitting(true);
     try {
-      const res = await fetch(`/api/admin/activities/${activityId}/approval`, {
+      setSubmitting(true);
+      const response = await fetch(`/api/admin/activities/${activityId}/approval`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -196,613 +257,628 @@ export default function AdminActivityDetailPage() {
           notes: approvalNotes.trim(),
         }),
       });
+      const payload = await response.json().catch(() => null);
 
-      const data = await res.json();
-
-      if (!res.ok) throw new Error(data.error || 'Không thể xử lý phê duyệt');
+      if (!response.ok) {
+        throw new Error(payload?.error || payload?.message || 'Khong the cap nhat phe duyet');
+      }
 
       toast.success(
-        data.message ||
-          (approvalAction === 'approve' ? 'Đã phê duyệt hoạt động' : 'Đã từ chối hoạt động')
+        payload?.message ||
+          (approvalAction === 'approve'
+            ? 'Da phe duyet hoat dong'
+            : 'Da tu choi hoat dong')
       );
       setShowApprovalModal(false);
-      void fetchActivity();
+      setApprovalNotes('');
+      await fetchActivity();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Có lỗi xảy ra khi xử lý phê duyệt');
+      console.error('Submit admin activity approval error:', error);
+      toast.error(error instanceof Error ? error.message : 'Khong the cap nhat phe duyet');
     } finally {
       setSubmitting(false);
     }
-  };
+  }
 
-  const handleDelete = async () => {
+  async function handleCancelActivity() {
     try {
-      const res = await fetch(`/api/admin/activities/${activityId}`, {
+      const response = await fetch(`/api/admin/activities/${activityId}`, {
         method: 'DELETE',
       });
+      const payload = await response.json().catch(() => null);
 
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || 'Không thể hủy hoạt động');
+      if (!response.ok) {
+        throw new Error(payload?.error || payload?.message || 'Khong the huy hoat dong');
+      }
 
-      toast.success(data.message || 'Đã hủy hoạt động');
+      toast.success(payload?.message || 'Da huy hoat dong');
       router.push('/admin/activities');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Không thể hủy hoạt động');
+      console.error('Cancel admin activity error:', error);
+      toast.error(error instanceof Error ? error.message : 'Khong the huy hoat dong');
     }
-  };
+  }
 
-  const exportParticipants = () => {
-    if (participants.length === 0) {
-      toast.error('Không có người tham gia để xuất');
+  function exportParticipants() {
+    if (filteredParticipants.length === 0) {
+      toast.error('Khong co nguoi tham gia de xuat');
       return;
     }
 
     const csv = [
-      ['Tên', 'Email', 'Lớp', 'Ngày đăng ký', 'Điểm danh', 'Thành tích', 'Điểm'].join(','),
-      ...participants.map((p) =>
+      ['Ho ten', 'Email', 'Lop', 'Dang ky', 'Diem danh', 'Thanh tich', 'Diem'].join(','),
+      ...filteredParticipants.map((participant) =>
         [
-          p.user_name,
-          p.user_email,
-          p.class_name || '-',
-          formatDate(p.registered_at, 'date'),
-          p.attendance_status === 'present'
-            ? 'Có mặt'
-            : p.attendance_status === 'absent'
-              ? 'Vắng'
-              : 'Chưa tham gia',
-          p.achievement_level || '-',
-          p.points_earned || 0,
-        ].join(',')
+          participant.user_name,
+          participant.user_email,
+          participant.class_name || '-',
+          formatVietnamDateTime(participant.registered_at, 'datetime'),
+          getAttendanceMeta(participant.attendance_status).label,
+          participant.achievement_level || '-',
+          participant.points_earned || 0,
+        ]
+          .map((value) => `"${String(value).replace(/"/g, '""')}"`)
+          .join(',')
       ),
     ].join('\n');
 
     const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
-    const url = window.URL.createObjectURL(blob);
+    const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `hoat-dong-${activityId}-nguoi-tham-gia-${toVietnamDateStamp(new Date())}.csv`;
+    link.download = `activity-${activityId}-participants-${toVietnamDateStamp(new Date())}.csv`;
     link.click();
-    window.URL.revokeObjectURL(url);
-    toast.success(`Đã xuất ${participants.length} người tham gia`);
-  };
+    URL.revokeObjectURL(url);
+    toast.success(`Da xuat ${filteredParticipants.length} nguoi tham gia`);
+  }
 
   if (authLoading || loading) {
-    return <LoadingSpinner />;
+    return <LoadingSpinner message="Dang tai chi tiet hoat dong..." />;
   }
 
   if (!activity) {
     return (
-      <div className="min-h-screen bg-gray-50 p-6">
-        <div className="text-center">
-          <p className="text-gray-600">Không tìm thấy hoạt động</p>
-          <button
-            onClick={() => router.push('/admin/activities')}
-            className="mt-4 text-blue-600 hover:text-blue-700"
-          >
-            ← Quay lại danh sách
-          </button>
+      <div className="page-shell">
+        <div className="mx-auto max-w-3xl">
+          <section className="page-surface rounded-[1.75rem] px-5 py-10 text-center sm:px-7">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-3xl bg-slate-100 text-slate-600">
+              <AlertCircle className="h-7 w-7" />
+            </div>
+            <h1 className="mt-4 text-xl font-semibold text-slate-900">Khong tim thay hoat dong</h1>
+            <button
+              type="button"
+              onClick={() => router.push('/admin/activities')}
+              className="mt-4 inline-flex items-center gap-2 rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Quay lai danh sach
+            </button>
+          </section>
         </div>
       </div>
     );
   }
 
-  const statusColors = {
-    draft: 'bg-gray-100 text-gray-700',
-    pending: 'bg-yellow-100 text-yellow-700',
-    published: 'bg-green-100 text-green-700',
-    rejected: 'bg-red-100 text-red-700',
-    completed: 'bg-purple-100 text-purple-700',
-    cancelled: 'bg-gray-100 text-gray-700',
-  };
-
-  const statusLabels = {
-    draft: 'Nháp',
-    pending: 'Chờ duyệt',
-    published: 'Đã công bố',
-    rejected: 'Bị từ chối',
-    completed: 'Hoàn thành',
-    cancelled: 'Đã hủy',
-  };
-
-  const totalParticipantPages = Math.max(
-    1,
-    Math.ceil(filteredParticipants.length / participantsPerPage)
-  );
-  const paginatedParticipants = filteredParticipants.slice(
-    (participantPage - 1) * participantsPerPage,
-    participantPage * participantsPerPage
-  );
-
-  const getHistoryPresentation = (entry: ApprovalHistory) => {
-    if (entry.status === 'approved') {
-      return {
-        icon: <CheckCircle className="w-5 h-5 text-green-600" />,
-        label: entry.status_label || 'Đã phê duyệt',
-      };
-    }
-
-    if (entry.status === 'rejected') {
-      return {
-        icon: <XCircle className="w-5 h-5 text-red-600" />,
-        label: entry.status_label || 'Đã từ chối',
-      };
-    }
-
-    return {
-      icon: <AlertCircle className="w-5 h-5 text-yellow-600" />,
-      label: entry.status_label || 'Đã gửi duyệt',
-    };
-  };
+  const statusMeta = getStatusMeta(activity.status);
+  const shouldShowApprovalActions =
+    activity.approval_status === 'requested' || activity.status === 'pending';
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-6">
-          <button
-            onClick={() => router.push('/admin/activities')}
-            className="flex items-center text-gray-600 hover:text-gray-900 mb-4"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Quay lại danh sách
-          </button>
+    <div className="page-shell">
+      <div className="mx-auto max-w-7xl space-y-6">
+        <section className="page-surface rounded-[1.75rem] px-5 py-6 sm:px-7">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+            <div className="flex items-start gap-4">
+              <button
+                type="button"
+                onClick={() => router.push('/admin/activities')}
+                className="rounded-xl border border-slate-300 p-2 text-slate-600 transition hover:bg-slate-50"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </button>
 
-          <div className="flex justify-between items-start">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">{activity.title}</h1>
-              <p className="text-gray-600 mt-1">
-                ID: {activity.id} | Tạo bởi: {activity.creator_name}
-              </p>
+              <div className="max-w-3xl">
+                <div className="inline-flex rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-blue-700">
+                  Activity detail
+                </div>
+                <h1
+                  className="mt-3 text-3xl font-bold text-slate-900"
+                  data-testid="admin-activity-detail-heading"
+                >
+                  {activity.title}
+                </h1>
+                <p className="mt-2 text-sm text-slate-600">
+                  ID {activity.id} | Tao boi {activity.creator_name || 'N/A'}
+                </p>
+              </div>
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-end">
               <span
-                className={`px-3 py-1 rounded-full text-sm font-medium ${statusColors[activity.status]}`}
+                className={`inline-flex items-center justify-center rounded-full px-3 py-2 text-xs font-semibold uppercase tracking-wide ${statusMeta.badgeClass}`}
               >
-                {statusLabels[activity.status]}
+                {statusMeta.label}
               </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Action Buttons */}
-        {(activity.approval_status === 'requested' || activity.status === 'pending') && (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6 flex items-center justify-between">
-            <div className="flex items-center gap-2 text-yellow-800">
-              <AlertCircle className="w-5 h-5" />
-              <span className="font-medium">Hoạt động này đang ở trạng thái chờ duyệt</span>
-            </div>
-            <div className="flex gap-2">
               <button
-                onClick={() => handleApprovalAction('approve')}
-                className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                type="button"
+                onClick={() => router.push(`/admin/activities/${activityId}/edit`)}
+                className="rounded-xl border border-blue-300 px-4 py-2.5 text-sm font-semibold text-blue-700 transition hover:bg-blue-50"
               >
-                <CheckCircle className="w-4 h-4 mr-2" />
-                Phê duyệt
+                Chinh sua
               </button>
               <button
-                onClick={() => handleApprovalAction('reject')}
-                className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                type="button"
+                onClick={() => setShowCancelConfirm(true)}
+                className="rounded-xl border border-rose-300 px-4 py-2.5 text-sm font-semibold text-rose-700 transition hover:bg-rose-50"
               >
-                <XCircle className="w-4 h-4 mr-2" />
-                Từ chối
+                Huy hoat dong
               </button>
             </div>
           </div>
-        )}
+        </section>
 
-        <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-          <div className="flex gap-2 mb-6">
+        {shouldShowApprovalActions ? (
+          <section className="page-surface rounded-[1.75rem] border-amber-200 bg-amber-50 px-5 py-5 sm:px-7">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <div className="text-sm font-semibold text-amber-800">Hoat dong dang cho phe duyet</div>
+                <p className="mt-1 text-sm text-amber-700">
+                  Kiem tra thong tin, roster du kien va lich su de ra quyet dinh nhanh.
+                </p>
+              </div>
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setApprovalAction('approve');
+                    setApprovalNotes('');
+                    setShowApprovalModal(true);
+                  }}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700"
+                >
+                  <CheckCircle2 className="h-4 w-4" />
+                  Phe duyet
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setApprovalAction('reject');
+                    setApprovalNotes('');
+                    setShowApprovalModal(true);
+                  }}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-700"
+                >
+                  <XCircle className="h-4 w-4" />
+                  Tu choi
+                </button>
+              </div>
+            </div>
+          </section>
+        ) : null}
+
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <div className="rounded-[1.5rem] bg-slate-50 px-4 py-4">
+            <div className="flex items-center justify-between">
+              <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Thoi gian</div>
+              <Calendar className="h-5 w-5 text-slate-500" />
+            </div>
+            <div className="mt-3 text-sm font-semibold text-slate-900">
+              {formatVietnamDateTime(activity.date_time, 'datetime')}
+            </div>
+            <div className="mt-2 text-xs text-slate-500">
+              {activity.end_time ? `Ket thuc ${formatVietnamDateTime(activity.end_time, 'datetime')}` : 'Chua co gio ket thuc'}
+            </div>
+          </div>
+          <div className="rounded-[1.5rem] bg-slate-50 px-4 py-4">
+            <div className="flex items-center justify-between">
+              <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Dia diem</div>
+              <MapPin className="h-5 w-5 text-slate-500" />
+            </div>
+            <div className="mt-3 text-sm font-semibold text-slate-900">
+              {activity.location || 'Chua xac dinh'}
+            </div>
+            <div className="mt-2 text-xs text-slate-500">
+              {activity.organization_level_name || 'Chua co cap to chuc'}
+            </div>
+          </div>
+          <div className="rounded-[1.5rem] bg-slate-50 px-4 py-4">
+            <div className="flex items-center justify-between">
+              <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Tham gia</div>
+              <Users className="h-5 w-5 text-slate-500" />
+            </div>
+            <div className="mt-3 text-2xl font-semibold text-slate-900">{participants.length}</div>
+            <div className="mt-2 text-xs text-slate-500">
+              Toi da {activity.max_participants || 'Khong gioi han'}
+            </div>
+          </div>
+          <div className="rounded-[1.5rem] bg-slate-50 px-4 py-4">
+            <div className="flex items-center justify-between">
+              <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Lich su duyet</div>
+              <History className="h-5 w-5 text-slate-500" />
+            </div>
+            <div className="mt-3 text-2xl font-semibold text-slate-900">{approvalHistory.length}</div>
+            <div className="mt-2 text-xs text-slate-500">
+              {activity.activity_type_name || 'Chua co loai hoat dong'}
+            </div>
+          </div>
+        </section>
+
+        <section className="page-surface rounded-[1.75rem] px-5 py-6 sm:px-7">
+          <div className="flex flex-wrap gap-3 border-b border-slate-200 pb-4">
             <button
-              onClick={() => router.push(`/admin/activities/${activityId}/edit`)}
-              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              type="button"
+              onClick={() => setActiveTab('overview')}
+              className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                activeTab === 'overview'
+                  ? 'bg-blue-100 text-blue-700'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
             >
-              <Edit className="w-4 h-4 mr-2" />
-              Chỉnh sửa
+              Tong quan
             </button>
             <button
-              onClick={() => setShowDeleteConfirm(true)}
-              className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+              type="button"
+              onClick={() => setActiveTab('participants')}
+              className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                activeTab === 'participants'
+                  ? 'bg-blue-100 text-blue-700'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
             >
-              <Trash2 className="w-4 h-4 mr-2" />
-              Xóa
+              Nguoi tham gia ({participants.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('history')}
+              className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                activeTab === 'history'
+                  ? 'bg-blue-100 text-blue-700'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              Lich su duyet ({approvalHistory.length})
             </button>
           </div>
 
-          <ConfirmDialog
-            isOpen={showDeleteConfirm}
-            title="Xác nhận hủy hoạt động"
-            message="Bạn có chắc chắn muốn hủy hoạt động này?"
-            confirmText="Hủy hoạt động"
-            cancelText="Hủy"
-            variant="danger"
-            onCancel={() => setShowDeleteConfirm(false)}
-            onConfirm={async () => {
-              await handleDelete();
-              setShowDeleteConfirm(false);
-            }}
-          />
-
-          {/* Tabs */}
-          <div className="border-b border-gray-200 mb-6">
-            <div className="flex gap-4">
-              <button
-                onClick={() => setActiveTab('details')}
-                className={`pb-2 px-1 font-medium ${
-                  activeTab === 'details'
-                    ? 'border-b-2 border-blue-500 text-blue-600'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                <FileText className="w-4 h-4 inline mr-2" />
-                Chi tiết
-              </button>
-              <button
-                onClick={() => setActiveTab('participants')}
-                className={`pb-2 px-1 font-medium ${
-                  activeTab === 'participants'
-                    ? 'border-b-2 border-blue-500 text-blue-600'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                <Users className="w-4 h-4 inline mr-2" />
-                Người tham gia ({participants.length})
-              </button>
-              <button
-                onClick={() => setActiveTab('history')}
-                className={`pb-2 px-1 font-medium ${
-                  activeTab === 'history'
-                    ? 'border-b-2 border-blue-500 text-blue-600'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                <History className="w-4 h-4 inline mr-2" />
-                Lịch sử duyệt ({approvalHistory.length})
-              </button>
-            </div>
-          </div>
-
-          {/* Tab Content */}
-          {activeTab === 'details' && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    <Calendar className="w-4 h-4 inline mr-2" />
-                    Thời gian
-                  </label>
-                  <p className="text-gray-900">
-                    {formatDate(activity.date_time)} - {formatDate(activity.end_time)}
-                  </p>
+          {activeTab === 'overview' ? (
+            <div className="mt-6 space-y-6">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50 px-4 py-4">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Loai hoat dong
+                  </div>
+                  <div className="mt-2 text-sm font-semibold text-slate-900">
+                    {activity.activity_type_name || 'Chua xac dinh'}
+                  </div>
                 </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    <MapPin className="w-4 h-4 inline mr-2" />
-                    Địa điểm
-                  </label>
-                  <p className="text-gray-900">{activity.location || 'Chưa xác định'}</p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Loại hoạt động
-                  </label>
-                  <p className="text-gray-900">{activity.activity_type_name}</p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Cấp tổ chức
-                  </label>
-                  <p className="text-gray-900">{activity.organization_level_name}</p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    <Users className="w-4 h-4 inline mr-2" />
-                    Số lượng tối đa
-                  </label>
-                  <p className="text-gray-900">{activity.max_participants || 'Không giới hạn'}</p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    <Clock className="w-4 h-4 inline mr-2" />
-                    Ngày tạo
-                  </label>
-                  <p className="text-gray-900">{formatDate(activity.created_at, 'date')}</p>
+                <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50 px-4 py-4">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Cap to chuc
+                  </div>
+                  <div className="mt-2 text-sm font-semibold text-slate-900">
+                    {activity.organization_level_name || 'Chua xac dinh'}
+                  </div>
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Mô tả</label>
-                <p className="text-gray-900 whitespace-pre-wrap">
-                  {activity.description || 'Không có mô tả'}
+              <div className="rounded-[1.5rem] border border-slate-200 bg-white px-4 py-4">
+                <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Mo ta hoat dong
+                </div>
+                <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-slate-700">
+                  {activity.description || 'Chua co mo ta.'}
                 </p>
               </div>
 
-              {activity.approval_notes && (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                  <label className="block text-sm font-medium text-yellow-800 mb-2">
-                    Ghi chú phê duyệt
-                  </label>
-                  <p className="text-yellow-900">{activity.approval_notes}</p>
+              {activity.approval_notes ? (
+                <div className="rounded-[1.5rem] border border-amber-200 bg-amber-50 px-4 py-4">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-amber-700">
+                    Ghi chu phe duyet
+                  </div>
+                  <p className="mt-3 text-sm leading-7 text-amber-900">{activity.approval_notes}</p>
                 </div>
-              )}
+              ) : null}
             </div>
-          )}
+          ) : null}
 
-          {activeTab === 'participants' && (
-            <div>
-              <div className="flex flex-col gap-4 mb-4 lg:flex-row lg:items-center lg:justify-between">
-                <div>
-                  <h3 className="font-semibold text-gray-900">
-                    Danh sách người tham gia ({participants.length})
-                  </h3>
-                  <p className="text-sm text-gray-500">
-                    Hiển thị {filteredParticipants.length} kết quả phù hợp
-                  </p>
+          {activeTab === 'participants' ? (
+            <div className="mt-6 space-y-6">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div className="max-w-2xl text-sm text-slate-600">
+                  Kiem tra roster, trang thai diem danh va diem duoc ghi nhan theo tung hoc vien.
                 </div>
                 <button
+                  type="button"
                   onClick={exportParticipants}
-                  disabled={participants.length === 0}
-                  className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300"
+                  disabled={filteredParticipants.length === 0}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50"
                 >
-                  <Download className="w-4 h-4 mr-2" />
-                  Xuất CSV
+                  <Download className="h-4 w-4" />
+                  Xuat CSV
                 </button>
               </div>
 
-              {participants.length === 0 ? (
-                <p className="text-gray-500 text-center py-8">Chưa có người đăng ký</p>
+              <div className="grid gap-4 md:grid-cols-3">
+                <label className="block">
+                  <span className="mb-2 block text-sm font-medium text-slate-700">Tim kiem</span>
+                  <div className="relative">
+                    <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="text"
+                      value={participantSearch}
+                      onChange={(event) => setParticipantSearch(event.target.value)}
+                      placeholder="Ten hoac email"
+                      className="w-full rounded-2xl border border-slate-300 py-3 pl-11 pr-4 text-sm text-slate-900"
+                    />
+                  </div>
+                </label>
+
+                <label className="block">
+                  <span className="mb-2 block text-sm font-medium text-slate-700">Diem danh</span>
+                  <select
+                    value={participantStatusFilter}
+                    onChange={(event) => setParticipantStatusFilter(event.target.value)}
+                    className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm text-slate-900"
+                  >
+                    <option value="all">Tat ca</option>
+                    <option value="present">Co mat</option>
+                    <option value="absent">Vang</option>
+                    <option value="registered">Da dang ky</option>
+                    <option value="not_participated">Khong tham gia</option>
+                  </select>
+                </label>
+
+                <label className="block">
+                  <span className="mb-2 block text-sm font-medium text-slate-700">Lop</span>
+                  <select
+                    value={participantClassFilter}
+                    onChange={(event) => setParticipantClassFilter(event.target.value)}
+                    className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm text-slate-900"
+                  >
+                    <option value="all">Tat ca lop</option>
+                    {participantClasses.map((className) => (
+                      <option key={className} value={className}>
+                        {className}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+
+              {filteredParticipants.length === 0 ? (
+                <div className="rounded-[1.5rem] border border-dashed border-slate-300 px-5 py-10 text-center text-sm text-slate-500">
+                  Khong co nguoi tham gia phu hop voi bo loc hien tai.
+                </div>
               ) : (
                 <>
-                  <div className="mb-4 grid grid-cols-1 gap-4 rounded-lg border border-gray-200 bg-gray-50 p-4 md:grid-cols-3">
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                      <input
-                        type="text"
-                        value={participantSearch}
-                        onChange={(e) => setParticipantSearch(e.target.value)}
-                        placeholder="Tìm theo tên hoặc email"
-                        className="w-full rounded-lg border border-gray-300 py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
+                  <div className="grid gap-4 xl:hidden">
+                    {filteredParticipants.map((participant) => {
+                      const attendanceMeta = getAttendanceMeta(participant.attendance_status);
+                      return (
+                        <article
+                          key={participant.id}
+                          className="rounded-[1.5rem] border border-slate-200 bg-white px-4 py-4"
+                        >
+                          <div className="flex items-start justify-between gap-4">
+                            <div>
+                              <div className="text-sm font-semibold text-slate-900">
+                                {participant.user_name}
+                              </div>
+                              <div className="mt-1 text-sm text-slate-500">
+                                {participant.user_email}
+                              </div>
+                              <div className="mt-1 text-xs text-slate-500">
+                                {participant.class_name || 'Chua gan lop'}
+                              </div>
+                            </div>
 
-                    <div className="relative">
-                      <Filter className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                      <select
-                        value={participantStatusFilter}
-                        onChange={(e) => setParticipantStatusFilter(e.target.value)}
-                        className="w-full rounded-lg border border-gray-300 py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="all">Tất cả điểm danh</option>
-                        <option value="present">Có mặt</option>
-                        <option value="absent">Vắng</option>
-                        <option value="registered">Chưa điểm danh</option>
-                      </select>
-                    </div>
+                            <div className="text-right">
+                              <div className="text-lg font-semibold text-blue-700">
+                                {participant.points_earned || 0}
+                              </div>
+                              <div className="text-xs text-slate-500">diem</div>
+                            </div>
+                          </div>
 
-                    <div>
-                      <select
-                        value={participantClassFilter}
-                        onChange={(e) => setParticipantClassFilter(e.target.value)}
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="all">Tất cả lớp</option>
-                        {participantClasses.map((className) => (
-                          <option key={className} value={className}>
-                            {className}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            <span
+                              className={`rounded-full px-3 py-1 text-xs font-semibold ${attendanceMeta.badgeClass}`}
+                            >
+                              {attendanceMeta.label}
+                            </span>
+                            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+                              {participant.achievement_level || 'Chua xep hang'}
+                            </span>
+                          </div>
+                        </article>
+                      );
+                    })}
                   </div>
 
-                  {filteredParticipants.length === 0 ? (
-                    <p className="text-gray-500 text-center py-8">
-                      Không có người tham gia phù hợp với bộ lọc hiện tại
-                    </p>
-                  ) : (
-                    <>
-                      <div className="overflow-x-auto">
-                        <table className="min-w-full divide-y divide-gray-200">
-                          <thead className="bg-gray-50">
-                            <tr>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">
-                                Tên
-                              </th>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">
-                                Email
-                              </th>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">
-                                Lớp
-                              </th>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">
-                                Đăng ký
-                              </th>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">
-                                Điểm danh
-                              </th>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">
-                                Thành tích
-                              </th>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">
-                                Điểm
-                              </th>
+                  <div className="hidden overflow-x-auto xl:block">
+                    <table className="min-w-full divide-y divide-slate-200">
+                      <thead className="bg-slate-50">
+                        <tr>
+                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            Hoc vien
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            Lop
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            Dang ky
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            Diem danh
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            Thanh tich
+                          </th>
+                          <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            Diem
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-200 bg-white">
+                        {filteredParticipants.map((participant) => {
+                          const attendanceMeta = getAttendanceMeta(participant.attendance_status);
+                          return (
+                            <tr key={participant.id} className="hover:bg-slate-50">
+                              <td className="px-4 py-3">
+                                <div className="text-sm font-semibold text-slate-900">
+                                  {participant.user_name}
+                                </div>
+                                <div className="mt-1 text-sm text-slate-500">
+                                  {participant.user_email}
+                                </div>
+                              </td>
+                              <td className="px-4 py-3 text-sm text-slate-600">
+                                {participant.class_name || 'Chua gan lop'}
+                              </td>
+                              <td className="px-4 py-3 text-sm text-slate-600">
+                                {formatVietnamDateTime(participant.registered_at, 'datetime')}
+                              </td>
+                              <td className="px-4 py-3">
+                                <span
+                                  className={`rounded-full px-3 py-1 text-xs font-semibold ${attendanceMeta.badgeClass}`}
+                                >
+                                  {attendanceMeta.label}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-sm text-slate-600">
+                                {participant.achievement_level || '-'}
+                              </td>
+                              <td className="px-4 py-3 text-right text-sm font-semibold text-blue-700">
+                                {participant.points_earned || 0}
+                              </td>
                             </tr>
-                          </thead>
-                          <tbody className="divide-y divide-gray-200">
-                            {paginatedParticipants.map((p) => (
-                              <tr key={p.id}>
-                                <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                                  {p.user_name}
-                                </td>
-                                <td className="px-4 py-3 text-sm text-gray-600">{p.user_email}</td>
-                                <td className="px-4 py-3 text-sm text-gray-600">
-                                  {p.class_name || '-'}
-                                </td>
-                                <td className="px-4 py-3 text-sm text-gray-600">
-                                  {formatDate(p.registered_at, 'date')}
-                                </td>
-                                <td className="px-4 py-3">
-                                  {p.attendance_status === 'present' ? (
-                                    <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">
-                                      Có mặt
-                                    </span>
-                                  ) : p.attendance_status === 'absent' ? (
-                                    <span className="px-2 py-1 bg-red-100 text-red-700 rounded text-xs">
-                                      Vắng
-                                    </span>
-                                  ) : (
-                                    <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs">
-                                      Đã đăng ký / chưa điểm danh
-                                    </span>
-                                  )}
-                                </td>
-                                <td className="px-4 py-3 text-sm text-gray-600">
-                                  {p.achievement_level || '-'}
-                                </td>
-                                <td className="px-4 py-3 text-sm font-semibold text-blue-600">
-                                  {p.points_earned || 0}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-
-                      <div className="mt-4 flex flex-col gap-3 text-sm text-gray-600 md:flex-row md:items-center md:justify-between">
-                        <div>
-                          Hiển thị {(participantPage - 1) * participantsPerPage + 1}-
-                          {Math.min(
-                            participantPage * participantsPerPage,
-                            filteredParticipants.length
-                          )}{' '}
-                          / {filteredParticipants.length} người tham gia phù hợp
-                        </div>
-                        {totalParticipantPages > 1 && (
-                          <div className="flex items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => setParticipantPage((page) => Math.max(1, page - 1))}
-                              disabled={participantPage === 1}
-                              className="rounded border border-gray-300 px-3 py-1.5 hover:bg-gray-50 disabled:opacity-50"
-                            >
-                              ← Trước
-                            </button>
-                            <span>
-                              Trang {participantPage}/{totalParticipantPages}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setParticipantPage((page) =>
-                                  Math.min(totalParticipantPages, page + 1)
-                                )
-                              }
-                              disabled={participantPage === totalParticipantPages}
-                              className="rounded border border-gray-300 px-3 py-1.5 hover:bg-gray-50 disabled:opacity-50"
-                            >
-                              Tiếp →
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </>
-                  )}
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
                 </>
               )}
             </div>
-          )}
+          ) : null}
 
-          {activeTab === 'history' && (
-            <div>
-              <h3 className="font-semibold text-gray-900 mb-4">
-                Lịch sử phê duyệt ({approvalHistory.length})
-              </h3>
-
+          {activeTab === 'history' ? (
+            <div className="mt-6">
               {approvalHistory.length === 0 ? (
-                <p className="text-gray-500 text-center py-8">Chưa có lịch sử phê duyệt</p>
+                <div className="rounded-[1.5rem] border border-dashed border-slate-300 px-5 py-10 text-center text-sm text-slate-500">
+                  Chua co lich su phe duyet.
+                </div>
               ) : (
                 <div className="space-y-4">
-                  {approvalHistory.map((h) => (
-                    <div key={h.id} className="border-l-4 border-blue-500 pl-4 py-2">
-                      <div className="flex items-center gap-2 mb-1">
-                        {getHistoryPresentation(h).icon}
-                        <span className="font-medium text-gray-900">
-                          {getHistoryPresentation(h).label}
-                        </span>
-                      </div>
-                      <p className="text-sm text-gray-600">
-                        Bởi: {h.changed_by_name} | {formatDate(h.changed_at)}
-                      </p>
-                      {h.notes && (
-                        <p className="text-sm text-gray-700 mt-2 bg-gray-50 p-2 rounded">
-                          {h.notes}
-                        </p>
-                      )}
-                    </div>
-                  ))}
+                  {approvalHistory.map((entry) => {
+                    const historyMeta = getHistoryMeta(entry);
+                    return (
+                      <article
+                        key={entry.id}
+                        className="rounded-[1.5rem] border border-slate-200 bg-white px-5 py-5"
+                      >
+                        <div className="flex items-start gap-3">
+                          {historyMeta.icon}
+                          <div className="flex-1">
+                            <div className="text-sm font-semibold text-slate-900">
+                              {historyMeta.label}
+                            </div>
+                            <div className="mt-1 text-sm text-slate-500">
+                              {entry.changed_by_name || 'N/A'} |{' '}
+                              {formatVietnamDateTime(entry.changed_at, 'datetime')}
+                            </div>
+                            {entry.notes ? (
+                              <div className="mt-3 rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                                {entry.notes}
+                              </div>
+                            ) : null}
+                          </div>
+                        </div>
+                      </article>
+                    );
+                  })}
                 </div>
               )}
             </div>
-          )}
-        </div>
+          ) : null}
+        </section>
       </div>
 
-      {/* Approval Modal */}
-      {showApprovalModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
-            <h3 className="text-xl font-bold text-gray-900 mb-4">
-              {approvalAction === 'approve' ? 'Phê duyệt hoạt động' : 'Từ chối hoạt động'}
-            </h3>
+      <ConfirmDialog
+        isOpen={showCancelConfirm}
+        title="Huy hoat dong"
+        message="Hoat dong se duoc chuyen sang trang thai cancelled. Ban co chac chan muon tiep tuc?"
+        confirmText="Huy hoat dong"
+        cancelText="Dong"
+        variant="danger"
+        onCancel={() => setShowCancelConfirm(false)}
+        onConfirm={async () => {
+          await handleCancelActivity();
+          setShowCancelConfirm(false);
+        }}
+      />
 
-            <p className="text-gray-600 mb-4">
+      {showApprovalModal ? (
+        <div className="app-modal-backdrop p-4" onClick={() => setShowApprovalModal(false)}>
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="admin-activity-approval-title"
+            className="app-modal-panel app-modal-panel-scroll w-full max-w-lg p-6"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h3 id="admin-activity-approval-title" className="text-2xl font-semibold text-slate-900">
+              {approvalAction === 'approve' ? 'Phe duyet hoat dong' : 'Tu choi hoat dong'}
+            </h3>
+            <p className="mt-2 text-sm text-slate-600">
               {approvalAction === 'approve'
-                ? 'Xác nhận phê duyệt hoạt động này? Hoạt động sẽ được hiển thị cho học viên đăng ký.'
-                : 'Vui lòng nhập lý do từ chối hoạt động này.'}
+                ? 'Nhap ghi chu neu can roi xac nhan de cong bo hoat dong.'
+                : 'Nhap ly do tu choi de tra lai thong tin ro rang cho giang vien.'}
             </p>
 
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Ghi chú {approvalAction === 'reject' && <span className="text-red-500">*</span>}
-              </label>
+            <label className="mt-5 block">
+              <span className="mb-2 block text-sm font-medium text-slate-700">
+                Ghi chu {approvalAction === 'reject' ? '(bat buoc)' : '(tuy chon)'}
+              </span>
               <textarea
-                value={approvalNotes}
-                onChange={(e) => setApprovalNotes(e.target.value)}
-                placeholder={
-                  approvalAction === 'approve' ? 'Ghi chú (tùy chọn)' : 'Lý do từ chối (bắt buộc)'
-                }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 rows={4}
+                value={approvalNotes}
+                onChange={(event) => setApprovalNotes(event.target.value)}
+                placeholder={
+                  approvalAction === 'approve'
+                    ? 'Nhap ghi chu neu can...'
+                    : 'Nhap ly do tu choi...'
+                }
+                className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm text-slate-900"
               />
-            </div>
+            </label>
 
-            <div className="flex gap-3">
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
               <button
+                type="button"
                 onClick={() => setShowApprovalModal(false)}
                 disabled={submitting}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                className="rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
               >
-                Hủy
+                Dong
               </button>
               <button
-                onClick={submitApproval}
+                type="button"
+                onClick={() => void handleApprovalSubmit()}
                 disabled={submitting}
-                className={`flex-1 px-4 py-2 text-white rounded-lg ${
+                className={`inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-white transition disabled:opacity-50 ${
                   approvalAction === 'approve'
-                    ? 'bg-green-600 hover:bg-green-700'
-                    : 'bg-red-600 hover:bg-red-700'
-                } disabled:bg-gray-300`}
+                    ? 'bg-emerald-600 hover:bg-emerald-700'
+                    : 'bg-rose-600 hover:bg-rose-700'
+                }`}
               >
-                {submitting ? 'Đang xử lý...' : 'Xác nhận'}
+                {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                {approvalAction === 'approve' ? 'Xac nhan phe duyet' : 'Xac nhan tu choi'}
               </button>
             </div>
           </div>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

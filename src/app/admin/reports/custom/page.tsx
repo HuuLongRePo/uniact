@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
@@ -30,27 +31,27 @@ type PreviewRow = string[];
 const REPORT_TYPES: Array<{ id: ReportType; label: string; description: string; icon: string }> = [
   {
     id: 'activities',
-    label: 'Báo cáo hoạt động',
-    description: 'Thống kê hoạt động theo thời gian, trạng thái và đơn vị tổ chức.',
-    icon: 'Hoạt động',
+    label: 'Bao cao hoat dong',
+    description: 'Thong ke hoat dong theo thoi gian, trang thai va don vi to chuc.',
+    icon: 'Hoat dong',
   },
   {
     id: 'participants',
-    label: 'Báo cáo người tham gia',
-    description: 'Danh sách người tham gia, trạng thái điểm danh và điểm số.',
-    icon: 'Người tham gia',
+    label: 'Bao cao nguoi tham gia',
+    description: 'Danh sach nguoi tham gia, trang thai diem danh va diem so.',
+    icon: 'Nguoi tham gia',
   },
   {
     id: 'scores',
-    label: 'Báo cáo điểm số',
-    description: 'Tổng hợp điểm, số hoạt động đã tham gia và xếp hạng.',
-    icon: 'Điểm số',
+    label: 'Bao cao diem so',
+    description: 'Tong hop diem, so hoat dong da tham gia va xep hang.',
+    icon: 'Diem so',
   },
   {
     id: 'awards',
-    label: 'Báo cáo khen thưởng',
-    description: 'Theo dõi các quyết định khen thưởng theo thời gian.',
-    icon: 'Khen thưởng',
+    label: 'Bao cao khen thuong',
+    description: 'Theo doi cac quyet dinh khen thuong theo thoi gian.',
+    icon: 'Khen thuong',
   },
 ];
 
@@ -94,32 +95,32 @@ const COLUMN_OPTIONS: Record<ReportType, string[]> = {
 
 const COLUMN_LABELS: Record<string, string> = {
   id: 'ID',
-  title: 'Tiêu đề',
-  name: 'Họ tên',
+  title: 'Tieu de',
+  name: 'Ho ten',
   email: 'Email',
-  class: 'Lớp',
-  date_time: 'Ngày giờ',
-  location: 'Địa điểm',
-  status: 'Trạng thái',
-  type: 'Loại',
-  level: 'Cấp độ',
-  organizer: 'Người tổ chức',
-  participants: 'Số người tham gia',
-  created_at: 'Ngày tạo',
-  activity: 'Hoạt động',
-  checked_in: 'Điểm danh',
-  rating: 'Đánh giá',
-  points: 'Điểm',
-  registered_at: 'Ngày đăng ký',
-  total_points: 'Tổng điểm',
-  activities_joined: 'Hoạt động tham gia',
-  avg_rating: 'Đánh giá trung bình',
-  rank: 'Xếp hạng',
-  updated_at: 'Cập nhật lần cuối',
-  recipient: 'Người nhận',
-  reason: 'Lý do',
-  awarded_by: 'Trao bởi',
-  awarded_at: 'Ngày trao',
+  class: 'Lop',
+  date_time: 'Ngay gio',
+  location: 'Dia diem',
+  status: 'Trang thai',
+  type: 'Loai',
+  level: 'Cap do',
+  organizer: 'Nguoi to chuc',
+  participants: 'So nguoi tham gia',
+  created_at: 'Ngay tao',
+  activity: 'Hoat dong',
+  checked_in: 'Diem danh',
+  rating: 'Danh gia',
+  points: 'Diem',
+  registered_at: 'Ngay dang ky',
+  total_points: 'Tong diem',
+  activities_joined: 'Hoat dong tham gia',
+  avg_rating: 'Danh gia trung binh',
+  rank: 'Xep hang',
+  updated_at: 'Cap nhat lan cuoi',
+  recipient: 'Nguoi nhan',
+  reason: 'Ly do',
+  awarded_by: 'Trao boi',
+  awarded_at: 'Ngay trao',
 };
 
 const DEFAULT_CONFIG: ReportConfig = {
@@ -176,6 +177,29 @@ function getDefaultColumns(type: ReportType): string[] {
   return COLUMN_OPTIONS[type].slice(0, 3);
 }
 
+function SelectStepCard({
+  reportType,
+  onSelect,
+}: {
+  reportType: { id: ReportType; label: string; description: string; icon: string };
+  onSelect: (type: ReportType) => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onSelect(reportType.id)}
+      className="rounded-[2rem] border border-slate-200 bg-white p-6 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-cyan-200 hover:bg-cyan-50 hover:shadow-md"
+    >
+      <div className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-cyan-700">
+        {reportType.icon}
+      </div>
+      <div className="mt-4 text-xl font-semibold text-slate-950">{reportType.label}</div>
+      <div className="mt-3 text-sm leading-6 text-slate-600">{reportType.description}</div>
+      <div className="mt-4 text-sm font-medium text-cyan-700">Bat dau cau hinh</div>
+    </button>
+  );
+}
+
 export default function CustomReportsPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
@@ -200,7 +224,7 @@ export default function CustomReportsPage() {
   );
 
   if (authLoading || !user || user.role !== 'admin') {
-    return <LoadingSpinner />;
+    return <LoadingSpinner message="Dang tai custom report..." />;
   }
 
   const handleSelectType = (type: ReportType) => {
@@ -247,7 +271,7 @@ export default function CustomReportsPage() {
 
   const fetchPreview = async () => {
     if (config.columns.length === 0) {
-      toast.error('Vui lòng chọn ít nhất một cột');
+      toast.error('Vui long chon it nhat mot cot');
       return;
     }
 
@@ -263,14 +287,14 @@ export default function CustomReportsPage() {
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || error.message || 'Không thể tải dữ liệu xem trước');
+        throw new Error(error.error || error.message || 'Khong the tai du lieu xem truoc');
       }
 
       const csvText = await response.text();
       setPreviewRows(parseCsvPreview(csvText));
     } catch (error) {
       console.error('Preview error:', error);
-      setPreviewError(error instanceof Error ? error.message : 'Không thể tải dữ liệu xem trước');
+      setPreviewError(error instanceof Error ? error.message : 'Khong the tai du lieu xem truoc');
     } finally {
       setPreviewLoading(false);
     }
@@ -278,12 +302,12 @@ export default function CustomReportsPage() {
 
   const handleExport = async () => {
     if (!config.name.trim()) {
-      toast.error('Vui lòng nhập tên báo cáo');
+      toast.error('Vui long nhap ten bao cao');
       return;
     }
 
     if (config.columns.length === 0) {
-      toast.error('Vui lòng chọn ít nhất một cột');
+      toast.error('Vui long chon it nhat mot cot');
       return;
     }
 
@@ -298,7 +322,7 @@ export default function CustomReportsPage() {
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || error.message || 'Không thể xuất báo cáo');
+        throw new Error(error.error || error.message || 'Khong the xuat bao cao');
       }
 
       const blob = await response.blob();
@@ -314,10 +338,10 @@ export default function CustomReportsPage() {
       window.URL.revokeObjectURL(url);
       document.body.removeChild(anchor);
 
-      toast.success('Xuất báo cáo thành công');
+      toast.success('Xuat bao cao thanh cong');
     } catch (error) {
       console.error('Export error:', error);
-      toast.error(error instanceof Error ? error.message : 'Không thể xuất báo cáo');
+      toast.error(error instanceof Error ? error.message : 'Khong the xuat bao cao');
     } finally {
       setExporting(false);
     }
@@ -325,7 +349,7 @@ export default function CustomReportsPage() {
 
   const handleSaveReport = () => {
     if (!config.name.trim()) {
-      toast.error('Vui lòng nhập tên báo cáo trước khi lưu');
+      toast.error('Vui long nhap ten bao cao truoc khi luu');
       return;
     }
 
@@ -336,7 +360,7 @@ export default function CustomReportsPage() {
         id: Date.now().toString(),
       },
     ]);
-    toast.success('Đã lưu cấu hình báo cáo');
+    toast.success('Da luu cau hinh bao cao');
   };
 
   const handleLoadSavedReport = (report: ReportConfig) => {
@@ -348,126 +372,160 @@ export default function CustomReportsPage() {
 
   if (step === 'select') {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="mb-2 flex items-center gap-3 text-4xl font-bold">
-            <Settings className="h-10 w-10 text-blue-600" />
-            Báo cáo tùy chỉnh
-          </h1>
-          <p className="text-gray-600">Chọn loại báo cáo bạn muốn cấu hình và xuất ra CSV.</p>
-        </div>
+      <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
+        <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-3xl">
+              <div className="inline-flex items-center gap-3">
+                <Settings className="h-8 w-8 text-cyan-700" />
+                <h1 className="text-3xl font-semibold text-slate-950">Bao cao tuy chinh</h1>
+              </div>
+              <p className="mt-3 text-sm leading-6 text-slate-600 sm:text-base">
+                Chon nhom du lieu can xuat, cau hinh bo cot va preview ngay truoc khi tai file CSV.
+              </p>
+            </div>
 
-        <div className="mb-8 grid gap-6 md:grid-cols-2">
+            <div className="flex flex-wrap gap-2">
+              <Link
+                href="/admin/reports"
+                className="rounded-2xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              >
+                Ve trung tam bao cao
+              </Link>
+              <Link
+                href="/admin/dashboard"
+                className="rounded-2xl bg-cyan-700 px-4 py-2 text-sm font-medium text-white hover:bg-cyan-800"
+              >
+                Ve dashboard
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        <section className="grid gap-4 md:grid-cols-2">
           {REPORT_TYPES.map((reportType) => (
-            <button
+            <SelectStepCard
               key={reportType.id}
-              onClick={() => handleSelectType(reportType.id)}
-              className="rounded-lg border bg-white p-8 text-left shadow-lg transition hover:-translate-y-1 hover:shadow-xl"
-            >
-              <div className="mb-4 text-sm font-semibold text-blue-600">{reportType.icon}</div>
-              <div className="text-xl font-bold text-gray-800">{reportType.label}</div>
-              <div className="mt-3 text-sm text-gray-600">{reportType.description}</div>
-              <div className="mt-4 text-sm font-medium text-blue-600">Bắt đầu cấu hình</div>
-            </button>
+              reportType={reportType}
+              onSelect={handleSelectType}
+            />
           ))}
-        </div>
+        </section>
 
-        {savedReports.length > 0 && (
-          <div className="rounded-lg bg-white p-6 shadow-lg">
-            <h2 className="mb-4 text-2xl font-bold">Cấu hình đã lưu trong phiên làm việc</h2>
-            <div className="space-y-3">
+        {savedReports.length > 0 ? (
+          <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 className="text-xl font-semibold text-slate-950">Cau hinh da luu trong phien</h2>
+            <div className="mt-4 space-y-3">
               {savedReports.map((report) => (
                 <div
                   key={report.id}
-                  className="flex items-center justify-between rounded border p-3 transition hover:bg-gray-50"
+                  className="flex items-center justify-between gap-3 rounded-3xl border border-slate-200 bg-slate-50 p-4"
                 >
                   <div>
-                    <div className="font-medium">{report.name}</div>
-                    <div className="text-sm text-gray-500">
-                      {REPORT_TYPES.find((item) => item.id === report.type)?.label} •{' '}
-                      {report.columns.length} cột
+                    <div className="font-medium text-slate-950">{report.name}</div>
+                    <div className="mt-1 text-sm text-slate-500">
+                      {REPORT_TYPES.find((item) => item.id === report.type)?.label} ·{' '}
+                      {report.columns.length} cot
                     </div>
                   </div>
                   <button
+                    type="button"
                     onClick={() => handleLoadSavedReport(report)}
-                    className="flex items-center gap-2 text-blue-600 hover:text-blue-800"
+                    className="inline-flex items-center gap-2 rounded-2xl border border-cyan-200 bg-white px-4 py-2 text-sm font-medium text-cyan-700 hover:bg-cyan-50"
                   >
-                    <Eye className="h-5 w-5" />
-                    Nạp lại
+                    <Eye className="h-4 w-4" />
+                    Nap lai
                   </button>
                 </div>
               ))}
             </div>
-          </div>
-        )}
+          </section>
+        ) : null}
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
+    <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
+      <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
         <button
+          type="button"
           onClick={handleReset}
-          className="mb-4 flex items-center gap-2 text-blue-600 hover:text-blue-800"
+          className="inline-flex items-center gap-2 text-sm font-medium text-cyan-700 hover:text-cyan-800"
         >
           <ArrowLeft className="h-4 w-4" />
-          Quay lại chọn loại báo cáo
+          Quay lai chon loai bao cao
         </button>
-        <h1 className="mb-2 text-3xl font-bold">Cấu hình báo cáo</h1>
-        <p className="text-gray-600">Loại báo cáo: {selectedTypeLabel}</p>
-      </div>
+
+        <div className="mt-4 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-3xl">
+            <h1 className="text-3xl font-semibold text-slate-950">Cau hinh bao cao</h1>
+            <p className="mt-2 text-sm leading-6 text-slate-600 sm:text-base">
+              Loai bao cao dang chon: <span className="font-semibold text-slate-950">{selectedTypeLabel}</span>
+            </p>
+          </div>
+
+          <div className="rounded-3xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
+            CSV only · preview nhanh truoc khi tai file
+          </div>
+        </div>
+      </section>
 
       <div className="grid gap-6 md:grid-cols-3">
         <div className="space-y-6 md:col-span-2">
-          <div className="rounded-lg bg-white p-6 shadow-lg">
-            <label className="mb-2 block text-sm font-medium">Tên báo cáo</label>
-            <input
-              type="text"
-              value={config.name}
-              onChange={(event) =>
-                setConfig((current) => ({ ...current, name: event.target.value }))
-              }
-              placeholder="Ví dụ: Báo cáo hoạt động tháng này"
-              className="w-full rounded-lg border px-4 py-2 focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
+          <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+            <label className="block text-sm font-medium text-slate-700">
+              Ten bao cao
+              <input
+                type="text"
+                value={config.name}
+                onChange={(event) =>
+                  setConfig((current) => ({ ...current, name: event.target.value }))
+                }
+                placeholder="Vi du: Bao cao hoat dong thang nay"
+                className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-cyan-300"
+              />
+            </label>
+          </section>
 
-          <div className="rounded-lg bg-white p-6 shadow-lg">
-            <h3 className="mb-4 text-lg font-bold">Chọn cột hiển thị</h3>
-            <div className="mb-4 space-y-2">
+          <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 className="text-lg font-semibold text-slate-950">Chon cot hien thi</h2>
+
+            <div className="mt-4 space-y-2">
               {config.columns.length > 0 ? (
                 config.columns.map((column) => (
                   <div
                     key={column}
-                    className="flex items-center justify-between rounded border border-blue-200 bg-blue-50 p-3"
+                    className="flex items-center justify-between rounded-2xl border border-cyan-200 bg-cyan-50 p-3"
                   >
-                    <span className="font-medium">{COLUMN_LABELS[column] || column}</span>
+                    <span className="font-medium text-slate-900">{COLUMN_LABELS[column] || column}</span>
                     <button
+                      type="button"
                       onClick={() => handleRemoveColumn(column)}
-                      className="font-bold text-red-600 hover:text-red-800"
+                      className="text-red-600 hover:text-red-800"
                     >
-                      Xóa
+                      Xoa
                     </button>
                   </div>
                 ))
               ) : (
-                <div className="rounded bg-gray-50 p-3 text-gray-500">Chưa chọn cột nào</div>
+                <div className="rounded-2xl bg-slate-50 p-3 text-sm text-slate-500">Chua chon cot nao</div>
               )}
             </div>
 
-            <div>
-              <label className="mb-2 block text-sm font-medium">Thêm cột</label>
+            <div className="mt-5">
+              <label className="mb-2 block text-sm font-medium text-slate-700">Them cot</label>
               <div className="grid grid-cols-2 gap-2">
                 {COLUMN_OPTIONS[config.type].map((column) => (
                   <button
+                    type="button"
                     key={column}
                     onClick={() => handleAddColumn(column)}
                     disabled={config.columns.includes(column)}
-                    className={`rounded px-3 py-2 text-sm font-medium transition ${
+                    className={`rounded-2xl px-3 py-2 text-sm font-medium transition ${
                       config.columns.includes(column)
-                        ? 'cursor-not-allowed bg-gray-100 text-gray-400'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        ? 'cursor-not-allowed bg-slate-100 text-slate-400'
+                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                     }`}
                   >
                     + {COLUMN_LABELS[column] || column}
@@ -475,13 +533,13 @@ export default function CustomReportsPage() {
                 ))}
               </div>
             </div>
-          </div>
+          </section>
 
-          <div className="rounded-lg bg-white p-6 shadow-lg">
-            <h3 className="mb-4 text-lg font-bold">Bộ lọc</h3>
-            <div className="space-y-3">
+          <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 className="text-lg font-semibold text-slate-950">Bo loc</h2>
+            <div className="mt-4 space-y-3">
               <div>
-                <label className="mb-1 block text-sm font-medium">Từ ngày</label>
+                <label className="mb-1 block text-sm font-medium text-slate-700">Tu ngay</label>
                 <input
                   type="date"
                   value={config.filters.dateFrom || ''}
@@ -491,11 +549,11 @@ export default function CustomReportsPage() {
                       filters: { ...current.filters, dateFrom: event.target.value },
                     }))
                   }
-                  className="w-full rounded border px-3 py-2"
+                  className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-cyan-300"
                 />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium">Đến ngày</label>
+                <label className="mb-1 block text-sm font-medium text-slate-700">Den ngay</label>
                 <input
                   type="date"
                   value={config.filters.dateTo || ''}
@@ -505,13 +563,13 @@ export default function CustomReportsPage() {
                       filters: { ...current.filters, dateTo: event.target.value },
                     }))
                   }
-                  className="w-full rounded border px-3 py-2"
+                  className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-cyan-300"
                 />
               </div>
 
-              {config.type === 'activities' && (
+              {config.type === 'activities' ? (
                 <div>
-                  <label className="mb-1 block text-sm font-medium">Trạng thái</label>
+                  <label className="mb-1 block text-sm font-medium text-slate-700">Trang thai</label>
                   <select
                     value={config.filters.status || ''}
                     onChange={(event) =>
@@ -520,72 +578,69 @@ export default function CustomReportsPage() {
                         filters: { ...current.filters, status: event.target.value },
                       }))
                     }
-                    className="w-full rounded border px-3 py-2"
+                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-cyan-300"
                   >
-                    <option value="">Tất cả</option>
-                    <option value="draft">Nháp</option>
-                    <option value="published">Đã công bố</option>
-                    <option value="completed">Hoàn thành</option>
-                    <option value="cancelled">Đã hủy</option>
+                    <option value="">Tat ca</option>
+                    <option value="draft">Nhap</option>
+                    <option value="published">Da cong bo</option>
+                    <option value="completed">Hoan thanh</option>
+                    <option value="cancelled">Da huy</option>
                   </select>
                 </div>
-              )}
+              ) : null}
             </div>
-          </div>
+          </section>
 
-          <div className="rounded-lg bg-white p-6 shadow-lg">
-            <h3 className="mb-2 text-lg font-bold">Định dạng xuất</h3>
-            <p className="text-sm text-gray-600">
-              Luồng hiện tại hỗ trợ xuất CSV ổn định. Các tùy chọn Excel/PDF cũ đã được loại bỏ để
-              tránh gây hiểu nhầm.
+          <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 className="text-lg font-semibold text-slate-950">Dinh dang xuat</h2>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              Luong hien tai chi xuat CSV de giu contract on dinh va giam nham lan cho end-user.
             </p>
-          </div>
+          </section>
         </div>
 
         <div className="md:col-span-1">
-          <div className="sticky top-8 rounded-lg bg-white p-6 shadow-lg">
-            <h3 className="mb-4 text-lg font-bold">Xem trước</h3>
+          <section className="sticky top-8 rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 className="text-lg font-semibold text-slate-950">Xem truoc</h2>
 
-            <div className="mb-6 space-y-3">
+            <div className="mt-4 space-y-3">
               <div>
-                <div className="mb-1 text-sm text-gray-500">Loại báo cáo</div>
-                <div className="font-semibold">{selectedTypeLabel}</div>
+                <div className="mb-1 text-sm text-slate-500">Loai bao cao</div>
+                <div className="font-semibold text-slate-950">{selectedTypeLabel}</div>
               </div>
-
               <div>
-                <div className="mb-1 text-sm text-gray-500">Tên</div>
-                <div className="font-semibold">{config.name || '(Chưa nhập)'}</div>
+                <div className="mb-1 text-sm text-slate-500">Ten</div>
+                <div className="font-semibold text-slate-950">{config.name || '(Chua nhap)'}</div>
               </div>
-
               <div>
-                <div className="mb-1 text-sm text-gray-500">Số cột</div>
-                <div className="font-semibold">{config.columns.length}</div>
+                <div className="mb-1 text-sm text-slate-500">So cot</div>
+                <div className="font-semibold text-slate-950">{config.columns.length}</div>
               </div>
-
               <div>
-                <div className="mb-1 text-sm text-gray-500">Định dạng</div>
-                <div className="font-semibold">CSV</div>
+                <div className="mb-1 text-sm text-slate-500">Dinh dang</div>
+                <div className="font-semibold text-slate-950">CSV</div>
               </div>
             </div>
 
             <button
+              type="button"
               onClick={fetchPreview}
               disabled={previewLoading || config.columns.length === 0}
-              className="mb-4 flex w-full items-center justify-center gap-2 rounded-lg bg-purple-600 px-4 py-2 font-bold text-white transition hover:bg-purple-700 disabled:bg-gray-400"
+              className="bg-purple-600 mb-4 mt-6 flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 font-bold text-white transition hover:bg-purple-700 disabled:bg-slate-400"
             >
               <Eye className="h-5 w-5" />
-              {previewLoading ? 'Đang tải...' : 'Xem trước'}
+              {previewLoading ? 'Dang tai...' : 'Xem truoc'}
             </button>
 
-            {previewRows.length > 0 && (
-              <div className="mb-4 max-h-48 overflow-y-auto rounded border border-blue-200 bg-blue-50 p-3">
-                <div className="mb-2 text-xs font-bold text-blue-900">Dữ liệu mẫu</div>
+            {previewRows.length > 0 ? (
+              <div className="max-h-48 mb-4 overflow-y-auto rounded-2xl border border-cyan-200 bg-cyan-50 p-3">
+                <div className="mb-2 text-xs font-bold uppercase tracking-wide text-cyan-900">Du lieu mau</div>
                 <table className="w-full text-xs">
                   <tbody>
                     {previewRows.map((row, rowIndex) => (
                       <tr
                         key={`${rowIndex}-${row.join('-')}`}
-                        className={rowIndex === 0 ? 'border-b font-bold' : ''}
+                        className={rowIndex === 0 ? 'border-b font-bold text-slate-900' : 'text-slate-700'}
                       >
                         {row.slice(0, 3).map((cell, cellIndex) => (
                           <td key={`${rowIndex}-${cellIndex}`} className="truncate p-1">
@@ -597,37 +652,40 @@ export default function CustomReportsPage() {
                   </tbody>
                 </table>
               </div>
-            )}
+            ) : null}
 
-            {previewError && (
-              <div className="mb-4 rounded border border-red-200 bg-red-50 p-3 text-xs text-red-700">
+            {previewError ? (
+              <div className="mb-4 rounded-2xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700">
                 {previewError}
               </div>
-            )}
+            ) : null}
 
             <button
+              type="button"
               onClick={handleExport}
               disabled={exporting || !config.name.trim() || config.columns.length === 0}
-              className="flex w-full items-center justify-center gap-2 rounded-lg bg-green-600 px-4 py-3 font-bold text-white transition hover:bg-green-700 disabled:bg-gray-400"
+              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 font-bold text-white transition hover:bg-emerald-700 disabled:bg-slate-400"
             >
               <Download className="h-5 w-5" />
-              {exporting ? 'Đang xuất...' : 'Xuất báo cáo'}
+              {exporting ? 'Dang xuat...' : 'Xuat bao cao'}
             </button>
 
             <button
+              type="button"
               onClick={handleSaveReport}
-              className="mt-2 w-full rounded-lg bg-blue-600 px-4 py-3 font-bold text-white transition hover:bg-blue-700"
+              className="mt-2 w-full rounded-2xl bg-cyan-700 px-4 py-3 font-bold text-white transition hover:bg-cyan-800"
             >
-              Lưu cấu hình hiện tại
+              Luu cau hinh hien tai
             </button>
 
             <button
+              type="button"
               onClick={handleReset}
-              className="mt-2 w-full rounded-lg bg-gray-200 px-4 py-3 font-bold text-gray-800 transition hover:bg-gray-300"
+              className="mt-2 w-full rounded-2xl bg-slate-200 px-4 py-3 font-bold text-slate-800 transition hover:bg-slate-300"
             >
-              Bắt đầu lại
+              Bat dau lai
             </button>
-          </div>
+          </section>
         </div>
       </div>
     </div>

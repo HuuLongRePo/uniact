@@ -1,19 +1,19 @@
 'use client';
 
-import { useAuth } from '@/contexts/AuthContext';
-import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   ArrowLeft,
-  Download,
   BarChart3,
+  Download,
+  Loader2,
   TrendingUp,
   Users,
-  Loader,
-  AlertCircle,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useAuth } from '@/contexts/AuthContext';
+import LoadingSpinner from '@/components/LoadingSpinner';
 import { resolveDownloadFilename } from '@/lib/download-filename';
 
 interface SemesterReport {
@@ -45,57 +45,66 @@ interface Statistics {
 }
 
 export default function BonusReportsPage() {
-  const { user: currentUser, loading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-
   const [report, setReport] = useState<SemesterReport | null>(null);
   const [statistics, setStatistics] = useState<Statistics | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
+  const [error, setError] = useState('');
   const [semester, setSemester] = useState(1);
   const [academicYear, setAcademicYear] = useState(new Date().getFullYear().toString());
 
   useEffect(() => {
-    if (!loading && (!currentUser || currentUser.role !== 'admin')) {
+    if (!authLoading && (!user || user.role !== 'admin')) {
       router.push('/login');
       return;
     }
-  }, [loading, currentUser, router]);
 
-  const fetchReport = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const [reportRes, statsRes] = await Promise.all([
-        fetch(`/api/bonus/reports?type=semester&semester=${semester}&academicYear=${academicYear}`),
-        fetch(`/api/bonus/reports?type=statistics`),
-      ]);
-
-      if (reportRes.ok) {
-        const reportData = await reportRes.json();
-        setReport(reportData);
-      }
-
-      if (statsRes.ok) {
-        const statsData = await statsRes.json();
-        setStatistics(statsData);
-      }
-    } catch (error) {
-      console.error('Fetch error:', error);
-      toast.error('Lỗi khi tải báo cáo');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [academicYear, semester]);
-
-  useEffect(() => {
-    if (currentUser?.role === 'admin') {
+    if (user) {
       void fetchReport();
     }
-  }, [currentUser, fetchReport]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, router, user]);
 
-  const handleExport = async (type: 'csv' | 'xlsx' | 'json') => {
+  async function fetchReport() {
     try {
-      const url = `/api/bonus/reports?type=semester&semester=${semester}&academicYear=${academicYear}&format=${type}`;
-      const response = await fetch(url);
+      setLoading(true);
+      setError('');
+      const [reportResponse, statisticsResponse] = await Promise.all([
+        fetch(`/api/bonus/reports?type=semester&semester=${semester}&academicYear=${academicYear}`),
+        fetch('/api/bonus/reports?type=statistics'),
+      ]);
+
+      const [reportPayload, statisticsPayload] = await Promise.all([
+        reportResponse.json().catch(() => null),
+        statisticsResponse.json().catch(() => null),
+      ]);
+
+      if (!reportResponse.ok) {
+        throw new Error(reportPayload?.error || reportPayload?.message || 'Khong the tai bao cao cong diem');
+      }
+
+      setReport((reportPayload?.data || reportPayload) as SemesterReport);
+      setStatistics((statisticsPayload?.data || statisticsPayload) as Statistics);
+    } catch (fetchError) {
+      console.error('Fetch bonus reports error:', fetchError);
+      setReport(null);
+      setStatistics(null);
+      setError(
+        fetchError instanceof Error ? fetchError.message : 'Khong the tai bao cao cong diem'
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleExport(format: 'csv' | 'xlsx' | 'json') {
+    try {
+      setExporting(true);
+      const response = await fetch(
+        `/api/bonus/reports?type=semester&semester=${semester}&academicYear=${academicYear}&format=${format}`
+      );
 
       if (!response.ok) {
         throw new Error('Export failed');
@@ -107,225 +116,269 @@ export default function BonusReportsPage() {
       link.href = downloadUrl;
       link.download = resolveDownloadFilename(
         response.headers?.get?.('Content-Disposition') ?? null,
-        `bonus-hk${semester}-${academicYear}.${type}`
+        `bonus-report-hk${semester}-${academicYear}.${format}`
       );
       link.click();
       window.URL.revokeObjectURL(downloadUrl);
-
-      toast.success(`✅ Xuất ${type.toUpperCase()} thành công`);
-    } catch (error) {
-      console.error('Export error:', error);
-      toast.error('Lỗi khi xuất báo cáo');
+      toast.success(`Da xuat bao cao ${format.toUpperCase()}`);
+    } catch (exportError) {
+      console.error('Export bonus report error:', exportError);
+      toast.error('Khong the xuat bao cao cong diem');
+    } finally {
+      setExporting(false);
     }
-  };
+  }
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
-        <div className="max-w-7xl mx-auto text-center py-20">
-          <Loader className="w-8 h-8 animate-spin mx-auto text-gray-400 mb-4" />
-          <p className="text-gray-500">Đang tải báo cáo...</p>
-        </div>
-      </div>
-    );
+  if (authLoading || (loading && !report && !error)) {
+    return <LoadingSpinner message="Dang tai bao cao cong diem..." />;
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center gap-4 mb-8">
-          <Link
-            href="/admin/bonus-approval"
-            className="p-2 hover:bg-white/50 rounded-lg transition"
-          >
-            <ArrowLeft className="w-6 h-6 text-gray-600" />
-          </Link>
-          <div>
-            <h1 className="text-4xl font-bold text-gray-800">Báo Cáo Cộng Điểm</h1>
-            <p className="text-gray-600 mt-1">Phân tích và thống kê điểm cộng toàn trường</p>
-          </div>
-        </div>
-
-        {/* Period Selection */}
-        <div className="bg-white rounded-lg shadow p-4 mb-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Học kỳ</label>
-              <select
-                value={semester}
-                onChange={(e) => setSemester(parseInt(e.target.value))}
-                className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+    <div className="page-shell">
+      <div className="mx-auto max-w-7xl space-y-6">
+        <section className="page-surface rounded-[1.75rem] px-5 py-6 sm:px-7">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+            <div className="flex items-start gap-4">
+              <Link
+                href="/admin/bonus-approval"
+                className="rounded-xl border border-slate-300 p-2 text-slate-600 transition hover:bg-slate-50"
               >
-                <option value={1}>Học kỳ 1</option>
-                <option value={2}>Học kỳ 2</option>
-                <option value={3}>Học kỳ 3</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Năm học</label>
-              <input
-                type="text"
-                value={academicYear}
-                onChange={(e) => setAcademicYear(e.target.value)}
-                placeholder="2024"
-                className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div className="md:col-span-2 flex items-end gap-2">
-              <button
-                onClick={() => fetchReport()}
-                className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 transition"
-              >
-                Tải báo cáo
-              </button>
-              <button
-                onClick={() => handleExport('csv')}
-                className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-700 transition"
-              >
-                <Download className="w-4 h-4" />
-                CSV
-              </button>
-              <button
-                onClick={() => handleExport('xlsx')}
-                className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-emerald-700 transition"
-              >
-                <Download className="w-4 h-4" />
-                Excel
-              </button>
-              <button
-                onClick={() => handleExport('json')}
-                className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-purple-700 transition"
-              >
-                <Download className="w-4 h-4" />
-                JSON
-              </button>
-            </div>
-          </div>
-        </div>
+                <ArrowLeft className="h-5 w-5" />
+              </Link>
 
-        {/* Overall Statistics */}
-        {statistics && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-gray-600 font-semibold">Tổng đề xuất</h3>
-                <BarChart3 className="w-5 h-5 text-blue-500" />
-              </div>
-              <div className="text-3xl font-bold text-gray-800">{statistics.total.proposals}</div>
-              <p className="text-gray-500 text-sm mt-2">
-                Phê duyệt: {statistics.byStatus.approved} | Chờ: {statistics.byStatus.pending}
-              </p>
-            </div>
-
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-gray-600 font-semibold">Tổng điểm</h3>
-                <TrendingUp className="w-5 h-5 text-green-500" />
-              </div>
-              <div className="text-3xl font-bold text-gray-800">{statistics.total.points}</div>
-              <p className="text-gray-500 text-sm mt-2">Điểm đã phê duyệt</p>
-            </div>
-
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-gray-600 font-semibold">Tỉ lệ duyệt</h3>
-                <Users className="w-5 h-5 text-purple-500" />
-              </div>
-              <div className="text-3xl font-bold text-gray-800">
-                {statistics.averages.approvalRate.toFixed(1)}%
-              </div>
-              <p className="text-gray-500 text-sm mt-2">
-                Trung bình {statistics.averages.pointsPerApprovedProposal.toFixed(1)} điểm/đề
-              </p>
-            </div>
-
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-gray-600 font-semibold">Từ chối</h3>
-                <AlertCircle className="w-5 h-5 text-red-500" />
-              </div>
-              <div className="text-3xl font-bold text-gray-800">{statistics.byStatus.rejected}</div>
-              <p className="text-gray-500 text-sm mt-2">Không phê duyệt</p>
-            </div>
-          </div>
-        )}
-
-        {/* Semester Report */}
-        {report && (
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <h2 className="text-2xl font-bold text-gray-800 mb-6">
-              Báo Cáo {report.semester} - Năm học {report.academicYear}
-            </h2>
-
-            {/* Summary */}
-            <div className="grid grid-cols-3 gap-4 mb-8 p-4 bg-blue-50 rounded-lg">
-              <div>
-                <p className="text-gray-600 text-sm">Tổng học viên</p>
-                <p className="text-2xl font-bold text-blue-600">{report.totalStudents}</p>
-              </div>
-              <div>
-                <p className="text-gray-600 text-sm">Tổng điểm</p>
-                <p className="text-2xl font-bold text-green-600">{report.totalPoints}</p>
-              </div>
-              <div>
-                <p className="text-gray-600 text-sm">Điểm bình quân</p>
-                <p className="text-2xl font-bold text-purple-600">
-                  {report.averagePointsPerStudent.toFixed(2)}
+              <div className="max-w-3xl">
+                <div className="inline-flex rounded-full bg-cyan-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-cyan-700">
+                  Bonus reports
+                </div>
+                <h1
+                  className="mt-3 text-3xl font-bold text-slate-900"
+                  data-testid="admin-bonus-reports-heading"
+                >
+                  Bao cao cong diem
+                </h1>
+                <p className="mt-2 text-sm text-slate-600">
+                  Tong hop cong diem theo hoc ky, doi soat ty le duyet va so sanh giua cac lop.
                 </p>
               </div>
             </div>
 
-            {/* Class Reports */}
-            <h3 className="text-xl font-bold text-gray-800 mb-4">Chi tiết theo lớp</h3>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-100 border-b-2 border-gray-300">
-                  <tr>
-                    <th className="text-left px-4 py-3 font-semibold text-gray-700">Lớp</th>
-                    <th className="text-center px-4 py-3 font-semibold text-gray-700">Số HV</th>
-                    <th className="text-center px-4 py-3 font-semibold text-gray-700">Tổng điểm</th>
-                    <th className="text-center px-4 py-3 font-semibold text-gray-700">Bình quân</th>
-                    <th className="text-center px-4 py-3 font-semibold text-gray-700">Tổng đề</th>
-                    <th className="text-center px-4 py-3 font-semibold text-gray-700">Duyệt</th>
-                    <th className="text-center px-4 py-3 font-semibold text-gray-700">Chờ</th>
-                    <th className="text-center px-4 py-3 font-semibold text-gray-700">Từ chối</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {report.classReports.map((cls) => (
-                    <tr key={cls.className} className="border-b hover:bg-gray-50 transition">
-                      <td className="px-4 py-3 font-semibold text-gray-800">{cls.className}</td>
-                      <td className="px-4 py-3 text-center text-gray-600">{cls.studentCount}</td>
-                      <td className="px-4 py-3 text-center font-bold text-green-600">
-                        {cls.totalApprovedPoints}
-                      </td>
-                      <td className="px-4 py-3 text-center text-gray-600">
-                        {cls.averagePointsPerStudent.toFixed(2)}
-                      </td>
-                      <td className="px-4 py-3 text-center text-gray-600">{cls.proposals.total}</td>
-                      <td className="px-4 py-3 text-center">
-                        <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-sm font-semibold">
-                          {cls.proposals.approved}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-sm font-semibold">
-                          {cls.proposals.pending}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <span className="bg-red-100 text-red-800 px-2 py-1 rounded text-sm font-semibold">
-                          {cls.proposals.rejected}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <button
+                type="button"
+                disabled={exporting}
+                onClick={() => void handleExport('csv')}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50"
+              >
+                <Download className="h-4 w-4" />
+                CSV
+              </button>
+              <button
+                type="button"
+                disabled={exporting}
+                onClick={() => void handleExport('xlsx')}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
+              >
+                <Download className="h-4 w-4" />
+                Excel
+              </button>
+              <button
+                type="button"
+                disabled={exporting}
+                onClick={() => void handleExport('json')}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-violet-700 disabled:opacity-50"
+              >
+                <Download className="h-4 w-4" />
+                JSON
+              </button>
             </div>
           </div>
-        )}
+        </section>
+
+        {error ? (
+          <section className="page-surface rounded-[1.75rem] border-rose-200 bg-rose-50 px-5 py-5 sm:px-7">
+            <div className="text-sm font-semibold text-rose-700">Co loi khi tai bao cao</div>
+            <p className="mt-2 text-sm text-rose-800">{error}</p>
+          </section>
+        ) : null}
+
+        <section className="page-surface rounded-[1.75rem] px-5 py-6 sm:px-7">
+          <div className="grid gap-4 md:grid-cols-[220px_220px_1fr]">
+            <label className="block">
+              <span className="mb-2 block text-sm font-medium text-slate-700">Hoc ky</span>
+              <select
+                value={semester}
+                onChange={(event) => setSemester(Number(event.target.value))}
+                className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm text-slate-900"
+              >
+                <option value={1}>Hoc ky 1</option>
+                <option value={2}>Hoc ky 2</option>
+                <option value={3}>Hoc ky 3</option>
+              </select>
+            </label>
+
+            <label className="block">
+              <span className="mb-2 block text-sm font-medium text-slate-700">Nam hoc</span>
+              <input
+                type="text"
+                value={academicYear}
+                onChange={(event) => setAcademicYear(event.target.value)}
+                className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm text-slate-900"
+              />
+            </label>
+
+            <div className="flex items-end">
+              <button
+                type="button"
+                disabled={loading}
+                onClick={() => void fetchReport()}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-50"
+              >
+                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                Tai lai bao cao
+              </button>
+            </div>
+          </div>
+        </section>
+
+        {statistics ? (
+          <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <div className="rounded-[1.5rem] bg-blue-50 px-4 py-4">
+              <div className="flex items-center justify-between">
+                <div className="text-xs font-semibold uppercase tracking-wide text-blue-700">Tong de xuat</div>
+                <BarChart3 className="h-5 w-5 text-blue-600" />
+              </div>
+              <div className="mt-3 text-2xl font-semibold text-slate-900">{statistics.total.proposals}</div>
+              <div className="mt-2 text-xs text-slate-500">Duyet {statistics.byStatus.approved} | Cho {statistics.byStatus.pending}</div>
+            </div>
+            <div className="rounded-[1.5rem] bg-emerald-50 px-4 py-4">
+              <div className="flex items-center justify-between">
+                <div className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Tong diem</div>
+                <TrendingUp className="h-5 w-5 text-emerald-600" />
+              </div>
+              <div className="mt-3 text-2xl font-semibold text-slate-900">{statistics.total.points}</div>
+              <div className="mt-2 text-xs text-slate-500">Chi tinh diem da duyet</div>
+            </div>
+            <div className="rounded-[1.5rem] bg-violet-50 px-4 py-4">
+              <div className="flex items-center justify-between">
+                <div className="text-xs font-semibold uppercase tracking-wide text-violet-700">Ty le duyet</div>
+                <Users className="h-5 w-5 text-violet-600" />
+              </div>
+              <div className="mt-3 text-2xl font-semibold text-slate-900">
+                {statistics.averages.approvalRate.toFixed(1)}%
+              </div>
+              <div className="mt-2 text-xs text-slate-500">
+                TB {statistics.averages.pointsPerApprovedProposal.toFixed(1)} diem/de xuat
+              </div>
+            </div>
+            <div className="rounded-[1.5rem] bg-rose-50 px-4 py-4">
+              <div className="text-xs font-semibold uppercase tracking-wide text-rose-700">Tu choi</div>
+              <div className="mt-3 text-2xl font-semibold text-slate-900">{statistics.byStatus.rejected}</div>
+              <div className="mt-2 text-xs text-slate-500">So de xuat khong duoc duyet</div>
+            </div>
+          </section>
+        ) : null}
+
+        {report ? (
+          <>
+            <section className="page-surface rounded-[1.75rem] px-5 py-6 sm:px-7">
+              <div className="text-sm text-slate-500">Tong quan hoc ky</div>
+              <h2 className="mt-2 text-2xl font-semibold text-slate-900">
+                Bao cao {report.semester} - nam hoc {report.academicYear}
+              </h2>
+              <div className="mt-5 grid gap-4 md:grid-cols-3">
+                <div className="rounded-[1.5rem] bg-slate-50 px-4 py-4">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Tong hoc vien</div>
+                  <div className="mt-3 text-2xl font-semibold text-slate-900">{report.totalStudents}</div>
+                </div>
+                <div className="rounded-[1.5rem] bg-slate-50 px-4 py-4">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Tong diem duyet</div>
+                  <div className="mt-3 text-2xl font-semibold text-slate-900">{report.totalPoints}</div>
+                </div>
+                <div className="rounded-[1.5rem] bg-slate-50 px-4 py-4">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Diem TB / hoc vien</div>
+                  <div className="mt-3 text-2xl font-semibold text-slate-900">
+                    {report.averagePointsPerStudent.toFixed(2)}
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {report.classReports.length === 0 ? (
+              <section className="page-surface rounded-[1.75rem] border-dashed px-5 py-10 text-center sm:px-7">
+                <div className="text-xl font-semibold text-slate-900">Khong co du lieu theo lop</div>
+                <p className="mt-2 text-sm text-slate-600">
+                  Thu doi hoc ky hoac nam hoc de xem bao cao khac.
+                </p>
+              </section>
+            ) : (
+              <>
+                <section className="grid gap-4 xl:hidden">
+                  {report.classReports.map((classReport) => (
+                    <article
+                      key={classReport.className}
+                      className="page-surface rounded-[1.75rem] border px-5 py-5 sm:px-7"
+                    >
+                      <div className="text-base font-semibold text-slate-900">{classReport.className}</div>
+                      <div className="mt-4 grid grid-cols-2 gap-3">
+                        <div className="rounded-2xl bg-slate-50 px-4 py-3">
+                          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">So HV</div>
+                          <div className="mt-2 text-sm font-semibold text-slate-900">{classReport.studentCount}</div>
+                        </div>
+                        <div className="rounded-2xl bg-slate-50 px-4 py-3">
+                          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Tong diem</div>
+                          <div className="mt-2 text-sm font-semibold text-emerald-700">{classReport.totalApprovedPoints}</div>
+                        </div>
+                        <div className="rounded-2xl bg-slate-50 px-4 py-3">
+                          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Diem TB</div>
+                          <div className="mt-2 text-sm font-semibold text-slate-900">
+                            {classReport.averagePointsPerStudent.toFixed(2)}
+                          </div>
+                        </div>
+                        <div className="rounded-2xl bg-slate-50 px-4 py-3">
+                          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Tong de xuat</div>
+                          <div className="mt-2 text-sm font-semibold text-slate-900">{classReport.proposals.total}</div>
+                        </div>
+                      </div>
+                    </article>
+                  ))}
+                </section>
+
+                <section className="page-surface hidden overflow-x-auto rounded-[1.75rem] border xl:block">
+                  <table className="min-w-full divide-y divide-slate-200">
+                    <thead className="bg-slate-50">
+                      <tr>
+                        <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Lop</th>
+                        <th className="px-5 py-4 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">So HV</th>
+                        <th className="px-5 py-4 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Tong diem</th>
+                        <th className="px-5 py-4 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Diem TB</th>
+                        <th className="px-5 py-4 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Tong de xuat</th>
+                        <th className="px-5 py-4 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Duyet</th>
+                        <th className="px-5 py-4 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Cho</th>
+                        <th className="px-5 py-4 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Tu choi</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200 bg-white">
+                      {report.classReports.map((classReport) => (
+                        <tr key={classReport.className} className="hover:bg-slate-50">
+                          <td className="px-5 py-4 text-sm font-semibold text-slate-900">{classReport.className}</td>
+                          <td className="px-5 py-4 text-right text-sm text-slate-600">{classReport.studentCount}</td>
+                          <td className="px-5 py-4 text-right text-sm font-semibold text-emerald-700">{classReport.totalApprovedPoints}</td>
+                          <td className="px-5 py-4 text-right text-sm text-slate-600">
+                            {classReport.averagePointsPerStudent.toFixed(2)}
+                          </td>
+                          <td className="px-5 py-4 text-right text-sm text-slate-600">{classReport.proposals.total}</td>
+                          <td className="px-5 py-4 text-right text-sm text-emerald-700">{classReport.proposals.approved}</td>
+                          <td className="px-5 py-4 text-right text-sm text-amber-700">{classReport.proposals.pending}</td>
+                          <td className="px-5 py-4 text-right text-sm text-rose-700">{classReport.proposals.rejected}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </section>
+              </>
+            )}
+          </>
+        ) : null}
       </div>
     </div>
   );

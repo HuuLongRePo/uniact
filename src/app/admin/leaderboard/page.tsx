@@ -1,11 +1,18 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import LoadingSpinner from '@/components/LoadingSpinner';
-import { Trophy, Medal, Award, Download, Settings } from 'lucide-react';
+import {
+  Award,
+  Download,
+  Medal,
+  Settings2,
+  Trophy,
+  Users,
+} from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useAuth } from '@/contexts/AuthContext';
+import LoadingSpinner from '@/components/LoadingSpinner';
 import { toVietnamDateStamp } from '@/lib/timezone';
 
 interface LeaderboardEntry {
@@ -18,298 +25,420 @@ interface LeaderboardEntry {
   activities_count: number;
 }
 
+type ExportColumnState = {
+  rank: boolean;
+  name: boolean;
+  email: boolean;
+  class_name: boolean;
+  total_points: boolean;
+  activities_count: boolean;
+};
+
+const INITIAL_COLUMNS: ExportColumnState = {
+  rank: true,
+  name: true,
+  email: true,
+  class_name: true,
+  total_points: true,
+  activities_count: true,
+};
+
+function parseLeaderboardPayload(payload: any): LeaderboardEntry[] {
+  const source = payload?.leaderboard || payload?.data?.leaderboard || [];
+  return Array.isArray(source) ? source : [];
+}
+
+function SummaryCard({
+  label,
+  value,
+  meta,
+  tone,
+}: {
+  label: string;
+  value: string;
+  meta?: string;
+  tone: 'amber' | 'blue' | 'emerald';
+}) {
+  const toneClass =
+    tone === 'amber'
+      ? 'bg-amber-50 text-amber-700'
+      : tone === 'emerald'
+        ? 'bg-emerald-50 text-emerald-700'
+        : 'bg-blue-50 text-blue-700';
+
+  return (
+    <div className={`rounded-[1.5rem] px-4 py-4 ${toneClass}`}>
+      <div className="text-xs font-semibold uppercase tracking-wide">{label}</div>
+      <div className="mt-3 text-2xl font-semibold text-slate-900">{value}</div>
+      {meta ? <div className="mt-2 text-xs text-slate-500">{meta}</div> : null}
+    </div>
+  );
+}
+
 export default function AdminLeaderboardPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [limit, setLimit] = useState(20);
+  const [error, setError] = useState('');
   const [showExportDialog, setShowExportDialog] = useState(false);
-  const [exportColumns, setExportColumns] = useState({
-    rank: true,
-    name: true,
-    email: true,
-    class_name: true,
-    total_points: true,
-    activities_count: true,
-  });
-
-  const fetchLeaderboard = useCallback(async () => {
-    try {
-      setLoading(true);
-      const res = await fetch(`/api/admin/leaderboard?limit=${limit}`);
-      const data = await res.json();
-      setLeaderboard(data.leaderboard || []);
-    } finally {
-      setLoading(false);
-    }
-  }, [limit]);
+  const [exportColumns, setExportColumns] = useState<ExportColumnState>(INITIAL_COLUMNS);
 
   useEffect(() => {
     if (!authLoading && (!user || user.role !== 'admin')) {
       router.push('/login');
       return;
     }
+
     if (user) {
-      void fetchLeaderboard();
+      void fetchLeaderboard(limit);
     }
-  }, [authLoading, fetchLeaderboard, router, user]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, router, user, limit]);
 
-  const exportToCSV = () => {
+  async function fetchLeaderboard(nextLimit: number) {
+    try {
+      setLoading(true);
+      setError('');
+      const response = await fetch(`/api/admin/leaderboard?limit=${nextLimit}`);
+      const payload = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(payload?.error || payload?.message || 'Khong the tai bang xep hang');
+      }
+
+      setLeaderboard(parseLeaderboardPayload(payload));
+    } catch (fetchError) {
+      console.error('Fetch admin leaderboard error:', fetchError);
+      setLeaderboard([]);
+      setError(fetchError instanceof Error ? fetchError.message : 'Khong the tai bang xep hang');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const stats = useMemo(() => {
+    const first = leaderboard[0] || null;
+    const totalPoints = leaderboard.reduce((sum, entry) => sum + Number(entry.total_points || 0), 0);
+    const avgPoints =
+      leaderboard.length > 0 ? Math.round((totalPoints / leaderboard.length) * 10) / 10 : 0;
+
+    return {
+      topName: first?.name || 'Chua co du lieu',
+      topPoints: first?.total_points || 0,
+      avgPoints,
+    };
+  }, [leaderboard]);
+
+  function exportData(format: 'csv' | 'xls') {
     if (leaderboard.length === 0) {
-      toast.error('Không có dữ liệu để xuất');
+      toast.error('Khong co du lieu de xuat');
       return;
     }
 
-    const columnMap: Record<
-      string,
-      { label: string; getValue: (entry: LeaderboardEntry) => string | number }
-    > = {
-      rank: { label: 'Hạng', getValue: (e) => e.rank },
-      name: { label: 'Họ tên', getValue: (e) => e.name },
-      email: { label: 'Email', getValue: (e) => e.email },
-      class_name: { label: 'Lớp', getValue: (e) => e.class_name || 'N/A' },
-      total_points: { label: 'Tổng điểm', getValue: (e) => e.total_points },
-      activities_count: { label: 'Số hoạt động', getValue: (e) => e.activities_count },
-    };
+    const columnMap: Record<keyof ExportColumnState, { label: string; getValue: (entry: LeaderboardEntry) => string | number }> =
+      {
+        rank: { label: 'Hang', getValue: (entry) => entry.rank },
+        name: { label: 'Ho ten', getValue: (entry) => entry.name },
+        email: { label: 'Email', getValue: (entry) => entry.email },
+        class_name: { label: 'Lop', getValue: (entry) => entry.class_name || 'N/A' },
+        total_points: { label: 'Tong diem', getValue: (entry) => entry.total_points },
+        activities_count: { label: 'So hoat dong', getValue: (entry) => entry.activities_count },
+      };
 
-    const selectedColumns = Object.keys(exportColumns).filter(
-      (k) => exportColumns[k as keyof typeof exportColumns]
+    const selectedColumns = (Object.keys(exportColumns) as Array<keyof ExportColumnState>).filter(
+      (columnKey) => exportColumns[columnKey]
     );
 
     if (selectedColumns.length === 0) {
-      toast.error('Vui lòng chọn ít nhất một cột để xuất');
+      toast.error('Chon it nhat mot cot de xuat');
       return;
     }
 
-    const headers = selectedColumns.map((col) => columnMap[col].label);
-    const rows = leaderboard.map((entry) =>
-      selectedColumns.map((col) => columnMap[col].getValue(entry))
-    );
+    const separator = format === 'csv' ? ',' : '\t';
+    const rows = [
+      selectedColumns.map((columnKey) => columnMap[columnKey].label).join(separator),
+      ...leaderboard.map((entry) =>
+        selectedColumns
+          .map((columnKey) => `"${columnMap[columnKey].getValue(entry)}"`)
+          .join(separator)
+      ),
+    ];
 
-    const csvContent = [
-      headers.join(','),
-      ...rows.map((row) => row.map((cell) => `"${cell}"`).join(',')),
-    ].join('\n');
-
-    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
+    const blob = new Blob(['\uFEFF' + rows.join('\n')], {
+      type: format === 'csv' ? 'text/csv;charset=utf-8;' : 'application/vnd.ms-excel',
+    });
     const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
     link.href = url;
-    link.download = `bang-xep-hang-top-${limit}-${toVietnamDateStamp(new Date())}.csv`;
+    link.download = `leaderboard-top-${limit}-${toVietnamDateStamp(new Date())}.${format}`;
     link.click();
     URL.revokeObjectURL(url);
-
-    toast.success(`Đã xuất Top ${limit} học viên!`);
+    toast.success(format === 'csv' ? 'Da xuat leaderboard CSV' : 'Da xuat leaderboard Excel');
     setShowExportDialog(false);
-  };
+  }
 
-  const exportToExcel = () => {
-    // For now, export as CSV with .xls extension (Excel can open it)
-    if (leaderboard.length === 0) {
-      toast.error('Không có dữ liệu để xuất');
-      return;
-    }
-
-    const columnMap: Record<
-      string,
-      { label: string; getValue: (entry: LeaderboardEntry) => string | number }
-    > = {
-      rank: { label: 'Hạng', getValue: (e) => e.rank },
-      name: { label: 'Họ tên', getValue: (e) => e.name },
-      email: { label: 'Email', getValue: (e) => e.email },
-      class_name: { label: 'Lớp', getValue: (e) => e.class_name || 'N/A' },
-      total_points: { label: 'Tổng điểm', getValue: (e) => e.total_points },
-      activities_count: { label: 'Số hoạt động', getValue: (e) => e.activities_count },
-    };
-
-    const selectedColumns = Object.keys(exportColumns).filter(
-      (k) => exportColumns[k as keyof typeof exportColumns]
-    );
-
-    if (selectedColumns.length === 0) {
-      toast.error('Vui lòng chọn ít nhất một cột để xuất');
-      return;
-    }
-
-    const headers = selectedColumns.map((col) => columnMap[col].label);
-    const rows = leaderboard.map((entry) =>
-      selectedColumns.map((col) => columnMap[col].getValue(entry))
-    );
-
-    const csvContent = [headers.join('\t'), ...rows.map((row) => row.join('\t'))].join('\n');
-
-    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.href = url;
-    link.download = `bang-xep-hang-top-${limit}-${toVietnamDateStamp(new Date())}.xls`;
-    link.click();
-    URL.revokeObjectURL(url);
-
-    toast.success(`Đã xuất Top ${limit} sang Excel!`);
-    setShowExportDialog(false);
-  };
-
-  if (authLoading || loading) return <LoadingSpinner />;
+  if (authLoading || (loading && leaderboard.length === 0 && !error)) {
+    return <LoadingSpinner message="Dang tai leaderboard..." />;
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-5xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-              <Trophy className="w-8 h-8 text-yellow-600" />
-              Bảng Xếp Hạng
-            </h1>
-            <p className="text-gray-600 mt-1">Xếp hạng học viên theo điểm tích lũy</p>
-          </div>
-          <button
-            onClick={() => setShowExportDialog(true)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium shadow-sm"
-          >
-            <Download className="w-5 h-5" />
-            Xuất File
-          </button>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-          <div className="flex items-center gap-4 mb-4">
-            <label className="text-sm font-medium text-gray-700">Hiển thị:</label>
-            <select
-              value={limit}
-              onChange={(e) => setLimit(Number(e.target.value))}
-              className="px-3 py-2 border border-gray-300 rounded-lg"
-            >
-              <option value={10}>Top 10</option>
-              <option value={20}>Top 20</option>
-              <option value={50}>Top 50</option>
-              <option value={100}>Top 100</option>
-            </select>
-          </div>
-
-          <div className="space-y-3">
-            {leaderboard.map((entry) => (
-              <div
-                key={entry.user_id}
-                className={`flex items-center gap-4 p-4 rounded-lg ${
-                  entry.rank <= 3
-                    ? 'bg-gradient-to-r from-yellow-50 to-orange-50 border-2 border-yellow-200'
-                    : 'bg-gray-50'
-                }`}
+    <div className="page-shell">
+      <div className="mx-auto max-w-6xl space-y-6">
+        <section className="page-surface rounded-[1.75rem] px-5 py-6 sm:px-7">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+            <div className="max-w-3xl">
+              <div className="inline-flex rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-700">
+                Leaderboard
+              </div>
+              <h1
+                className="mt-3 text-3xl font-bold text-slate-900"
+                data-testid="admin-leaderboard-heading"
               >
-                <div
-                  className={`flex items-center justify-center w-12 h-12 rounded-full font-bold text-lg ${
-                    entry.rank === 1
-                      ? 'bg-yellow-400 text-white'
-                      : entry.rank === 2
-                        ? 'bg-gray-300 text-white'
-                        : entry.rank === 3
-                          ? 'bg-orange-400 text-white'
-                          : 'bg-blue-100 text-blue-700'
+                Bang xep hang tong hop
+              </h1>
+              <p className="mt-2 text-sm text-slate-600">
+                Theo doi nhom hoc vien dan dau theo tong diem tich luy va so hoat dong tham gia.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <select
+                value={limit}
+                onChange={(event) => setLimit(Number(event.target.value))}
+                className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700"
+              >
+                <option value={10}>Top 10</option>
+                <option value={20}>Top 20</option>
+                <option value={50}>Top 50</option>
+                <option value={100}>Top 100</option>
+              </select>
+
+              <button
+                type="button"
+                onClick={() => setShowExportDialog(true)}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700"
+              >
+                <Download className="h-4 w-4" />
+                Xuat file
+              </button>
+            </div>
+          </div>
+        </section>
+
+        {error ? (
+          <section className="page-surface rounded-[1.75rem] border-rose-200 bg-rose-50 px-5 py-5 sm:px-7">
+            <div className="text-sm font-semibold text-rose-700">Co loi khi tai leaderboard</div>
+            <p className="mt-2 text-sm text-rose-800">{error}</p>
+          </section>
+        ) : null}
+
+        <section className="grid gap-4 md:grid-cols-3">
+          <SummaryCard
+            label="Top 1 hien tai"
+            value={stats.topName}
+            meta={`${stats.topPoints} diem`}
+            tone="amber"
+          />
+          <SummaryCard
+            label="Tong hoc vien hien thi"
+            value={String(leaderboard.length)}
+            meta={`Dang xem top ${limit}`}
+            tone="blue"
+          />
+          <SummaryCard
+            label="Diem trung binh"
+            value={String(stats.avgPoints)}
+            meta="Tinh tren danh sach hien tai"
+            tone="emerald"
+          />
+        </section>
+
+        {leaderboard.length === 0 ? (
+          <section className="page-surface rounded-[1.75rem] border-dashed px-5 py-10 text-center sm:px-7">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-3xl bg-slate-100 text-slate-600">
+              <Users className="h-7 w-7" />
+            </div>
+            <h2 className="mt-4 text-xl font-semibold text-slate-900">Chua co du lieu xep hang</h2>
+            <p className="mt-2 text-sm text-slate-600">
+              Kiem tra score ledger hoac mo rong limit de xem them ket qua.
+            </p>
+          </section>
+        ) : (
+          <section className="space-y-4">
+            <div className="grid gap-4 xl:hidden">
+              {leaderboard.map((entry) => (
+                <article
+                  key={entry.user_id}
+                  className={`page-surface rounded-[1.75rem] border px-5 py-5 sm:px-7 ${
+                    entry.rank <= 3 ? 'border-amber-200 bg-amber-50' : ''
                   }`}
                 >
-                  {entry.rank === 1 ? (
-                    <Trophy className="w-6 h-6" />
-                  ) : entry.rank === 2 ? (
-                    <Medal className="w-6 h-6" />
-                  ) : entry.rank === 3 ? (
-                    <Award className="w-6 h-6" />
-                  ) : (
-                    entry.rank
-                  )}
-                </div>
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-center gap-4">
+                      <div
+                        className={`flex h-12 w-12 items-center justify-center rounded-full text-sm font-bold ${
+                          entry.rank === 1
+                            ? 'bg-amber-400 text-white'
+                            : entry.rank === 2
+                              ? 'bg-slate-300 text-white'
+                              : entry.rank === 3
+                                ? 'bg-orange-400 text-white'
+                                : 'bg-blue-100 text-blue-700'
+                        }`}
+                      >
+                        {entry.rank === 1 ? (
+                          <Trophy className="h-5 w-5" />
+                        ) : entry.rank === 2 ? (
+                          <Medal className="h-5 w-5" />
+                        ) : entry.rank === 3 ? (
+                          <Award className="h-5 w-5" />
+                        ) : (
+                          `#${entry.rank}`
+                        )}
+                      </div>
 
-                <div className="flex-1">
-                  <p className="font-semibold text-gray-900">{entry.name}</p>
-                  <p className="text-sm text-gray-600">
-                    {entry.class_name || 'N/A'} • {entry.activities_count} hoạt động
-                  </p>
-                </div>
+                      <div>
+                        <div className="text-sm font-semibold text-slate-900">{entry.name}</div>
+                        <div className="mt-1 text-sm text-slate-500">{entry.email}</div>
+                        <div className="mt-1 text-xs text-slate-500">
+                          {entry.class_name || 'Chua gan lop'} | {entry.activities_count} hoat dong
+                        </div>
+                      </div>
+                    </div>
 
-                <div className="text-right">
-                  <p className="text-2xl font-bold text-blue-600">{entry.total_points}</p>
-                  <p className="text-xs text-gray-500">điểm</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+                    <div className="text-right">
+                      <div className="text-2xl font-semibold text-blue-700">{entry.total_points}</div>
+                      <div className="text-xs text-slate-500">diem</div>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
 
-        {/* Export Dialog */}
-        {showExportDialog && (
+            <div className="page-surface hidden overflow-x-auto rounded-[1.75rem] border xl:block">
+              <table className="min-w-full divide-y divide-slate-200">
+                <thead className="bg-slate-50">
+                  <tr>
+                    <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Hang
+                    </th>
+                    <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Hoc vien
+                    </th>
+                    <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Lop
+                    </th>
+                    <th className="px-5 py-4 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Tong diem
+                    </th>
+                    <th className="px-5 py-4 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Hoat dong
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200 bg-white">
+                  {leaderboard.map((entry) => (
+                    <tr key={entry.user_id} className="hover:bg-slate-50">
+                      <td className="px-5 py-4 text-sm font-semibold text-slate-900">#{entry.rank}</td>
+                      <td className="px-5 py-4">
+                        <div className="text-sm font-semibold text-slate-900">{entry.name}</div>
+                        <div className="mt-1 text-sm text-slate-500">{entry.email}</div>
+                      </td>
+                      <td className="px-5 py-4 text-sm text-slate-600">
+                        {entry.class_name || 'Chua gan lop'}
+                      </td>
+                      <td className="px-5 py-4 text-right text-sm font-semibold text-blue-700">
+                        {entry.total_points}
+                      </td>
+                      <td className="px-5 py-4 text-right text-sm text-slate-600">
+                        {entry.activities_count}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )}
+
+        {showExportDialog ? (
           <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+            className="app-modal-backdrop p-4"
             onClick={() => setShowExportDialog(false)}
           >
             <div
-              className="bg-white rounded-lg shadow-2xl p-6 max-w-md w-full mx-4"
-              onClick={(e) => e.stopPropagation()}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="admin-leaderboard-export-title"
+              className="app-modal-panel app-modal-panel-scroll w-full max-w-lg p-6"
+              onClick={(event) => event.stopPropagation()}
             >
-              <div className="flex items-center gap-3 mb-4">
-                <Settings className="w-6 h-6 text-blue-600" />
-                <h3 className="text-xl font-bold">Xuất Bảng Xếp Hạng</h3>
+              <div className="flex items-center gap-3">
+                <Settings2 className="h-5 w-5 text-cyan-600" />
+                <h3 id="admin-leaderboard-export-title" className="text-xl font-semibold text-slate-900">
+                  Xuat leaderboard
+                </h3>
+              </div>
+              <p className="mt-2 text-sm text-slate-600">
+                Chon cac cot can xuat cho top {limit} hoc vien dang hien thi.
+              </p>
+
+              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                {[
+                  ['rank', 'Hang'],
+                  ['name', 'Ho ten'],
+                  ['email', 'Email'],
+                  ['class_name', 'Lop'],
+                  ['total_points', 'Tong diem'],
+                  ['activities_count', 'So hoat dong'],
+                ].map(([key, label]) => (
+                  <label
+                    key={key}
+                    className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={exportColumns[key as keyof ExportColumnState]}
+                      onChange={(event) =>
+                        setExportColumns((current) => ({
+                          ...current,
+                          [key]: event.target.checked,
+                        }))
+                      }
+                    />
+                    {label}
+                  </label>
+                ))}
               </div>
 
-              <div className="mb-4">
-                <p className="text-sm text-gray-600 mb-3">Chọn các cột muốn xuất:</p>
-                <div className="space-y-2">
-                  {[
-                    { key: 'rank', label: 'Hạng' },
-                    { key: 'name', label: 'Họ tên' },
-                    { key: 'email', label: 'Email' },
-                    { key: 'class_name', label: 'Lớp' },
-                    { key: 'total_points', label: 'Tổng điểm' },
-                    { key: 'activities_count', label: 'Số hoạt động' },
-                  ].map((col) => (
-                    <label
-                      key={col.key}
-                      className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={exportColumns[col.key as keyof typeof exportColumns]}
-                        onChange={(e) =>
-                          setExportColumns({ ...exportColumns, [col.key]: e.target.checked })
-                        }
-                        className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
-                      />
-                      <span className="text-sm text-gray-700">{col.label}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
-                <p className="text-sm text-blue-800">
-                  Sẽ xuất <strong>Top {limit}</strong> học viên với{' '}
-                  <strong>{Object.values(exportColumns).filter(Boolean).length}</strong> cột đã chọn
-                </p>
-              </div>
-
-              <div className="flex gap-3">
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
                 <button
+                  type="button"
                   onClick={() => setShowExportDialog(false)}
-                  className="flex-1 px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition font-medium"
+                  className="rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
                 >
-                  Hủy
+                  Huy
                 </button>
                 <button
-                  onClick={exportToCSV}
-                  className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
+                  type="button"
+                  onClick={() => exportData('csv')}
+                  className="rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
                 >
                   CSV
                 </button>
                 <button
-                  onClick={exportToExcel}
-                  className="flex-1 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium"
+                  type="button"
+                  onClick={() => exportData('xls')}
+                  className="rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700"
                 >
                   Excel
                 </button>
               </div>
             </div>
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   );

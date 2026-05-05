@@ -1,320 +1,482 @@
 'use client';
 
-import { useState } from 'react';
-import { Button } from '@/components/ui/Button';
+import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import {
+  ArrowLeft,
+  CalendarDays,
+  Clock3,
+  Loader2,
+  RefreshCw,
+  Users,
+  Zap,
+} from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import LoadingSpinner from '@/components/LoadingSpinner';
 import { toVietnamDatetimeLocalValue } from '@/lib/timezone';
 
-interface Activity {
+interface ActivityOption {
   id: number;
   title: string;
   max_participants: number;
   date_time: string;
 }
 
-interface CreatedSlot {
+interface TimeSlot {
   id: number;
+  activity_id?: number;
+  activity_title?: string;
+  slot_date?: string;
   slot_start: string;
   slot_end: string;
   max_concurrent: number;
+  current_registered?: number;
   status: string;
 }
 
-interface ActivitiesResponse {
-  activities?: Activity[];
-}
-
-interface CreateSlotsResponse {
-  error?: string;
-  message?: string;
-  slots?: CreatedSlot[];
-}
-
-type MessageState = {
+interface MessageState {
   type: 'success' | 'error';
   text: string;
-};
+}
 
 const DEFAULT_SLOT_SIZE = 500;
 
-const getErrorMessage = (error: unknown, fallback: string) =>
-  error instanceof Error ? error.message : fallback;
+function getActivitiesFromPayload(payload: unknown): ActivityOption[] {
+  if (!payload || typeof payload !== 'object') return [];
+  const record = payload as {
+    activities?: ActivityOption[];
+    data?: { activities?: ActivityOption[] };
+  };
+  return record.activities ?? record.data?.activities ?? [];
+}
 
-const toDateInputValue = (dateTime: string) => {
-  const datetimeValue = toVietnamDatetimeLocalValue(dateTime);
-  return datetimeValue ? datetimeValue.slice(0, 10) : '';
-};
+function getSlotsFromPayload(payload: unknown): TimeSlot[] {
+  if (!payload || typeof payload !== 'object') return [];
+  const record = payload as {
+    slots?: TimeSlot[];
+    data?: { slots?: TimeSlot[] };
+  };
+  return record.slots ?? record.data?.slots ?? [];
+}
 
-const getSlotStatusLabel = (status: string) => {
+function toDateInputValue(dateTime: string) {
+  const value = toVietnamDatetimeLocalValue(dateTime);
+  return value ? value.slice(0, 10) : '';
+}
+
+function getSlotStatusLabel(status: string) {
   switch (status) {
     case 'available':
-      return 'Sẵn sàng';
+      return 'San sang';
     case 'closed':
-      return 'Đã đóng';
+      return 'Da dong';
+    case 'full':
+      return 'Da day';
     default:
-      return status;
+      return status || 'Khong ro';
   }
-};
+}
 
-export default function AdminTimeSlots() {
-  const [activities, setActivities] = useState<Activity[]>([]);
-  const [selectedActivity, setSelectedActivity] = useState<number | null>(null);
+function formatTimeRange(slot: TimeSlot) {
+  return `${String(slot.slot_start || '').slice(0, 5)} - ${String(slot.slot_end || '').slice(0, 5)}`;
+}
+
+export default function AdminTimeSlotsPage() {
+  const { user, loading: authLoading } = useAuth();
+  const router = useRouter();
+
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [activities, setActivities] = useState<ActivityOption[]>([]);
+  const [selectedActivityId, setSelectedActivityId] = useState<number | null>(null);
   const [slotDate, setSlotDate] = useState('');
-  const [totalParticipants, setTotalParticipants] = useState(0);
+  const [totalParticipants, setTotalParticipants] = useState(DEFAULT_SLOT_SIZE);
   const [slotSize, setSlotSize] = useState(DEFAULT_SLOT_SIZE);
-  const [loading, setLoading] = useState(false);
+  const [slots, setSlots] = useState<TimeSlot[]>([]);
   const [message, setMessage] = useState<MessageState | null>(null);
-  const [createdSlots, setCreatedSlots] = useState<CreatedSlot[]>([]);
+
+  useEffect(() => {
+    if (!authLoading && (!user || user.role !== 'admin')) {
+      router.push('/login');
+      return;
+    }
+
+    if (user?.role === 'admin') {
+      void loadActivities();
+    }
+  }, [authLoading, router, user]);
+
+  const selectedActivity = useMemo(
+    () => activities.find((activity) => activity.id === selectedActivityId) ?? null,
+    [activities, selectedActivityId]
+  );
+
+  const estimatedSlots = useMemo(() => {
+    if (!totalParticipants || !slotSize) return 0;
+    return Math.max(1, Math.ceil(totalParticipants / slotSize));
+  }, [slotSize, totalParticipants]);
 
   const loadActivities = async () => {
     try {
-      const res = await fetch('/api/admin/activities?limit=100');
-      const data = (await res.json()) as ActivitiesResponse;
-
-      if (!res.ok) {
-        throw new Error('Không thể tải danh sách hoạt động');
+      setLoading(true);
+      const response = await fetch('/api/admin/activities?limit=100');
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(
+          (payload && typeof payload === 'object' && 'error' in payload && String(payload.error)) ||
+            'Khong the tai danh sach hoat dong'
+        );
       }
 
-      setActivities(Array.isArray(data.activities) ? data.activities : []);
+      setActivities(getActivitiesFromPayload(payload));
+      setMessage(null);
     } catch (error) {
-      console.error('Load activities error:', error);
-      setMessage({
-        type: 'error',
-        text: getErrorMessage(error, 'Không thể tải danh sách hoạt động'),
-      });
+      console.error('Load admin activities for time slots error:', error);
+      setMessage({ type: 'error', text: 'Khong the tai danh sach hoat dong' });
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleActivitySelect = (activityId: number) => {
-    setSelectedActivity(activityId);
+  const loadExistingSlots = async (activityId: number) => {
+    try {
+      const response = await fetch(`/api/admin/time-slots?activity_id=${activityId}`);
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(
+          (payload && typeof payload === 'object' && 'error' in payload && String(payload.error)) ||
+            'Khong the tai danh sach khung gio'
+        );
+      }
 
-    const activity = activities.find((item) => item.id === activityId);
-    if (!activity) {
+      setSlots(getSlotsFromPayload(payload));
+    } catch (error) {
+      console.error('Load existing time slots error:', error);
+      setSlots([]);
+      setMessage({ type: 'error', text: 'Khong the tai danh sach khung gio' });
+    }
+  };
+
+  const handleActivityChange = async (value: string) => {
+    const activityId = Number(value);
+    if (!Number.isFinite(activityId) || activityId <= 0) {
+      setSelectedActivityId(null);
       setSlotDate('');
+      setSlots([]);
       return;
     }
 
-    setTotalParticipants(activity.max_participants || DEFAULT_SLOT_SIZE);
-    setSlotDate(toDateInputValue(activity.date_time));
+    setSelectedActivityId(activityId);
+    const activity = activities.find((item) => item.id === activityId);
+    if (activity) {
+      setTotalParticipants(activity.max_participants || DEFAULT_SLOT_SIZE);
+      setSlotDate(toDateInputValue(activity.date_time));
+    }
+
+    setMessage(null);
+    await loadExistingSlots(activityId);
   };
 
   const handleCreateSlots = async () => {
-    if (!selectedActivity || !slotDate) {
-      setMessage({ type: 'error', text: 'Vui lòng chọn hoạt động và ngày.' });
+    if (!selectedActivityId || !slotDate) {
+      setMessage({ type: 'error', text: 'Hay chon hoat dong va ngay to chuc truoc.' });
       return;
     }
 
-    setLoading(true);
-    setMessage(null);
-
     try {
-      const res = await fetch('/api/admin/time-slots/create', {
+      setSubmitting(true);
+      setMessage(null);
+
+      const response = await fetch('/api/admin/time-slots/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          activityId: selectedActivity,
+          activityId: selectedActivityId,
           slotDate,
           totalParticipants,
           slotSize,
         }),
       });
 
-      const data = (await res.json()) as CreateSlotsResponse;
-
-      if (!res.ok) {
-        throw new Error(data.error || 'Tạo khung giờ thất bại');
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(
+          (payload && typeof payload === 'object' && 'error' in payload && String(payload.error)) ||
+            'Tao khung gio that bai'
+        );
       }
 
+      const createdSlots = getSlotsFromPayload(payload);
+      setSlots(createdSlots);
       setMessage({
         type: 'success',
-        text: data.message || 'Tạo khung giờ thành công.',
+        text:
+          (payload && typeof payload === 'object' && 'message' in payload && String(payload.message)) ||
+          'Da tao khung gio thanh cong',
       });
-      setCreatedSlots(Array.isArray(data.slots) ? data.slots : []);
     } catch (error) {
+      console.error('Create admin time slots error:', error);
       setMessage({
         type: 'error',
-        text: getErrorMessage(error, 'Lỗi tạo khung giờ'),
+        text: error instanceof Error ? error.message : 'Tao khung gio that bai',
       });
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
-  const calculateSlots = () => {
-    if (!totalParticipants || !slotSize) {
-      return 0;
-    }
-
-    return Math.ceil(totalParticipants / slotSize);
-  };
-
-  const calculateReductionPercent = () => {
-    if (!totalParticipants || !slotSize) {
-      return 0;
-    }
-
-    return Math.max(0, Math.round((1 - slotSize / totalParticipants) * 100));
-  };
+  if (authLoading || loading) {
+    return <LoadingSpinner message="Dang tai cong cu khung gio..." />;
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <div className="mx-auto max-w-4xl">
-        <div className="rounded-lg bg-white p-6 shadow-md">
-          <h1 className="mb-6 text-2xl font-bold text-gray-800">Quản lý khung giờ hoạt động</h1>
-
-          <div className="mb-6">
-            <Button onClick={loadActivities}>Tải danh sách hoạt động</Button>
-          </div>
-
-          {activities.length > 0 && (
-            <div className="mb-6">
-              <label className="mb-2 block text-sm font-medium text-gray-700">Chọn hoạt động</label>
-              <select
-                value={selectedActivity || ''}
-                onChange={(e) => handleActivitySelect(Number(e.target.value))}
-                className="w-full rounded-md border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-blue-500"
+    <div className="page-shell">
+      <div className="mx-auto max-w-6xl space-y-6">
+        <section className="page-surface rounded-[1.75rem] px-5 py-6 sm:px-7">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+            <div className="flex items-start gap-4">
+              <Link
+                href="/admin/dashboard"
+                className="rounded-xl border border-slate-300 p-2 text-slate-600 transition hover:bg-slate-50"
               >
-                <option value="">-- Chọn hoạt động --</option>
-                {activities.map((activity) => (
-                  <option key={activity.id} value={activity.id}>
-                    {activity.title} (Tối đa: {activity.max_participants} người)
-                  </option>
-                ))}
-              </select>
+                <ArrowLeft className="h-5 w-5" />
+              </Link>
+              <div className="max-w-3xl">
+                <div className="inline-flex rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-700">
+                  Time slots
+                </div>
+                <h1
+                  className="mt-3 text-3xl font-bold text-slate-900"
+                  data-testid="admin-time-slots-heading"
+                >
+                  Dieu phoi khung gio hoat dong
+                </h1>
+                <p className="mt-2 text-sm text-slate-600">
+                  Tach luot diem danh thanh cac khung gio de giam tai dong thoi va chuan bi cho
+                  ngay to chuc dong nguoi.
+                </p>
+              </div>
             </div>
-          )}
 
-          {selectedActivity && (
-            <div className="mb-6 space-y-4">
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <button
+                type="button"
+                onClick={() => void loadActivities()}
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Tai lai hoat dong
+              </button>
+              <button
+                type="button"
+                disabled={!selectedActivityId}
+                onClick={() => selectedActivityId && void loadExistingSlots(selectedActivityId)}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
+              >
+                <Clock3 className="h-4 w-4" />
+                Tai lai khung gio
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <article className="rounded-[1.5rem] bg-blue-50 px-4 py-4 text-blue-700">
+            <div className="flex items-start justify-between gap-3">
               <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700">Ngày tổ chức</label>
+                <div className="text-xs font-semibold uppercase tracking-wide">Hoat dong da tai</div>
+                <div className="mt-3 text-2xl font-semibold text-slate-900">{activities.length}</div>
+              </div>
+              <CalendarDays className="h-8 w-8" />
+            </div>
+          </article>
+          <article className="rounded-[1.5rem] bg-emerald-50 px-4 py-4 text-emerald-700">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-wide">So khung du kien</div>
+                <div className="mt-3 text-2xl font-semibold text-slate-900">{estimatedSlots}</div>
+              </div>
+              <Clock3 className="h-8 w-8" />
+            </div>
+          </article>
+          <article className="rounded-[1.5rem] bg-violet-50 px-4 py-4 text-violet-700">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-wide">Suc chua moi khung</div>
+                <div className="mt-3 text-2xl font-semibold text-slate-900">{slotSize}</div>
+              </div>
+              <Users className="h-8 w-8" />
+            </div>
+          </article>
+          <article className="rounded-[1.5rem] bg-amber-50 px-4 py-4 text-amber-700">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-wide">Tong nguoi du kien</div>
+                <div className="mt-3 text-2xl font-semibold text-slate-900">{totalParticipants}</div>
+              </div>
+              <Zap className="h-8 w-8" />
+            </div>
+          </article>
+        </section>
+
+        <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+          <article className="page-surface rounded-[1.75rem] px-5 py-5 sm:px-7">
+            <div className="grid gap-4 md:grid-cols-2">
+              <label className="space-y-2 text-sm font-medium text-slate-700 md:col-span-2">
+                <span>Hoat dong</span>
+                <select
+                  value={selectedActivityId ?? ''}
+                  onChange={(event) => void handleActivityChange(event.target.value)}
+                  className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                >
+                  <option value="">Chon hoat dong can chia khung gio</option>
+                  {activities.map((activity) => (
+                    <option key={activity.id} value={activity.id}>
+                      {activity.title} ({activity.max_participants || DEFAULT_SLOT_SIZE} nguoi)
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="space-y-2 text-sm font-medium text-slate-700">
+                <span>Ngay to chuc</span>
                 <input
                   type="date"
                   value={slotDate}
-                  onChange={(e) => setSlotDate(e.target.value)}
-                  className="w-full rounded-md border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-blue-500"
+                  onChange={(event) => setSlotDate(event.target.value)}
+                  className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
                 />
-              </div>
+              </label>
 
-              <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700">
-                  Tổng số người tham gia
-                </label>
+              <label className="space-y-2 text-sm font-medium text-slate-700">
+                <span>Tong nguoi du kien</span>
                 <input
                   type="number"
-                  value={totalParticipants}
-                  onChange={(e) => setTotalParticipants(Number(e.target.value))}
                   min="1"
-                  className="w-full rounded-md border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-blue-500"
+                  value={totalParticipants}
+                  onChange={(event) => setTotalParticipants(Number(event.target.value) || 0)}
+                  className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
                 />
-              </div>
+              </label>
 
-              <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700">
-                  Kích thước mỗi khung giờ
-                </label>
+              <label className="space-y-2 text-sm font-medium text-slate-700">
+                <span>Suc chua moi khung</span>
                 <input
                   type="number"
-                  value={slotSize}
-                  onChange={(e) => setSlotSize(Number(e.target.value))}
                   min="1"
                   max="1000"
-                  className="w-full rounded-md border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-blue-500"
+                  value={slotSize}
+                  onChange={(event) => setSlotSize(Number(event.target.value) || DEFAULT_SLOT_SIZE)}
+                  className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
                 />
-                <p className="mt-1 text-xs text-gray-500">
-                  Khuyến nghị: {DEFAULT_SLOT_SIZE} người/khung để tối ưu chi phí hạ tầng.
-                </p>
-              </div>
+              </label>
 
-              <div className="rounded-md border border-blue-200 bg-blue-50 p-4">
-                <h4 className="mb-2 font-semibold text-blue-900">Dự kiến</h4>
-                <ul className="space-y-1 text-sm text-blue-800">
+              <div className="rounded-[1.5rem] bg-slate-50 px-4 py-4 text-sm text-slate-700">
+                <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Goi y van hanh
+                </div>
+                <ul className="mt-3 space-y-2">
+                  <li>{estimatedSlots} khung gio se duoc tao theo moc 1 gio bat dau tu 08:00.</li>
                   <li>
-                    Số khung giờ: <strong>{calculateSlots()} khung</strong>
+                    Gia tri mac dinh {DEFAULT_SLOT_SIZE} nguoi/khung phu hop voi su kien dong nguoi.
                   </li>
-                  <li>
-                    Tổng thời gian: {calculateSlots()} giờ (8:00 - {8 + calculateSlots()}:00)
-                  </li>
-                  <li>
-                    Tải đồng thời tối đa: {slotSize} người (giảm {calculateReductionPercent()}%)
-                  </li>
+                  <li>Luon tai lai danh sach khung gio sau khi thay doi so luong nguoi du kien.</li>
                 </ul>
               </div>
+            </div>
 
-              <Button
-                onClick={handleCreateSlots}
-                disabled={loading}
-                isLoading={loading}
-                loadingText="Đang tạo..."
-                variant="success"
-                size="lg"
-                className="w-full"
+            {message && (
+              <div
+                className={`mt-4 rounded-2xl border px-4 py-4 text-sm ${
+                  message.type === 'success'
+                    ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                    : 'border-rose-200 bg-rose-50 text-rose-800'
+                }`}
               >
-                Tạo khung giờ
-              </Button>
-            </div>
-          )}
-
-          {message && (
-            <div
-              className={`mb-4 rounded-md border p-4 ${
-                message.type === 'success'
-                  ? 'border-green-200 bg-green-50 text-green-800'
-                  : 'border-red-200 bg-red-50 text-red-800'
-              }`}
-            >
-              {message.text}
-            </div>
-          )}
-
-          {createdSlots.length > 0 && (
-            <div className="mt-6">
-              <h3 className="mb-3 font-semibold text-gray-800">
-                Đã tạo {createdSlots.length} khung giờ
-              </h3>
-              <div className="space-y-2">
-                {createdSlots.map((slot, index) => (
-                  <div
-                    key={slot.id}
-                    className="flex items-center justify-between rounded-md border border-gray-200 bg-gray-50 p-3"
-                  >
-                    <div>
-                      <span className="font-medium text-gray-800">
-                        Khung {index + 1}: {slot.slot_start} - {slot.slot_end}
-                      </span>
-                      <span className="ml-3 text-sm text-gray-600">
-                        (Tối đa: {slot.max_concurrent} người)
-                      </span>
-                    </div>
-                    <span
-                      className={`rounded-full px-2 py-1 text-xs font-medium ${
-                        slot.status === 'available'
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-gray-100 text-gray-800'
-                      }`}
-                    >
-                      {getSlotStatusLabel(slot.status)}
-                    </span>
-                  </div>
-                ))}
+                {message.text}
               </div>
-            </div>
-          )}
+            )}
 
-          <div className="mt-6 rounded-md border border-purple-200 bg-purple-50 p-4">
-            <h4 className="mb-2 font-semibold text-purple-900">Hướng dẫn sử dụng</h4>
-            <ol className="ml-4 list-decimal space-y-1 text-sm text-purple-800">
-              <li>Tải danh sách hoạt động từ hệ thống.</li>
-              <li>Chọn hoạt động cần tạo khung giờ.</li>
-              <li>Cấu hình ngày, tổng số người và kích thước mỗi khung.</li>
-              <li>Xem trước số khung giờ sẽ được tạo.</li>
-              <li>Nhấn &quot;Tạo khung giờ&quot; để áp dụng.</li>
-            </ol>
-            <p className="mt-3 text-xs text-purple-700">
-              <strong>Lưu ý:</strong> Kích thước khung {DEFAULT_SLOT_SIZE} người thường phù hợp để
-              giảm tải đồng thời trên hạ tầng.
+            <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+              <button
+                type="button"
+                disabled={submitting || !selectedActivityId}
+                onClick={() => void handleCreateSlots()}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50"
+              >
+                {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
+                Tao khung gio
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedActivityId(null);
+                  setSlotDate('');
+                  setTotalParticipants(DEFAULT_SLOT_SIZE);
+                  setSlotSize(DEFAULT_SLOT_SIZE);
+                  setSlots([]);
+                  setMessage(null);
+                }}
+                className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              >
+                Dat lai form
+              </button>
+            </div>
+          </article>
+
+          <article className="page-surface rounded-[1.75rem] px-5 py-5 sm:px-7">
+            <h2 className="text-lg font-semibold text-slate-900">Khung gio hien co</h2>
+            <p className="mt-1 text-sm text-slate-600">
+              {selectedActivity
+                ? `Dang xem cac khung gio cua ${selectedActivity.title}.`
+                : 'Chon mot hoat dong de xem danh sach khung gio da tao.'}
             </p>
-          </div>
-        </div>
+
+            <div className="mt-4 space-y-3">
+              {slots.length === 0 ? (
+                <div className="rounded-2xl bg-slate-50 px-4 py-6 text-sm text-slate-500">
+                  Chua co khung gio nao cho hoat dong dang chon.
+                </div>
+              ) : (
+                slots.map((slot, index) => (
+                  <div key={slot.id} className="rounded-2xl border border-slate-200 px-4 py-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                          Khung {index + 1}
+                        </div>
+                        <div className="mt-2 text-lg font-semibold text-slate-900">
+                          {formatTimeRange(slot)}
+                        </div>
+                        <div className="mt-1 text-sm text-slate-500">
+                          {slot.slot_date || slotDate || 'Chua co ngay'}
+                        </div>
+                        <div className="mt-2 text-sm text-slate-700">
+                          Toi da {slot.max_concurrent} nguoi
+                          {typeof slot.current_registered === 'number'
+                            ? ` • Da dang ky ${slot.current_registered}`
+                            : ''}
+                        </div>
+                      </div>
+                      <div
+                        className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                          slot.status === 'available'
+                            ? 'bg-emerald-100 text-emerald-700'
+                            : slot.status === 'full'
+                              ? 'bg-amber-100 text-amber-700'
+                              : 'bg-slate-100 text-slate-700'
+                        }`}
+                      >
+                        {getSlotStatusLabel(slot.status)}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </article>
+        </section>
       </div>
     </div>
   );

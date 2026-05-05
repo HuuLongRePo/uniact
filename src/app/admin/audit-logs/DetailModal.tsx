@@ -1,7 +1,6 @@
 'use client';
 
 import { AuditLog } from './types';
-import { Button } from '@/components/ui/Button';
 import { formatVietnamDateTime } from '@/lib/timezone';
 
 interface DetailModalProps {
@@ -9,76 +8,68 @@ interface DetailModalProps {
   onClose: () => void;
 }
 
-function getActionBadgeClass(action: string) {
-  if (action.includes('CREATE')) return 'bg-green-100 text-green-800';
-  if (action.includes('UPDATE') || action.includes('CHANGE')) return 'bg-blue-100 text-blue-800';
-  if (action.includes('DELETE')) return 'bg-red-100 text-red-800';
-  if (action.includes('APPROVE')) return 'bg-purple-100 text-purple-800';
-  return 'bg-gray-100 text-gray-800';
-}
-
-function getRoleBadgeClass(role: string) {
-  if (role === 'admin') return 'bg-purple-100 text-purple-800';
-  if (role === 'teacher') return 'bg-blue-100 text-blue-800';
-  return 'bg-green-100 text-green-800';
-}
-
 export default function DetailModal({ log, onClose }: DetailModalProps) {
   if (!log) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
-        <h3 className="text-lg font-bold mb-4">Chi tiết Audit Log #{log.id}</h3>
+    <div
+      className="app-modal-backdrop p-4"
+      onClick={onClose}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="admin-audit-log-detail-title"
+        className="app-modal-panel app-modal-panel-scroll w-full max-w-3xl p-6 sm:p-7"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="text-xs font-semibold uppercase tracking-wide text-cyan-700">
+              Audit detail
+            </div>
+            <h3 id="admin-audit-log-detail-title" className="mt-2 text-2xl font-bold text-slate-900">
+              Log #{log.id}
+            </h3>
+            <p className="mt-2 text-sm text-slate-500">{formatVietnamDateTime(log.created_at)}</p>
+          </div>
 
-        <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <div className="text-sm font-medium text-gray-500">Time</div>
-              <div className="text-sm">{formatVietnamDateTime(log.created_at)}</div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+          >
+            Dong
+          </button>
+        </div>
+
+        <div className="mt-6 grid gap-4 md:grid-cols-2">
+          <div className="rounded-[1.5rem] bg-slate-50 px-4 py-4">
+            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Actor</div>
+            <div className="mt-2 text-sm font-semibold text-slate-900">
+              {log.actor_name || `User #${log.actor_id || '-'}`}
             </div>
-            <div>
-              <div className="text-sm font-medium text-gray-500">Actor</div>
-              <div className="text-sm">
-                {log.actor_name} ({log.actor_email})
-                <span
-                  className={`ml-2 inline-block px-2 py-1 text-xs rounded ${getRoleBadgeClass(log.actor_role)}`}
-                >
-                  {log.actor_role}
-                </span>
-              </div>
-            </div>
-            <div>
-              <div className="text-sm font-medium text-gray-500">Action</div>
-              <div>
-                <span
-                  className={`inline-block px-2 py-1 text-xs rounded font-medium ${getActionBadgeClass(log.action)}`}
-                >
-                  {log.action}
-                </span>
-              </div>
-            </div>
-            <div>
-              <div className="text-sm font-medium text-gray-500">Target</div>
-              <div className="text-sm">
-                {log.target_table}
-                {log.target_id && <span className="ml-2 text-gray-500">ID: {log.target_id}</span>}
-              </div>
+            <div className="mt-1 text-sm text-slate-500">{log.actor_email || 'Khong co email'}</div>
+            <div className="mt-1 text-xs uppercase tracking-wide text-slate-400">
+              {log.actor_role || 'unknown'}
             </div>
           </div>
 
-          <div>
-            <div className="text-sm font-medium text-gray-500 mb-2">Details</div>
-            <div className="bg-gray-50 p-4 rounded border text-sm font-mono whitespace-pre-wrap break-words">
-              {log.details || 'No details'}
+          <div className="rounded-[1.5rem] bg-slate-50 px-4 py-4">
+            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Action</div>
+            <div className="mt-2 text-sm font-semibold text-slate-900">{log.action}</div>
+            <div className="mt-1 text-sm text-slate-500">
+              {log.target_table || '-'}
+              {log.target_id ? ` #${log.target_id}` : ''}
             </div>
           </div>
         </div>
 
-        <div className="mt-6 flex justify-end">
-          <Button onClick={onClose} variant="secondary">
-            Đóng
-          </Button>
+        <div className="mt-6 rounded-[1.5rem] border border-slate-200 bg-slate-50 px-4 py-4">
+          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Chi tiet</div>
+          <pre className="mt-3 overflow-x-auto whitespace-pre-wrap break-words text-sm text-slate-800">
+            {log.details || 'Khong co noi dung chi tiet.'}
+          </pre>
         </div>
       </div>
     </div>

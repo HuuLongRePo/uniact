@@ -113,6 +113,7 @@ export default function NotificationSettingsPage() {
         toast.error(payload?.error || payload?.message || 'Không thể lưu cài đặt');
         return;
       }
+
       toast.success(payload?.message || 'Đã lưu cài đặt');
     } catch (error: unknown) {
       console.error('Error saving settings:', error);
@@ -359,7 +360,7 @@ export default function NotificationSettingsPage() {
               </button>
             </div>
 
-            {showTemplateForm && (
+            {showTemplateForm ? (
               <div className="mb-6 border-b border-gray-200 pb-6">
                 <div className="space-y-4">
                   <div>
@@ -394,7 +395,7 @@ export default function NotificationSettingsPage() {
 
                   <div>
                     <label className="mb-2 block text-sm font-medium text-gray-700">
-                      Tiêu đề (tùy chọn)
+                      Tiêu đề email
                     </label>
                     <input
                       type="text"
@@ -438,7 +439,7 @@ export default function NotificationSettingsPage() {
                   </div>
                 </div>
               </div>
-            )}
+            ) : null}
 
             <div className="space-y-3">
               {templates.length === 0 ? (
@@ -450,8 +451,7 @@ export default function NotificationSettingsPage() {
                       <div>
                         <div className="font-medium text-gray-900">{template.name}</div>
                         <div className="text-xs text-gray-500">
-                          {template.category} •{' '}
-                          {formatVietnamDateTime(template.created_at, 'date')}
+                          {template.category} | {formatVietnamDateTime(template.created_at, 'date')}
                         </div>
                       </div>
                       <div className="flex gap-2">
@@ -473,11 +473,13 @@ export default function NotificationSettingsPage() {
                         </button>
                       </div>
                     </div>
-                    {template.subject && (
+
+                    {template.subject ? (
                       <div className="mb-1 text-sm font-medium text-gray-700">
                         Tiêu đề: {template.subject}
                       </div>
-                    )}
+                    ) : null}
+
                     <div className="line-clamp-3 rounded bg-gray-50 p-2 text-sm text-gray-600">
                       {template.body}
                     </div>

@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import LoadingSpinner from '@/components/LoadingSpinner';
@@ -55,7 +56,7 @@ function getTeachersFromResponse(payload: unknown): TeacherReport[] {
 
       return {
         id: toNumber(record.id),
-        name: typeof record.name === 'string' ? record.name : 'Chưa cập nhật',
+        name: typeof record.name === 'string' ? record.name : 'Chua cap nhat',
         email: typeof record.email === 'string' ? record.email : '',
         totalActivitiesCreated: toNumber(record.totalActivitiesCreated),
         averageAttendance: toNumber(record.averageAttendance),
@@ -113,14 +114,16 @@ export default function TeacherReportPage() {
       const payload = await response.json();
 
       if (!response.ok) {
-        throw new Error(getErrorMessage(payload, 'Không thể tải báo cáo giảng viên.'));
+        throw new Error(getErrorMessage(payload, 'Khong the tai bao cao giang vien.'));
       }
 
       setTeachers(getTeachersFromResponse(payload));
     } catch (error) {
       console.error('Teacher report fetch error:', error);
       setTeachers([]);
-      setErrorMessage(error instanceof Error ? error.message : 'Không thể tải báo cáo giảng viên.');
+      setErrorMessage(
+        error instanceof Error ? error.message : 'Khong the tai bao cao giang vien.'
+      );
     } finally {
       setLoading(false);
     }
@@ -146,10 +149,7 @@ export default function TeacherReportPage() {
     return sortDirection === 'desc' ? difference * -1 : difference;
   });
 
-  const totalActivities = teachers.reduce(
-    (total, teacher) => total + teacher.totalActivitiesCreated,
-    0
-  );
+  const totalActivities = teachers.reduce((total, teacher) => total + teacher.totalActivitiesCreated, 0);
   const averageAttendance =
     teachers.length > 0
       ? teachers.reduce((total, teacher) => total + teacher.averageAttendance, 0) / teachers.length
@@ -165,169 +165,251 @@ export default function TeacherReportPage() {
   );
 
   if (authLoading || loading) {
-    return <LoadingSpinner />;
+    return <LoadingSpinner message="Dang tai bao cao giang vien..." />;
+  }
+
+  if (!user || user.role !== 'admin') {
+    return null;
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="mx-auto max-w-7xl">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Báo cáo giảng viên</h1>
-          <p className="mt-2 text-sm text-gray-600">
-            Tổng hợp hiệu quả tổ chức hoạt động, tỷ lệ tham gia và điểm trung bình theo từng giảng
-            viên.
-          </p>
+    <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
+      <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-3xl">
+            <p className="text-sm font-medium uppercase tracking-[0.2em] text-cyan-700">
+              Teacher analytics
+            </p>
+            <h1 className="mt-3 text-3xl font-semibold text-slate-950">Bao cao giang vien</h1>
+            <p className="mt-3 text-sm leading-6 text-slate-600 sm:text-base">
+              Tong hop khoi luong to chuc hoat dong, muc tham gia va mat bang diem da trao theo
+              tung giang vien.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => void fetchReport()}
+              className="rounded-2xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            >
+              Tai lai
+            </button>
+            <Link
+              href="/admin/reports"
+              className="rounded-2xl bg-cyan-700 px-4 py-2 text-sm font-medium text-white hover:bg-cyan-800"
+            >
+              Ve trung tam bao cao
+            </Link>
+          </div>
         </div>
 
-        {errorMessage && (
-          <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        {errorMessage ? (
+          <div className="mt-6 rounded-3xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
             {errorMessage}
           </div>
-        )}
+        ) : null}
 
-        <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-lg bg-white p-6 shadow">
-            <p className="text-sm text-gray-600">Tổng giảng viên</p>
-            <p className="mt-2 text-3xl font-bold text-gray-900">{teachers.length}</p>
-          </div>
-          <div className="rounded-lg bg-white p-6 shadow">
-            <p className="text-sm text-gray-600">Tổng hoạt động đã tạo</p>
-            <p className="mt-2 text-3xl font-bold text-blue-600">{totalActivities}</p>
-          </div>
-          <div className="rounded-lg bg-white p-6 shadow">
-            <p className="text-sm text-gray-600">Tỷ lệ tham gia trung bình</p>
-            <p className="mt-2 text-3xl font-bold text-green-600">
+        <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <article className="rounded-3xl border border-slate-200 bg-slate-50 p-5 shadow-sm">
+            <div className="text-sm font-medium text-slate-600">Tong giang vien</div>
+            <div className="mt-3 text-3xl font-semibold text-slate-950">{teachers.length}</div>
+          </article>
+          <article className="rounded-3xl border border-cyan-200 bg-cyan-50 p-5 shadow-sm">
+            <div className="text-sm font-medium text-cyan-800">Tong hoat dong da tao</div>
+            <div className="mt-3 text-3xl font-semibold text-cyan-950">{totalActivities}</div>
+          </article>
+          <article className="rounded-3xl border border-emerald-200 bg-emerald-50 p-5 shadow-sm">
+            <div className="text-sm font-medium text-emerald-800">Ti le tham gia trung binh</div>
+            <div className="mt-3 text-3xl font-semibold text-emerald-950">
               {formatDecimal(averageAttendance)}%
+            </div>
+          </article>
+          <article className="rounded-3xl border border-violet-200 bg-violet-50 p-5 shadow-sm">
+            <div className="text-sm font-medium text-violet-800">Diem trung binh da trao</div>
+            <div className="mt-3 text-3xl font-semibold text-violet-950">
+              {formatDecimal(averagePointsAwarded)}
+            </div>
+            <div className="mt-2 text-sm text-violet-800">
+              {totalStudentsParticipated.toLocaleString('vi-VN')} luot tham gia
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <h2 className="text-xl font-semibold text-slate-950">Chi tiet theo giang vien</h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Doi thu tu sap xep de nhin ra nhom dang ganh nhieu khoi luong hoac can duoc ho tro.
             </p>
           </div>
-          <div className="rounded-lg bg-white p-6 shadow">
-            <p className="text-sm text-gray-600">Điểm trung bình đã trao</p>
-            <p className="mt-2 text-3xl font-bold text-purple-600">
-              {formatDecimal(averagePointsAwarded)}
-            </p>
-            <p className="mt-1 text-xs text-gray-500">
-              {totalStudentsParticipated.toLocaleString('vi-VN')} lượt sinh viên tham gia
-            </p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => handleSortChange('totalActivitiesCreated')}
+              className={`rounded-full px-3 py-2 text-sm font-medium ${
+                sortField === 'totalActivitiesCreated'
+                  ? 'bg-cyan-700 text-white'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              Hoat dong da tao
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSortChange('averageAttendance')}
+              className={`rounded-full px-3 py-2 text-sm font-medium ${
+                sortField === 'averageAttendance'
+                  ? 'bg-cyan-700 text-white'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              Ti le tham gia
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSortChange('averagePointsAwarded')}
+              className={`rounded-full px-3 py-2 text-sm font-medium ${
+                sortField === 'averagePointsAwarded'
+                  ? 'bg-cyan-700 text-white'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              Diem trung binh
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSortChange('totalStudentsParticipated')}
+              className={`rounded-full px-3 py-2 text-sm font-medium ${
+                sortField === 'totalStudentsParticipated'
+                  ? 'bg-cyan-700 text-white'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              Hoc vien tham gia
+            </button>
           </div>
         </div>
 
-        <div className="rounded-lg bg-white p-6 shadow">
-          <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900">Chi tiết theo giảng viên</h2>
-              <p className="mt-1 text-sm text-gray-600">
-                Bấm vào tiêu chí để đổi cách sắp xếp và xác định nhóm giảng viên nổi bật.
-              </p>
+        <div className="mt-6 grid gap-4 lg:hidden">
+          {sortedTeachers.length === 0 ? (
+            <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50 px-4 py-10 text-center text-sm text-slate-500">
+              Chua co du lieu giang vien de hien thi.
             </div>
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => handleSortChange('totalActivitiesCreated')}
-                className={`rounded-full px-3 py-2 text-sm font-medium ${
-                  sortField === 'totalActivitiesCreated'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
+          ) : (
+            sortedTeachers.map((teacher, index) => (
+              <article
+                key={teacher.id}
+                className="rounded-3xl border border-slate-200 bg-slate-50 p-4 shadow-sm"
               >
-                Hoạt động đã tạo
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSortChange('averageAttendance')}
-                className={`rounded-full px-3 py-2 text-sm font-medium ${
-                  sortField === 'averageAttendance'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                Tỷ lệ tham gia
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSortChange('averagePointsAwarded')}
-                className={`rounded-full px-3 py-2 text-sm font-medium ${
-                  sortField === 'averagePointsAwarded'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                Điểm trung bình
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSortChange('totalStudentsParticipated')}
-                className={`rounded-full px-3 py-2 text-sm font-medium ${
-                  sortField === 'totalStudentsParticipated'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                Sinh viên tham gia
-              </button>
-            </div>
-          </div>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium text-slate-500">Hang #{index + 1}</div>
+                    <div className="mt-1 truncate text-base font-semibold text-slate-950">
+                      {teacher.name}
+                    </div>
+                    <div className="mt-1 truncate text-sm text-slate-500">
+                      {teacher.email || 'Chua cap nhat'}
+                    </div>
+                  </div>
+                  <div className="rounded-2xl bg-white px-3 py-2 text-right shadow-sm">
+                    <div className="text-xs font-medium uppercase tracking-wide text-cyan-700">
+                      Hoat dong
+                    </div>
+                    <div className="mt-1 text-lg font-semibold text-slate-950">
+                      {teacher.totalActivitiesCreated}
+                    </div>
+                  </div>
+                </div>
 
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+                <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                  <div className="rounded-2xl bg-white px-3 py-3 shadow-sm">
+                    Ti le tham gia
+                    <div className="mt-1 font-semibold text-emerald-700">
+                      {formatDecimal(teacher.averageAttendance)}%
+                    </div>
+                  </div>
+                  <div className="rounded-2xl bg-white px-3 py-3 shadow-sm">
+                    Diem trung binh
+                    <div className="mt-1 font-semibold text-violet-700">
+                      {formatDecimal(teacher.averagePointsAwarded)}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-3 rounded-2xl bg-white px-3 py-3 text-sm text-slate-700 shadow-sm">
+                  Hoc vien tham gia:{' '}
+                  <span className="font-semibold text-slate-950">
+                    {teacher.totalStudentsParticipated.toLocaleString('vi-VN')}
+                  </span>
+                </div>
+              </article>
+            ))
+          )}
+        </div>
+
+        <div className="mt-6 hidden overflow-x-auto lg:block">
+          <table className="min-w-full divide-y divide-slate-200">
+            <thead className="bg-slate-50">
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
+                  STT
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
+                  Giang vien
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
+                  Hoat dong da tao
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
+                  Ti le tham gia TB
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
+                  Diem TB da trao
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
+                  Hoc vien da tham gia
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-200 bg-white">
+              {sortedTeachers.length === 0 ? (
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                    STT
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                    Giảng viên
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                    Hoạt động đã tạo
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                    Tỷ lệ tham gia TB
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                    Điểm TB đã trao
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                    Sinh viên đã tham gia
-                  </th>
+                  <td colSpan={6} className="px-4 py-8 text-center text-sm text-slate-500">
+                    Chua co du lieu giang vien de hien thi.
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200 bg-white">
-                {sortedTeachers.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center text-sm text-gray-500">
-                      Chưa có dữ liệu giảng viên để hiển thị.
+              ) : (
+                sortedTeachers.map((teacher, index) => (
+                  <tr key={teacher.id} className="hover:bg-slate-50">
+                    <td className="px-4 py-3 text-sm font-medium text-slate-700">{index + 1}</td>
+                    <td className="px-4 py-3">
+                      <div className="font-medium text-slate-900">{teacher.name}</div>
+                      <div className="text-sm text-slate-500">
+                        {teacher.email || 'Chua cap nhat'}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-sm font-medium text-cyan-700">
+                      {teacher.totalActivitiesCreated}
+                    </td>
+                    <td className="px-4 py-3 text-sm font-medium text-emerald-700">
+                      {formatDecimal(teacher.averageAttendance)}%
+                    </td>
+                    <td className="px-4 py-3 text-sm font-medium text-violet-700">
+                      {formatDecimal(teacher.averagePointsAwarded)}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-slate-700">
+                      {teacher.totalStudentsParticipated.toLocaleString('vi-VN')}
                     </td>
                   </tr>
-                ) : (
-                  sortedTeachers.map((teacher, index) => (
-                    <tr key={teacher.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 text-sm font-medium text-gray-700">{index + 1}</td>
-                      <td className="px-4 py-3">
-                        <div className="font-medium text-gray-900">{teacher.name}</div>
-                        <div className="text-sm text-gray-500">
-                          {teacher.email || 'Chưa cập nhật'}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-sm font-medium text-blue-600">
-                        {teacher.totalActivitiesCreated}
-                      </td>
-                      <td className="px-4 py-3 text-sm font-medium text-green-600">
-                        {formatDecimal(teacher.averageAttendance)}%
-                      </td>
-                      <td className="px-4 py-3 text-sm font-medium text-purple-600">
-                        {formatDecimal(teacher.averagePointsAwarded)}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-700">
-                        {teacher.totalStudentsParticipated.toLocaleString('vi-VN')}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
-      </div>
+      </section>
     </div>
   );
 }

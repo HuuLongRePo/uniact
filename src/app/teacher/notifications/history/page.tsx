@@ -98,7 +98,8 @@ function getHistoryPayload(payload: unknown): {
   return {
     records: data.data?.records ?? data.records ?? [],
     notifications: data.data?.notifications ?? data.notifications ?? [],
-    summary: data.data?.summary ??
+    summary:
+      data.data?.summary ??
       data.summary ?? {
         total_notifications: 0,
         total_recipients: 0,
@@ -124,7 +125,6 @@ export default function NotificationHistoryPage() {
     low_read_notifications: [],
   });
   const [filteredRecords, setFilteredRecords] = useState<NotificationRecord[]>([]);
-
   const [filters, setFilters] = useState({
     readStatus: '',
     className: '',
@@ -230,11 +230,12 @@ export default function NotificationHistoryPage() {
       if (sortOrder === 'asc') {
         return leftValue > rightValue ? 1 : leftValue < rightValue ? -1 : 0;
       }
+
       return leftValue < rightValue ? 1 : leftValue > rightValue ? -1 : 0;
     });
 
     setFilteredRecords(next);
-  }, [records, filters, searchTerm, sortBy, sortOrder]);
+  }, [filters, records, searchTerm, sortBy, sortOrder]);
 
   const handleExport = async () => {
     try {
@@ -250,7 +251,10 @@ export default function NotificationHistoryPage() {
           },
         }),
       });
-      if (!response.ok) throw new Error('Không thể xuất tệp');
+
+      if (!response.ok) {
+        throw new Error('Không thể xuất tệp');
+      }
 
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
@@ -305,6 +309,7 @@ export default function NotificationHistoryPage() {
                 dung.
               </p>
             </div>
+
             <button
               type="button"
               onClick={handleExport}
@@ -551,9 +556,7 @@ export default function NotificationHistoryPage() {
                         )}
                       </td>
                       <td className="px-4 py-4 text-sm text-gray-600">
-                        {record.read_on_device === 'unknown'
-                          ? 'Không theo dõi'
-                          : record.read_on_device}
+                        {record.read_on_device === 'unknown' ? 'Không theo dõi' : record.read_on_device}
                       </td>
                     </tr>
                   ))}
@@ -561,19 +564,19 @@ export default function NotificationHistoryPage() {
               </table>
             </div>
 
-            {filteredRecords.length === 0 && (
+            {filteredRecords.length === 0 ? (
               <div className="p-12 text-center">
                 <History className="mx-auto mb-4 h-16 w-16 text-gray-400" />
                 <p className="text-lg text-gray-600">Không có bản ghi thông báo nào</p>
               </div>
-            )}
+            ) : null}
           </div>
 
-          {broadcasts.length > 0 && (
+          {broadcasts.length > 0 ? (
             <div className="text-right text-sm text-gray-500">
               Đang theo dõi {broadcasts.length} chiến dịch gần nhất.
             </div>
-          )}
+          ) : null}
         </div>
       </section>
     </div>

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import StudentDailyQuickActions from '@/components/student/StudentDailyQuickActions';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import toast from 'react-hot-toast';
 import { formatDate } from '@/lib/formatters';
@@ -13,8 +14,8 @@ interface Registration {
   id: number;
   activity_id: number;
   attendance_status: string;
-  achievement_level?: string;
-  feedback?: string;
+  achievement_level?: string | null;
+  feedback?: string | null;
   registered_at: string;
   title: string;
   description: string;
@@ -32,19 +33,23 @@ interface Registrations {
   cancelled: Registration[];
 }
 
+type TabKey = 'upcoming' | 'completed' | 'cancelled';
+
+const EMPTY_REGISTRATIONS: Registrations = {
+  upcoming: [],
+  completed: [],
+  cancelled: [],
+};
+
 export default function MyActivitiesPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-  const [registrations, setRegistrations] = useState<Registrations>({
-    upcoming: [],
-    completed: [],
-    cancelled: [],
-  });
+  const [registrations, setRegistrations] = useState<Registrations>(EMPTY_REGISTRATIONS);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<'upcoming' | 'completed' | 'cancelled'>('upcoming');
+  const [tab, setTab] = useState<TabKey>('upcoming');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'date_desc' | 'date_asc' | 'title'>('date_desc');
-  const [upcomingReminders, setUpcomingReminders] = useState<number[]>([]); // Activities happening soon
+  const [upcomingReminders, setUpcomingReminders] = useState<number[]>([]);
   const [cancelTarget, setCancelTarget] = useState<Registration | null>(null);
   const [cancelingActivityId, setCancelingActivityId] = useState<number | null>(null);
 
@@ -55,63 +60,42 @@ export default function MyActivitiesPage() {
     }
 
     if (user) {
-      fetchRegistrations();
+      void fetchRegistrations();
     }
   }, [user, authLoading, router]);
 
-  const fetchRegistrations = async () => {
+  async function fetchRegistrations() {
     try {
       const response = await fetch('/api/activities/my-registrations');
       const data = await response.json();
       const payload = data?.data ?? data;
-      const nextRegistrations = payload?.registrations ?? {
-        upcoming: [],
-        completed: [],
-        cancelled: [],
-      };
+      const nextRegistrations = payload?.registrations ?? EMPTY_REGISTRATIONS;
 
-      if (response.ok) {
-        setRegistrations(nextRegistrations);
-
-        // Check for upcoming activities (within 24 hours)
-        const now = new Date();
-        const upcoming24h = nextRegistrations.upcoming.filter((reg: Registration) => {
-          const activityTime = parseVietnamDate(reg.date_time);
-          if (!activityTime) return false;
-          const hoursUntil = (activityTime.getTime() - now.getTime()) / (1000 * 60 * 60);
-          return hoursUntil > 0 && hoursUntil <= 24;
-        });
-
-        setUpcomingReminders(upcoming24h.map((r: Registration) => r.activity_id));
-
-        // Show toast for very soon activities (within 2 hours)
-        const verySoon = upcoming24h.filter((reg: Registration) => {
-          const activityTime = parseVietnamDate(reg.date_time);
-          if (!activityTime) return false;
-          const hoursUntil = (activityTime.getTime() - now.getTime()) / (1000 * 60 * 60);
-          return hoursUntil <= 2;
-        });
-
-        if (verySoon.length > 0) {
-          verySoon.forEach((reg: Registration) => {
-            const activityTime = parseVietnamDate(reg.date_time);
-            if (!activityTime) return;
-            const minutesUntil = Math.round((activityTime.getTime() - now.getTime()) / (1000 * 60));
-            toast(`⏰ Hoạt động "${reg.title}" sẽ diễn ra sau ${minutesUntil} phút!`, {
-              duration: 8000,
-              icon: '🔔',
-            });
-          });
-        }
+      if (!response.ok) {
+        throw new Error(data?.error || data?.message || 'Không thể tải danh sách đăng ký');
       }
+
+      setRegistrations(nextRegistrations);
+
+      const now = new Date();
+      const upcoming24h = nextRegistrations.upcoming.filter((registration: Registration) => {
+        const activityTime = parseVietnamDate(registration.date_time);
+        if (!activityTime) return false;
+        const hoursUntil = (activityTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+        return hoursUntil > 0 && hoursUntil <= 24;
+      });
+
+      setUpcomingReminders(upcoming24h.map((registration: Registration) => registration.activity_id));
     } catch (error) {
       console.error('Fetch registrations error:', error);
+      toast.error(error instanceof Error ? error.message : 'Không thể tải danh sách đăng ký');
+      setRegistrations(EMPTY_REGISTRATIONS);
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  const handleCancelRegistration = async (activityId: number) => {
+  async function handleCancelRegistration(activityId: number) {
     setCancelingActivityId(activityId);
     try {
       const response = await fetch(`/api/activities/${activityId}/register`, {
@@ -121,10 +105,10 @@ export default function MyActivitiesPage() {
       const data = await response.json();
 
       if (response.ok) {
-        toast.success('Hủy đăng ký thành công!');
-        fetchRegistrations();
+        toast.success('Đã hủy đăng ký thành công');
+        await fetchRegistrations();
       } else {
-        toast.error(data.error || 'Hủy đăng ký thất bại');
+        toast.error(data.error || 'Không thể hủy đăng ký');
       }
     } catch (error) {
       console.error('Cancel registration error:', error);
@@ -132,26 +116,26 @@ export default function MyActivitiesPage() {
     } finally {
       setCancelingActivityId(null);
     }
-  };
+  }
 
   const currentList = useMemo(() => {
     const list = [...registrations[tab]];
 
-    const filtered = list.filter((reg) => {
+    const filtered = list.filter((registration) => {
       if (!searchQuery.trim()) return true;
       const query = searchQuery.trim().toLowerCase();
       return (
-        reg.title.toLowerCase().includes(query) ||
-        reg.description.toLowerCase().includes(query) ||
-        reg.location.toLowerCase().includes(query)
+        registration.title.toLowerCase().includes(query) ||
+        registration.description.toLowerCase().includes(query) ||
+        registration.location.toLowerCase().includes(query)
       );
     });
 
-    filtered.sort((a, b) => {
-      if (sortBy === 'title') return a.title.localeCompare(b.title, 'vi');
-      const timeA = parseVietnamDate(a.date_time)?.getTime() ?? 0;
-      const timeB = parseVietnamDate(b.date_time)?.getTime() ?? 0;
-      return sortBy === 'date_asc' ? timeA - timeB : timeB - timeA;
+    filtered.sort((left, right) => {
+      if (sortBy === 'title') return left.title.localeCompare(right.title, 'vi');
+      const timeLeft = parseVietnamDate(left.date_time)?.getTime() ?? 0;
+      const timeRight = parseVietnamDate(right.date_time)?.getTime() ?? 0;
+      return sortBy === 'date_asc' ? timeLeft - timeRight : timeRight - timeLeft;
     });
 
     return filtered;
@@ -166,245 +150,240 @@ export default function MyActivitiesPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 data-testid="my-activities-heading" className="text-3xl font-bold mb-6">
-        📋 Hoạt Động Của Tôi
-      </h1>
+    <div className="page-shell">
+      <div className="mx-auto max-w-6xl space-y-6">
+        <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900 sm:p-6">
+          <h1 data-testid="my-activities-heading" className="text-3xl font-bold text-slate-900 dark:text-slate-100">
+            Hoạt động của tôi
+          </h1>
+          <p className="mt-2 max-w-3xl text-sm text-slate-600 dark:text-slate-300">
+            Theo dõi các hoạt động đã đăng ký, hoạt động đã tham gia và các mục đã hủy trên một
+            giao diện gọn gàng hơn cho điện thoại.
+          </p>
+        </div>
 
-      {/* Upcoming Reminders Alert */}
-      {upcomingReminders.length > 0 && tab === 'upcoming' && (
-        <div className="bg-orange-50 border-l-4 border-orange-500 p-4 mb-6 rounded">
-          <div className="flex items-center gap-3">
-            <div className="text-3xl">🔔</div>
-            <div className="flex-1">
-              <h3 className="font-bold text-orange-900">
-                Nhắc nhở: {upcomingReminders.length} hoạt động sắp diễn ra trong 24 giờ tới!
-              </h3>
-              <p className="text-sm text-orange-700 mt-1">
-                Hãy chuẩn bị và đến đúng giờ. Kiểm tra thông tin chi tiết bên dưới.
-              </p>
+        <StudentDailyQuickActions />
+
+        {upcomingReminders.length > 0 && tab === 'upcoming' && (
+          <div className="rounded-3xl border border-orange-300 bg-orange-50 p-4 shadow-sm dark:border-orange-500/40 dark:bg-orange-500/10">
+            <div className="text-sm font-semibold text-orange-900 dark:text-orange-200">
+              Có {upcomingReminders.length} hoạt động sắp diễn ra trong 24 giờ tới.
+            </div>
+            <div className="mt-1 text-sm text-orange-700 dark:text-orange-300">
+              Kiểm tra thời gian bắt đầu và mở trang điểm danh QR đúng lúc để tránh bỏ lỡ điểm
+              danh.
+            </div>
+          </div>
+        )}
+
+        <div className="grid gap-4 sm:grid-cols-3">
+          <div className="rounded-3xl border border-blue-100 bg-white p-5 shadow-sm dark:border-blue-900/50 dark:bg-slate-900">
+            <div className="text-sm font-medium text-blue-700 dark:text-blue-300">Sắp diễn ra</div>
+            <div className="mt-2 text-3xl font-bold text-slate-900 dark:text-slate-100">{registrations.upcoming.length}</div>
+          </div>
+          <div className="rounded-3xl border border-emerald-100 bg-white p-5 shadow-sm dark:border-emerald-900/50 dark:bg-slate-900">
+            <div className="text-sm font-medium text-emerald-700 dark:text-emerald-300">Đã hoàn thành</div>
+            <div className="mt-2 text-3xl font-bold text-slate-900 dark:text-slate-100">{registrations.completed.length}</div>
+          </div>
+          <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+            <div className="text-sm font-medium text-slate-700 dark:text-slate-200">Đã hủy</div>
+            <div className="mt-2 text-3xl font-bold text-slate-900 dark:text-slate-100">{registrations.cancelled.length}</div>
+          </div>
+        </div>
+
+        <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900 sm:p-6">
+          <div className="-mx-1 flex snap-x gap-2 overflow-x-auto px-1 pb-1">
+            <button
+              onClick={() => setTab('upcoming')}
+              className={`shrink-0 snap-start rounded-full px-4 py-2 text-sm font-semibold ${
+                tab === 'upcoming' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-200'
+              }`}
+            >
+              Sắp diễn ra ({registrations.upcoming.length})
+            </button>
+            <button
+              onClick={() => setTab('completed')}
+              className={`shrink-0 snap-start rounded-full px-4 py-2 text-sm font-semibold ${
+                tab === 'completed' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-200'
+              }`}
+            >
+              Đã hoàn thành ({registrations.completed.length})
+            </button>
+            <button
+              onClick={() => setTab('cancelled')}
+              className={`shrink-0 snap-start rounded-full px-4 py-2 text-sm font-semibold ${
+                tab === 'cancelled' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-200'
+              }`}
+            >
+              Đã hủy ({registrations.cancelled.length})
+            </button>
+          </div>
+
+          <div className="mt-4 grid gap-4 md:grid-cols-2">
+            <div>
+              <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200">Tìm kiếm</label>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="Tên, mô tả, địa điểm..."
+                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:focus:ring-blue-500/20"
+              />
+            </div>
+            <div>
+              <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200">Sắp xếp</label>
+              <select
+                value={sortBy}
+                onChange={(event) =>
+                  setSortBy(event.target.value as 'date_desc' | 'date_asc' | 'title')
+                }
+                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:focus:ring-blue-500/20"
+              >
+                <option value="date_desc">Ngày mới nhất</option>
+                <option value="date_asc">Ngày xa nhất</option>
+                <option value="title">Theo tên A-Z</option>
+              </select>
             </div>
           </div>
         </div>
-      )}
 
-      {/* Tabs */}
-      <div className="flex gap-2 mb-6 border-b">
-        <button
-          onClick={() => setTab('upcoming')}
-          className={`px-6 py-3 font-semibold relative ${
-            tab === 'upcoming'
-              ? 'border-b-2 border-blue-500 text-blue-600'
-              : 'text-gray-600 hover:text-gray-800'
-          }`}
-        >
-          Sắp diễn ra ({registrations.upcoming.length})
-          {upcomingReminders.length > 0 && (
-            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
-              {upcomingReminders.length}
-            </span>
-          )}
-        </button>
-        <button
-          onClick={() => setTab('completed')}
-          className={`px-6 py-3 font-semibold ${
-            tab === 'completed'
-              ? 'border-b-2 border-blue-500 text-blue-600'
-              : 'text-gray-600 hover:text-gray-800'
-          }`}
-        >
-          Đã hoàn thành ({registrations.completed.length})
-        </button>
-        <button
-          onClick={() => setTab('cancelled')}
-          className={`px-6 py-3 font-semibold ${
-            tab === 'cancelled'
-              ? 'border-b-2 border-blue-500 text-blue-600'
-              : 'text-gray-600 hover:text-gray-800'
-          }`}
-        >
-          Đã hủy ({registrations.cancelled.length})
-        </button>
-      </div>
-
-      <div className="mb-6 rounded-lg bg-white p-4 shadow">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700">🔍 Tìm kiếm</label>
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
-              placeholder="Tìm theo tên, mô tả hoặc địa điểm..."
-              className="w-full rounded-lg border px-3 py-2"
-            />
+        {currentList.length === 0 ? (
+          <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-10 text-center shadow-sm dark:border-slate-700 dark:bg-slate-900">
+            <p className="text-base font-medium text-slate-700 dark:text-slate-200">Chưa có hoạt động phù hợp</p>
+            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Hãy đổi tab hoặc bộ lọc để xem danh sách khác.</p>
           </div>
-          <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700">↕️ Sắp xếp</label>
-            <select
-              value={sortBy}
-              onChange={(event) =>
-                setSortBy(event.target.value as 'date_desc' | 'date_asc' | 'title')
-              }
-              className="w-full rounded-lg border px-3 py-2"
-            >
-              <option value="date_desc">Mới nhất</option>
-              <option value="date_asc">Cũ nhất</option>
-              <option value="title">Theo tên A-Z</option>
-            </select>
-          </div>
-        </div>
-      </div>
+        ) : (
+          <div className="space-y-4">
+            {currentList.map((registration) => {
+              const activityDate = parseVietnamDate(registration.date_time);
+              const activityTimestamp = activityDate?.getTime() ?? Number.NaN;
+              const canCancel =
+                tab === 'upcoming' && (activityTimestamp - Date.now()) / (1000 * 60 * 60) >= 24;
+              const isSoon = upcomingReminders.includes(registration.activity_id);
+              const hoursUntil = Number.isFinite(activityTimestamp)
+                ? (activityTimestamp - Date.now()) / (1000 * 60 * 60)
+                : null;
 
-      {/* List */}
-      {currentList.length === 0 ? (
-        <div className="text-center py-12 bg-gray-50 rounded-lg">
-          <p className="text-gray-500 text-lg">Chưa có hoạt động nào phù hợp</p>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {currentList.map((reg) => {
-            const activityDate = parseVietnamDate(reg.date_time);
-            const activityTimestamp = activityDate?.getTime() ?? Number.NaN;
-            const canCancel =
-              tab === 'upcoming' && (activityTimestamp - Date.now()) / (1000 * 60 * 60) >= 24;
-            const isSoon = upcomingReminders.includes(reg.activity_id);
-            const hoursUntil = (activityTimestamp - Date.now()) / (1000 * 60 * 60);
+              return (
+                <div
+                  key={registration.id}
+                  className={`rounded-3xl border bg-white p-5 shadow-sm dark:bg-slate-900 ${
+                    tab === 'cancelled' ? 'border-slate-200 opacity-70 dark:border-slate-700' : 'border-slate-200 dark:border-slate-700'
+                  } ${isSoon ? 'border-orange-300 dark:border-orange-500/40' : ''}`}
+                >
+                  {isSoon && hoursUntil !== null && (
+                    <div className="mb-4 rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm font-medium text-orange-800 dark:border-orange-500/40 dark:bg-orange-500/10 dark:text-orange-200">
+                      Sắp diễn ra trong khoảng {Math.max(1, Math.round(hoursUntil))} giờ nữa.
+                    </div>
+                  )}
 
-            return (
-              <div
-                key={reg.id}
-                className={`bg-white rounded-lg shadow-md p-6 border ${
-                  tab === 'cancelled' ? 'opacity-60' : ''
-                } ${isSoon ? 'border-orange-500 border-2' : ''}`}
-              >
-                {isSoon && (
-                  <div className="bg-orange-100 border border-orange-300 text-orange-800 px-3 py-2 rounded mb-4 flex items-center gap-2">
-                    <span className="text-xl">⏰</span>
-                    <span className="font-medium">
-                      Sắp diễn ra trong {Math.round(hoursUntil)} giờ nữa!
-                    </span>
-                  </div>
-                )}
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100">{registration.title}</h2>
+                        {tab === 'upcoming' && (
+                          <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700 dark:bg-blue-500/20 dark:text-blue-200">
+                            Đã đăng ký
+                          </span>
+                        )}
+                        {tab === 'cancelled' && (
+                          <span className="rounded-full bg-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-700 dark:text-slate-100">
+                            Đã hủy
+                          </span>
+                        )}
+                      </div>
 
-                <div className="flex justify-between items-start mb-4">
-                  <div className="flex-1">
-                    <h3 className="text-xl font-bold mb-2">{reg.title}</h3>
+                      <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{registration.description}</p>
 
-                    <div className="text-sm text-gray-600 space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span>👨‍🏫</span>
-                        <span>{reg.teacher_name}</span>
+                      <div className="mt-4 grid gap-3 text-sm text-slate-600 dark:text-slate-300 sm:grid-cols-2 xl:grid-cols-4">
+                        <div>
+                          <div className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Giảng viên</div>
+                          <div className="mt-1 font-medium text-slate-900 dark:text-slate-100">{registration.teacher_name}</div>
+                        </div>
+                        <div>
+                          <div className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Thời gian</div>
+                          <div className="mt-1 font-medium text-slate-900 dark:text-slate-100">
+                            {formatDate(registration.date_time)}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Địa điểm</div>
+                          <div className="mt-1 font-medium text-slate-900 dark:text-slate-100">{registration.location}</div>
+                        </div>
+                        <div>
+                          <div className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Số chỗ</div>
+                          <div className="mt-1 font-medium text-slate-900 dark:text-slate-100">
+                            {registration.participant_count}/{registration.max_participants}
+                          </div>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span>📅</span>
-                        <span>{formatDate(reg.date_time)}</span>
+
+                      {registration.feedback && (
+                        <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">
+                          <div className="font-semibold">Nhận xét</div>
+                          <div className="mt-1">{registration.feedback}</div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="w-full shrink-0 space-y-3 lg:w-60">
+                      {registration.achievement_level && (
+                        <div className="rounded-2xl bg-slate-100 px-4 py-3 text-sm dark:bg-slate-800">
+                          <div className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Thành tích</div>
+                          <div className="mt-1 font-semibold text-slate-900 dark:text-slate-100">
+                            {registration.achievement_level === 'excellent'
+                              ? 'Xuất sắc'
+                              : registration.achievement_level === 'good'
+                                ? 'Tốt'
+                                : 'Tham gia'}
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="rounded-2xl bg-slate-100 px-4 py-3 text-sm dark:bg-slate-800">
+                          <div className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Đăng ký lúc</div>
+                        <div className="mt-1 font-semibold text-slate-900 dark:text-slate-100">
+                          {formatDate(registration.registered_at)}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span>📍</span>
-                        <span>{reg.location}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span>👥</span>
-                        <span>
-                          {reg.participant_count}/{reg.max_participants} người
-                        </span>
-                      </div>
+
+                      {canCancel && (
+                        <button
+                          onClick={() => setCancelTarget(registration)}
+                          disabled={cancelingActivityId === registration.activity_id}
+                          className="w-full rounded-2xl bg-rose-600 px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {cancelingActivityId === registration.activity_id ? 'Đang hủy...' : 'Hủy đăng ký'}
+                        </button>
+                      )}
                     </div>
                   </div>
-
-                  <div className="text-right space-y-2">
-                    {/* Status badge */}
-                    {tab === 'upcoming' && (
-                      <span className="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded text-sm">
-                        ✅ Đã đăng ký
-                      </span>
-                    )}
-                    {tab === 'completed' && reg.attendance_status === 'attended' && (
-                      <span className="inline-block bg-green-100 text-green-800 px-3 py-1 rounded text-sm">
-                        ✓ Đã điểm danh
-                      </span>
-                    )}
-                    {tab === 'completed' && reg.attendance_status === 'absent' && (
-                      <span className="inline-block bg-red-100 text-red-800 px-3 py-1 rounded text-sm">
-                        ✗ Vắng mặt
-                      </span>
-                    )}
-                    {tab === 'cancelled' && (
-                      <span className="inline-block bg-gray-100 text-gray-800 px-3 py-1 rounded text-sm">
-                        🚫 Đã hủy
-                      </span>
-                    )}
-
-                    {/* Achievement level */}
-                    {reg.achievement_level && (
-                      <div className="text-sm">
-                        {reg.achievement_level === 'excellent' && '🏆 Xuất sắc'}
-                        {reg.achievement_level === 'good' && '⭐ Tốt'}
-                        {reg.achievement_level === 'participated' && '👍 Tham gia'}
-                      </div>
-                    )}
-                  </div>
                 </div>
+              );
+            })}
+          </div>
+        )}
 
-                <p className="text-gray-700 mb-4">{reg.description}</p>
-
-                {/* Feedback */}
-                {reg.feedback && (
-                  <div className="bg-yellow-50 border border-yellow-200 p-3 rounded mb-4">
-                    <p className="text-sm font-semibold text-gray-700">💬 Nhận xét:</p>
-                    <p className="text-sm text-gray-600">{reg.feedback}</p>
-                  </div>
-                )}
-
-                {/* Actions */}
-                {canCancel && (
-                  <div className="flex justify-end gap-2">
-                    <button
-                      onClick={() => setCancelTarget(reg)}
-                      disabled={cancelingActivityId === reg.activity_id}
-                      className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {cancelingActivityId === reg.activity_id ? (
-                        <span className="flex items-center gap-2">
-                          <LoadingSpinner size="xs" color="white" variant="inline" />
-                          Đang hủy...
-                        </span>
-                      ) : (
-                        'Hủy đăng ký'
-                      )}
-                    </button>
-                  </div>
-                )}
-
-                <div className="text-xs text-gray-400 mt-4">
-                  Đăng ký lúc: {formatDate(reg.registered_at)}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      <ConfirmDialog
-        isOpen={cancelTarget !== null}
-        title="Xác nhận hủy đăng ký"
-        message={
-          cancelTarget
-            ? `Bạn có chắc muốn hủy đăng ký hoạt động "${cancelTarget.title}" không? Bạn sẽ mất suất tham gia hiện tại.`
-            : ''
-        }
-        confirmText="Hủy đăng ký"
-        cancelText="Quay lại"
-        variant="danger"
-        onCancel={() => setCancelTarget(null)}
-        onConfirm={async () => {
-          if (!cancelTarget) return;
-          const activityId = cancelTarget.activity_id;
-          setCancelTarget(null);
-          await handleCancelRegistration(activityId);
-        }}
-      />
+        <ConfirmDialog
+          isOpen={cancelTarget !== null}
+          title="Xác nhận hủy đăng ký"
+          message={
+            cancelTarget
+              ? `Bạn có chắc muốn hủy đăng ký hoạt động "${cancelTarget.title}" không?`
+              : ''
+          }
+          confirmText="Hủy đăng ký"
+          cancelText="Quay lại"
+          variant="danger"
+          onCancel={() => setCancelTarget(null)}
+          onConfirm={async () => {
+            if (!cancelTarget) return;
+            const activityId = cancelTarget.activity_id;
+            setCancelTarget(null);
+            await handleCancelRegistration(activityId);
+          }}
+        />
+      </div>
     </div>
   );
 }

@@ -1,9 +1,27 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import StudentDailyQuickActions from '@/components/student/StudentDailyQuickActions';
+import StudentScoreFlowNav from '@/components/student/StudentScoreFlowNav';
 import { toast } from '@/lib/toast';
+
+interface ScoreboardStudent {
+  id: number;
+  name: string;
+  class_id?: number | null;
+  class_name?: string | null;
+  total_score: number;
+  activities_count: number;
+}
+
+interface ScoreboardMeta {
+  total: number;
+  page: number;
+  per_page: number;
+  total_pages: number;
+}
 
 interface RankingEntry {
   rank: number;
@@ -12,238 +30,250 @@ interface RankingEntry {
   class_name: string;
   total_points: number;
   total_activities: number;
-  excellent_count: number;
-  good_count: number;
   is_current_user: boolean;
 }
 
-interface RankingResponse {
-  data: RankingEntry[];
-  total: number;
-  user_rank: number;
-  user_points: number;
+interface ScoreboardResponse {
+  students?: ScoreboardStudent[];
+  meta?: ScoreboardMeta;
 }
 
 export default function StudentRankingPage() {
   const { user, loading: authLoading } = useAuth();
   const [rankings, setRankings] = useState<RankingEntry[]>([]);
-  const [userRank, setUserRank] = useState<number | null>(null);
-  const [userPoints, setUserPoints] = useState<number>(0);
-  const [classFilter, setClassFilter] = useState<string>('all');
   const [loading, setLoading] = useState(true);
-  const [perPage] = useState(20);
   const [currentPage, setCurrentPage] = useState(1);
+  const [meta, setMeta] = useState<ScoreboardMeta>({
+    total: 0,
+    page: 1,
+    per_page: 20,
+    total_pages: 1,
+  });
 
   useEffect(() => {
-    if (!authLoading && user) {
-      fetchRankings();
+    if (!authLoading && user?.role === 'student') {
+      void fetchRankings();
     }
-  }, [user, authLoading, classFilter, currentPage]);
+  }, [user, authLoading, currentPage]);
 
   const fetchRankings = async () => {
     try {
       setLoading(true);
       const params = new URLSearchParams({
         page: String(currentPage),
-        per_page: String(perPage),
+        per_page: '20',
         order: 'desc',
       });
 
-      if (classFilter !== 'all') {
-        params.append('class_id', classFilter);
+      const res = await fetch(`/api/scoreboard?${params.toString()}`);
+      if (!res.ok) {
+        throw new Error('Không thể tải bảng xếp hạng');
       }
 
-      const res = await fetch(`/api/scoreboard?${params.toString()}`);
-      if (!res.ok) throw new Error('Không thể tải bảng xếp hạng');
+      const data = (await res.json()) as ScoreboardResponse;
+      const students = data.students || [];
+      const resolvedMeta = data.meta || {
+        total: students.length,
+        page: currentPage,
+        per_page: 20,
+        total_pages: 1,
+      };
 
-      const data: RankingResponse = await res.json();
-
-      // Add current user flag
-      const enrichedData = data.data.map((entry: any) => ({
-        ...entry,
-        is_current_user: user?.id === entry.student_id,
-      }));
-
-      setRankings(enrichedData);
-      setUserRank(data.user_rank || null);
-      setUserPoints(data.user_points || 0);
-    } catch (error: any) {
+      setMeta(resolvedMeta);
+      setRankings(
+        students.map((entry, index) => ({
+          rank: (resolvedMeta.page - 1) * resolvedMeta.per_page + index + 1,
+          student_id: entry.id,
+          student_name: entry.name,
+          class_name: entry.class_name || 'Chưa có lớp',
+          total_points: Number(entry.total_score || 0),
+          total_activities: Number(entry.activities_count || 0),
+          is_current_user: user?.id === entry.id,
+        }))
+      );
+    } catch (error) {
       console.error('Error fetching rankings:', error);
       toast.error('Không thể tải bảng xếp hạng');
+      setRankings([]);
     } finally {
       setLoading(false);
     }
   };
 
+  const currentUserEntry = useMemo(
+    () => rankings.find((entry) => entry.is_current_user) ?? null,
+    [rankings]
+  );
+  const classScopeLabel = currentUserEntry?.class_name || rankings[0]?.class_name || 'Chưa có lớp';
+
   if (authLoading || loading) {
     return <LoadingSpinner />;
   }
 
+  if (!user || user.role !== 'student') {
+    return null;
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-6">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 data-testid="ranking-heading" className="text-4xl font-bold text-gray-900 mb-2">
-            🏆 Bảng Xếp Hạng
+    <div className="page-shell">
+      <div className="mx-auto max-w-5xl space-y-6">
+        <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900 sm:p-6">
+          <h1 data-testid="ranking-heading" className="text-3xl font-bold text-slate-900 dark:text-slate-100">
+            Bảng xếp hạng
           </h1>
-          <p className="text-gray-600">Xem xếp hạng điểm của các học viên</p>
+          <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+            Học viên chỉ xem bảng xếp hạng trong lớp của mình. Thứ hạng được tính theo tổng điểm
+            tích lũy hiện có.
+          </p>
         </div>
 
-        {/* User Stats Card */}
-        {userRank && (
-          <div className="bg-white rounded-lg shadow-md p-6 mb-6 border-l-4 border-blue-500">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-600 text-sm font-medium">Xếp hạng của bạn</p>
-                <p className="text-3xl font-bold text-blue-600">
-                  #{userRank}
-                  <span className="text-lg text-gray-500 ml-3">{userPoints} điểm</span>
-                </p>
-              </div>
-              <div className="text-5xl">
-                {userRank === 1 ? '🥇' : userRank === 2 ? '🥈' : userRank === 3 ? '🥉' : '⭐'}
-              </div>
+        <StudentDailyQuickActions />
+        <StudentScoreFlowNav />
+
+        <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_220px]">
+          <div className="rounded-3xl border border-blue-100 bg-gradient-to-br from-blue-50 via-white to-sky-50 p-5 shadow-sm dark:border-blue-500/40 dark:from-slate-900 dark:via-slate-900 dark:to-blue-950/30">
+            <div className="text-sm font-medium text-blue-700 dark:text-blue-300">Lớp hiện tại</div>
+            <div className="mt-2 text-xl font-semibold text-slate-900 dark:text-slate-100">
+              {classScopeLabel}
             </div>
+            <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+              Trang {meta.page}/{Math.max(1, meta.total_pages)} · {meta.total} học viên
+            </p>
           </div>
-        )}
 
-        {/* Filters */}
-        <div className="bg-white rounded-lg shadow-md p-4 mb-6">
-          <label className="flex items-center gap-3">
-            <span className="text-gray-700 font-medium">Lọc theo lớp:</span>
-            <select
-              value={classFilter}
-              onChange={(e) => {
-                setClassFilter(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="all">Tất cả lớp</option>
-              <option value="lop-10a">Lớp 10A</option>
-              <option value="lop-10b">Lớp 10B</option>
-              <option value="lop-11a">Lớp 11A</option>
-              <option value="lop-11b">Lớp 11B</option>
-              <option value="lop-12a">Lớp 12A</option>
-              <option value="lop-12b">Lớp 12B</option>
-            </select>
-          </label>
+          <div className="rounded-3xl border border-amber-100 bg-gradient-to-br from-amber-50 via-white to-orange-50 p-5 shadow-sm dark:border-amber-500/40 dark:from-slate-900 dark:via-slate-900 dark:to-amber-950/30">
+            <div className="text-sm font-medium text-amber-700 dark:text-amber-300">Thứ hạng của bạn</div>
+            {currentUserEntry ? (
+              <>
+                <div className="mt-2 text-3xl font-bold text-slate-900 dark:text-slate-100">#{currentUserEntry.rank}</div>
+                <div className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                  {currentUserEntry.total_points} điểm · {currentUserEntry.total_activities} hoạt động
+                </div>
+              </>
+            ) : (
+              <div className="mt-2 min-h-[3.75rem] text-sm text-slate-600 dark:text-slate-300">
+                Trang hiện tại chưa có tên của bạn. Thứ hạng chỉ hiển thị khi bạn nằm trong danh
+                sách của trang đang xem.
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Rankings Table */}
-        <div className="bg-white rounded-lg shadow-md overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
-                <tr>
-                  <th className="px-6 py-4 text-left text-sm font-semibold w-24">Hạng</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold">Tên Học Viên</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold">Lớp</th>
-                  <th className="px-6 py-4 text-center text-sm font-semibold">Tổng Điểm</th>
-                  <th className="px-6 py-4 text-center text-sm font-semibold">Hoạt Động</th>
-                  <th className="px-6 py-4 text-center text-sm font-semibold">Xuất Sắc</th>
-                  <th className="px-6 py-4 text-center text-sm font-semibold">Tốt</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rankings.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
-                      Không có dữ liệu xếp hạng
-                    </td>
-                  </tr>
-                ) : (
-                  rankings.map((entry) => (
-                    <tr
-                      key={entry.student_id}
-                      className={`border-b transition-colors ${
-                        entry.is_current_user ? 'bg-blue-50 hover:bg-blue-100' : 'hover:bg-gray-50'
-                      }`}
-                    >
-                      <td className="px-6 py-4 text-center font-bold text-lg">
-                        <div className="flex items-center justify-center gap-2">
-                          {entry.rank === 1 && '🥇'}
-                          {entry.rank === 2 && '🥈'}
-                          {entry.rank === 3 && '🥉'}
-                          {entry.rank > 3 && entry.rank <= 10 && '⭐'}
-                          {entry.rank > 10 && ''}
-                          <span className={entry.rank <= 3 ? 'text-blue-600' : ''}>
-                            #{entry.rank}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div>
-                          <p className="font-semibold text-gray-900">
-                            {entry.student_name}
+        {rankings.length === 0 ? (
+          <div className="rounded-3xl border border-slate-200 bg-white p-10 text-center shadow-sm dark:border-slate-700 dark:bg-slate-900">
+            <p className="text-base text-slate-600 dark:text-slate-300">Chưa có dữ liệu xếp hạng.</p>
+          </div>
+        ) : (
+          <>
+            <div className="space-y-3 md:hidden">
+              {rankings.map((entry) => (
+                <div
+                  key={entry.student_id}
+                  className={`rounded-3xl border p-4 shadow-sm ${
+                    entry.is_current_user
+                      ? 'border-blue-300 bg-blue-50/70 dark:border-blue-500/40 dark:bg-blue-500/10'
+                      : 'border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                        Hạng #{entry.rank}
+                      </div>
+                      <div className="mt-1 text-lg font-semibold text-slate-900 dark:text-slate-100">
+                        {entry.student_name}
+                      </div>
+                      <div className="mt-1 text-sm text-slate-600 dark:text-slate-300">{entry.class_name}</div>
+                    </div>
+                    {entry.is_current_user && (
+                      <span className="rounded-full bg-blue-600 px-3 py-1 text-xs font-semibold text-white dark:bg-blue-500 dark:text-slate-950">
+                        Bạn
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-2 gap-3">
+                    <div className="rounded-2xl bg-slate-100 px-3 py-3 dark:bg-slate-800/90">
+                      <div className="text-xs text-slate-500 dark:text-slate-400">Tổng điểm</div>
+                      <div className="mt-1 text-xl font-bold text-slate-900 dark:text-slate-100">
+                        {entry.total_points}
+                      </div>
+                    </div>
+                    <div className="rounded-2xl bg-slate-100 px-3 py-3 dark:bg-slate-800/90">
+                      <div className="text-xs text-slate-500 dark:text-slate-400">Hoạt động</div>
+                      <div className="mt-1 text-xl font-bold text-slate-900 dark:text-slate-100">
+                        {entry.total_activities}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="hidden overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900 md:block">
+              <div className="overflow-x-auto">
+                <table className="min-w-full">
+                  <thead className="bg-slate-900 text-left text-sm text-white">
+                    <tr>
+                      <th className="px-5 py-4 font-semibold">Hạng</th>
+                      <th className="px-5 py-4 font-semibold">Học viên</th>
+                      <th className="px-5 py-4 font-semibold">Lớp</th>
+                      <th className="px-5 py-4 text-center font-semibold">Tổng điểm</th>
+                      <th className="px-5 py-4 text-center font-semibold">Hoạt động</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 text-sm text-slate-700 dark:divide-slate-700 dark:text-slate-300">
+                    {rankings.map((entry) => (
+                      <tr
+                        key={entry.student_id}
+                        className={entry.is_current_user ? 'bg-blue-50/70 dark:bg-blue-500/10' : 'bg-white dark:bg-slate-900'}
+                      >
+                        <td className="px-5 py-4 font-semibold text-slate-900 dark:text-slate-100">#{entry.rank}</td>
+                        <td className="px-5 py-4">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-slate-900 dark:text-slate-100">{entry.student_name}</span>
                             {entry.is_current_user && (
-                              <span className="ml-2 inline-block px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded font-medium">
+                              <span className="rounded-full bg-blue-600 px-2 py-1 text-xs font-semibold text-white dark:bg-blue-500 dark:text-slate-950">
                                 Bạn
                               </span>
                             )}
-                          </p>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-gray-600">{entry.class_name || '-'}</td>
-                      <td className="px-6 py-4 text-center">
-                        <span className="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-bold">
+                          </div>
+                        </td>
+                        <td className="px-5 py-4">{entry.class_name}</td>
+                        <td className="px-5 py-4 text-center font-semibold text-slate-900 dark:text-slate-100">
                           {entry.total_points}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-center text-gray-700">
-                        {entry.total_activities}
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <span className="inline-block bg-purple-100 text-purple-800 px-2 py-1 rounded text-sm">
-                          {entry.excellent_count}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <span className="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">
-                          {entry.good_count}
-                        </span>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                        </td>
+                        <td className="px-5 py-4 text-center">{entry.total_activities}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
 
-          {/* Pagination */}
-          {rankings.length > 0 && (
-            <div className="bg-gray-50 px-6 py-4 border-t flex items-center justify-between">
+            <div className="flex flex-col gap-3 rounded-3xl border border-slate-200 bg-white px-4 py-4 shadow-sm dark:border-slate-700 dark:bg-slate-900 sm:flex-row sm:items-center sm:justify-between">
               <button
-                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                disabled={currentPage === 1}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg disabled:bg-gray-300 disabled:cursor-not-allowed hover:bg-blue-700"
+                type="button"
+                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                disabled={meta.page <= 1}
+                className="w-full rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800 dark:focus-visible:ring-blue-400 dark:focus-visible:ring-offset-slate-900 sm:w-auto"
               >
-                ← Trang trước
+                Trang trước
               </button>
-              <span className="text-gray-700 font-medium">Trang {currentPage}</span>
+              <div className="text-sm text-slate-600 dark:text-slate-300">
+                Trang {meta.page}/{Math.max(1, meta.total_pages)}
+              </div>
               <button
-                onClick={() => setCurrentPage(currentPage + 1)}
-                disabled={rankings.length < perPage}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg disabled:bg-gray-300 disabled:cursor-not-allowed hover:bg-blue-700"
+                type="button"
+                onClick={() => setCurrentPage((prev) => Math.min(meta.total_pages || 1, prev + 1))}
+                disabled={meta.page >= Math.max(1, meta.total_pages)}
+                className="w-full rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800 dark:focus-visible:ring-blue-400 dark:focus-visible:ring-offset-slate-900 sm:w-auto"
               >
-                Trang tiếp →
+                Trang sau
               </button>
             </div>
-          )}
-        </div>
-
-        {/* Info Section */}
-        <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
-          <h3 className="font-semibold text-blue-900 mb-3">ℹ️ Cách tính điểm</h3>
-          <ul className="space-y-2 text-sm text-blue-800">
-            <li>• Mỗi hoạt động bạn tham gia sẽ được tính điểm dựa trên loại hoạt động</li>
-            <li>• Nếu đạt &quot;Xuất Sắc&quot; sẽ được nhân thêm 1.5x điểm</li>
-            <li>• Nếu đạt &quot;Tốt&quot; sẽ được nhân thêm 1.2x điểm</li>
-            <li>• Hoạt động cấp độ cao hơn sẽ được nhân thêm điểm</li>
-            <li>• Điểm được cộng dồn, không có điểm âm</li>
-          </ul>
-        </div>
+          </>
+        )}
       </div>
     </div>
   );

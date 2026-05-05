@@ -27,10 +27,12 @@ interface BroadcastNotification {
   created_by: string;
 }
 
-type PendingBroadcastAction = {
-  type: 'send' | 'delete';
-  notification: BroadcastNotification;
-} | null;
+type PendingBroadcastAction =
+  | {
+      type: 'send' | 'delete';
+      notification: BroadcastNotification;
+    }
+  | null;
 
 function getClasses(payload: unknown): Class[] {
   if (!payload || typeof payload !== 'object') return [];
@@ -52,6 +54,32 @@ function getNotifications(payload: unknown): BroadcastNotification[] {
     };
   };
   return data.data?.notifications ?? data.notifications ?? [];
+}
+
+function getStatusColor(status: BroadcastNotification['status']) {
+  switch (status) {
+    case 'draft':
+      return 'bg-blue-100 text-blue-700';
+    case 'scheduled':
+      return 'bg-amber-100 text-amber-700';
+    case 'sent':
+      return 'bg-emerald-100 text-emerald-700';
+    default:
+      return 'bg-gray-100 text-gray-700';
+  }
+}
+
+function getStatusLabel(status: BroadcastNotification['status']) {
+  switch (status) {
+    case 'draft':
+      return 'Nháp';
+    case 'scheduled':
+      return 'Đã lên lịch';
+    case 'sent':
+      return 'Đã gửi';
+    default:
+      return status;
+  }
 }
 
 export default function BroadcastNotificationsPage() {
@@ -85,7 +113,10 @@ export default function BroadcastNotificationsPage() {
         fetch('/api/classes'),
       ]);
 
-      if (!notificationsRes.ok) throw new Error('Không thể tải thông báo quảng bá');
+      if (!notificationsRes.ok) {
+        throw new Error('Không thể tải thông báo broadcast');
+      }
+
       const notificationsData = await notificationsRes.json();
       setNotifications(getNotifications(notificationsData));
 
@@ -243,32 +274,6 @@ export default function BroadcastNotificationsPage() {
     setEditingId(null);
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'draft':
-        return 'bg-blue-100 text-blue-700';
-      case 'scheduled':
-        return 'bg-amber-100 text-amber-700';
-      case 'sent':
-        return 'bg-emerald-100 text-emerald-700';
-      default:
-        return 'bg-gray-100 text-gray-700';
-    }
-  };
-
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'draft':
-        return 'Nháp';
-      case 'scheduled':
-        return 'Đã lên lịch';
-      case 'sent':
-        return 'Đã gửi';
-      default:
-        return status;
-    }
-  };
-
   const confirmConfig =
     pendingAction?.type === 'send'
       ? {
@@ -303,14 +308,15 @@ export default function BroadcastNotificationsPage() {
     <div className="page-shell">
       <section className="page-surface overflow-hidden rounded-[1.75rem]">
         <header className="border-b border-gray-200 px-5 py-5 sm:px-7">
-          <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">Thông báo quảng bá</h1>
+          <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">Thông báo broadcast</h1>
           <p className="mt-2 text-sm leading-6 text-gray-600 sm:text-base">
-            Gửi broadcast đến lớp học hoặc toàn trường theo hình thức nháp, lên lịch hoặc gửi ngay.
+            Gửi broadcast đến lớp học hoặc toàn trường theo hình thức nháp, lên lịch hoặc gửi
+            ngay.
           </p>
         </header>
 
         <div className="space-y-6 px-5 py-6 sm:px-7">
-          {!isCreating && !editingId && (
+          {!isCreating && !editingId ? (
             <button
               type="button"
               onClick={() => setIsCreating(true)}
@@ -319,13 +325,14 @@ export default function BroadcastNotificationsPage() {
               <Plus className="h-4 w-4" />
               Tạo thông báo mới
             </button>
-          )}
+          ) : null}
 
-          {(isCreating || editingId) && (
+          {isCreating || editingId ? (
             <div className="content-card p-5">
               <h2 className="mb-4 text-lg font-bold text-gray-900">
                 {editingId ? 'Chỉnh sửa thông báo' : 'Tạo thông báo mới'}
               </h2>
+
               <div className="space-y-4">
                 <div>
                   <label className="mb-2 block text-sm font-medium text-gray-700">Tiêu đề *</label>
@@ -377,7 +384,7 @@ export default function BroadcastNotificationsPage() {
 
                   <div>
                     <label className="mb-2 block text-sm font-medium text-gray-700">
-                      Thời gian gửi (tùy chọn)
+                      Thời gian gửi
                     </label>
                     <input
                       type="datetime-local"
@@ -393,7 +400,7 @@ export default function BroadcastNotificationsPage() {
                   </div>
                 </div>
 
-                {formData.target_type !== 'all' && (
+                {formData.target_type !== 'all' ? (
                   <div>
                     <label className="mb-2 block text-sm font-medium text-gray-700">
                       {formData.target_type === 'class' ? 'Chọn lớp *' : 'Chọn khối *'}
@@ -426,7 +433,7 @@ export default function BroadcastNotificationsPage() {
                       ))}
                     </div>
                   </div>
-                )}
+                ) : null}
 
                 <div className="flex gap-3">
                   <button
@@ -455,9 +462,9 @@ export default function BroadcastNotificationsPage() {
                 </div>
               </div>
             </div>
-          )}
+          ) : null}
 
-          <div className="flex gap-2 border-b border-gray-200">
+          <div className="flex flex-wrap gap-2 border-b border-gray-200">
             {(['all', 'draft', 'scheduled', 'sent'] as const).map((tab) => (
               <button
                 key={tab}
@@ -490,7 +497,7 @@ export default function BroadcastNotificationsPage() {
                 >
                   <div className="mb-4 flex items-start justify-between gap-4">
                     <div className="flex-1">
-                      <div className="mb-2 flex items-center gap-3">
+                      <div className="mb-2 flex flex-wrap items-center gap-3">
                         <h3 className="text-lg font-bold text-gray-900">{notification.title}</h3>
                         <span
                           className={`rounded-full px-3 py-1 text-sm font-medium ${getStatusColor(notification.status)}`}
@@ -498,9 +505,8 @@ export default function BroadcastNotificationsPage() {
                           {getStatusLabel(notification.status)}
                         </span>
                       </div>
-                      <p className="mb-3 whitespace-pre-wrap text-gray-700">
-                        {notification.message}
-                      </p>
+
+                      <p className="mb-3 whitespace-pre-wrap text-gray-700">{notification.message}</p>
 
                       <div className="flex flex-wrap gap-4 text-sm text-gray-600">
                         <span className="inline-flex items-center gap-1">
@@ -511,21 +517,21 @@ export default function BroadcastNotificationsPage() {
                           <Clock className="h-4 w-4" />
                           {formatVietnamDateTime(notification.created_at)}
                         </span>
-                        {notification.scheduled_at && notification.status === 'scheduled' && (
+                        {notification.scheduled_at && notification.status === 'scheduled' ? (
                           <span className="text-blue-600">
                             Gửi lúc {formatVietnamDateTime(notification.scheduled_at)}
                           </span>
-                        )}
-                        {notification.sent_at && (
+                        ) : null}
+                        {notification.sent_at ? (
                           <span className="text-emerald-600">
                             Đã gửi lúc {formatVietnamDateTime(notification.sent_at)}
                           </span>
-                        )}
+                        ) : null}
                       </div>
                     </div>
 
                     <div className="flex shrink-0 items-center gap-2">
-                      {notification.status === 'draft' && (
+                      {notification.status === 'draft' ? (
                         <>
                           <button
                             type="button"
@@ -544,8 +550,9 @@ export default function BroadcastNotificationsPage() {
                             <Trash2 className="h-5 w-5" />
                           </button>
                         </>
-                      )}
-                      {notification.status === 'scheduled' && (
+                      ) : null}
+
+                      {notification.status === 'scheduled' ? (
                         <button
                           type="button"
                           onClick={() => setPendingAction({ type: 'send', notification })}
@@ -554,7 +561,7 @@ export default function BroadcastNotificationsPage() {
                           <Send className="h-4 w-4" />
                           Gửi ngay
                         </button>
-                      )}
+                      ) : null}
                     </div>
                   </div>
                 </article>
