@@ -191,6 +191,9 @@ Yeu cau:
   - is_mandatory=false -> hoc vien duoc tu dang ky
 - [x] Cap nhat API contract + validation + migration.
 - [x] Dam bao backward compatibility du lieu cu.
+- [ ] Follow-up UX thong bao cho lop duoc dang ky:
+  - Khi tao hoat dong va chon "lop duoc dang ky" (voluntary class), he thong phai gui/tao thong bao ro rang cho hoc vien thuoc cac lop nay biet rang ho duoc dang ky tham gia.
+  - Noi dung thong bao can neu ro: hoat dong nao, han dang ky (neu co), cach vao man hinh dang ky.
 
 ### Definition of Done
 
@@ -1684,7 +1687,7 @@ Yeu cau:
 ### P0 Todo tiep theo (uu tien truoc cac batch UI lon)
 
 - [x] Camera/QR cross-browser re-verify tren dien thoai:
-  - [x] Neu trinh duyet/OS khong cap quyen camera hoac khong ho tro, phai hien thong diep ro rang + huong dan (cap quyen, doi trinh duyet) va fallback (upload anh QR / nhap ma / quet bang app khac mo link).
+  - [x] Neu trinh duyet/OS khong cap quyen camera hoac khong ho tro, phai hien thong diep ro rang + huong dan (cap quyen, doi trinh duyet). Khong su dung fallback upload anh/nhap tay cho luong diem danh chinh thuc.
 
 ## 9.38) Batch uu tien nong - sidebar clarity (QR vs scan, notify labels)
 
@@ -1717,7 +1720,7 @@ Yeu cau:
 - [x] `src/lib/camera-stream.ts`: sua `getPermissionsPolicyCameraHint()` ve tieng Viet dung.
 - [x] `src/components/StudentQRScanner.tsx`:
   - [x] neu `video.play()` bi block, hien overlay + nut `Bat camera` de nguoi dung tap 1 lan.
-  - [x] giu nguyen fallback: tai anh QR / nhap thu cong.
+  - [x] bo fallback tai anh QR / nhap thu cong de ep buoc quet bang camera web.
 - [x] `test/student-qr-scanner-playback-gesture.test.tsx`: them regression cho overlay `Bat camera`.
 
 ### Verification
@@ -1752,8 +1755,8 @@ Yeu cau:
 ### Muc tieu
 
 - Giam phu thuoc camera `getUserMedia` khi test tren LAN `http://10.x` (insecure context) hoac trinh duyet khong cap quyen camera:
-  - Giang vien chi QR theo dang DUONG LINK `/student/check-in?s=...&t=...` de hoc vien co the quet bang app camera bat ky, mo link va diem danh.
-  - Trang hoc vien tu dong diem danh khi mo dung link (sau khi dang nhap).
+  - Giang vien chi QR theo dang DUONG LINK `/student/check-in?s=...&t=...` de hoc vien mo dung trang check-in.
+  - Trang hoc vien khong tu dong diem danh khi mo link; hoc vien bat buoc bat camera web va quet lai QR.
 - Tang do ben doc QR tu anh (jsQR inversion attempts), giam false-negative "Khong doc duoc ma QR tu anh".
 - Login ton trong `?next=` de bao toan deep-link flow.
 
@@ -2155,13 +2158,11 @@ Yeu cau:
     - Them option `aggressive` cho decode pass.
     - Bo sung pass high-contrast + upscale cho anh kho decode.
 - [x] Student scanner UX/fallback:
-  - [x] `src/components/StudentQRScanner.tsx`:
-    - Ho tro decode anh ca khi trinh duyet khong co `createImageBitmap`.
-    - Bat `aggressive` mode cho upload anh QR.
-    - Bo sung canh bao insecure-context + huong dan deep-link `/student/check-in?s=...&t=...`.
-    - Cap nhat label/placeholder nhap thu cong: chap nhan ca raw payload va full link.
+- [x] `src/components/StudentQRScanner.tsx`:
+  - Ho tro decode anh ca khi trinh duyet khong co `createImageBitmap`.
+    - Bo sung canh bao insecure-context + huong dan deep-link `/student/check-in?s=...&t=...` (link chi de vao trang, khong auto diem danh).
 - [x] Camera troubleshooting guidance:
-  - [x] `src/lib/camera-stream.ts`: them tip fallback deep-link trong insecure context.
+  - [x] `src/lib/camera-stream.ts`: them tip mo dung trang + quet lai QR bang camera web.
 - [x] Landing dark CTA contrast:
   - [x] `src/app/globals.css`: harden `.landing-action-primary` cho visited/active/focus-visible + border contrast.
 - [x] Test cap nhat:
@@ -2170,8 +2171,8 @@ Yeu cau:
 
 ### Risk / defer
 
-- [ ] Gioi han trinh duyet: camera tren origin HTTP (khong phai localhost) van bi browser chan theo secure-context policy; batch nay bo sung fallback de van diem danh duoc, khong the bypass policy.
-- [ ] Chua bo sung e2e test upload anh QR that trong browser that; hien tai moi co unit/integration decoder + scanner playback fallback.
+- [ ] Gioi han trinh duyet: camera tren origin HTTP (khong phai localhost) van bi browser chan theo secure-context policy; can van hanh bang HTTPS de hoc vien quet camera web.
+- [ ] Chua bo sung e2e test luong "mo deep-link -> login -> quay lai -> quet camera web moi diem danh".
 
 ### Verification
 
@@ -3857,6 +3858,1157 @@ Sau khi code:
 - [x] `npm.cmd run build` -> PASS (2026-04-25)
 - [x] `rg -n "docs/teacher-activity-form-followup-tasks\\.md|docs/teacher-activity-scope-and-ux-next-batches\\.md" docs --glob "!docs/release-backbone-batch-todos.md"` -> khong con reference active den path cu.
 
+## 9.108) Batch uu tien nong - student QR scan responsiveness + diagnostics gating + dashboard dark-mode readability
+
+### Muc tieu
+
+- Tang toc do nhan dien QR tren mobile de "dua vao la an" nhanh hon trong luong check-in hoc vien.
+- Giu man hinh check-in gon cho end-user: panel chuan doan ky thuat chi mo khi chu dong bat `debug=qr`.
+- Sua card "Thong ke he thong" o dashboard de dam bao doc ro trong dark mode.
+
+### Viec can lam
+
+- [x] QR scan responsiveness:
+  - [x] `src/components/StudentQRScanner.tsx`
+  - [x] giam `DECODE_INTERVAL_MS` 45 -> 24.
+  - [x] day timeout notice 5.5s -> 7s de giam false-negative qua som.
+  - [x] tang tan suat full-frame + aggressive decode mode som hon.
+- [x] Runtime scanner tuning:
+  - [x] `src/lib/qr-scanner-runtime.ts`
+  - [x] tang `maxScansPerSecond` 35 -> 48.
+  - [x] mo rong scan region 90% -> 96% va tang downscale 960 -> 1080.
+- [x] Diagnostics gating:
+  - [x] `src/app/student/check-in/page.tsx`
+  - [x] panel "Chuan doan ky thuat" chi hien thi khi co `debug=qr`.
+- [x] Dashboard dark-mode readability:
+  - [x] `src/app/dashboard/page.tsx`
+  - [x] tang contrast card "Thong ke he thong" va 4 tile con (nen/to mau chu/border dark mode).
+
+### Risk / defer
+
+- [ ] Chua thay doi nghiep vu validate payload/API attendance; batch nay chi toi uu UX quet + hien thi.
+- [ ] Chua co e2e that tren thiet bi mobile cho benchmark toc do decode sau tuning (can tiep tuc o RB-02).
+
+### Verification
+
+- [x] `npm.cmd test -- test/student-check-in-page.test.tsx test/student-qr-scanner-playback-gesture.test.tsx test/admin-dashboard-page.test.tsx test/student-dashboard-page.test.tsx` -> PASS (3 files / 9 tests, 2026-05-02)
+
+## 9.109) Batch uu tien nong - student shell dark/mobile accessibility polish (history/ranking/scores/points)
+
+### Muc tieu
+
+- Tang kha nang doc va thao tac tren mobile/dark mode cho cac trang hoc vien dung thuong xuyen trong luong diem.
+- Chuan hoa focus state cho nut/bo loc/phan trang de giam loi thao tac tren dien thoai va ban phim.
+
+### Viec can lam
+
+- [x] `src/app/student/history/page.tsx`
+  - [x] harden contrast dark mode cho badges (loai/cap/trang thai/thanh tich/phuong thuc diem danh).
+  - [x] bo sung focus-visible cho bo loc va nut export.
+  - [x] bo sung dark-tone cho card tong diem ben phai.
+- [x] `src/app/student/ranking/page.tsx`
+  - [x] harden badge "Ban" trong dark mode.
+  - [x] bo sung focus-visible cho nut phan trang.
+- [x] `src/app/student/scores/page.tsx`
+  - [x] bo sung focus-visible cho nut "Xem cong thuc" (mobile + table) va nut dong modal.
+  - [x] dong bo separator hien thi loai/cap tren card mobile.
+- [x] `src/app/student/points/page.tsx`
+  - [x] bo sung focus-visible cho tab group.
+
+### Risk / defer
+
+- [ ] Batch nay chi harden UI/UX, khong thay doi contract API hay cong thuc tinh diem.
+- [ ] Chua bo sung visual e2e screenshot cho dark mode tren thiet bi that; hien tai khoa bang page regression tests.
+
+### Verification
+
+- [x] `npm.cmd test -- test/student-history-page.test.tsx test/student-ranking-page.test.tsx test/student-points-page.test.tsx test/student-scores-page.test.tsx` -> PASS (4 files / 6 tests, 2026-05-02)
+
+## 9.110) Batch uu tien nong - mobile shell navigation/toast de-conflict
+
+### Muc tieu
+
+- Giam xung dot UI tren dien thoai giua nut mo menu, khoang dem noi dung va toast thong bao.
+- Dam bao thao tac navbar khong bi che va toast hien thi gon hon tren mobile.
+
+### Viec can lam
+
+- [x] `src/components/Sidebar.tsx`
+  - [x] doi vi tri nut mobile toggle sang goc phai + tang `z-index` + them `data-testid`.
+  - [x] tang offset layout mobile qua CSS variable `--app-mobile-nav-offset` len `6.5rem`.
+- [x] `src/app/globals.css`
+  - [x] dong bo gia tri mac dinh `--app-mobile-nav-offset: 6.5rem`.
+- [x] `src/components/ToastProvider.tsx`
+  - [x] doi toast mobile tu `bottom-center` sang `top-center`, dat top offset nam duoi nut navbar.
+  - [x] thu gon kich thuoc toast mobile (padding/font/maxWidth) va giu dark/light contrast.
+
+### Risk / defer
+
+- [ ] Batch nay chi harden presentation layer, khong doi notification contract hay luong auth.
+- [ ] Chua co e2e screenshot cross-browser mobile cho toast overlap; hien tai da khoa bang regression unit/page tests.
+
+### Verification
+
+- [x] `npm.cmd test -- test/sidebar-teacher-links.test.tsx test/notification-inbox.test.tsx` -> PASS (2 files / 9 tests, 2026-05-02)
+
+## 9.111) Batch uu tien nong - dev network link readability + poll detail parity
+
+### Muc tieu
+
+- Khi chay `npm run dev`, dong `Network` trong terminal hien IP LAN that de bam mo truc tiep, khong hien `0.0.0.0`.
+- Chot lai giao dien `teacher poll detail` theo layout moi nhung van pass regression tests.
+
+### Viec can lam
+
+- [x] `scripts/tools/dev-readable-host.mjs`
+  - [x] bo sung strip ANSI truoc khi match de thay the duoc dong `Network` co mau.
+  - [x] giu nguyen output Next.js, chi rewrite host `0.0.0.0` -> IP LAN.
+- [x] `src/app/teacher/polls/[id]/page.tsx`
+  - [x] hoan tat refactor giao dien chi tiet khao sat (summary cards, ket qua, bieu do, export CSV UTF-8 BOM).
+  - [x] harden dark/light + responsive + trang thai dong/mo.
+- [x] `test/teacher-poll-detail-page.test.tsx`
+  - [x] cap nhat matcher nhan `Tong so phan hoi` theo nhan moi (khong phu thuoc dau `:`).
+
+### Risk / defer
+
+- [ ] Batch nay tap trung UI/test parity va readability log dev, khong doi contract route poll.
+- [ ] Chua co e2e mobile visual snapshot cho trang poll detail.
+
+### Verification
+
+- [x] `npm.cmd test -- test/teacher-poll-detail-page.test.tsx test/teacher-polls-page.test.tsx test/student-polls-page.test.tsx` -> PASS (3 files / 4 tests, 2026-05-02)
+
+## 9.112) Batch uu tien nong - student sidebar priority regroup for mobile flow
+
+### Muc tieu
+
+- Sap xep lai menu hoc vien theo muc do su dung: diem danh/tuong tac truoc, luong diem sau, muc kham pha va tai khoan o cuoi.
+- Giu on dinh route, khong lam vo cac test navigation va responsive shell.
+
+### Viec can lam
+
+- [x] `src/components/Sidebar.tsx`
+  - [x] dua `Khảo sát` len nhom uu tien hom nay de hoc vien thao tac nhanh hon sau thong bao/diem danh.
+  - [x] dua `Lịch sử tham gia` vao nhom diem so de khop luong theo doi tien bo.
+  - [x] chuyen `Khám phá hoạt động` xuong nhom kham pha de uu tien thao tac core truoc.
+- [x] `test/sidebar-teacher-links.test.tsx`
+  - [x] bo sung assertion thu tu uu tien: `student/polls` phai dung truoc `student/activities`.
+
+### Risk / defer
+
+- [ ] Batch nay chi doi thu tu/menu grouping, khong doi API hay quyen truy cap.
+- [ ] Chua them E2E visual snapshot cho layout sidebar tren man hinh hep.
+
+### Verification
+
+- [x] `npm.cmd test -- test/sidebar-teacher-links.test.tsx test/student-polls-page.test.tsx` -> PASS (2 files / 7 tests, 2026-05-02)
+
+## 9.113) Batch uu tien nong - dong bo score-flow nav tren cac trang hoc vien
+
+### Muc tieu
+
+- Dong bo thanh dieu huong nhanh luong diem so tren toan bo cum trang `history/awards`.
+- Giam xung dot mobile sticky top voi nut navbar toggle.
+- Bao dam route con theo namespace `/student/*` va active state dung tren sub-page.
+
+### Viec can lam
+
+- [x] `src/components/student/StudentScoreFlowNav.tsx`
+  - [x] bo sung ham `isFlowItemActive` de highlight dung cho sub-route (dac biet `awards/*`).
+  - [x] doi sticky top sang su dung bien `--app-mobile-nav-offset` de tranh de len nut navbar mobile.
+  - [x] clean copy tieng Viet co dau cho nhan flow nav.
+- [x] bo sung flow nav vao cac trang con thieu:
+  - [x] `src/app/student/history/page.tsx`
+  - [x] `src/app/student/awards/page.tsx`
+  - [x] `src/app/student/awards/history/page.tsx`
+  - [x] `src/app/student/awards/upcoming/page.tsx`
+- [x] cap nhat mocks `next/navigation` cho page tests de co `usePathname`:
+  - [x] `test/student-history-page.test.tsx`
+  - [x] `test/student-awards-page.test.tsx`
+  - [x] `test/student-award-history-page.test.tsx`
+  - [x] `test/student-awards-upcoming-page.test.tsx`
+
+### Risk / defer
+
+- [ ] Batch nay chi harden UI/UX navigation va responsive behavior, khong doi API diem/thuong.
+- [ ] Chua co E2E mobile visual snapshot cho sticky nav overlap tren tat ca browser.
+
+### Verification
+
+- [x] `npm.cmd test -- test/student-points-page.test.tsx test/student-scores-page.test.tsx test/student-ranking-page.test.tsx test/student-history-page.test.tsx test/student-awards-page.test.tsx test/student-award-history-page.test.tsx test/student-awards-upcoming-page.test.tsx` -> PASS (7 files / 9 tests, 2026-05-02)
+- [x] `npm.cmd test -- test/sidebar-teacher-links.test.tsx` -> PASS (1 file / 5 tests, 2026-05-02)
+
+## 9.114) Batch uu tien nong - UTF-8 cleanup cho score/awards flow hoc vien
+
+### Muc tieu
+
+- Loai bo chuoi mojibake trong cum trang `history/awards` de giao dien hien thi dung tieng Viet co dau.
+- Giu nguyen logic nghiep vu, chi cleanup text/UX va on dinh dark-light readability.
+
+### Viec can lam
+
+- [x] Rebuild UTF-8 cho cac trang:
+  - [x] `src/app/student/history/page.tsx`
+  - [x] `src/app/student/awards/page.tsx`
+  - [x] `src/app/student/awards/history/page.tsx`
+  - [x] `src/app/student/awards/upcoming/page.tsx`
+- [x] Cleanup fixture/assertion text trong page tests tuong ung:
+  - [x] `test/student-history-page.test.tsx`
+  - [x] `test/student-awards-page.test.tsx`
+  - [x] `test/student-award-history-page.test.tsx`
+  - [x] `test/student-awards-upcoming-page.test.tsx`
+
+### Risk / defer
+
+- [ ] Batch nay khong doi contract API hay cong thuc tinh diem, chi dong bo text UI + test readability.
+- [ ] Chua mo rong cleanup mojibake ra toan bo cac module khac ngoai score/awards flow hoc vien.
+
+### Verification
+
+- [x] `npm.cmd test -- test/student-points-page.test.tsx test/student-scores-page.test.tsx test/student-ranking-page.test.tsx test/student-history-page.test.tsx test/student-awards-page.test.tsx test/student-award-history-page.test.tsx test/student-awards-upcoming-page.test.tsx` -> PASS (7 files / 9 tests, 2026-05-02)
+- [x] `npm.cmd test -- test/sidebar-teacher-links.test.tsx` -> PASS (1 file / 5 tests, 2026-05-02)
+
+## 9.115) Batch uu tien nong - dashboard hoc vien: uu tien thao tac nhanh + regression shell test
+
+### Muc tieu
+
+- Dua thao tac tan suat cao (quet QR, thong bao) len khu "Hanh dong nhanh" cua dashboard hoc vien.
+- Khoa regression cho luong dashboard bang page-shell test co mock du lieu canonical.
+
+### Viec can lam
+
+- [x] `src/app/student/dashboard/page.tsx`
+  - [x] bo sung the nhanh `student/check-in` va `student/notifications`.
+  - [x] doi bo cuc luoi quick actions thanh `xl:grid-cols-3` de giu can bang tren man hinh rong.
+- [x] `test/student-dashboard-links.test.ts`
+  - [x] bo sung assertion route canonical `href="/student/check-in"`.
+- [x] `test/student-dashboard-page-shell.test.tsx`
+  - [x] them shell test cho dashboard: render payload canonical, loc hoat dong tuong lai, xac nhan quick actions uu tien.
+  - [x] them test redirect `/login` khi khong co user.
+
+### Risk / defer
+
+- [ ] Batch nay tap trung UX dieu huong va test hardening, khong doi API/dashboard contract.
+- [ ] Log stderr o test error-path notifications la hanh vi du kien (component co `console.error`), khong anh huong ket qua PASS.
+
+### Verification
+
+- [x] `npm.cmd test -- test/student-dashboard-page-shell.test.tsx test/student-dashboard-links.test.ts test/student-profile-page.test.tsx test/student-notifications-page.test.tsx` -> PASS (4 files / 9 tests, 2026-05-02)
+
+## 9.116) Batch uu tien nong - profile quick actions + UTF-8 test fixtures cho notifications/profile
+
+### Muc tieu
+
+- Day thao tac tan suat cao len trang ho so hoc vien de giam buoc dieu huong.
+- Chuan hoa fixture/test text UTF-8 de tranh fail gia do mojibake khi regression.
+
+### Viec can lam
+
+- [x] `src/app/student/profile/page.tsx`
+  - [x] bo sung quick action `student/check-in` tren header profile.
+  - [x] toi uu bo cuc quick actions profile cho mobile/tablet (`sm:grid-cols-2` + rong hon tren `lg`).
+- [x] `src/app/student/notifications/page.tsx`
+  - [x] tao lai shell trang notifications voi chuoi UTF-8 sach (`Vui lòng đăng nhập`, `Thông báo`).
+- [x] `test/student-profile-page.test.tsx`
+  - [x] rewrite fixture UTF-8, assert co nut `Quét QR điểm danh`.
+- [x] `test/student-notifications-page.test.tsx`
+  - [x] rewrite fixture UTF-8 cho notifications matrix (system/attendance/broadcast/error).
+
+### Risk / defer
+
+- [ ] Batch nay tap trung luong UI + test fixture readability, khong doi contract API notifications/profile.
+- [ ] `stderr` o test error-path notifications la du kien do component ghi `console.error`.
+
+### Verification
+
+- [x] `npm.cmd test -- test/student-dashboard-page-shell.test.tsx test/student-dashboard-links.test.ts test/student-profile-page.test.tsx test/student-notifications-page.test.tsx` -> PASS (4 files / 9 tests, 2026-05-02)
+
+## 9.117) Batch uu tien nong - profile quick action notifications parity
+
+### Muc tieu
+
+- Dong bo thao tac nhanh giua dashboard va profile de hoc vien vao notifications trong 1 cham.
+- Khoa regression bang test shell profile.
+
+### Viec can lam
+
+- [x] `src/app/student/profile/page.tsx`
+  - [x] bo sung quick action `student/notifications`.
+  - [x] can chinh lai width quick-action grid tren `lg` de hien thi on dinh 5 tac vu.
+- [x] `test/student-profile-page.test.tsx`
+  - [x] bo sung assert nut `Thong bao` tren profile shell.
+
+### Risk / defer
+
+- [ ] Batch nay chi sua profile shell + test, khong doi contract API.
+
+### Verification
+
+- [x] `npm.cmd test -- test/student-dashboard-page-shell.test.tsx test/student-dashboard-links.test.ts test/student-profile-page.test.tsx test/student-notifications-page.test.tsx` -> PASS (4 files / 9 tests, 2026-05-02)
+
+## 9.118) Batch uu tien nong - toi uu thu tu navbar hoc vien theo tan suat su dung
+
+### Muc tieu
+
+- Sap xep lai menu hoc vien de thao tac tan suat cao luon o nhom tren cung.
+- Giam so lan cuon/tim menu tren mobile: diem danh, hoat dong cua toi, thong bao/canh bao, khao sat.
+
+### Viec can lam
+
+- [x] `src/components/Sidebar.tsx`
+  - [x] doi ten nhom student tu `Uu tien hom nay` -> `Dung hang ngay`.
+  - [x] doi thu tu muc uu tien: `check-in` -> `my-activities` -> `notifications` -> `alerts` -> `polls` -> `dashboard`.
+  - [x] chuyen `alerts` ra khoi nhom tai khoan de dua vao luong van hanh moi ngay.
+  - [x] doi ten nhom `Hoc tap va tuong tac` -> `Kham pha hoat dong`.
+  - [x] doi ten nhom `Tai khoan va ho tro` -> `Tai khoan`.
+- [x] `test/sidebar-teacher-links.test.tsx`
+  - [x] them regression thu tu: `check-in` phai dung truoc `dashboard`.
+  - [x] them regression thu tu: `notifications` phai dung truoc `profile`.
+  - [x] them regression thu tu: `alerts` phai dung truoc `recommendations`.
+
+### Risk / defer
+
+- [ ] Batch nay chi sua thu tu va nhom menu, khong doi route contract hay API.
+
+### Verification
+
+- [x] `npm.cmd test -- test/sidebar-teacher-links.test.tsx test/student-dashboard-links.test.ts test/student-alerts-page.test.tsx test/student-recommendations-page.test.tsx test/student-polls-page.test.tsx` -> PASS (5 files / 13 tests, 2026-05-02)
+
+## 9.119) Batch uu tien nong - dong bo thanh tac vu nhanh tren cac trang hoc vien
+
+### Muc tieu
+
+- Giam ma sat dieu huong tren mobile: giu 1 thanh tac vu nhanh thong nhat giua cac trang hoc vien dung thuong xuyen.
+- Dong bo dark/light readability va active-state theo duong dan hien tai.
+
+### Viec can lam
+
+- [x] tao component dung chung:
+  - [x] `src/components/student/StudentDailyQuickActions.tsx`
+  - [x] gom 5 tac vu cot loi: `check-in`, `my-activities`, `notifications`, `polls`, `profile`.
+  - [x] active-state theo `window.location.pathname` de tuong thich bo test mock hien co.
+- [x] gan thanh tac vu nhanh vao cac trang hoc vien:
+  - [x] `src/app/student/alerts/page.tsx`
+  - [x] `src/app/student/recommendations/page.tsx`
+  - [x] `src/app/student/polls/page.tsx`
+  - [x] `src/app/student/devices/page.tsx`
+- [x] cap nhat regression tests de khoa hien dien:
+  - [x] `test/student-alerts-page.test.tsx`
+  - [x] `test/student-recommendations-page.test.tsx`
+  - [x] `test/student-polls-page.test.tsx`
+  - [x] `test/student-devices-page.test.tsx`
+
+### Risk / defer
+
+- [ ] Batch nay tap trung UX dieu huong, khong doi API contract.
+- [ ] Chua mo rong thanh tac vu nhanh sang toan bo cac trang student con lai (se tiep tuc theo cum).
+
+### Verification
+
+- [x] `npm.cmd test -- test/sidebar-teacher-links.test.tsx test/student-alerts-page.test.tsx test/student-recommendations-page.test.tsx test/student-polls-page.test.tsx test/student-devices-page.test.tsx` -> PASS (5 files / 12 tests, 2026-05-02)
+
+## 9.120) Batch uu tien nong - mo rong tac vu nhanh sang cum hoat dong/notifications
+
+### Muc tieu
+
+- Hoan tat luong dieu huong nhanh tren cac trang hoc vien co tan suat su dung cao nhat.
+- Giam thao tac quay lui sidebar tren mobile khi dang xu ly hoat dong/notifications.
+
+### Viec can lam
+
+- [x] gan `StudentDailyQuickActions` vao:
+  - [x] `src/app/student/my-activities/page.tsx`
+  - [x] `src/app/student/activities/page.tsx`
+  - [x] `src/app/student/notifications/page.tsx`
+- [x] cap nhat regression tests:
+  - [x] `test/student-my-activities-page.test.tsx`
+  - [x] `test/student-activities-page.test.tsx`
+  - [x] `test/student-notifications-page.test.tsx`
+  - [x] giu route-order guard qua `test/sidebar-teacher-links.test.tsx`
+
+### Risk / defer
+
+- [ ] Batch nay chi thay doi UI shell dieu huong, khong doi contract API.
+- [ ] Trang notifications hien tai dung 2 shell lien tiep (quick actions + inbox); co the hop nhat layout o batch polish tiep theo neu can.
+
+### Verification
+
+- [x] `npm.cmd test -- test/student-my-activities-page.test.tsx test/student-activities-page.test.tsx test/student-notifications-page.test.tsx test/sidebar-teacher-links.test.tsx` -> PASS (4 files / 12 tests, 2026-05-02)
+
+## 9.121) Batch uu tien nong - hop nhat shell notifications de bo layout kep
+
+### Muc tieu
+
+- Loai bo cau truc shell long nhau tren trang thong bao hoc vien.
+- Giu thanh `Tac vu nhanh` nam trong cung luong layout voi inbox thong bao.
+
+### Viec can lam
+
+- [x] `src/components/notifications/NotificationInbox.tsx`
+  - [x] bo sung prop `leadingContent?: ReactNode`.
+  - [x] render `leadingContent` ngay tren inbox section trong cung `page-shell`.
+- [x] `src/app/student/notifications/page.tsx`
+  - [x] chuyen sang truyen `leadingContent={<StudentDailyQuickActions />}`.
+  - [x] bo shell rieng trung lap.
+
+### Risk / defer
+
+- [ ] Batch nay chi canh chinh layout shell, khong doi luong API notifications.
+- [ ] Vẫn giu log `console.error` trong error-path notifications de phuc vu debug (test error-path co stderr la du kien).
+
+### Verification
+
+- [x] `npm.cmd test -- test/student-notifications-page.test.tsx test/notification-inbox.test.tsx test/sidebar-teacher-links.test.tsx` -> PASS (3 files / 13 tests, 2026-05-02)
+
+## 9.122) Batch uu tien nong - dark mode contrast polish cho cum student thong bao/goi y/canh bao
+
+### Muc tieu
+
+- Tang do ro chu va badge trong dark mode o cac trang hoc vien vua duoc mo rong tac vu nhanh.
+- Giu nguyen nghiep vu, chi harden presentation + accessibility focus state.
+
+### Viec can lam
+
+- [x] `src/components/notifications/NotificationInbox.tsx`
+  - [x] harden contrast dark mode cho:
+    - [x] thanh thao tac khi chon nhieu notifications,
+    - [x] nut `Đánh dấu đã đọc`,
+    - [x] nhan `Chọn tất cả trong trang`,
+    - [x] button variant trung tinh trong action buttons.
+  - [x] bo sung dark mode day du cho modal `Cài đặt thông báo` (title/text/card/control).
+- [x] `src/app/student/recommendations/page.tsx`
+  - [x] bo sung dark classes cho badge header, badge card va icon empty-state.
+- [x] `src/app/student/alerts/page.tsx`
+  - [x] bo sung dark classes cho badge header va text tone cards.
+- [x] `src/app/student/my-activities/page.tsx`
+  - [x] them focus ring va dark-focus cho input `Tìm kiếm` + select `Sắp xếp`.
+
+### Risk / defer
+
+- [ ] Batch nay chi sua UI contrast/focus, khong doi API contract.
+- [ ] Log `console.error` trong test error-path notifications van la hanh vi du kien.
+
+### Verification
+
+- [x] `npm.cmd test -- test/student-notifications-page.test.tsx test/notification-inbox.test.tsx test/student-alerts-page.test.tsx test/student-recommendations-page.test.tsx test/student-my-activities-page.test.tsx` -> PASS (5 files / 13 tests, 2026-05-02)
+
+## 9.123) Batch uu tien nong - responsive/focus polish cho cum student score flow
+
+### Muc tieu
+
+- Tang do ro thao tac tren mobile cho cac trang score flow cua hoc vien.
+- Dong bo focus-visible va dark contrast cho cac nut/nhan quan trong.
+
+### Viec can lam
+
+- [x] `src/app/student/scores/page.tsx`
+  - [x] harden dark badge `Tham gia`/`Chưa xếp loại`.
+  - [x] bo sung focus-visible ring cho nut `Xuất CSV`.
+  - [x] chinh separator `Loại / cấp` de doc ro hon tren dark mode.
+- [x] `src/app/student/points/page.tsx`
+  - [x] them `aria-pressed` cho tab button de tang truy cap va ro trang thai.
+- [x] `src/app/student/ranking/page.tsx`
+  - [x] giu chieu cao toi thieu cho thong diep fallback "Thứ hạng của bạn" de tranh giat layout mobile.
+- [x] `src/app/student/awards/page.tsx`
+  - [x] bo sung focus-visible + dark hover cho quick actions (`Xem lịch sử`, `Mốc tiếp theo`).
+  - [x] harden style nut `Áp dụng` (dark/focus/transition).
+
+### Risk / defer
+
+- [ ] Batch nay chi sua UI/accessibility, khong doi nghiep vu tinh diem hay API.
+
+### Verification
+
+- [x] `npm.cmd test -- test/student-scores-page.test.tsx test/student-points-page.test.tsx test/student-ranking-page.test.tsx test/student-awards-page.test.tsx` -> PASS (4 files / 5 tests, 2026-05-02)
+
+## 9.124) Batch uu tien nong - tang do nhay QR scan + micro-UX mobile check-in
+
+### Muc tieu
+
+- Giam do tre khi camera lia qua ma QR o trang check-in hoc vien.
+- Lam ro trang thai quet/loi/thanh cong tren mobile, tang kha nang thao tac ban phim.
+
+### Viec can lam
+
+- [x] `src/components/StudentQRScanner.tsx`
+  - [x] tang tan suat decode (`DECODE_INTERVAL_MS`: 24 -> 18).
+  - [x] doi scan strategy: full-frame 1/3 cycle va crop zoom progression moi de bat ma nhanh hon.
+  - [x] day aggressive mode som hon (tu ~450ms) de giam "lia ma khong an".
+  - [x] them `scanStateHint` theo tung trang thai de user biet hanh dong tiep theo.
+  - [x] bo sung `aria-live` cho thong bao thanh cong/loi.
+  - [x] harden focus-visible cho cac nut (`Bật camera`, `Quét lại`, `Tạm dừng`).
+  - [x] them dem `safe-area` duoi section scanner de tranh sat mep tren mobile.
+
+### Risk / defer
+
+- [ ] Batch nay chi toi uu scanner runtime + UX, khong doi contract API diem danh.
+- [ ] Chua co benchmark FPS thuc te tren tung dong may; can tiep tuc soak test tren iOS/Android o UAT.
+
+### Verification
+
+- [x] `npm.cmd test -- test/student-check-in-page.test.tsx test/student-qr-scanner-playback-gesture.test.tsx test/qr-scan-decoder.test.ts test/qr.test.ts` -> PASS (4 files / 15 tests, 2026-05-02)
+
+## 9.125) Batch uu tien nong - harden dieu huong score-flow (mobile + active-state)
+
+### Muc tieu
+
+- Chuan hoa trai nghiem dieu huong luong diem so tren mobile: nut de bam hon, focus ro rang.
+- Khoa regression active-state cho route con (`/student/awards/*`) de tranh sai highlight khi refactor.
+
+### Viec can lam
+
+- [x] `src/components/student/StudentScoreFlowNav.tsx`
+  - [x] bo sung `data-testid="student-score-flow-nav"` cho shell nav.
+  - [x] tang hit-area link (`min-h`) va them `focus-visible` ring day du cho keyboard/mobile accessibility.
+- [x] them test moi:
+  - [x] `test/student-score-flow-nav.test.tsx`
+  - [x] verify full canonical links.
+  - [x] verify `aria-current="page"` cho `/student/awards/history`.
+  - [x] verify active-state dung tren `/student/points`.
+
+### Risk / defer
+
+- [ ] Batch nay chi harden UI/accessibility + regression tests, khong doi API contract.
+
+### Verification
+
+- [x] `npm.cmd test -- test/student-score-flow-nav.test.tsx test/student-scores-page.test.tsx test/student-points-page.test.tsx test/student-ranking-page.test.tsx test/student-awards-page.test.tsx` -> PASS (5 files / 8 tests, 2026-05-02)
+
+## 9.126) Batch uu tien nong - chuan hoa tac vu nhanh hoc vien (nav semantics + regression lock)
+
+### Muc tieu
+
+- Nang cap thanh `Tác vụ nhanh` thanh dieu huong chuan truy cap (aria/focus/current-state).
+- Dong bo thao tac tan suat cao (them `Bảng điểm`) ma van giu trai nghiem gon tren mobile.
+
+### Viec can lam
+
+- [x] `src/components/student/StudentDailyQuickActions.tsx`
+  - [x] doi wrapper thanh `<nav>` co `aria-label`, bo sung `data-testid`.
+  - [x] bo sung action `Bảng điểm` (`/student/scores`) vao nhom tac vu nhanh.
+  - [x] bo sung `aria-current="page"` cho item active.
+  - [x] harden focus-visible ring cho cac quick-action links.
+  - [x] bo sung hit-area `min-h` + bottom safe-area padding khi scroll ngang tren mobile.
+- [x] them test moi:
+  - [x] `test/student-daily-quick-actions.test.tsx`
+  - [x] verify canonical links + order.
+  - [x] verify active-state route truc tiep.
+  - [x] verify active-state route con (`/student/scores/*`).
+
+### Risk / defer
+
+- [ ] Batch nay chi harden UI nav semantics, khong doi contract API.
+- [ ] Log `console.error` cua notifications error-path van la hanh vi du kien trong test.
+
+### Verification
+
+- [x] `npm.cmd test -- test/student-daily-quick-actions.test.tsx test/student-alerts-page.test.tsx test/student-recommendations-page.test.tsx test/student-polls-page.test.tsx test/student-devices-page.test.tsx test/student-my-activities-page.test.tsx test/student-activities-page.test.tsx test/student-notifications-page.test.tsx` -> PASS (8 files / 17 tests, 2026-05-02)
+
+## 9.127) Batch uu tien nong - chuan hoa quick-nav ho so hoc vien (link semantics + accessibility)
+
+### Muc tieu
+
+- Bo nut `button + router.push` trong quick action profile, dong bo ve `Link` de dieu huong on dinh.
+- Tang chat luong accessibility cho thao tac nhanh (focus-visible ring + nav semantics).
+
+### Viec can lam
+
+- [x] `src/app/student/profile/page.tsx`
+  - [x] chuyen 5 quick actions thanh `Link`:
+    - [x] `/student/check-in`
+    - [x] `/student/scores`
+    - [x] `/student/my-activities`
+    - [x] `/student/notifications`
+    - [x] `/student/devices`
+  - [x] bo sung `aria-label` cho nhom quick action.
+  - [x] bo sung `focus-visible` ring de keyboard/mobile accessibility ro rang hon.
+- [x] `test/student-profile-page.test.tsx`
+  - [x] mock `next/link`.
+  - [x] doi assertion quick action tu `role=button` sang `role=link` + verify `href`.
+
+### Risk / defer
+
+- [ ] Batch nay chi doi shell dieu huong va test regression, khong doi API contract.
+
+### Verification
+
+- [x] `npm.cmd test -- test/student-profile-page.test.tsx test/student-dashboard-page-shell.test.tsx test/student-daily-quick-actions.test.tsx` -> PASS (3 files / 6 tests, 2026-05-02)
+
+## 9.128) Batch uu tien nong - chuan hoa quick-nav cum awards hoc vien (link semantics + regression lock)
+
+### Muc tieu
+
+- Loai bo `button + router.push` trong quick-nav cac trang awards cua hoc vien.
+- Dong bo dieu huong thanh `Link` de on dinh UX mobile va toi uu accessibility.
+
+### Viec can lam
+
+- [x] `src/app/student/awards/page.tsx`
+  - [x] doi quick-nav sang `Link`:
+    - [x] `/student/awards/history`
+    - [x] `/student/awards/upcoming`
+- [x] `src/app/student/awards/history/page.tsx`
+  - [x] doi quick-nav sang `Link`:
+    - [x] `/student/awards`
+    - [x] `/student/dashboard`
+- [x] `src/app/student/awards/upcoming/page.tsx`
+  - [x] doi quick-nav sang `Link`:
+    - [x] `/student/points`
+    - [x] `/student/awards`
+- [x] cap nhat regression tests:
+  - [x] `test/student-awards-page.test.tsx`
+  - [x] `test/student-award-history-page.test.tsx`
+  - [x] `test/student-awards-upcoming-page.test.tsx`
+  - [x] bo sung mock `next/link` + assert `href` cho cac quick-nav links.
+
+### Risk / defer
+
+- [ ] Batch nay chi doi shell dieu huong + test hardening, khong doi contract API awards.
+
+### Verification
+
+- [x] `npm.cmd test -- test/student-awards-page.test.tsx test/student-award-history-page.test.tsx test/student-awards-upcoming-page.test.tsx test/student-profile-page.test.tsx` -> PASS (4 files / 4 tests, 2026-05-02)
+
+## 9.129) Batch uu tien nong - hoan thien dieu huong trang chi tiet hoat dong hoc vien
+
+### Muc tieu
+
+- Bo sung duong lui ro rang tu trang chi tiet hoat dong ve danh sach hoat dong.
+- Dong bo `Tac vu nhanh hoc vien` ngay trong trang chi tiet de giam thao tac mobile.
+- Khoa regression test cho quick-nav moi de tranh vo luong dieu huong.
+
+### Viec can lam
+
+- [x] `src/app/student/activities/[id]/page.tsx`
+  - [x] bo sung `Link` quay ve `/student/activities` ngay canh nut `Quay lai`.
+  - [x] harden accessibility cho nut `Quay lai` (focus-visible ring).
+  - [x] gan `StudentDailyQuickActions` vao trang chi tiet hoat dong.
+- [x] `test/student-activity-detail-page.test.tsx`
+  - [x] mock `next/link`.
+  - [x] bo sung assert quick-link `Quet QR -> /student/check-in`.
+  - [x] bo sung assert link `Danh sach hoat dong -> /student/activities`.
+
+### Risk / defer
+
+- [ ] Batch nay chi thay doi shell dieu huong va regression tests, khong doi nghiep vu dang ky/huy dang ky.
+
+### Verification
+
+- [x] `npm.cmd test -- test/student-activity-detail-page.test.tsx test/student-daily-quick-actions.test.tsx` -> PASS (2 files / 7 tests, 2026-05-03)
+
+## 9.130) Batch uu tien nong - semantic navigation cho recommendations + achievement tips
+
+### Muc tieu
+
+- Chuan hoa CTA dieu huong tren trang goi y va meo thanh tich hoc vien sang `Link` semantic.
+- Giam phu thuoc `router.push` cho thao tac dieu huong don gian, tang on dinh mobile/accessibility.
+- Khoa regression test theo `href` de tranh quay lai mo hinh `button + push`.
+
+### Viec can lam
+
+- [x] `src/app/student/recommendations/page.tsx`
+  - [x] doi nut `Xem hoat dong` thanh `Link` den `/student/activities/{id}`.
+  - [x] bo sung `focus-visible` ring cho CTA.
+- [x] `src/app/student/achievements/tips/page.tsx`
+  - [x] doi nut action moi tip thanh `Link` theo `tip.actionUrl`.
+  - [x] bo import/khai bao `useRouter` khong can thiet.
+  - [x] bo sung `focus-visible` ring cho CTA tips.
+- [x] cap nhat tests:
+  - [x] `test/student-recommendations-page.test.tsx`
+    - [x] mock `next/link`.
+    - [x] doi assertion tu click button + `pushMock` sang verify `href`.
+  - [x] `test/student-achievement-tips-page.test.tsx`
+    - [x] mock `next/link`.
+    - [x] doi assertion tu click button + `pushMock` sang verify `href`.
+
+### Risk / defer
+
+- [ ] Batch nay chi doi presentation-layer navigation + test regression, khong doi contract API student.
+
+### Verification
+
+- [x] `npm.cmd test -- test/student-recommendations-page.test.tsx test/student-achievement-tips-page.test.tsx test/student-activity-detail-page.test.tsx` -> PASS (3 files / 7 tests, 2026-05-03)
+
+## 9.131) Batch uu tien nong - semantic detail navigation trong danh sach hoat dong hoc vien
+
+### Muc tieu
+
+- Loai bo callback dieu huong `onView + router.push` o card hoat dong hoc vien.
+- Chuan hoa CTA `Xem chi tiet` thanh `Link` semantic de tang on dinh mobile/accessibility.
+- Khoa regression test bang assert `href` chi tiet.
+
+### Viec can lam
+
+- [x] `src/components/activity/StudentActivityCard.tsx`
+  - [x] bo prop `onView`.
+  - [x] doi nut `Xem chi tiet` thanh `Link` den `/student/activities/{id}`.
+  - [x] bo sung `focus-visible` ring cho CTA.
+- [x] `src/app/student/activities/page.tsx`
+  - [x] bo truyen callback `onView={(id) => router.push(...)}`.
+- [x] `test/student-activities-page.test.tsx`
+  - [x] mock `next/link`.
+  - [x] them assert `Xem chi tiet` co `href` dung (`/student/activities/1`).
+
+### Risk / defer
+
+- [ ] Batch nay chi doi presentation-layer navigation + typing props, khong doi nghiep vu dang ky/huy/kiem tra conflict.
+
+### Verification
+
+- [x] `npm.cmd test -- test/student-activities-page.test.tsx test/student-activity-detail-page.test.tsx test/student-my-activities-page.test.tsx` -> PASS (3 files / 7 tests, 2026-05-03)
+
+## 9.132) Batch uu tien nong - accessibility hardening cho bo loc hoat dong hoc vien
+
+### Muc tieu
+
+- Tang do ro trang thai bo loc tren mobile/keyboard cho trang `student/activities`.
+- Chuan hoa keyboard focus cho cac nut phan trang va nut thao tac tren the hoat dong.
+- Khoa regression bang assert `aria-pressed` cho cac bo loc chinh.
+
+### Viec can lam
+
+- [x] `src/app/student/activities/page.tsx`
+  - [x] them `aria-label` cho nhom bo loc thoi gian va nhom bo loc pham vi.
+  - [x] them `aria-pressed` cho 4 nut bo loc:
+    - [x] `time-filter-upcoming`
+    - [x] `time-filter-all`
+    - [x] `scope-filter-applicable`
+    - [x] `scope-filter-not-applicable`
+  - [x] them `data-testid` cho 4 nut bo loc de khoa regression test.
+  - [x] harden `focus-visible` ring cho nut phan trang `Trang truoc/Trang sau`.
+- [x] `src/components/activity/StudentActivityCard.tsx`
+  - [x] harden `focus-visible` ring cho nut `Dang ky ngay` va `Huy dang ky`.
+- [x] `test/student-activities-page.test.tsx`
+  - [x] assert `aria-pressed` default cho 4 nut bo loc.
+  - [x] assert `aria-pressed` update dung sau khi chuyen tab pham vi.
+
+### Risk / defer
+
+- [ ] Batch nay chi harden accessibility + regression test, khong doi nghiep vu bo loc/dang ky.
+
+### Verification
+
+- [x] `npm.cmd test -- test/student-activities-page.test.tsx test/student-activity-detail-page.test.tsx test/student-my-activities-page.test.tsx` -> PASS (3 files / 7 tests, 2026-05-03)
+
+## 9.133) Batch uu tien nong - dong bo tac vu nhanh cho trang meo thanh tich hoc vien
+
+### Muc tieu
+
+- Dong bo dieu huong nhanh tren trang `student/achievements/tips` de giam ma sat mobile.
+- Giu nhat quan UX voi cac trang hoc vien da co `StudentDailyQuickActions`.
+- Khoa regression bang assert shell quick-actions trong page test.
+
+### Viec can lam
+
+- [x] `src/app/student/achievements/tips/page.tsx`
+  - [x] import va gan `StudentDailyQuickActions` ngay duoi card header.
+- [x] `test/student-achievement-tips-page.test.tsx`
+  - [x] bo sung assert `data-testid="student-daily-quick-actions"` co hien thi.
+
+### Risk / defer
+
+- [ ] Batch nay chi mo rong shell dieu huong, khong doi nghiep vu tinh diem/goi y.
+
+### Verification
+
+- [x] `npm.cmd test -- test/student-achievement-tips-page.test.tsx test/student-daily-quick-actions.test.tsx test/student-recommendations-page.test.tsx` -> PASS (3 files / 6 tests, 2026-05-03)
+
+## 9.134) Batch uu tien nong - mo rong StudentDailyQuickActions voi tuy chon thiet bi
+
+### Muc tieu
+
+- Mo rong component tac vu nhanh dung chung de ho tro them action `Thiet bi` khi can.
+- Giu nguyen hanh vi mac dinh tren tat ca cac trang student hien co.
+- Khoa regression cho bien the include action bo sung.
+
+### Viec can lam
+
+- [x] `src/components/student/StudentDailyQuickActions.tsx`
+  - [x] them prop `includeDevices?: boolean`.
+  - [x] them prop `className?: string` de tai su dung linh hoat theo bo cuc trang.
+  - [x] bo sung action `Thiet bi` (`/student/devices`) khi `includeDevices=true`.
+  - [x] giu nguyen active-state (`aria-current`) cho ca route con.
+- [x] `test/student-daily-quick-actions.test.tsx`
+  - [x] them regression test cho `includeDevices`:
+    - [x] link `Thiết bị` co `href` dung.
+    - [x] `aria-current=page` dung tren route `/student/devices`.
+
+### Risk / defer
+
+- [ ] Batch nay mo rong component shell va test regression, chua thay the toan bo quick-actions dac thu trong profile page (se tach batch rieng).
+
+### Verification
+
+- [x] `npm.cmd test -- test/student-daily-quick-actions.test.tsx test/student-profile-page.test.tsx test/student-achievement-tips-page.test.tsx test/student-recommendations-page.test.tsx` -> PASS (4 files / 8 tests, 2026-05-03)
+
+## 9.135) Batch uu tien nong - thay quick-actions profile sang component dung chung
+
+### Muc tieu
+
+- Loai bo block quick-actions viet rieng trong trang `student/profile` de tranh duplicate UI.
+- Tai su dung `StudentDailyQuickActions` (co `includeDevices`) de dong bo menu tac vu nhanh.
+- Khoa regression bang assert danh sach `href` theo `data-testid`, khong phu thuoc text locale.
+
+### Viec can lam
+
+- [x] `src/app/student/profile/page.tsx`
+  - [x] bo import `next/link` khong can dung.
+  - [x] import `StudentDailyQuickActions`.
+  - [x] thay block link thu cong bang `<StudentDailyQuickActions includeDevices className="lg:w-[28rem]" />`.
+- [x] `test/student-profile-page.test.tsx`
+  - [x] lam sach file test ve UTF-8 on dinh.
+  - [x] doi assert quick-action sang kiem tra tap `href` qua `student-daily-quick-action-link`.
+
+### Risk / defer
+
+- [ ] Batch nay khong doi nghiep vu profile hay diem danh, chi doi shell dieu huong + test regression.
+
+### Verification
+
+- [x] `npm.cmd test -- test/student-profile-page.test.tsx test/student-daily-quick-actions.test.tsx test/student-achievement-tips-page.test.tsx test/student-recommendations-page.test.tsx` -> PASS (4 files / 8 tests, 2026-05-03)
+- [x] `npm.cmd test -- test/student-activities-page.test.tsx test/student-activity-detail-page.test.tsx` -> PASS (2 files / 6 tests, 2026-05-03)
+
+## 9.136) Batch uu tien nong - hardening script dev-readable-host tranh sap do EPIPE
+
+### Muc tieu
+
+- Giu script `npm run dev` on dinh khi luong output bi dong/ngat dot ngot.
+- Tranh crash `EPIPE` trong `dev-readable-host.mjs` khi terminal/client dong pipe.
+- Bao dam script tiep tuc vai tro rewrite `Network: https://0.0.0.0` sang IP LAN.
+
+### Viec can lam
+
+- [x] `scripts/tools/dev-readable-host.mjs`
+  - [x] bo sung `safeWrite()` bat va bo qua `EPIPE` / `ERR_STREAM_DESTROYED`.
+  - [x] bo sung co `closed` trong stream rewriter de dung ghi tiep khi stream da dong.
+  - [x] chan `pushChunk`/`flushRemainder` khi stream da dong de tranh throw lap lai.
+
+### Risk / defer
+
+- [ ] Batch nay la hardening script local dev; khong doi nghiep vu runtime web.
+
+### Verification
+
+- [x] `node --check scripts/tools/dev-readable-host.mjs` -> PASS (2026-05-03)
+- [x] Chay thu `npm.cmd run dev -- --port 3011` voi timeout ngan, khong con crash stack `EPIPE` trong wrapper (2026-05-03)
+
+## 9.137) Batch uu tien nong - chuan hoa UTF-8 cho thanh dieu huong hoc vien dung chung
+
+### Muc tieu
+
+- Chuan hoa tieng Viet co dau cho 2 thanh dieu huong hoc vien duoc tai su dung nhieu nhat.
+- Giam nguy co mismatch hydratation/SSR do doc `window.location` truc tiep.
+- Khoa regression cho active-state va tap lien ket chinh.
+
+### Viec can lam
+
+- [x] `src/components/student/StudentDailyQuickActions.tsx`
+  - [x] rewrite file sang UTF-8 sach, nhan tieng Viet co dau.
+  - [x] chuyen xac dinh route hien tai sang `usePathname` thay cho `window.location.pathname`.
+  - [x] giu nguyen contract `includeDevices` + `className`.
+- [x] `src/components/student/StudentScoreFlowNav.tsx`
+  - [x] rewrite file sang UTF-8 sach, nhan tieng Viet co dau.
+  - [x] giu logic active cho nhanh `awards/*`.
+- [x] `test/student-daily-quick-actions.test.tsx`
+  - [x] rewrite test theo nhan moi co dau.
+  - [x] mock `usePathname` de test active-state on dinh.
+- [x] `test/student-score-flow-nav.test.tsx`
+  - [x] rewrite test theo nhan moi co dau.
+  - [x] mock `usePathname` de test active-state on dinh.
+- [x] `test/student-profile-page.test.tsx`
+  - [x] bo sung mock `usePathname` cho page co import quick-actions.
+
+### Risk / defer
+
+- [ ] Batch nay tap trung text + hook route client; khong doi nghiep vu diem danh, tinh diem, hay API.
+- [ ] Chua quet het toan bo he thong mojibake; uu tien cao nhat da ap vao 2 component dung chung cho hoc vien.
+
+### Verification
+
+- [x] `npm.cmd test -- test/student-daily-quick-actions.test.tsx test/student-score-flow-nav.test.tsx test/student-profile-page.test.tsx` -> PASS (3 files / 8 tests, 2026-05-03)
+- [x] `npm.cmd test -- test/student-points-page.test.tsx test/student-scores-page.test.tsx test/student-ranking-page.test.tsx test/student-history-page.test.tsx` -> PASS (4 files / 6 tests, 2026-05-03)
+
+## 9.138) Batch uu tien nong - khoa regression empty-state trang lich su hoc vien
+
+### Muc tieu
+
+- Loai bo regression fail do assert text mojibake o `student-history-page`.
+- Khoa empty-state bang `data-testid` de test on dinh, khong phu thuoc encoding text.
+
+### Viec can lam
+
+- [x] `src/app/student/history/page.tsx`
+  - [x] bo sung `data-testid="student-history-empty-state"` cho khung empty-state.
+- [x] `test/student-history-page.test.tsx`
+  - [x] rewrite test sang UTF-8 sach.
+  - [x] doi assertion empty-state sang `findByTestId('student-history-empty-state')`.
+
+### Risk / defer
+
+- [ ] Batch nay chi harden testability + text fixture, khong doi nghiep vu history/diem.
+
+### Verification
+
+- [x] `npm.cmd test -- test/student-history-page.test.tsx test/student-points-page.test.tsx test/student-scores-page.test.tsx test/student-ranking-page.test.tsx` -> PASS (4 files / 6 tests, 2026-05-03)
+- [x] `npm.cmd test -- test/student-daily-quick-actions.test.tsx test/student-score-flow-nav.test.tsx test/student-profile-page.test.tsx` -> PASS (3 files / 8 tests, 2026-05-03)
+
+## 9.139) Batch uu tien nong - dong bo mock usePathname cho cum test student co quick-actions
+
+### Muc tieu
+
+- Sua regression test do `StudentDailyQuickActions` da chuyen sang hook `usePathname`.
+- Loai bo loi "No usePathname export is defined on next/navigation mock" tren cac page test student.
+- Khoa lai cum test recommendations/tips/activity-detail/dashboard shell.
+
+### Viec can lam
+
+- [x] cap nhat mocks `next/navigation` bo sung `usePathname`:
+  - [x] `test/student-achievement-tips-page.test.tsx`
+  - [x] `test/student-recommendations-page.test.tsx`
+  - [x] `test/student-activity-detail-page.test.tsx`
+  - [x] `test/student-profile-page.test.tsx` (da cap nhat o batch 9.137)
+- [x] cap nhat matcher label quick-action moi:
+  - [x] `test/student-activity-detail-page.test.tsx`: `Quét QR` -> `Quét mã QR`.
+
+### Risk / defer
+
+- [ ] Batch nay chi sua test mocks/matcher, khong doi nghiep vu runtime.
+- [ ] Co log `stderr` trong 1 scenario test activity-detail (fetch fail branch) nhung test van PASS.
+
+### Verification
+
+- [x] `npm.cmd test -- test/student-dashboard-page-shell.test.tsx test/student-achievement-tips-page.test.tsx test/student-recommendations-page.test.tsx test/student-activity-detail-page.test.tsx` -> PASS (4 files / 9 tests, 2026-05-03)
+
+## 9.140) Batch uu tien nong - quet rong toan cum test student dung StudentDailyQuickActions
+
+### Muc tieu
+
+- Quet rong cac page test hoc vien co render `StudentDailyQuickActions` de tim va sua het mock `next/navigation` thieu `usePathname`.
+- Chan regression day chuyen "component crash -> body rong -> fail hang loat assert text" sau khi doi hook route.
+
+### Viec can lam
+
+- [x] bo sung `usePathname` cho mocks `next/navigation`:
+  - [x] `test/student-activities-page.test.tsx` (`/student/activities`)
+  - [x] `test/student-alerts-page.test.tsx` (`/student/alerts`)
+  - [x] `test/student-devices-page.test.tsx` (`/student/devices`)
+  - [x] `test/student-my-activities-page.test.tsx` (`/student/my-activities`)
+  - [x] `test/student-polls-page.test.tsx` (`/student/polls`)
+- [x] re-run cum test truoc do fail day chuyen va xac nhan da khoi phuc.
+- [x] run gop 15 file student regression de khoa lai nhanh toan bo nhom lien quan.
+
+### Risk / defer
+
+- [ ] Batch nay chi sua mocking test, khong doi logic runtime production.
+- [ ] Co log `stderr` du kien trong 1 so scenario error-path (activity-detail/notifications), nhung khong lam fail test.
+
+### Verification
+
+- [x] `npm.cmd test -- test/student-activities-page.test.tsx test/student-alerts-page.test.tsx test/student-devices-page.test.tsx test/student-my-activities-page.test.tsx test/student-polls-page.test.tsx test/student-notifications-page.test.tsx` -> PASS (6 files / 12 tests, 2026-05-03)
+- [x] `npm.cmd test -- test/student-daily-quick-actions.test.tsx test/student-score-flow-nav.test.tsx test/student-profile-page.test.tsx test/student-history-page.test.tsx test/student-points-page.test.tsx test/student-scores-page.test.tsx test/student-ranking-page.test.tsx test/student-achievement-tips-page.test.tsx test/student-recommendations-page.test.tsx test/student-activity-detail-page.test.tsx test/student-activities-page.test.tsx test/student-alerts-page.test.tsx test/student-devices-page.test.tsx test/student-my-activities-page.test.tsx test/student-polls-page.test.tsx` -> PASS (15 files / 29 tests, 2026-05-03)
+
+## 9.141) Batch uu tien nong - harden dark-mode cho card thong ke he thong dashboard
+
+### Muc tieu
+
+- Tang do ro doc khi xem card thong ke he thong o che do dark.
+- Giam nguy co text/so bi nhat mau tren nen toi.
+
+### Viec can lam
+
+- [x] `src/app/dashboard/page.tsx`
+  - [x] harden card shell dark mode: `dark:bg-slate-900`, border dam hon.
+  - [x] harden tile dark backgrounds va border tones cho 4 o thong ke.
+  - [x] tang contrast mau so thong ke (blue/violet/amber/emerald) trong dark mode.
+  - [x] harden heading card (`dark:text-white`).
+
+### Risk / defer
+
+- [ ] Batch nay chi doi style card dashboard, khong doi nghiep vu du lieu.
+
+### Verification
+
+- [x] `npm.cmd test -- test/dashboard-page.test.tsx` -> PASS (1 file / 1 test, 2026-05-03)
+
+## 9.142) Batch uu tien nong - on dinh test student history (empty-state error path)
+
+### Muc tieu
+
+- Loai bo tinh trang flaky o test empty-state khi API history loi.
+- Chuan hoa fixture/test text UTF-8 de de doc va de bao tri.
+
+### Viec can lam
+
+- [x] `test/student-history-page.test.tsx`
+  - [x] rewrite file test UTF-8 sach.
+  - [x] bo sung `vi.unstubAllGlobals()` trong `beforeEach` de reset state fetch truoc moi test.
+  - [x] doi assert empty-state ve `waitFor + getByTestId('student-history-empty-state')` de on dinh hon.
+
+### Risk / defer
+
+- [ ] Batch nay chi sua test hardening, khong doi logic runtime student history.
+
+### Verification
+
+- [x] `npm.cmd test -- test/student-history-page.test.tsx test/dashboard-page.test.tsx` -> PASS (2 files / 3 tests, 2026-05-03)
+- [x] `npm.cmd test -- test/student-daily-quick-actions.test.tsx test/student-score-flow-nav.test.tsx test/student-profile-page.test.tsx test/student-points-page.test.tsx test/student-scores-page.test.tsx test/student-ranking-page.test.tsx test/student-achievement-tips-page.test.tsx test/student-recommendations-page.test.tsx test/student-activity-detail-page.test.tsx test/student-activities-page.test.tsx test/student-alerts-page.test.tsx test/student-devices-page.test.tsx test/student-my-activities-page.test.tsx test/student-polls-page.test.tsx` -> PASS (14 files / 27 tests, 2026-05-03)
+
+## 9.143) Batch uu tien nong - prompt mega-batch de tiet kiem request limit
+
+### Muc tieu
+
+- Tao prompt ngan gon, co cau truc batch lon de su dung lap lai trong cac session tiep theo.
+- Giam so request do khong can nhac lai huong lam viec moi lan.
+- Chuan hoa cach bao cao ket qua va verification theo tung batch.
+
+### Viec can lam
+
+- [x] tao tai lieu prompt:
+  - [x] `docs/mega-batch-efficiency-prompt.md`
+  - [x] gom: muc tieu, nguyen tac, uu tien P0/P1/P2, khung thuc thi 4 buoc, mau bao cao, chu ky batch A/B/C.
+
+### Risk / defer
+
+- [ ] Batch nay chi tao tai lieu workflow, khong doi logic runtime.
+
+### Verification
+
+- [x] Prompt da tao va san sang copy-paste cho cac session tiep theo.
+- [x] Regression lock hien tai van PASS:
+  - [x] `npm.cmd test -- test/student-daily-quick-actions.test.tsx test/student-score-flow-nav.test.tsx test/student-profile-page.test.tsx test/student-history-page.test.tsx test/student-points-page.test.tsx test/student-scores-page.test.tsx test/student-ranking-page.test.tsx test/student-achievement-tips-page.test.tsx test/student-recommendations-page.test.tsx test/student-activity-detail-page.test.tsx test/student-activities-page.test.tsx test/student-alerts-page.test.tsx test/student-devices-page.test.tsx test/student-my-activities-page.test.tsx test/student-polls-page.test.tsx test/dashboard-page.test.tsx` -> PASS (16 files / 30 tests, 2026-05-03)
+
+## 9.144) Batch uu tien nong - tu dong hoa audit mock next/navigation cho test student
+
+### Muc tieu
+
+- Chan tai phat regression "No usePathname export is defined on next/navigation mock".
+- Co script audit 1 lenh de quet toan bo test student va fail som neu mock thieu `usePathname`.
+- Dong bo nốt 3 test student con thieu de dat trang thai an toan mac dinh.
+
+### Viec can lam
+
+- [x] bo sung `usePathname` vao 3 test student con thieu:
+  - [x] `test/student-dashboard-page-shell.test.tsx`
+  - [x] `test/student-activity-check-in-redirect-page.test.tsx`
+  - [x] `test/student-profile-edit-redirect-page.test.tsx`
+- [x] tao script audit:
+  - [x] `scripts/maintenance/audit-student-navigation-mocks.mjs`
+  - [x] quet `test/student-*.test.tsx`, neu co `vi.mock('next/navigation')` ma thieu `usePathname` thi fail.
+- [x] bo sung npm script:
+  - [x] `package.json` -> `audit:student-navigation-mocks`
+
+### Risk / defer
+
+- [ ] Batch nay tap trung test infra hardening, khong doi runtime business logic.
+
+### Verification
+
+- [x] `npm.cmd run audit:student-navigation-mocks` -> PASS (2026-05-03)
+- [x] `npm.cmd test -- test/student-dashboard-page-shell.test.tsx test/student-activity-check-in-redirect-page.test.tsx test/student-profile-edit-redirect-page.test.tsx` -> PASS (3 files / 4 tests, 2026-05-03)
+- [x] `npm.cmd test -- test/student-daily-quick-actions.test.tsx test/student-score-flow-nav.test.tsx test/student-profile-page.test.tsx test/student-history-page.test.tsx test/student-points-page.test.tsx test/student-scores-page.test.tsx test/student-ranking-page.test.tsx test/student-achievement-tips-page.test.tsx test/student-recommendations-page.test.tsx test/student-activity-detail-page.test.tsx test/student-activities-page.test.tsx test/student-alerts-page.test.tsx test/student-devices-page.test.tsx test/student-my-activities-page.test.tsx test/student-polls-page.test.tsx test/student-dashboard-page-shell.test.tsx test/student-activity-check-in-redirect-page.test.tsx test/student-profile-edit-redirect-page.test.tsx test/dashboard-page.test.tsx` -> PASS (19 files / 34 tests, 2026-05-03)
+
+## 9.145) Batch uu tien nong - tang do nhay QR scanner va mo rong parse compact payload
+
+### Muc tieu
+
+- Tang kha nang nhan ma QR ngay khi dua camera vao ma (nhat la khi ma o xa, nhieu glare, hoac khung hinh chua ly tuong).
+- Mo rong parser compact payload de khong bi fail neu token co ky tu thuong, `_` hoac `-`.
+- Khoa regression bang test decoder + parse payload + check-in UI flow.
+
+### Viec can lam
+
+- [x] `src/lib/qr-scan-decoder.ts`
+  - [x] bo sung crop-zoom candidate trong aggressive mode (center crops nhieu ti le) de "phong to logic" khi QR o xa.
+  - [x] giu chuoi fallback hien tai: BarcodeDetector -> jsQR (direct/attemptBoth) -> aggressive variants.
+- [x] `src/lib/qr-scanner-runtime.ts`
+  - [x] tang `maxScansPerSecond` tu 48 -> 60.
+  - [x] mo rong scan region gan full square frame (`0.99`) de giam bo sot ma gan bien khung.
+- [x] `src/components/StudentQRScanner.tsx`
+  - [x] giam decode interval tu `18ms` -> `12ms`.
+  - [x] bat aggressive mode manh hon trong 2.5 giay dau de "bat ma som".
+  - [x] tinh chinh thoi diem canh bao timeout (`7000ms` -> `6000ms`).
+- [x] `src/app/student/check-in/page.tsx`
+  - [x] mo rong compact regex payload:
+    - `123:TOKEN_x-y`
+    - `S123:TOKEN_x-y`
+- [x] Test update:
+  - [x] `test/qr-scan-decoder.test.ts`: bo sung case zoom-cropped candidate.
+  - [x] `test/student-qr-parse-payload.test.ts`: bo sung case compact lowercase + `_` + `-`.
+
+### Risk / defer
+
+- [ ] Batch nay chua doi nghiep vu attendance API; tap trung vao phia client scan/decode va parser robustness.
+- [ ] Chua toi uu torch/manual focus UI (defer neu can cho release tiep theo).
+
+### Verification
+
+- [x] `npm.cmd test -- test/qr-scan-decoder.test.ts test/student-qr-parse-payload.test.ts test/student-qr-scanner-playback-gesture.test.tsx test/student-check-in-page.test.tsx` -> PASS (4 files / 21 tests, 2026-05-03)
+- [x] `npm.cmd test -- test/qr.test.ts test/qr-access.test.ts test/qr-session-reuse-route.test.ts test/attendance.test.ts` -> PASS (4 files / 13 tests, 2026-05-03)
+
+## 9.146) Batch uu tien nong - dong bo tac vu nhanh hoc vien theo menu uu tien
+
+### Muc tieu
+
+- Dong bo thanh `Tac vu nhanh` voi thu tu uu tien cua navbar hoc vien de giam xung dot luong dieu huong.
+- Dua cac thao tac dung hang ngay len truoc (quet QR, hoat dong cua toi, thong bao, canh bao, khao sat, bang dieu khien).
+- Giu on dinh regression cho cac trang hoc vien tai su dung quick-actions.
+
+### Viec can lam
+
+- [x] `src/components/student/StudentDailyQuickActions.tsx`
+  - [x] thay bo action cu (`Bang diem`, `Ho so`) bang bo action uu tien (`Canh bao`, `Bang dieu khien`).
+  - [x] giu nguyen contract `includeDevices` de profile page van mo rong nhanh sang `Thiet bi`.
+  - [x] giu nguyen logic active-state theo `usePathname`.
+- [x] `test/student-daily-quick-actions.test.tsx`
+  - [x] cap nhat matcher tap link quick-actions theo bo moi.
+  - [x] cap nhat test nested route active-state sang nhanh `Thong bao`.
+- [x] `test/student-profile-page.test.tsx`
+  - [x] cap nhat assert danh sach `href` quick-actions theo bo moi (bo `scores`, them `alerts` + `dashboard`).
+
+### Risk / defer
+
+- [ ] Batch nay chi toi uu shell dieu huong nhanh, khong doi nghiep vu API hay luong diem danh.
+- [ ] Chua merge `scores` vao quick-actions hang ngay (luong diem van giu qua `StudentScoreFlowNav` trong cac trang diem/thanh tich).
+
+### Verification
+
+- [x] `npm.cmd test -- test/student-daily-quick-actions.test.tsx test/student-profile-page.test.tsx test/student-activities-page.test.tsx test/student-alerts-page.test.tsx test/student-notifications-page.test.tsx test/student-my-activities-page.test.tsx test/student-polls-page.test.tsx test/student-recommendations-page.test.tsx test/student-achievement-tips-page.test.tsx` -> PASS (9 files / 19 tests, 2026-05-03)
+
+## 9.147) Batch uu tien nong - mo rong quick-actions cho luong diem va dong bo nav tren cum trang diem
+
+### Muc tieu
+
+- Giam nghen dieu huong tren cum trang diem/thanh tich cua hoc vien (points/scores/ranking/history/awards).
+- Giu lai `StudentScoreFlowNav` cho luong diem chuyen sau, dong thoi them `StudentDailyQuickActions` de quay ve tac vu hang ngay ngay tren cung trang.
+- Mo rong quick-actions co shortcut `Diem so` de vao bang diem nhanh ma khong can mo sidebar.
+
+### Viec can lam
+
+- [x] `src/components/student/StudentDailyQuickActions.tsx`
+  - [x] bo sung action `Diem so` (`/student/scores`).
+  - [x] giu bo uu tien hang ngay: `check-in`, `my-activities`, `notifications`, `alerts`, `scores`, `polls`, `dashboard`.
+- [x] bo sung `StudentDailyQuickActions` vao toan bo cum trang diem/thanh tich:
+  - [x] `src/app/student/points/page.tsx`
+  - [x] `src/app/student/scores/page.tsx`
+  - [x] `src/app/student/ranking/page.tsx`
+  - [x] `src/app/student/history/page.tsx`
+  - [x] `src/app/student/awards/page.tsx`
+  - [x] `src/app/student/awards/history/page.tsx`
+  - [x] `src/app/student/awards/upcoming/page.tsx`
+  - [x] pattern sau cap nhat: `StudentDailyQuickActions` -> `StudentScoreFlowNav`.
+- [x] cap nhat test:
+  - [x] `test/student-daily-quick-actions.test.tsx`: them assert link `Diem so`.
+  - [x] `test/student-profile-page.test.tsx`: cap nhat tap quick-action href (co `/student/scores`).
+
+### Risk / defer
+
+- [ ] Batch nay chi toi uu shell dieu huong, khong doi contract API diem/thuong/xep hang.
+- [ ] Chua bo sung analytics clickstream cho quick-actions (defer batch sau neu can do luong tan suat su dung).
+
+### Verification
+
+- [x] `npm.cmd test -- test/student-daily-quick-actions.test.tsx test/student-profile-page.test.tsx test/student-points-page.test.tsx test/student-scores-page.test.tsx test/student-ranking-page.test.tsx test/student-history-page.test.tsx test/student-awards-page.test.tsx test/student-award-history-page.test.tsx test/student-awards-upcoming-page.test.tsx test/student-score-flow-nav.test.tsx` -> PASS (10 files / 17 tests, 2026-05-03)
+
 ## 10) Ke hoach commit de xuat
 
 - [ ] Commit 1: Batch 1 text refactor + org-level bug fix
@@ -3928,3 +5080,45 @@ Prompt nay da gom thu tu xu ly blocker + workflow batch + format bao cao.
   - [x] Branch hien tai: `main`
 - [x] Chay test cum lien quan truoc va sau khi sua.
 - [x] Cap nhat lai checklist batch + risk/defer ngay trong file nay.
+
+---
+
+## 12) Batch 9.148 - Activity create min dynamic + quick-template/type clarity
+
+### Outcome
+
+- [x] Gom ro "Mau nhanh" + "Loai hoat dong" vao cung mot khoi o Buoc 1.
+- [x] Khi chon "Mau nhanh", tu dien tieu de/mo ta va goi y map `activityTypeId` neu tim thay.
+- [x] "So luong toi da" duoc rang buoc `min` dong theo pham vi:
+  - `min = tong si so lop trong pham vi + hoc vien chi dinh truc tiep (dedupe theo lop da chon)`.
+- [x] Neu gia tri dang co < min thi chan submit va thong bao loi.
+- [x] Neu nguoi dung nhap gia tri lon hon min thi giu nguyen gia tri do khi luu.
+
+### Files
+
+- [x] `src/app/teacher/activities/new/page.tsx`
+- [x] `test/teacher-create-activity-page.test.tsx`
+- [x] `docs/mega-batch-efficiency-prompt.md`
+
+### Verification
+
+- [x] `npm.cmd test -- test/teacher-create-activity-page.test.tsx test/teacher-create-activity-preview.test.tsx` -> PASS (2 files / 7 tests, 2026-05-04)
+
+## 13) Batch 9.149 - Activity create draft resilience (autosave/restore/leave-guard)
+
+### Outcome
+
+- [x] Tu dong luu ban nhap tao hoat dong vao `sessionStorage` theo phien lam viec.
+- [x] Tu khoi phuc ban nhap khi quay lai trang tao hoat dong.
+- [x] Canh bao truoc khi dong tab/refresh neu con du lieu chua luu.
+- [x] Tu dong xoa ban nhap sau khi luu tao hoat dong thanh cong.
+- [x] Bo sung regression tests cho restore + clear-draft + giu du lieu khi chuyen buoc.
+
+### Files
+
+- [x] `src/app/teacher/activities/new/page.tsx`
+- [x] `test/teacher-create-activity-page.test.tsx`
+
+### Verification
+
+- [x] `npm.cmd test -- test/teacher-create-activity-page.test.tsx test/teacher-create-activity-preview.test.tsx` -> PASS (2 files / 10 tests, 2026-05-04)
