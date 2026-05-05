@@ -1,10 +1,20 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import LoadingSpinner from '@/components/LoadingSpinner';
-import { toast } from '@/lib/toast';
+import toast from 'react-hot-toast';
+import {
+  ArrowLeft,
+  Calculator,
+  Layers3,
+  ListChecks,
+  Medal,
+  Scale,
+  SlidersHorizontal,
+} from 'lucide-react';
 import TabButton from './TabButton';
 import ActivityTypeManager from './ActivityTypeManager';
 import LevelMultiplierManager from './LevelMultiplierManager';
@@ -13,35 +23,29 @@ import AwardsTab from './AwardsTab';
 import ScoringRulesTab from './ScoringRulesTab';
 import { type ScoringConfig, type ScoringConfigUpdatePayload } from './types';
 
+type TabKey = 'types' | 'levels' | 'achievements' | 'awards' | 'rules';
+
 function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error && error.message ? error.message : fallback;
 }
 
-/**
- * REFACTORED (Phase 6):
- * Original 678-line scoring-config page split into smaller components:
- * - ActivityTypeManager.tsx: Manage activity types
- * - LevelMultiplierManager.tsx: Manage organization level multipliers
- * - AchievementsTab.tsx: Manage achievement ratings
- * - AwardsTab.tsx: Manage award bonuses
- * - ScoringRulesTab.tsx: Manage scoring rules
- * - TabButton.tsx: Reusable tab button component
- * - page.tsx (130L): Main page with state & API management
- *
- * Benefits:
- * ✅ Reduced file complexity (678L → 130L + 5 components)
- * ✅ Each component focuses on one feature
- * ✅ Easier to test and maintain
- * ✅ Better reusability (TabButton used throughout)
- */
+const TAB_META: Array<{
+  key: TabKey;
+  label: string;
+}> = [
+  { key: 'types', label: 'Loai hoat dong' },
+  { key: 'levels', label: 'Cap to chuc' },
+  { key: 'achievements', label: 'Danh gia' },
+  { key: 'awards', label: 'Thuong them' },
+  { key: 'rules', label: 'Cong thuc' },
+];
+
 export default function ScoringConfigPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState<
-    'types' | 'levels' | 'achievements' | 'awards' | 'rules'
-  >('types');
+  const [activeTab, setActiveTab] = useState<TabKey>('types');
   const [config, setConfig] = useState<ScoringConfig | null>(null);
 
   useEffect(() => {
@@ -53,13 +57,13 @@ export default function ScoringConfigPage() {
   const fetchConfig = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/admin/scoring-config');
-      if (!res.ok) throw new Error('Không thể tải cấu hình');
-      const data = await res.json();
-      setConfig(data);
-    } catch (error: unknown) {
-      console.error('Fetch config error:', error);
-      toast.error('Không thể tải cấu hình: ' + getErrorMessage(error, 'Lỗi không xác định'));
+      const response = await fetch('/api/admin/scoring-config');
+      if (!response.ok) throw new Error('Khong the tai cau hinh tinh diem');
+      const payload = (await response.json()) as ScoringConfig;
+      setConfig(payload);
+    } catch (error) {
+      console.error('Fetch scoring config error:', error);
+      toast.error(getErrorMessage(error, 'Khong the tai cau hinh tinh diem'));
     } finally {
       setLoading(false);
     }
@@ -82,140 +86,231 @@ export default function ScoringConfigPage() {
   ) => {
     try {
       setSaving(true);
-      const res = await fetch('/api/admin/scoring-config', {
+      const response = await fetch('/api/admin/scoring-config', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type, data }),
       });
 
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || 'Update failed');
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(
+          (payload && typeof payload === 'object' && 'error' in payload && String(payload.error)) ||
+            'Cap nhat that bai'
+        );
       }
 
-      toast.success('Cập nhật thành công');
+      toast.success('Da cap nhat cau hinh tinh diem');
       await fetchConfig();
-    } catch (error: unknown) {
-      console.error('Update error:', error);
-      toast.error('Cập nhật thất bại: ' + getErrorMessage(error, 'Lỗi không xác định'));
+    } catch (error) {
+      console.error('Update scoring config error:', error);
+      toast.error(getErrorMessage(error, 'Cap nhat cau hinh that bai'));
     } finally {
       setSaving(false);
     }
   };
 
+  const stats = useMemo(() => {
+    if (!config) {
+      return {
+        activityTypes: 0,
+        organizationLevels: 0,
+        achievementMultipliers: 0,
+        awardBonuses: 0,
+        scoringRules: 0,
+      };
+    }
+
+    return {
+      activityTypes: config.activityTypes.length,
+      organizationLevels: config.organizationLevels.length,
+      achievementMultipliers: config.achievementMultipliers.length,
+      awardBonuses: config.awardBonuses.length,
+      scoringRules: config.scoringRules.length,
+    };
+  }, [config]);
+
   if (authLoading || loading) {
-    return <LoadingSpinner />;
+    return <LoadingSpinner message="Dang tai scoring config..." />;
   }
 
   if (!config) {
-    return <div className="p-6">Không có dữ liệu</div>;
+    return (
+      <div className="page-shell">
+        <div className="mx-auto max-w-4xl rounded-[1.75rem] bg-white px-6 py-12 text-center text-sm text-slate-500 shadow-sm">
+          Khong co du lieu scoring config.
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex justify-between items-start">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">⚙️ Cấu Hình Tính Điểm</h1>
-              <p className="text-gray-600 mt-2">
-                Tùy chỉnh cách tính điểm rèn luyện cho trường của bạn
-              </p>
+    <div className="page-shell">
+      <div className="mx-auto max-w-7xl space-y-6">
+        <section className="page-surface rounded-[1.75rem] px-5 py-6 sm:px-7">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+            <div className="flex items-start gap-4">
+              <Link
+                href="/admin/dashboard"
+                className="rounded-xl border border-slate-300 p-2 text-slate-600 transition hover:bg-slate-50"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </Link>
+              <div className="max-w-3xl">
+                <div className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-700">
+                  Scoring config
+                </div>
+                <h1
+                  className="mt-3 text-3xl font-bold text-slate-900"
+                  data-testid="admin-scoring-config-heading"
+                >
+                  Dieu phoi cong thuc tinh diem
+                </h1>
+                <p className="mt-2 text-sm text-slate-600">
+                  Chot diem co ban, he so cap to chuc, muc danh gia va diem thuong de toan bo luong
+                  tinh diem trong he thong van hanh nhat quan.
+                </p>
+              </div>
             </div>
+
             <button
+              type="button"
               onClick={() => router.push('/admin/scoring-config/formula-editor')}
-              className="flex items-center px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 shadow-lg"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
             >
-              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"
-                />
-              </svg>
-              Trình soạn công thức
+              <Calculator className="h-4 w-4" />
+              Mo formula editor
             </button>
           </div>
-        </div>
+        </section>
 
-        {/* Tabs */}
-        <div className="bg-white rounded-lg shadow-sm mb-6">
-          <div className="border-b border-gray-200">
-            <nav className="flex -mb-px">
-              <TabButton active={activeTab === 'types'} onClick={() => setActiveTab('types')}>
-                📚 Loại Hoạt Động (8)
-              </TabButton>
-              <TabButton active={activeTab === 'levels'} onClick={() => setActiveTab('levels')}>
-                🏛️ Cấp Tổ Chức (5)
-              </TabButton>
-              <TabButton
-                active={activeTab === 'achievements'}
-                onClick={() => setActiveTab('achievements')}
-              >
-                ⭐ Đánh Giá (3)
-              </TabButton>
-              <TabButton active={activeTab === 'awards'} onClick={() => setActiveTab('awards')}>
-                🏆 Giải Thưởng (5)
-              </TabButton>
-              <TabButton active={activeTab === 'rules'} onClick={() => setActiveTab('rules')}>
-                🔢 Công Thức
-              </TabButton>
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+          <article className="rounded-[1.5rem] bg-blue-50 px-4 py-4 text-blue-700">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-wide">Loai hoat dong</div>
+                <div className="mt-3 text-2xl font-semibold text-slate-900">{stats.activityTypes}</div>
+              </div>
+              <Layers3 className="h-8 w-8" />
+            </div>
+          </article>
+          <article className="rounded-[1.5rem] bg-violet-50 px-4 py-4 text-violet-700">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-wide">Cap to chuc</div>
+                <div className="mt-3 text-2xl font-semibold text-slate-900">{stats.organizationLevels}</div>
+              </div>
+              <Scale className="h-8 w-8" />
+            </div>
+          </article>
+          <article className="rounded-[1.5rem] bg-amber-50 px-4 py-4 text-amber-700">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-wide">Muc danh gia</div>
+                <div className="mt-3 text-2xl font-semibold text-slate-900">
+                  {stats.achievementMultipliers}
+                </div>
+              </div>
+              <ListChecks className="h-8 w-8" />
+            </div>
+          </article>
+          <article className="rounded-[1.5rem] bg-emerald-50 px-4 py-4 text-emerald-700">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-wide">Thuong them</div>
+                <div className="mt-3 text-2xl font-semibold text-slate-900">{stats.awardBonuses}</div>
+              </div>
+              <Medal className="h-8 w-8" />
+            </div>
+          </article>
+          <article className="rounded-[1.5rem] bg-slate-100 px-4 py-4 text-slate-700">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-wide">Cong thuc</div>
+                <div className="mt-3 text-2xl font-semibold text-slate-900">{stats.scoringRules}</div>
+              </div>
+              <SlidersHorizontal className="h-8 w-8" />
+            </div>
+          </article>
+        </section>
+
+        <section className="page-surface rounded-[1.75rem] px-5 py-5 sm:px-7">
+          <div className="overflow-x-auto">
+            <nav className="flex min-w-max gap-2 border-b border-slate-200 pb-3">
+              {TAB_META.map((tab) => {
+                const count =
+                  tab.key === 'types'
+                    ? stats.activityTypes
+                    : tab.key === 'levels'
+                      ? stats.organizationLevels
+                      : tab.key === 'achievements'
+                        ? stats.achievementMultipliers
+                        : tab.key === 'awards'
+                          ? stats.awardBonuses
+                          : stats.scoringRules;
+
+                return (
+                  <TabButton
+                    key={tab.key}
+                    active={activeTab === tab.key}
+                    onClick={() => setActiveTab(tab.key)}
+                  >
+                    {tab.label} ({count})
+                  </TabButton>
+                );
+              })}
             </nav>
           </div>
 
-          {/* Tab Content */}
-          <div className="p-6">
+          <div className="pt-6">
             {activeTab === 'types' && (
               <ActivityTypeManager
                 types={config.activityTypes}
-                onUpdate={(data) => handleUpdate('activity_type', data)}
+                onUpdate={(data) => void handleUpdate('activity_type', data)}
                 saving={saving}
               />
             )}
             {activeTab === 'levels' && (
               <LevelMultiplierManager
                 levels={config.organizationLevels}
-                onUpdate={(data) => handleUpdate('organization_level', data)}
+                onUpdate={(data) => void handleUpdate('organization_level', data)}
                 saving={saving}
               />
             )}
             {activeTab === 'achievements' && (
               <AchievementsTab
                 achievements={config.achievementMultipliers}
-                onUpdate={(data) => handleUpdate('achievement_multiplier', data)}
+                onUpdate={(data) => void handleUpdate('achievement_multiplier', data)}
                 saving={saving}
               />
             )}
             {activeTab === 'awards' && (
               <AwardsTab
                 awards={config.awardBonuses}
-                onUpdate={(data) => handleUpdate('award_bonus', data)}
+                onUpdate={(data) => void handleUpdate('award_bonus', data)}
                 saving={saving}
               />
             )}
             {activeTab === 'rules' && (
               <ScoringRulesTab
                 rules={config.scoringRules}
-                onUpdate={(data) => handleUpdate('scoring_rule', data)}
+                onUpdate={(data) => void handleUpdate('scoring_rule', data)}
                 saving={saving}
               />
             )}
           </div>
-        </div>
+        </section>
 
-        {/* Info Box */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <h3 className="font-semibold text-blue-900 mb-2">💡 Công thức tính điểm hiện tại:</h3>
-          <p className="text-blue-800 font-mono">
-            Điểm = (Điểm cơ bản × Hệ số cấp độ × Hệ số đánh giá) + Điểm thưởng
+        <section className="rounded-[1.75rem] border border-blue-200 bg-blue-50 px-5 py-5 text-sm text-blue-900 sm:px-7">
+          <div className="font-semibold">Cong thuc chuan hien tai</div>
+          <div className="mt-2 font-mono text-blue-800">
+            Diem = (base_points x level_multiplier x achievement_multiplier) + bonus_points
+          </div>
+          <p className="mt-3 text-blue-800">
+            Goi y: chi doi he so khi da thong nhat voi quy che hien tai. Neu can thu cong thuc moi,
+            chuyen sang formula editor de preview truoc khi ap dung.
           </p>
-          <p className="text-blue-700 text-sm mt-2">
-            Ví dụ: Hoạt động Học thuật (10 điểm) × Cấp Trường (2.0) × Xuất sắc (1.5) + Giải Nhất
-            (20) = <strong>50 điểm</strong>
-          </p>
-        </div>
+        </section>
       </div>
     </div>
   );

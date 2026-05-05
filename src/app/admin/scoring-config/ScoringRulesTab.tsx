@@ -43,40 +43,41 @@ export default function ScoringRulesTab({
 
   return (
     <div>
-      <h2 className="text-xl font-bold mb-4">Công Thức Tính Điểm</h2>
-      <p className="text-gray-600 mb-6">
-        Định nghĩa các công thức tính điểm được sử dụng trong hệ thống.
+      <h2 className="mb-4 text-xl font-bold">Cong thuc tinh diem</h2>
+      <p className="mb-6 text-gray-600">
+        Doi soat cac cong thuc dang duoc luu trong he thong, uu tien giu duy nhat mot cong thuc
+        active cho moi dot tinh diem.
       </p>
 
       <div className="space-y-4">
         {rules.map((rule) => (
-          <div key={rule.id} className="border rounded-lg p-4 hover:bg-gray-50">
+          <div key={rule.id} className="rounded-lg border p-4 hover:bg-gray-50">
             {editingId === rule.id ? (
               <div className="space-y-3">
                 <div>
-                  <label className="block text-sm font-medium mb-1">Tên Công Thức</label>
+                  <label className="mb-1 block text-sm font-medium">Ten cong thuc</label>
                   <input
                     type="text"
                     value={editData.name}
-                    onChange={(e) => setEditData({ ...editData, name: e.target.value })}
-                    className="w-full px-3 py-2 border rounded"
+                    onChange={(event) => setEditData({ ...editData, name: event.target.value })}
+                    className="w-full rounded border px-3 py-2"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Công Thức</label>
+                  <label className="mb-1 block text-sm font-medium">Cong thuc</label>
                   <textarea
                     value={editData.formula}
-                    onChange={(e) => setEditData({ ...editData, formula: e.target.value })}
-                    className="w-full px-3 py-2 border rounded font-mono text-sm"
+                    onChange={(event) => setEditData({ ...editData, formula: event.target.value })}
+                    className="w-full rounded border px-3 py-2 font-mono text-sm"
                     rows={3}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Mô Tả</label>
+                  <label className="mb-1 block text-sm font-medium">Mo ta</label>
                   <textarea
                     value={editData.description}
-                    onChange={(e) => setEditData({ ...editData, description: e.target.value })}
-                    className="w-full px-3 py-2 border rounded"
+                    onChange={(event) => setEditData({ ...editData, description: event.target.value })}
+                    className="w-full rounded border px-3 py-2"
                     rows={2}
                   />
                 </div>
@@ -84,30 +85,37 @@ export default function ScoringRulesTab({
                   <button
                     onClick={handleSave}
                     disabled={saving}
-                    className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
+                    className="rounded bg-green-600 px-4 py-2 text-white hover:bg-green-700 disabled:opacity-50"
                   >
-                    Lưu
+                    Luu
                   </button>
                   <button
                     onClick={() => setEditingId(null)}
-                    className="px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500"
+                    className="rounded bg-gray-400 px-4 py-2 text-white hover:bg-gray-500"
                   >
-                    Hủy
+                    Huy
                   </button>
                 </div>
               </div>
             ) : (
               <div>
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className="font-semibold">{rule.name}</h3>
+                <div className="mb-2 flex items-start justify-between">
+                  <div>
+                    <h3 className="font-semibold">{rule.name}</h3>
+                    {rule.is_active ? (
+                      <div className="mt-1 inline-flex rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700">
+                        Dang active
+                      </div>
+                    ) : null}
+                  </div>
                   <button
                     onClick={() => handleEdit(rule)}
-                    className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+                    className="rounded bg-blue-600 px-3 py-1 text-sm text-white hover:bg-blue-700"
                   >
-                    Sửa
+                    Sua
                   </button>
                 </div>
-                <p className="text-sm text-gray-700 font-mono bg-gray-50 p-2 rounded mb-2">
+                <p className="mb-2 rounded bg-gray-50 p-2 font-mono text-sm text-gray-700">
                   {rule.formula}
                 </p>
                 <p className="text-sm text-gray-600">{rule.description}</p>

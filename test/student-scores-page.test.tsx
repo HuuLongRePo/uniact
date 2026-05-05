@@ -19,6 +19,10 @@ vi.mock('@/components/ui/Button', () => ({
   Button: ({ children, onClick }: any) => <button onClick={onClick}>{children}</button>,
 }));
 
+vi.mock('next/navigation', () => ({
+  usePathname: () => '/student/scores',
+}));
+
 describe('StudentScoresPage', () => {
   beforeEach(() => {
     toastErrorMock.mockReset();
@@ -38,9 +42,9 @@ describe('StudentScoresPage', () => {
           scores: [
             {
               participation_id: 1,
-              activity_title: 'Hoạt động A',
-              activity_type_name: 'Kỹ năng',
-              organization_level_name: 'Cấp trường',
+              activity_title: 'Hoat dong A',
+              activity_type_name: 'Ky nang',
+              organization_level_name: 'Cap truong',
               achievement_level: 'good',
               award_type: null,
               base_points: 10,
@@ -51,14 +55,18 @@ describe('StudentScoresPage', () => {
               bonus_points: 1,
               penalty_points: 0,
               total_points: 13,
-              formula: '(10 × 1 × 1 × 1.2) + 1 - 0 = 13',
+              formula: '(10 x 1 x 1 x 1.2) + 1 - 0 = 13',
               calculated_at: '2026-04-18T01:00:00.000Z',
               evaluated_at: '2026-04-18T00:50:00.000Z',
             },
           ],
           summary: {
             total_activities: 1,
-            total_points: 13,
+            total_points: 16,
+            final_total: 16,
+            activity_points: 13,
+            award_points: 4,
+            adjustment_points: -1,
             average_points: 13,
             excellent_count: 0,
             good_count: 1,
@@ -73,12 +81,16 @@ describe('StudentScoresPage', () => {
 
     render(<StudentScoresPage />);
 
-    expect(await screen.findByText('Hoạt động A')).toBeInTheDocument();
+    expect((await screen.findAllByText('Hoat dong A')).length).toBeGreaterThan(0);
+    expect(screen.getByText('Bảng điểm của tôi')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Điểm rèn luyện' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Xếp hạng' })).toBeInTheDocument();
+    expect(screen.getAllByText('16.00').length).toBeGreaterThan(0);
     expect(screen.getAllByText('13.00').length).toBeGreaterThan(0);
-    expect(screen.getByText('Kỹ năng')).toBeInTheDocument();
+    expect(screen.getByText('Ky nang')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByText('📊 Xem'));
-    expect(await screen.findByText('Chi tiết tính điểm')).toBeInTheDocument();
-    expect(screen.getByText('(10 × 1 × 1 × 1.2) + 1 - 0 = 13')).toBeInTheDocument();
+    fireEvent.click(screen.getAllByText('Xem công thức')[0]);
+    expect(await screen.findByRole('dialog', { name: 'Chi tiết tính điểm' })).toBeInTheDocument();
+    expect(screen.getByText('(10 x 1 x 1 x 1.2) + 1 - 0 = 13')).toBeInTheDocument();
   });
 });

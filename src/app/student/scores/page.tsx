@@ -1,17 +1,19 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { toast } from '@/lib/toast';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/Button';
+import StudentDailyQuickActions from '@/components/student/StudentDailyQuickActions';
+import StudentScoreFlowNav from '@/components/student/StudentScoreFlowNav';
+import { toast } from '@/lib/toast';
 import { formatDate } from '@/lib/formatters';
 import { toVietnamDateStamp } from '@/lib/timezone';
 
 interface ScoreRecord {
   participation_id: number;
   activity_title: string;
-  activity_type_name: string;
-  organization_level_name: string;
-  achievement_level: string;
+  activity_type_name: string | null;
+  organization_level_name: string | null;
+  achievement_level: string | null;
   award_type: string | null;
   base_points: number;
   type_multiplier: number;
@@ -29,10 +31,39 @@ interface ScoreRecord {
 interface Summary {
   total_activities: number;
   total_points: number;
+  final_total?: number;
+  activity_points?: number;
+  award_points?: number;
+  adjustment_points?: number;
   average_points: number;
   excellent_count: number;
   good_count: number;
   participated_count: number;
+}
+
+function formatPoints(value: number | null | undefined) {
+  const numberValue = Number(value || 0);
+  return numberValue.toFixed(2);
+}
+
+function getAchievementMeta(level: string | null) {
+  switch (level) {
+    case 'excellent':
+      return {
+        label: 'Xuất sắc',
+        className:
+          'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-200',
+      };
+    case 'good':
+      return {
+        label: 'Tốt',
+        className: 'bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-200',
+      };
+    case 'participated':
+      return { label: 'Tham gia', className: 'bg-slate-100 text-slate-700 dark:bg-slate-600 dark:text-slate-100' };
+    default:
+      return { label: 'Chưa xếp loại', className: 'bg-slate-100 text-slate-700 dark:bg-slate-600 dark:text-slate-100' };
+  }
 }
 
 export default function StudentScoresPage() {
@@ -42,67 +73,31 @@ export default function StudentScoresPage() {
   const [selectedScore, setSelectedScore] = useState<ScoreRecord | null>(null);
 
   useEffect(() => {
-    fetchScores();
+    void fetchScores();
   }, []);
 
   async function fetchScores() {
     try {
       const res = await fetch('/api/student/scores');
-      if (!res.ok) throw new Error('Không thể tải điểm số');
+      if (!res.ok) {
+        throw new Error('Không thể tải bảng điểm');
+      }
 
       const data = await res.json();
-      const resolvedScores = data.data?.scores || data.scores || [];
-      const resolvedSummary = data.data?.summary || data.summary || null;
+      const resolvedScores = (data.data?.scores || data.scores || []) as ScoreRecord[];
+      const resolvedSummary = (data.data?.summary || data.summary || null) as Summary | null;
 
       setScores(resolvedScores);
       setSummary(resolvedSummary);
     } catch (error) {
       console.error('Error fetching scores:', error);
-      toast.error('Không thể tải điểm số');
+      toast.error('Không thể tải bảng điểm');
     } finally {
       setLoading(false);
     }
   }
 
-  const getAchievementBadge = (level: string) => {
-    const styles = {
-      excellent: 'bg-purple-100 text-purple-800',
-      good: 'bg-blue-100 text-blue-800',
-      participated: 'bg-gray-100 text-gray-800',
-    };
-    const labels = {
-      excellent: 'Xuất sắc',
-      good: 'Tốt',
-      participated: 'Tham gia',
-    };
-    return (
-      <span
-        className={`px-2 py-1 rounded text-xs font-medium ${styles[level as keyof typeof styles]}`}
-      >
-        {labels[level as keyof typeof labels]}
-      </span>
-    );
-  };
-
-  const getAwardBadge = (awardType: string | null) => {
-    if (!awardType) return null;
-
-    const labels: Record<string, string> = {
-      first_prize: 'Giải Nhất',
-      second_prize: 'Giải Nhì',
-      third_prize: 'Giải Ba',
-      consolation: 'Khuyến khích',
-      special: 'Đặc biệt',
-    };
-
-    return (
-      <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs font-medium ml-2">
-        🏆 {labels[awardType] || awardType}
-      </span>
-    );
-  };
-
-  const exportToCSV = () => {
+  function exportToCSV() {
     if (scores.length === 0) {
       toast.error('Không có dữ liệu để xuất');
       return;
@@ -114,7 +109,6 @@ export default function StudentScoresPage() {
       'Loại hoạt động',
       'Cấp tổ chức',
       'Đánh giá',
-      'Giải thưởng',
       'Điểm cơ bản',
       'Hệ số loại',
       'Hệ số cấp',
@@ -130,18 +124,17 @@ export default function StudentScoresPage() {
       [
         index + 1,
         `"${score.activity_title}"`,
-        score.activity_type_name,
-        score.organization_level_name,
-        score.achievement_level,
-        score.award_type || '',
+        score.activity_type_name || '',
+        score.organization_level_name || '',
+        score.achievement_level || '',
         score.base_points,
         score.type_multiplier,
         score.level_multiplier,
         score.achievement_multiplier,
-        score.subtotal.toFixed(2),
+        formatPoints(score.subtotal),
         score.bonus_points,
         score.penalty_points,
-        score.total_points.toFixed(2),
+        formatPoints(score.total_points),
         score.evaluated_at ? formatDate(score.evaluated_at, 'date') : '',
       ].join(',')
     );
@@ -155,244 +148,308 @@ export default function StudentScoresPage() {
     link.click();
     URL.revokeObjectURL(url);
 
-    toast.success('Đã xuất file CSV thành công!');
-  };
+    toast.success('Đã xuất tệp CSV');
+  }
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="page-shell">
+        <div className="mx-auto max-w-6xl">
+          <div className="flex min-h-[12rem] items-center justify-center rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900">
+            <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-blue-600"></div>
+          </div>
+        </div>
       </div>
     );
   }
 
+  const finalTotal = Number(summary?.final_total ?? summary?.total_points ?? 0);
+  const activityPoints = Number(summary?.activity_points ?? 0);
+  const awardPoints = Number(summary?.award_points ?? 0);
+  const adjustmentPoints = Number(summary?.adjustment_points ?? 0);
+
   return (
-    <div className="max-w-7xl mx-auto p-6">
-      <div className="mb-6 flex justify-between items-center">
-        <div>
-          <h1 data-testid="scores-heading" className="text-3xl font-bold">
-            Bảng điểm của tôi
-          </h1>
-          <p className="text-gray-600 mt-2">Chi tiết điểm rèn luyện từ các hoạt động ngoại khóa</p>
-        </div>
-        <Button onClick={exportToCSV} variant="success">
-          Xuất CSV
-        </Button>
-      </div>
-
-      {/* Summary Stats */}
-      {summary && (
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-          <div className="bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-lg shadow p-4">
-            <p className="text-sm opacity-90">Tổng hoạt động</p>
-            <p className="text-3xl font-bold">{summary.total_activities}</p>
-          </div>
-          <div className="bg-gradient-to-br from-green-500 to-green-600 text-white rounded-lg shadow p-4">
-            <p className="text-sm opacity-90">Tổng điểm</p>
-            <p className="text-3xl font-bold">{summary.total_points.toFixed(2)}</p>
-          </div>
-          <div className="bg-gradient-to-br from-purple-500 to-purple-600 text-white rounded-lg shadow p-4">
-            <p className="text-sm opacity-90">Xuất sắc</p>
-            <p className="text-3xl font-bold">{summary.excellent_count}</p>
-          </div>
-          <div className="bg-gradient-to-br from-blue-400 to-blue-500 text-white rounded-lg shadow p-4">
-            <p className="text-sm opacity-90">Tốt</p>
-            <p className="text-3xl font-bold">{summary.good_count}</p>
-          </div>
-          <div className="bg-gradient-to-br from-gray-400 to-gray-500 text-white rounded-lg shadow p-4">
-            <p className="text-sm opacity-90">Tham gia</p>
-            <p className="text-3xl font-bold">{summary.participated_count}</p>
+    <div className="page-shell">
+      <div className="mx-auto max-w-6xl space-y-6">
+        <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900 sm:p-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h1 data-testid="scores-heading" className="text-3xl font-bold text-slate-900 dark:text-slate-100">
+                Bảng điểm của tôi
+              </h1>
+              <p className="mt-2 max-w-3xl text-sm text-slate-600 dark:text-slate-300">
+                Theo dõi tổng điểm cuối cùng và lịch sử tính điểm theo từng hoạt động đã được
+                đánh giá.
+              </p>
+            </div>
+            <Button
+              onClick={exportToCSV}
+              variant="success"
+              className="w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 dark:focus-visible:ring-emerald-300 dark:focus-visible:ring-offset-slate-900 sm:w-auto"
+            >
+              Xuất CSV
+            </Button>
           </div>
         </div>
-      )}
 
-      {/* Scores Table */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  STT
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Hoạt động
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Loại / Cấp
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Đánh giá
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Điểm
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Ngày đánh giá
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Chi tiết
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {scores.map((score, index) => (
-                <tr key={score.participation_id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{index + 1}</td>
-                  <td className="px-6 py-4 text-sm text-gray-900">
-                    <div className="font-medium">{score.activity_title}</div>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-600">
-                    <div>{score.activity_type_name}</div>
-                    <div className="text-xs text-gray-500">{score.organization_level_name}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {getAchievementBadge(score.achievement_level)}
-                    {getAwardBadge(score.award_type)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="text-lg font-bold text-green-600">
-                      {score.total_points.toFixed(2)}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                    {score.evaluated_at ? formatDate(score.evaluated_at, 'date') : '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+        <StudentDailyQuickActions />
+        <StudentScoreFlowNav />
+
+        {summary && (
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
+            <div className="rounded-3xl border border-emerald-100 bg-gradient-to-br from-emerald-50 via-white to-teal-50 p-5 shadow-sm dark:border-emerald-500/40 dark:from-slate-900 dark:via-slate-900 dark:to-emerald-950/30 xl:col-span-2">
+              <div className="text-sm font-medium text-emerald-700 dark:text-emerald-300">Tổng điểm cuối cùng</div>
+              <div className="mt-2 text-4xl font-bold text-slate-900 dark:text-slate-100">{formatPoints(finalTotal)}</div>
+              <div className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+                {summary.total_activities} hoạt động đã được tính điểm
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-blue-100 bg-white p-5 shadow-sm dark:border-blue-900/50 dark:bg-slate-900">
+              <div className="text-sm font-medium text-blue-700 dark:text-blue-300">Điểm hoạt động</div>
+              <div className="mt-2 text-3xl font-bold text-slate-900 dark:text-slate-100">
+                {formatPoints(activityPoints)}
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-amber-100 bg-white p-5 shadow-sm dark:border-amber-900/50 dark:bg-slate-900">
+              <div className="text-sm font-medium text-amber-700 dark:text-amber-300">Thưởng</div>
+              <div className="mt-2 text-3xl font-bold text-slate-900 dark:text-slate-100">
+                {formatPoints(awardPoints)}
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-rose-100 bg-white p-5 shadow-sm dark:border-rose-900/50 dark:bg-slate-900">
+              <div className="text-sm font-medium text-rose-700 dark:text-rose-300">Điều chỉnh</div>
+              <div className="mt-2 text-3xl font-bold text-slate-900 dark:text-slate-100">
+                {formatPoints(adjustmentPoints)}
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+              <div className="text-sm font-medium text-slate-600 dark:text-slate-300">Điểm trung bình / hoạt động</div>
+              <div className="mt-2 text-3xl font-bold text-slate-900 dark:text-slate-100">
+                {formatPoints(summary.average_points)}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {summary && (
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+              <div className="text-sm font-medium text-slate-600 dark:text-slate-300">Xuất sắc</div>
+              <div className="mt-2 text-3xl font-bold text-slate-900 dark:text-slate-100">{summary.excellent_count}</div>
+            </div>
+            <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+              <div className="text-sm font-medium text-slate-600 dark:text-slate-300">Tốt</div>
+              <div className="mt-2 text-3xl font-bold text-slate-900 dark:text-slate-100">{summary.good_count}</div>
+            </div>
+            <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+              <div className="text-sm font-medium text-slate-600 dark:text-slate-300">Tham gia</div>
+              <div className="mt-2 text-3xl font-bold text-slate-900 dark:text-slate-100">
+                {summary.participated_count}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {scores.length === 0 ? (
+          <div className="rounded-3xl border border-slate-200 bg-white p-10 text-center shadow-sm dark:border-slate-700 dark:bg-slate-900">
+            <p className="text-base text-slate-600 dark:text-slate-300">Chưa có bản ghi điểm nào.</p>
+          </div>
+        ) : (
+          <>
+            <div className="space-y-3 md:hidden">
+              {scores.map((score) => {
+                const achievement = getAchievementMeta(score.achievement_level);
+                return (
+                  <div
+                    key={score.participation_id}
+                    className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+                          {score.activity_title}
+                        </h2>
+                        <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                          {score.activity_type_name || 'Không rõ loại'}
+                          <span className="mx-1 text-slate-400 dark:text-slate-500">•</span>
+                          {score.organization_level_name || 'Không rõ cấp'}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-300">
+                          {formatPoints(score.total_points)}
+                        </div>
+                        <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                          {score.evaluated_at ? formatDate(score.evaluated_at, 'date') : '-'}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 flex flex-wrap items-center gap-2">
+                      <span
+                        className={`rounded-full px-3 py-1 text-xs font-semibold ${achievement.className}`}
+                      >
+                        {achievement.label}
+                      </span>
+                    </div>
+
+                    <div className="mt-4 grid grid-cols-2 gap-3 rounded-2xl bg-slate-50 p-3 text-sm text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                      <div>
+                        <div className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Tạm tính</div>
+                        <div className="mt-1 font-semibold text-slate-900 dark:text-slate-100">
+                          {formatPoints(score.subtotal)}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Cộng / trừ</div>
+                        <div className="mt-1 font-semibold text-slate-900 dark:text-slate-100">
+                          +{score.bonus_points} / -{score.penalty_points}
+                        </div>
+                      </div>
+                    </div>
+
                     <button
+                      type="button"
                       onClick={() => setSelectedScore(score)}
-                      className="text-blue-600 hover:text-blue-800 font-medium"
+                      className="mt-4 w-full rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-700 transition hover:border-blue-300 hover:bg-blue-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:border-blue-500/40 dark:bg-blue-500/10 dark:text-blue-200 dark:hover:border-blue-400 dark:hover:bg-blue-500/20 dark:focus-visible:ring-blue-400 dark:focus-visible:ring-offset-slate-900"
                     >
-                      📊 Xem
+                      Xem công thức
                     </button>
-                  </td>
-                </tr>
-              ))}
+                  </div>
+                );
+              })}
+            </div>
 
-              {scores.length === 0 && (
-                <tr>
-                  <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
-                    Chưa có điểm số nào
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+            <div className="hidden overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900 md:block">
+              <div className="overflow-x-auto">
+                <table className="min-w-full">
+                  <thead className="bg-slate-900 text-left text-sm text-white">
+                    <tr>
+                      <th className="px-5 py-4 font-semibold">Hoạt động</th>
+                      <th className="px-5 py-4 font-semibold">Loại / cấp</th>
+                      <th className="px-5 py-4 font-semibold">Đánh giá</th>
+                      <th className="px-5 py-4 text-right font-semibold">Tổng điểm</th>
+                      <th className="px-5 py-4 font-semibold">Ngày đánh giá</th>
+                      <th className="px-5 py-4 text-right font-semibold">Chi tiết</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 text-sm text-slate-700 dark:divide-slate-700 dark:text-slate-300">
+                    {scores.map((score) => {
+                      const achievement = getAchievementMeta(score.achievement_level);
+                      return (
+                        <tr key={score.participation_id} className="bg-white dark:bg-slate-900">
+                          <td className="px-5 py-4">
+                            <div className="font-semibold text-slate-900 dark:text-slate-100">{score.activity_title}</div>
+                          </td>
+                          <td className="px-5 py-4">
+                            <div>{score.activity_type_name || 'Không rõ loại'}</div>
+                            <div className="text-xs text-slate-500 dark:text-slate-400">
+                              {score.organization_level_name || 'Không rõ cấp'}
+                            </div>
+                          </td>
+                          <td className="px-5 py-4">
+                            <span
+                              className={`rounded-full px-3 py-1 text-xs font-semibold ${achievement.className}`}
+                            >
+                              {achievement.label}
+                            </span>
+                          </td>
+                          <td className="px-5 py-4 text-right font-semibold text-emerald-600 dark:text-emerald-300">
+                            {formatPoints(score.total_points)}
+                          </td>
+                          <td className="px-5 py-4">
+                            {score.evaluated_at ? formatDate(score.evaluated_at, 'date') : '-'}
+                          </td>
+                          <td className="px-5 py-4 text-right">
+                            <button
+                              type="button"
+                              onClick={() => setSelectedScore(score)}
+                              className="font-semibold text-blue-600 hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:text-blue-300 dark:hover:text-blue-200 dark:focus-visible:ring-blue-400 dark:focus-visible:ring-offset-slate-900"
+                            >
+                              Xem công thức
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
-      {/* Score Detail Modal */}
       {selectedScore && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+          className="app-modal-backdrop px-4 py-6"
           onClick={() => setSelectedScore(null)}
         >
           <div
-            className="bg-white rounded-lg shadow-xl max-w-2xl w-full p-6"
-            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="student-score-detail-dialog-title"
+            className="app-modal-panel app-modal-panel-scroll w-full max-w-2xl p-5 sm:p-6"
+            onClick={(event) => event.stopPropagation()}
           >
-            <div className="flex justify-between items-start mb-4">
-              <h2 className="text-2xl font-bold">Chi tiết tính điểm</h2>
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 id="student-score-detail-dialog-title" className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                  Chi tiết tính điểm
+                </h2>
+                <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{selectedScore.activity_title}</p>
+              </div>
               <button
+                type="button"
                 onClick={() => setSelectedScore(null)}
-                className="text-gray-400 hover:text-gray-600 text-2xl"
-              >
-                ×
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              {/* Activity Info */}
-              <div className="bg-gray-50 rounded-lg p-4">
-                <h3 className="font-semibold text-gray-700 mb-2">Hoạt động</h3>
-                <p className="text-lg font-medium">{selectedScore.activity_title}</p>
-                <div className="flex gap-2 mt-2">
-                  <span className="text-sm px-2 py-1 bg-blue-100 text-blue-800 rounded">
-                    {selectedScore.activity_type_name}
-                  </span>
-                  <span className="text-sm px-2 py-1 bg-green-100 text-green-800 rounded">
-                    {selectedScore.organization_level_name}
-                  </span>
-                </div>
-              </div>
-
-              {/* Formula Breakdown */}
-              <div className="bg-blue-50 rounded-lg p-4">
-                <h3 className="font-semibold text-blue-900 mb-3">🧮 Công thức tính điểm</h3>
-                <div className="text-sm text-blue-800 space-y-2">
-                  <p className="font-mono">{selectedScore.formula}</p>
-
-                  <div className="border-t border-blue-200 pt-2 mt-2">
-                    <p className="mb-1">
-                      <span className="font-medium">Điểm cơ bản:</span> {selectedScore.base_points}
-                    </p>
-                    <p className="mb-1">
-                      <span className="font-medium">Hệ số loại hoạt động:</span> ×
-                      {selectedScore.type_multiplier}
-                    </p>
-                    <p className="mb-1">
-                      <span className="font-medium">Hệ số cấp tổ chức:</span> ×
-                      {selectedScore.level_multiplier}
-                    </p>
-                    <p className="mb-1">
-                      <span className="font-medium">Hệ số thành tích:</span> ×
-                      {selectedScore.achievement_multiplier}
-                    </p>
-                    <p className="mb-1">
-                      <span className="font-medium">Tạm tính:</span>{' '}
-                      {selectedScore.subtotal.toFixed(2)} điểm
-                    </p>
-                    {selectedScore.bonus_points > 0 && (
-                      <p className="mb-1 text-green-700">
-                        <span className="font-medium">Điểm cộng:</span> +
-                        {selectedScore.bonus_points} điểm
-                      </p>
-                    )}
-                    {selectedScore.penalty_points > 0 && (
-                      <p className="mb-1 text-red-700">
-                        <span className="font-medium">Điểm trừ:</span> -
-                        {selectedScore.penalty_points} điểm
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="border-t border-blue-300 pt-2 mt-2">
-                    <p className="text-lg font-bold text-blue-900">
-                      Tổng điểm: {selectedScore.total_points.toFixed(2)} điểm
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Achievement & Award */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-purple-50 rounded-lg p-4">
-                  <h3 className="font-semibold text-purple-900 mb-2">Đánh giá</h3>
-                  {getAchievementBadge(selectedScore.achievement_level)}
-                </div>
-                <div className="bg-yellow-50 rounded-lg p-4">
-                  <h3 className="font-semibold text-yellow-900 mb-2">Giải thưởng</h3>
-                  {selectedScore.award_type ? (
-                    getAwardBadge(selectedScore.award_type)
-                  ) : (
-                    <span className="text-gray-500 text-sm">Không có</span>
-                  )}
-                </div>
-              </div>
-
-              {/* Timestamp */}
-              <div className="text-xs text-gray-500 text-center">
-                Tính toán lúc: {formatDate(selectedScore.calculated_at)}
-              </div>
-            </div>
-
-            <div className="mt-6">
-              <button
-                onClick={() => setSelectedScore(null)}
-                className="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 font-medium"
+                className="rounded-full bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 dark:focus-visible:ring-slate-500 dark:focus-visible:ring-offset-slate-900"
               >
                 Đóng
               </button>
+            </div>
+
+            <div className="mt-6 space-y-4">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/60">
+                <div className="text-sm font-medium text-slate-600 dark:text-slate-300">Công thức</div>
+                <div className="mt-2 rounded-2xl bg-white p-4 font-mono text-sm text-slate-800 dark:bg-slate-900 dark:text-slate-200">
+                  {selectedScore.formula}
+                </div>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
+                  <div className="text-sm font-medium text-slate-600 dark:text-slate-300">Cấu thành điểm</div>
+                  <div className="mt-3 space-y-2 text-sm text-slate-700 dark:text-slate-300">
+                    <div>Điểm cơ bản: {selectedScore.base_points}</div>
+                    <div>Hệ số loại: x{selectedScore.type_multiplier}</div>
+                    <div>Hệ số cấp: x{selectedScore.level_multiplier}</div>
+                    <div>Hệ số thành tích: x{selectedScore.achievement_multiplier}</div>
+                    <div>Tạm tính: {formatPoints(selectedScore.subtotal)}</div>
+                    <div className="text-emerald-700 dark:text-emerald-300">Cộng thêm: +{selectedScore.bonus_points}</div>
+                    <div className="text-rose-700 dark:text-rose-300">Khấu trừ: -{selectedScore.penalty_points}</div>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
+                  <div className="text-sm font-medium text-slate-600 dark:text-slate-300">Kết quả</div>
+                  <div className="mt-3 space-y-2 text-sm text-slate-700 dark:text-slate-300">
+                    <div>
+                      Tổng điểm: <span className="font-semibold">{formatPoints(selectedScore.total_points)}</span>
+                    </div>
+                    <div>Loại hoạt động: {selectedScore.activity_type_name || '-'}</div>
+                    <div>Cấp tổ chức: {selectedScore.organization_level_name || '-'}</div>
+                    <div>Ngày tính: {formatDate(selectedScore.calculated_at)}</div>
+                    <div>
+                      Ngày đánh giá:{' '}
+                      {selectedScore.evaluated_at ? formatDate(selectedScore.evaluated_at) : '-'}
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>

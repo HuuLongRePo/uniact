@@ -1,17 +1,17 @@
-import React from 'react'
-import { render, screen } from '@testing-library/react'
-import type { User } from '@/types/database'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import ScoreReportPage from '@/app/admin/reports/scores/page'
-import { useAuth } from '@/contexts/AuthContext'
+import React from 'react';
+import { render, screen } from '@testing-library/react';
+import type { User } from '@/types/database';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import ScoreReportPage from '@/app/admin/reports/scores/page';
+import { useAuth } from '@/contexts/AuthContext';
 
 const { pushMock } = vi.hoisted(() => ({
   pushMock: vi.fn(),
-}))
+}));
 
 vi.mock('@/contexts/AuthContext', () => ({
   useAuth: vi.fn(),
-}))
+}));
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
@@ -20,14 +20,14 @@ vi.mock('next/navigation', () => ({
     back: vi.fn(),
     prefetch: vi.fn(),
   }),
-}))
+}));
 
 vi.mock('@/components/LoadingSpinner', () => ({
-  default: () => <div data-testid="loading-spinner">Loading</div>,
-}))
+  default: ({ message }: { message?: string }) => <div data-testid="loading-spinner">{message || 'Loading'}</div>,
+}));
 
 vi.mock('recharts', async () => {
-  const ReactModule = await import('react')
+  const ReactModule = await import('react');
 
   return {
     ResponsiveContainer: ({ children }: { children: React.ReactNode }) =>
@@ -36,8 +36,8 @@ vi.mock('recharts', async () => {
       children,
       data = [],
     }: {
-      children: React.ReactNode
-      data?: Array<{ range: string; count: number }>
+      children: React.ReactNode;
+      data?: Array<{ range: string; count: number }>;
     }) =>
       ReactModule.createElement(
         'div',
@@ -54,10 +54,10 @@ vi.mock('recharts', async () => {
     YAxis: () => null,
     Tooltip: () => null,
     Bar: () => null,
-  }
-})
+  };
+});
 
-type MockResponse = Pick<Response, 'ok' | 'status' | 'json'>
+type MockResponse = Pick<Response, 'ok' | 'status' | 'json'>;
 
 function createAuthState(role: string = 'admin') {
   return {
@@ -66,41 +66,41 @@ function createAuthState(role: string = 'admin') {
     login: vi.fn(async () => undefined),
     logout: vi.fn(async () => undefined),
     register: vi.fn(async () => undefined),
-  }
+  };
 }
 
 function createJsonResponse(
   payload: unknown,
   init: {
-    ok?: boolean
-    status?: number
+    ok?: boolean;
+    status?: number;
   } = {}
 ): MockResponse {
   return {
     ok: init.ok ?? true,
     status: init.status ?? (init.ok === false ? 500 : 200),
     json: vi.fn().mockResolvedValue(payload),
-  }
+  };
 }
 
 function installFetchMock(response: MockResponse | Promise<MockResponse>) {
-  const fetchMock = vi.fn(() => response)
+  const fetchMock = vi.fn(() => response);
 
-  vi.stubGlobal('fetch', fetchMock)
-  window.fetch = fetchMock as typeof fetch
+  vi.stubGlobal('fetch', fetchMock);
+  window.fetch = fetchMock as typeof fetch;
 
-  return fetchMock
+  return fetchMock;
 }
 
 describe('ScoreReportPage', () => {
   beforeEach(() => {
-    vi.mocked(useAuth).mockReturnValue(createAuthState())
-    pushMock.mockReset()
-  })
+    vi.mocked(useAuth).mockReturnValue(createAuthState());
+    pushMock.mockReset();
+  });
 
   afterEach(() => {
-    vi.unstubAllGlobals()
-  })
+    vi.unstubAllGlobals();
+  });
 
   it('renders score cards and chart data when the report loads successfully', async () => {
     installFetchMock(
@@ -120,19 +120,19 @@ describe('ScoreReportPage', () => {
           },
         })
       )
-    )
-    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    );
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
-    render(<ScoreReportPage />)
+    render(<ScoreReportPage />);
 
-    expect(await screen.findByText('8.5')).toBeInTheDocument()
-    expect(screen.getByText('8')).toBeInTheDocument()
-    expect(screen.getByText('10')).toBeInTheDocument()
-    expect(screen.getByText('2')).toBeInTheDocument()
-    expect(screen.getByTestId('bar-chart')).toBeInTheDocument()
-    expect(screen.getByText('0-4:3')).toBeInTheDocument()
-    expect(pushMock).not.toHaveBeenCalled()
-  })
+    expect(await screen.findByText('8.5')).toBeInTheDocument();
+    expect(screen.getAllByText('8').length).toBeGreaterThan(0);
+    expect(screen.getByText('10')).toBeInTheDocument();
+    expect(screen.getByText('2')).toBeInTheDocument();
+    expect(screen.getByTestId('bar-chart')).toBeInTheDocument();
+    expect(screen.getByText('0-4:3')).toBeInTheDocument();
+    expect(pushMock).not.toHaveBeenCalled();
+  });
 
   it('renders the empty distribution state when there is no chart data', async () => {
     installFetchMock(
@@ -147,14 +147,14 @@ describe('ScoreReportPage', () => {
           },
         })
       )
-    )
-    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    );
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
-    render(<ScoreReportPage />)
+    render(<ScoreReportPage />);
 
-    expect(await screen.findByText('Chưa có dữ liệu phân bố điểm để hiển thị.')).toBeInTheDocument()
-    expect(screen.queryByTestId('bar-chart')).not.toBeInTheDocument()
-  })
+    expect(await screen.findByText('Chua co du lieu phan bo diem de hien thi.')).toBeInTheDocument();
+    expect(screen.queryByTestId('bar-chart')).not.toBeInTheDocument();
+  });
 
   it('shows an error banner when the report request fails', async () => {
     installFetchMock(
@@ -169,12 +169,12 @@ describe('ScoreReportPage', () => {
           }
         )
       )
-    )
-    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    );
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
-    render(<ScoreReportPage />)
+    render(<ScoreReportPage />);
 
-    expect(await screen.findByText('Score report unavailable')).toBeInTheDocument()
-    expect(screen.getByText('Chưa có dữ liệu phân bố điểm để hiển thị.')).toBeInTheDocument()
-  })
-})
+    expect(await screen.findByText('Score report unavailable')).toBeInTheDocument();
+    expect(screen.getByText('Chua co du lieu phan bo diem de hien thi.')).toBeInTheDocument();
+  });
+});

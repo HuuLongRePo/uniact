@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import StudentDailyQuickActions from '@/components/student/StudentDailyQuickActions';
+import StudentScoreFlowNav from '@/components/student/StudentScoreFlowNav';
 import toast from 'react-hot-toast';
 import { formatDate } from '@/lib/formatters';
 
@@ -66,6 +68,7 @@ interface PointsSummary {
   total_penalty: number;
   grand_total: number;
   total_award_points: number;
+  total_adjustment_points?: number;
   final_total: number;
 }
 
@@ -76,6 +79,39 @@ interface PointsBreakdown {
   byAchievement: PointsByAchievementItem[];
   awards: AwardItem[];
   summary: PointsSummary;
+}
+
+const TAB_ITEMS: Array<{ key: TabKey; label: string }> = [
+  { key: 'activities', label: 'Theo hoạt động' },
+  { key: 'types', label: 'Theo loại' },
+  { key: 'levels', label: 'Theo cấp độ' },
+  { key: 'achievements', label: 'Theo thành tích' },
+  { key: 'awards', label: 'Thưởng và cộng điểm' },
+];
+
+function formatPoints(value: number | null | undefined) {
+  return Number(value || 0).toFixed(2);
+}
+
+function getAchievementLabel(value: string | null) {
+  switch (value) {
+    case 'excellent':
+      return 'Xuất sắc';
+    case 'good':
+      return 'Tốt';
+    case 'participated':
+      return 'Tham gia';
+    default:
+      return value || 'Chưa xếp loại';
+  }
+}
+
+function EmptyState({ message }: { message: string }) {
+  return (
+    <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-300">
+      {message}
+    </div>
+  );
 }
 
 export default function StudentPointsBreakdownPage() {
@@ -90,10 +126,13 @@ export default function StudentPointsBreakdownPage() {
       router.push('/login');
       return;
     }
-    if (user) fetchBreakdown();
+
+    if (user) {
+      void fetchBreakdown();
+    }
   }, [user, authLoading, router]);
 
-  const fetchBreakdown = async () => {
+  async function fetchBreakdown() {
     try {
       setLoading(true);
       const res = await fetch('/api/student/points-breakdown');
@@ -103,228 +142,327 @@ export default function StudentPointsBreakdownPage() {
         throw new Error(json?.error || json?.message || 'Không thể tải chi tiết điểm rèn luyện');
       }
 
-      const payload = json?.data || json;
-      setData(payload);
+      setData((json?.data || json) as PointsBreakdown);
     } catch (error) {
       console.error('Error fetching breakdown:', error);
-      toast.error(error instanceof Error ? error.message : 'Không thể tải chi tiết điểm rèn luyện');
+      toast.error(
+        error instanceof Error ? error.message : 'Không thể tải chi tiết điểm rèn luyện'
+      );
       setData(null);
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   if (authLoading || loading) {
     return <LoadingSpinner />;
   }
 
   if (!data) {
-    return <div className="p-6">Không thể tải dữ liệu</div>;
+    return (
+      <div className="page-shell">
+        <div className="mx-auto max-w-3xl">
+          <div className="rounded-3xl border border-red-200 bg-red-50 p-6 text-sm text-red-800 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-200">
+            Không thể tải dữ liệu
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="container mx-auto p-6">
-      <h1 className="text-3xl font-bold mb-6">📊 Chi Tiết Điểm Rèn Luyện</h1>
+    <div className="page-shell">
+      <div className="mx-auto max-w-6xl space-y-6">
+        <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900 sm:p-6">
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Chi tiết điểm rèn luyện</h1>
+          <p className="mt-2 max-w-3xl text-sm text-slate-600 dark:text-slate-300">
+            Theo dõi từng lớp điểm từ hoạt động, hệ số, thưởng, phạt và tổng điểm cuối cùng đang
+            được hệ thống ghi nhận.
+          </p>
+        </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="text-sm text-gray-600">Tổng điểm cơ bản</div>
-          <div className="text-2xl font-bold text-blue-600">
-            {data.summary.total_base_points || 0}
-          </div>
-        </div>
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="text-sm text-gray-600">Sau hệ số nhân</div>
-          <div className="text-2xl font-bold text-purple-600">
-            {data.summary.total_after_multipliers || 0}
-          </div>
-        </div>
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="text-sm text-gray-600">Điểm thưởng</div>
-          <div className="text-2xl font-bold text-green-600">+{data.summary.total_bonus || 0}</div>
-        </div>
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="text-sm text-gray-600">Tổng cộng</div>
-          <div className="text-3xl font-bold text-orange-600">{data.summary.final_total || 0}</div>
-        </div>
-      </div>
+        <StudentDailyQuickActions />
+        <StudentScoreFlowNav />
 
-      {/* Tabs */}
-      <div className="bg-white rounded-lg shadow mb-6">
-        <div className="border-b border-gray-200">
-          <div className="flex">
-            {[
-              { key: 'activities', label: 'Theo hoạt động' },
-              { key: 'types', label: 'Theo loại' },
-              { key: 'levels', label: 'Theo cấp độ' },
-              { key: 'achievements', label: 'Theo thành tích' },
-              { key: 'awards', label: 'Giải thưởng' },
-            ].map((tab) => (
-              <button
-                key={tab.key}
-                onClick={() => setActiveTab(tab.key as TabKey)}
-                className={`px-6 py-3 font-medium ${
-                  activeTab === tab.key
-                    ? 'border-b-2 border-blue-500 text-blue-600'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+          <div className="rounded-3xl border border-emerald-100 bg-gradient-to-br from-emerald-50 via-white to-teal-50 p-5 shadow-sm dark:border-emerald-900/50 dark:from-emerald-500/10 dark:via-slate-900 dark:to-teal-500/10 xl:col-span-2">
+            <div className="text-sm font-medium text-emerald-700 dark:text-emerald-300">Tổng điểm cuối cùng</div>
+            <div className="mt-2 text-4xl font-bold text-slate-900 dark:text-slate-100">
+              {formatPoints(data.summary.final_total)}
+            </div>
+            <div className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+              Tổng cộng: {formatPoints(data.summary.grand_total)} · Thưởng thêm:{' '}
+              {formatPoints(data.summary.total_award_points)}
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-blue-100 bg-white p-5 shadow-sm dark:border-blue-900/50 dark:bg-slate-900">
+            <div className="text-sm font-medium text-blue-700 dark:text-blue-300">Tổng điểm cơ bản</div>
+            <div className="mt-2 text-3xl font-bold text-slate-900 dark:text-slate-100">
+              {formatPoints(data.summary.total_base_points)}
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-purple-100 bg-white p-5 shadow-sm dark:border-purple-900/50 dark:bg-slate-900">
+            <div className="text-sm font-medium text-purple-700 dark:text-purple-300">Sau hệ số nhân</div>
+            <div className="mt-2 text-3xl font-bold text-slate-900 dark:text-slate-100">
+              {formatPoints(data.summary.total_after_multipliers)}
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-amber-100 bg-white p-5 shadow-sm dark:border-amber-900/50 dark:bg-slate-900">
+            <div className="text-sm font-medium text-amber-700 dark:text-amber-300">Cộng / trừ</div>
+            <div className="mt-2 text-3xl font-bold text-slate-900 dark:text-slate-100">
+              +{formatPoints(data.summary.total_bonus)} / -{formatPoints(data.summary.total_penalty)}
+            </div>
           </div>
         </div>
 
-        <div className="p-6">
-          {/* By Activity */}
-          {activeTab === 'activities' && (
-            <div className="space-y-3">
-              {data.byActivity.length === 0 ? (
-                <p className="text-gray-500">Chưa có hoạt động nào</p>
-              ) : (
-                data.byActivity.map((activity) => (
-                  <div key={activity.id} className="border rounded-lg p-4 hover:bg-gray-50">
-                    <div className="flex justify-between items-start mb-2">
-                      <div>
-                        <h3 className="font-semibold">{activity.title}</h3>
-                        <div className="text-sm text-gray-600">
-                          {formatDate(activity.date_time, 'date')} •
-                          {activity.activity_type} • {activity.organization_level}
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-2xl font-bold text-green-600">
-                          {activity.total_points || 0}
-                        </div>
-                        {activity.achievement_level && (
-                          <span className="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded">
-                            {activity.achievement_level}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="text-xs text-gray-500 space-y-1">
-                      <div>
-                        Base: {activity.base_points} × Type: {activity.type_multiplier} × Level:{' '}
-                        {activity.level_multiplier} × Achievement: {activity.achievement_multiplier}{' '}
-                        = {activity.subtotal}
-                      </div>
-                      {activity.bonus_points > 0 && (
-                        <div className="text-green-600">+ Bonus: {activity.bonus_points}</div>
-                      )}
-                      {activity.penalty_points > 0 && (
-                        <div className="text-red-600">- Penalty: {activity.penalty_points}</div>
-                      )}
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          )}
-
-          {/* By Type */}
-          {activeTab === 'types' && (
-            <div className="space-y-3">
-              {data.byType.map((type, idx: number) => (
-                <div key={idx} className="border rounded-lg p-4">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <h3 className="font-semibold">{type.type_name}</h3>
-                      <div className="text-sm text-gray-600">
-                        {type.activity_count} hoạt động • Hệ số: ×{type.type_multiplier}
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-2xl font-bold text-blue-600">{type.total_points}</div>
-                      <div className="text-sm text-gray-500">
-                        TB: {type.avg_points.toFixed(1)}/HĐ
-                      </div>
-                    </div>
-                  </div>
-                </div>
+        <div className="rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900">
+          <div className="border-b border-slate-200 px-4 py-4 dark:border-slate-700 sm:px-6">
+            <div className="-mx-1 flex snap-x gap-2 overflow-x-auto px-1 pb-1">
+              {TAB_ITEMS.map((tab) => (
+                <button
+                  key={tab.key}
+                  type="button"
+                  onClick={() => setActiveTab(tab.key)}
+                  aria-pressed={activeTab === tab.key}
+                  className={`shrink-0 snap-start rounded-full px-4 py-2 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-blue-400 dark:focus-visible:ring-offset-slate-900 ${
+                    activeTab === tab.key
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700'
+                  }`}
+                >
+                  {tab.label}
+                </button>
               ))}
             </div>
-          )}
+          </div>
 
-          {/* By Level */}
-          {activeTab === 'levels' && (
-            <div className="space-y-3">
-              {data.byLevel.map((level, idx: number) => (
-                <div key={idx} className="border rounded-lg p-4">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <h3 className="font-semibold">{level.level_name}</h3>
-                      <div className="text-sm text-gray-600">
-                        {level.activity_count} hoạt động • Hệ số: ×{level.level_multiplier}
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-2xl font-bold text-purple-600">{level.total_points}</div>
-                      <div className="text-sm text-gray-500">
-                        TB: {level.avg_points.toFixed(1)}/HĐ
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* By Achievement */}
-          {activeTab === 'achievements' && (
-            <div className="space-y-3">
-              {data.byAchievement.map((ach, idx: number) => (
-                <div key={idx} className="border rounded-lg p-4">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <h3 className="font-semibold capitalize">{ach.achievement_level}</h3>
-                      <div className="text-sm text-gray-600">{ach.activity_count} hoạt động</div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-2xl font-bold text-orange-600">{ach.total_points}</div>
-                      <div className="text-sm text-gray-500">
-                        TB: {ach.avg_points.toFixed(1)}/HĐ
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Awards */}
-          {activeTab === 'awards' && (
-            <div className="space-y-3">
-              {data.awards.length === 0 ? (
-                <p className="text-gray-500">Chưa có giải thưởng nào</p>
-              ) : (
-                data.awards.map((award, idx: number) => (
-                  <div key={idx} className="border rounded-lg p-4 bg-yellow-50">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-2xl">🏆</span>
-                          <h3 className="font-semibold">{award.award_type}</h3>
+          <div className="p-4 sm:p-6">
+            {activeTab === 'activities' && (
+              <div className="space-y-4">
+                {data.byActivity.length === 0 ? (
+                  <EmptyState message="Chưa có hoạt động nào được tính điểm." />
+                ) : (
+                  data.byActivity.map((activity) => (
+                    <div
+                      key={activity.id}
+                      className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900"
+                    >
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                          <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">{activity.title}</h2>
+                          <div className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                            {formatDate(activity.date_time, 'date')} · {activity.activity_type || '-'} ·{' '}
+                            {activity.organization_level || '-'}
+                          </div>
                         </div>
-                        <div className="text-sm text-gray-600 mt-1">
-                          {award.activity_title && `${award.activity_title} • `}
-                          {award.reason}
-                        </div>
-                        <div className="text-xs text-gray-500 mt-1">
-                          Phê duyệt: {award.approved_at ? formatDate(award.approved_at, 'date') : '-'} bởi{' '}
-                          {award.approved_by_name}
+                        <div className="sm:text-right">
+                          <div className="text-3xl font-bold text-emerald-600 dark:text-emerald-300">
+                            {formatPoints(activity.total_points)}
+                          </div>
+                          <div className="mt-1 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                            {getAchievementLabel(activity.achievement_level)}
+                          </div>
                         </div>
                       </div>
-                      <div className="text-2xl font-bold text-yellow-600">
-                        +{award.bonus_points}
+
+                      <div className="mt-4 grid gap-3 rounded-2xl bg-slate-50 p-4 text-sm text-slate-700 dark:bg-slate-800/70 dark:text-slate-300 sm:grid-cols-2 xl:grid-cols-4">
+                        <div>
+                          <div className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Công thức</div>
+                          <div className="mt-1 font-semibold">
+                            {activity.base_points || 0} x {activity.type_multiplier || 0} x{' '}
+                            {activity.level_multiplier || 0} x {activity.achievement_multiplier || 0}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Tạm tính</div>
+                          <div className="mt-1 font-semibold">{formatPoints(activity.subtotal)}</div>
+                        </div>
+                        <div>
+                          <div className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Cộng thêm</div>
+                          <div className="mt-1 font-semibold text-emerald-700 dark:text-emerald-300">
+                            +{formatPoints(activity.bonus_points)}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Khấu trừ</div>
+                          <div className="mt-1 font-semibold text-rose-700 dark:text-rose-300">
+                            -{formatPoints(activity.penalty_points)}
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))
-              )}
-            </div>
-          )}
+                  ))
+                )}
+              </div>
+            )}
+
+            {activeTab === 'types' && (
+              <div className="grid gap-4 md:grid-cols-2">
+                {data.byType.length === 0 ? (
+                  <EmptyState message="Chưa có nhóm điểm theo loại hoạt động." />
+                ) : (
+                  data.byType.map((type, index) => (
+                    <div
+                      key={`${type.type_name || 'unknown'}-${index}`}
+                      className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900"
+                    >
+                      <div className="text-sm font-medium text-slate-500 dark:text-slate-400">Loại hoạt động</div>
+                      <div className="mt-2 text-xl font-semibold text-slate-900 dark:text-slate-100">
+                        {type.type_name || 'Chưa gán loại'}
+                      </div>
+                      <div className="mt-4 grid grid-cols-2 gap-3 text-sm text-slate-600 dark:text-slate-300">
+                        <div>
+                          <div className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Hoạt động</div>
+                          <div className="mt-1 font-semibold text-slate-900 dark:text-slate-100">{type.activity_count}</div>
+                        </div>
+                        <div>
+                          <div className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Hệ số</div>
+                          <div className="mt-1 font-semibold text-slate-900 dark:text-slate-100">
+                            x{formatPoints(type.type_multiplier)}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Tổng điểm</div>
+                          <div className="mt-1 font-semibold text-slate-900 dark:text-slate-100">
+                            {formatPoints(type.total_points)}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Trung bình / hoạt động</div>
+                          <div className="mt-1 font-semibold text-slate-900 dark:text-slate-100">
+                            {formatPoints(type.avg_points)}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+
+            {activeTab === 'levels' && (
+              <div className="grid gap-4 md:grid-cols-2">
+                {data.byLevel.length === 0 ? (
+                  <EmptyState message="Chưa có nhóm điểm theo cấp tổ chức." />
+                ) : (
+                  data.byLevel.map((level, index) => (
+                    <div
+                      key={`${level.level_name || 'unknown'}-${index}`}
+                      className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900"
+                    >
+                      <div className="text-sm font-medium text-slate-500 dark:text-slate-400">Cấp tổ chức</div>
+                      <div className="mt-2 text-xl font-semibold text-slate-900 dark:text-slate-100">
+                        {level.level_name || 'Chưa gán cấp'}
+                      </div>
+                      <div className="mt-4 grid grid-cols-2 gap-3 text-sm text-slate-600 dark:text-slate-300">
+                        <div>
+                          <div className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Hoạt động</div>
+                          <div className="mt-1 font-semibold text-slate-900 dark:text-slate-100">{level.activity_count}</div>
+                        </div>
+                        <div>
+                          <div className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Hệ số</div>
+                          <div className="mt-1 font-semibold text-slate-900 dark:text-slate-100">
+                            x{formatPoints(level.level_multiplier)}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Tổng điểm</div>
+                          <div className="mt-1 font-semibold text-slate-900 dark:text-slate-100">
+                            {formatPoints(level.total_points)}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Trung bình / hoạt động</div>
+                          <div className="mt-1 font-semibold text-slate-900 dark:text-slate-100">
+                            {formatPoints(level.avg_points)}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+
+            {activeTab === 'achievements' && (
+              <div className="grid gap-4 md:grid-cols-2">
+                {data.byAchievement.length === 0 ? (
+                  <EmptyState message="Chưa có nhóm điểm theo thành tích." />
+                ) : (
+                  data.byAchievement.map((achievement, index) => (
+                    <div
+                      key={`${achievement.achievement_level || 'unknown'}-${index}`}
+                      className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900"
+                    >
+                      <div className="text-sm font-medium text-slate-500 dark:text-slate-400">Thành tích</div>
+                      <div className="mt-2 text-xl font-semibold text-slate-900 dark:text-slate-100">
+                        {getAchievementLabel(achievement.achievement_level)}
+                      </div>
+                      <div className="mt-4 grid grid-cols-2 gap-3 text-sm text-slate-600 dark:text-slate-300">
+                        <div>
+                          <div className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Hoạt động</div>
+                          <div className="mt-1 font-semibold text-slate-900 dark:text-slate-100">
+                            {achievement.activity_count}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Tổng điểm</div>
+                          <div className="mt-1 font-semibold text-slate-900 dark:text-slate-100">
+                            {formatPoints(achievement.total_points)}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Trung bình / hoạt động</div>
+                          <div className="mt-1 font-semibold text-slate-900 dark:text-slate-100">
+                            {formatPoints(achievement.avg_points)}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+
+            {activeTab === 'awards' && (
+              <div className="space-y-4">
+                {data.awards.length === 0 ? (
+                  <EmptyState message="Chưa có quyết định thưởng hoặc cộng điểm nào." />
+                ) : (
+                  data.awards.map((award) => (
+                    <div
+                      key={award.id}
+                      className="rounded-3xl border border-amber-200 bg-amber-50/60 p-4 shadow-sm dark:border-amber-500/40 dark:bg-amber-500/10"
+                    >
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                          <div className="text-sm font-medium text-amber-700 dark:text-amber-300">Thưởng / cộng điểm</div>
+                          <div className="mt-2 text-xl font-semibold text-slate-900 dark:text-slate-100">
+                            {award.award_type || 'Cộng điểm khác'}
+                          </div>
+                          <div className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+                            {award.activity_title ? `${award.activity_title} · ` : ''}
+                            {award.reason || 'Không có ghi chú'}
+                          </div>
+                          <div className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                            Phê duyệt:{' '}
+                            {award.approved_at ? formatDate(award.approved_at, 'date') : '-'} ·{' '}
+                            {award.approved_by_name || 'Không rõ người duyệt'}
+                          </div>
+                        </div>
+                        <div className="text-3xl font-bold text-amber-700 dark:text-amber-300">
+                          +{formatPoints(award.bonus_points)}
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

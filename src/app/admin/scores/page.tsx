@@ -1,12 +1,11 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { useEffectEventCompat } from '@/lib/useEffectEventCompat';
-import { useAuth } from '@/contexts/AuthContext';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import LoadingSpinner from '@/components/LoadingSpinner';
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import toast from 'react-hot-toast';
 import {
+  ArrowLeft,
   Award,
   Download,
   Edit2,
@@ -16,7 +15,9 @@ import {
   ShieldPlus,
   Trophy,
 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { useAuth } from '@/contexts/AuthContext';
+import LoadingSpinner from '@/components/LoadingSpinner';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { formatVietnamDateTime } from '@/lib/timezone';
 
 interface StudentScore {
@@ -27,10 +28,10 @@ interface StudentScore {
   class_name: string | null;
   total_points: number;
   activities_count: number;
+  participated_count: number;
   excellent_count: number;
   good_count: number;
   average_count: number;
-  participated_count: number;
   awards_count: number;
   award_points: number;
   adjustment_points: number;
@@ -50,20 +51,22 @@ interface ScoresSummary {
   rewarded_students_count: number;
 }
 
+interface RecentAdjustment {
+  id: number;
+  student_id: number;
+  student_name: string;
+  class_name: string | null;
+  points: number;
+  source: string;
+  calculated_at: string;
+  adjustment_type: 'bonus' | 'penalty';
+  reason: string;
+}
+
 interface ScoresInsights {
   top_penalty_students: StudentScore[];
   top_bonus_students: StudentScore[];
-  recent_adjustments: Array<{
-    id: number;
-    student_id: number;
-    student_name: string;
-    class_name: string | null;
-    points: number;
-    source: string;
-    calculated_at: string;
-    adjustment_type: 'bonus' | 'penalty';
-    reason: string;
-  }>;
+  recent_adjustments: RecentAdjustment[];
 }
 
 interface ClassOption {
@@ -97,467 +100,593 @@ function buildScoresExportUrl(searchTerm: string, classFilter: string, minPoints
   return `/api/admin/scores?${params.toString()}`;
 }
 
-function getClassesFromResponse(payload: unknown): ClassOption[] {
+function getClassOptions(payload: unknown): ClassOption[] {
   if (!payload || typeof payload !== 'object') return [];
   const record = payload as {
-    data?: { classes?: ClassOption[] };
     classes?: ClassOption[];
+    data?: { classes?: ClassOption[] };
   };
-  return record.data?.classes ?? record.classes ?? [];
+  return record.classes ?? record.data?.classes ?? [];
+}
+
+function getScoresPayload(payload: unknown): {
+  scores: StudentScore[];
+  summary: ScoresSummary;
+  insights: ScoresInsights;
+} {
+  if (!payload || typeof payload !== 'object') {
+    return { scores: [], summary: EMPTY_SUMMARY, insights: EMPTY_INSIGHTS };
+  }
+
+  const record = payload as {
+    scores?: StudentScore[];
+    summary?: ScoresSummary;
+    insights?: ScoresInsights;
+    data?: {
+      scores?: StudentScore[];
+      summary?: ScoresSummary;
+      insights?: ScoresInsights;
+    };
+  };
+
+  return {
+    scores: record.scores ?? record.data?.scores ?? [],
+    summary: record.summary ?? record.data?.summary ?? EMPTY_SUMMARY,
+    insights: record.insights ?? record.data?.insights ?? EMPTY_INSIGHTS,
+  };
+}
+
+function getUpdatedCount(payload: unknown): number {
+  if (!payload || typeof payload !== 'object') return 0;
+  const record = payload as { updated?: number; data?: { updated?: number } };
+  return Number(record.updated ?? record.data?.updated ?? 0);
+}
+
+function formatAdjustmentLabel(adjustment: RecentAdjustment) {
+  const prefix = adjustment.adjustment_type === 'bonus' ? '+' : '-';
+  return `${prefix}${Math.abs(Number(adjustment.points || 0))}`;
 }
 
 export default function AdminStudentScoresPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
+
   const [loading, setLoading] = useState(true);
-  const [isRecalculateConfirmOpen, setIsRecalculateConfirmOpen] = useState(false);
   const [scores, setScores] = useState<StudentScore[]>([]);
-  const [filteredScores, setFilteredScores] = useState<StudentScore[]>([]);
   const [summary, setSummary] = useState<ScoresSummary>(EMPTY_SUMMARY);
   const [insights, setInsights] = useState<ScoresInsights>(EMPTY_INSIGHTS);
-
-  const [searchTerm, setSearchTerm] = useState('');
-  const [classFilter, setClassFilter] = useState<string>('all');
-  const [minPoints, setMinPoints] = useState<string>('');
-
   const [classes, setClasses] = useState<ClassOption[]>([]);
-
-  const filterScores = useEffectEventCompat(() => {
-    let filtered = [...scores];
-
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(
-        (s) => s.name.toLowerCase().includes(term) || s.email.toLowerCase().includes(term)
-      );
-    }
-
-    if (classFilter && classFilter !== 'all') {
-      filtered = filtered.filter((s) => s.class_id?.toString() === classFilter);
-    }
-
-    if (minPoints) {
-      const min = parseFloat(minPoints);
-      if (!isNaN(min)) {
-        filtered = filtered.filter((s) => s.total_points >= min);
-      }
-    }
-
-    setFilteredScores(filtered);
-  });
+  const [searchTerm, setSearchTerm] = useState('');
+  const [classFilter, setClassFilter] = useState('all');
+  const [minPoints, setMinPoints] = useState('');
+  const [recalculateOpen, setRecalculateOpen] = useState(false);
 
   useEffect(() => {
     if (!authLoading && (!user || user.role !== 'admin')) {
       router.push('/login');
       return;
     }
-    if (user) {
+
+    if (user?.role === 'admin') {
       void fetchData();
     }
-  }, [user, authLoading, router]);
-
-  useEffect(() => {
-    filterScores();
-  }, [scores, searchTerm, classFilter, minPoints, filterScores]);
+  }, [authLoading, router, user]);
 
   const fetchData = async () => {
     try {
       setLoading(true);
       const [scoresRes, classesRes] = await Promise.all([
         fetch('/api/admin/scores'),
-        fetch('/api/classes'),
+        fetch('/api/admin/classes?limit=200'),
       ]);
 
-      if (!scoresRes.ok) throw new Error('Không thể tải điểm số');
+      if (!scoresRes.ok) {
+        throw new Error('Khong the tai bang diem he thong');
+      }
 
-      const scoresData = await scoresRes.json();
-      setScores(scoresData.scores || scoresData.data?.scores || []);
-      setSummary(scoresData.summary || scoresData.data?.summary || EMPTY_SUMMARY);
-      setInsights(scoresData.insights || scoresData.data?.insights || EMPTY_INSIGHTS);
+      const scoresPayload = getScoresPayload(await scoresRes.json());
+      setScores(Array.isArray(scoresPayload.scores) ? scoresPayload.scores : []);
+      setSummary(scoresPayload.summary ?? EMPTY_SUMMARY);
+      setInsights(scoresPayload.insights ?? EMPTY_INSIGHTS);
 
       if (classesRes.ok) {
-        const classesData = await classesRes.json();
-        setClasses(getClassesFromResponse(classesData));
+        const classesPayload = getClassOptions(await classesRes.json());
+        setClasses(Array.isArray(classesPayload) ? classesPayload : []);
+      } else {
+        setClasses([]);
       }
-    } catch (_error) {
-      toast.error('Không thể tải dữ liệu điểm');
+    } catch (error) {
+      console.error('Admin scores page error:', error);
+      toast.error('Khong the tai bang diem he thong');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleRecalculate = async () => {
-    try {
-      const res = await fetch('/api/admin/scores/recalculate', {
-        method: 'POST',
-      });
+  const filteredScores = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+    const min = Number(minPoints);
 
-      if (!res.ok) throw new Error('Recalculation failed');
+    return scores.filter((score) => {
+      if (
+        term &&
+        !score.name.toLowerCase().includes(term) &&
+        !score.email.toLowerCase().includes(term)
+      ) {
+        return false;
+      }
 
-      const data = await res.json();
-      toast.success(`Đã tính lại điểm cho ${data.updated} sinh viên`);
-      void fetchData();
-    } catch (_error) {
-      toast.error('Tính lại điểm thất bại');
-    }
-  };
+      if (classFilter !== 'all' && String(score.class_id ?? '') !== classFilter) {
+        return false;
+      }
 
-  const handleExport = () => {
-    const url = buildScoresExportUrl(searchTerm, classFilter, minPoints);
-    window.location.href = url;
-    toast.success('Đang chuẩn bị file CSV...');
-  };
+      if (minPoints.trim() && Number.isFinite(min) && score.total_points < min) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [classFilter, minPoints, scores, searchTerm]);
 
   const filteredStats = useMemo(
     () => ({
       averagePoints:
         filteredScores.length > 0
-          ? filteredScores.reduce((sum, score) => sum + score.total_points, 0) /
+          ? filteredScores.reduce((sum, score) => sum + Number(score.total_points || 0), 0) /
             filteredScores.length
           : 0,
       totalBonusAdjustments: filteredScores.reduce(
-        (sum, score) => sum + score.bonus_adjustment_points,
+        (sum, score) => sum + Number(score.bonus_adjustment_points || 0),
         0
       ),
-      totalPenaltyPoints: filteredScores.reduce((sum, score) => sum + score.penalty_points, 0),
-      penalizedStudents: filteredScores.filter((score) => score.penalty_points > 0).length,
+      totalPenaltyPoints: filteredScores.reduce(
+        (sum, score) => sum + Number(score.penalty_points || 0),
+        0
+      ),
+      penalizedStudents: filteredScores.filter((score) => Number(score.penalty_points || 0) > 0)
+        .length,
     }),
     [filteredScores]
   );
 
+  const handleRecalculate = async () => {
+    try {
+      const response = await fetch('/api/admin/scores/recalculate', {
+        method: 'POST',
+      });
+
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(
+          (payload && typeof payload === 'object' && 'error' in payload && String(payload.error)) ||
+            'Tinh lai diem that bai'
+        );
+      }
+
+      const updated = getUpdatedCount(payload);
+      toast.success(
+        updated > 0 ? `Da tinh lai diem cho ${updated} sinh vien` : 'Da tinh lai bang diem he thong'
+      );
+      setRecalculateOpen(false);
+      void fetchData();
+    } catch (error) {
+      console.error('Recalculate scores error:', error);
+      toast.error('Tinh lai diem that bai');
+    }
+  };
+
+  const handleExport = () => {
+    const anchor = document.createElement('a');
+    anchor.href = buildScoresExportUrl(searchTerm, classFilter, minPoints);
+    anchor.download = '';
+    anchor.click();
+    toast.success('Da yeu cau xuat CSV bang diem');
+  };
+
   if (authLoading || loading) {
-    return <LoadingSpinner />;
+    return <LoadingSpinner message="Dang tai bang diem..." />;
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="mx-auto max-w-7xl">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">📊 Bảng Điểm Sinh Viên</h1>
-          <p className="mt-2 text-gray-600">
-            Quản lý điểm rèn luyện, theo dõi điều chỉnh thưởng/phạt và phát hiện các hotspot cần can
-            thiệp.
-          </p>
-        </div>
-
-        <div className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-6">
-          <div className="rounded-lg bg-white p-6 shadow-lg">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Tổng sinh viên</p>
-                <p className="mt-1 text-3xl font-bold text-blue-600">{summary.total_students}</p>
+    <div className="page-shell">
+      <div className="mx-auto max-w-7xl space-y-6">
+        <section className="page-surface rounded-[1.75rem] px-5 py-6 sm:px-7">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+            <div className="flex items-start gap-4">
+              <Link
+                href="/admin/dashboard"
+                className="rounded-xl border border-slate-300 p-2 text-slate-600 transition hover:bg-slate-50"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </Link>
+              <div className="max-w-3xl">
+                <div className="inline-flex rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-blue-700">
+                  Scores operations
+                </div>
+                <h1
+                  className="mt-3 text-3xl font-bold text-slate-900"
+                  data-testid="admin-scores-heading"
+                >
+                  Bang diem toan he thong
+                </h1>
+                <p className="mt-2 text-sm text-slate-600">
+                  Theo doi tong diem, dieu chinh cong tru va cac hoc vien can kiem tra lai truoc
+                  khi chot ky.
+                </p>
               </div>
-              <Trophy className="h-12 w-12 text-blue-600 opacity-20" />
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <button
+                type="button"
+                onClick={() => setRecalculateOpen(true)}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-violet-700"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Tinh lai diem
+              </button>
+              <button
+                type="button"
+                onClick={handleExport}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700"
+              >
+                <Download className="h-4 w-4" />
+                Xuat CSV
+              </button>
             </div>
           </div>
+        </section>
 
-          <div className="rounded-lg bg-white p-6 shadow-lg">
-            <div className="flex items-center justify-between">
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
+          <article className="rounded-[1.5rem] bg-blue-50 px-4 py-4 text-blue-700">
+            <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-sm text-gray-600">Điểm trung bình</p>
-                <p className="mt-1 text-3xl font-bold text-green-600">
+                <div className="text-xs font-semibold uppercase tracking-wide">Tong sinh vien</div>
+                <div className="mt-3 text-2xl font-semibold text-slate-900">
+                  {summary.total_students}
+                </div>
+              </div>
+              <Trophy className="h-8 w-8" />
+            </div>
+          </article>
+          <article className="rounded-[1.5rem] bg-emerald-50 px-4 py-4 text-emerald-700">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-wide">Diem trung binh</div>
+                <div className="mt-3 text-2xl font-semibold text-slate-900">
                   {filteredStats.averagePoints.toFixed(1)}
-                </p>
+                </div>
               </div>
-              <Award className="h-12 w-12 text-green-600 opacity-20" />
+              <Award className="h-8 w-8" />
             </div>
-          </div>
-
-          <div className="rounded-lg bg-white p-6 shadow-lg" data-testid="scores-bonus-card">
-            <div className="flex items-center justify-between">
+          </article>
+          <article
+            className="rounded-[1.5rem] bg-cyan-50 px-4 py-4 text-cyan-700"
+            data-testid="scores-bonus-card"
+          >
+            <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-sm text-gray-600">Điều chỉnh cộng</p>
-                <p className="mt-1 text-3xl font-bold text-emerald-600">
+                <div className="text-xs font-semibold uppercase tracking-wide">
+                  Dieu chinh cong
+                </div>
+                <div className="mt-3 text-2xl font-semibold text-slate-900">
                   {filteredStats.totalBonusAdjustments}
-                </p>
+                </div>
               </div>
-              <ShieldPlus className="h-12 w-12 text-emerald-600 opacity-20" />
+              <ShieldPlus className="h-8 w-8" />
             </div>
-          </div>
-
-          <div className="rounded-lg bg-white p-6 shadow-lg" data-testid="scores-penalty-card">
-            <div className="flex items-center justify-between">
+          </article>
+          <article
+            className="rounded-[1.5rem] bg-rose-50 px-4 py-4 text-rose-700"
+            data-testid="scores-penalty-card"
+          >
+            <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-sm text-gray-600">Điều chỉnh trừ</p>
-                <p className="mt-1 text-3xl font-bold text-red-600">
+                <div className="text-xs font-semibold uppercase tracking-wide">Dieu chinh tru</div>
+                <div className="mt-3 text-2xl font-semibold text-slate-900">
                   {filteredStats.totalPenaltyPoints}
-                </p>
+                </div>
               </div>
-              <ShieldAlert className="h-12 w-12 text-red-600 opacity-20" />
+              <ShieldAlert className="h-8 w-8" />
             </div>
-          </div>
-
-          <div className="rounded-lg bg-white p-6 shadow-lg">
-            <div className="flex items-center justify-between">
+          </article>
+          <article className="rounded-[1.5rem] bg-amber-50 px-4 py-4 text-amber-700">
+            <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-sm text-gray-600">Sinh viên bị trừ điểm</p>
-                <p className="mt-1 text-3xl font-bold text-orange-600">
+                <div className="text-xs font-semibold uppercase tracking-wide">
+                  Hoc vien bi tru diem
+                </div>
+                <div className="mt-3 text-2xl font-semibold text-slate-900">
                   {filteredStats.penalizedStudents}
-                </p>
+                </div>
               </div>
-              <ShieldAlert className="h-12 w-12 text-orange-600 opacity-20" />
+              <ShieldAlert className="h-8 w-8" />
             </div>
-          </div>
-
-          <div className="rounded-lg bg-white p-6 shadow-lg">
-            <div className="flex items-center justify-between">
+          </article>
+          <article className="rounded-[1.5rem] bg-violet-50 px-4 py-4 text-violet-700">
+            <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-sm text-gray-600">Sinh viên có điều chỉnh</p>
-                <p className="mt-1 text-3xl font-bold text-purple-600">
+                <div className="text-xs font-semibold uppercase tracking-wide">
+                  Sinh vien co dieu chinh
+                </div>
+                <div className="mt-3 text-2xl font-semibold text-slate-900">
                   {summary.adjusted_students_count}
-                </p>
+                </div>
               </div>
-              <RefreshCw className="h-12 w-12 text-purple-600 opacity-20" />
+              <RefreshCw className="h-8 w-8" />
             </div>
-          </div>
-        </div>
+          </article>
+        </section>
 
-        <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <div
-            className="rounded-lg border border-red-200 bg-red-50 p-6 shadow-sm"
+        <section className="grid gap-4 xl:grid-cols-2">
+          <article
+            className="page-surface rounded-[1.75rem] border border-rose-200 px-5 py-5 sm:px-7"
             data-testid="scores-penalty-hotspots"
           >
-            <h2 className="text-lg font-semibold text-red-900">Hotspot bị trừ điểm</h2>
-            <p className="mt-1 text-sm text-red-800">
-              Những sinh viên có tổng điểm bị trừ cao nhất từ adjustment history.
+            <h2 className="text-lg font-semibold text-slate-900">Hotspot bi tru diem</h2>
+            <p className="mt-1 text-sm text-slate-600">
+              Nhom hoc vien co tong diem tru cao nhat de admin doi soat lai adjustment history.
             </p>
             <div className="mt-4 space-y-3">
               {insights.top_penalty_students.length === 0 ? (
-                <div className="rounded-lg bg-white/80 p-4 text-sm text-red-900">
-                  Chưa có sinh viên nào bị trừ điểm trong hệ thống hiện tại.
+                <div className="rounded-2xl bg-rose-50 px-4 py-4 text-sm text-rose-800">
+                  Chua co hoc vien nao bi tru diem trong danh sach hien tai.
                 </div>
               ) : (
                 insights.top_penalty_students.map((student) => (
-                  <div key={student.user_id} className="rounded-lg bg-white/80 p-4">
-                    <div className="font-medium text-gray-900">{student.name}</div>
-                    <div className="mt-1 text-sm text-gray-500">
-                      {student.class_name || 'Chưa có lớp'}
-                    </div>
-                    <div className="mt-2 text-sm text-red-800">
-                      Tổng điểm trừ: <span className="font-semibold">{student.penalty_points}</span>
+                  <div key={student.user_id} className="rounded-2xl border border-slate-200 px-4 py-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <div className="font-semibold text-slate-900">{student.name}</div>
+                        <div className="mt-1 text-sm text-slate-500">
+                          {student.class_name || 'Chua gan lop'}
+                        </div>
+                      </div>
+                      <div className="rounded-full bg-rose-100 px-3 py-1 text-sm font-semibold text-rose-700">
+                        -{student.penalty_points}
+                      </div>
                     </div>
                   </div>
                 ))
               )}
             </div>
-          </div>
+          </article>
 
-          <div
-            className="rounded-lg border border-emerald-200 bg-emerald-50 p-6 shadow-sm"
+          <article
+            className="page-surface rounded-[1.75rem] border border-emerald-200 px-5 py-5 sm:px-7"
             data-testid="scores-adjustment-log"
           >
-            <h2 className="text-lg font-semibold text-emerald-900">Điều chỉnh gần đây</h2>
-            <p className="mt-1 text-sm text-emerald-800">
-              Lịch sử cộng/trừ điểm gần nhất để đối chiếu reason và rà động thái bất thường.
+            <h2 className="text-lg font-semibold text-slate-900">Dieu chinh gan day</h2>
+            <p className="mt-1 text-sm text-slate-600">
+              Nhat ky cong tru diem moi nhat de admin soat nhanh ly do va thoi diem cap nhat.
             </p>
             <div className="mt-4 space-y-3">
               {insights.recent_adjustments.length === 0 ? (
-                <div className="rounded-lg bg-white/80 p-4 text-sm text-emerald-900">
-                  Chưa có điều chỉnh điểm gần đây.
+                <div className="rounded-2xl bg-emerald-50 px-4 py-4 text-sm text-emerald-800">
+                  Chua co dieu chinh diem gan day.
                 </div>
               ) : (
                 insights.recent_adjustments.map((adjustment) => (
-                  <div key={adjustment.id} className="rounded-lg bg-white/80 p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <div className="font-medium text-gray-900">{adjustment.student_name}</div>
-                        <div className="text-sm text-gray-500">
-                          {adjustment.class_name || 'Chưa có lớp'}
+                  <div key={adjustment.id} className="rounded-2xl border border-slate-200 px-4 py-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="min-w-0">
+                        <div className="font-semibold text-slate-900">{adjustment.student_name}</div>
+                        <div className="mt-1 text-sm text-slate-500">
+                          {adjustment.class_name || 'Chua gan lop'}
                         </div>
-                        <div className="mt-2 text-sm text-gray-700">
-                          {adjustment.reason || 'Không ghi lý do'}
+                        <div className="mt-2 text-sm text-slate-700">
+                          {adjustment.reason || 'Khong ghi ly do'}
+                        </div>
+                        <div className="mt-2 text-xs text-slate-500">
+                          {formatVietnamDateTime(adjustment.calculated_at)}
                         </div>
                       </div>
-                      <span
-                        className={`rounded-full px-3 py-1 text-xs font-medium ${
+                      <div
+                        className={`rounded-full px-3 py-1 text-sm font-semibold ${
                           adjustment.adjustment_type === 'bonus'
-                            ? 'bg-emerald-100 text-emerald-800'
-                            : 'bg-red-100 text-red-800'
+                            ? 'bg-emerald-100 text-emerald-700'
+                            : 'bg-rose-100 text-rose-700'
                         }`}
                       >
-                        {adjustment.adjustment_type === 'bonus' ? '+' : '-'}
-                        {Math.abs(adjustment.points)}
-                      </span>
-                    </div>
-                    <div className="mt-2 text-xs text-gray-500">
-                      {formatVietnamDateTime(adjustment.calculated_at)}
+                        {formatAdjustmentLabel(adjustment)}
+                      </div>
                     </div>
                   </div>
                 ))
               )}
             </div>
-          </div>
-        </div>
+          </article>
+        </section>
 
-        <div className="mb-6 rounded-lg bg-white p-6 shadow-lg">
-          <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-4">
-            <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700">
-                <Search className="mr-1 inline h-4 w-4" />
-                Tìm kiếm
-              </label>
+        <section className="page-surface rounded-[1.75rem] px-5 py-5 sm:px-7">
+          <div className="grid gap-4 md:grid-cols-4">
+            <label className="space-y-2 text-sm font-medium text-slate-700">
+              <span className="inline-flex items-center gap-2">
+                <Search className="h-4 w-4" />
+                Tim kiem
+              </span>
               <input
                 type="text"
-                placeholder="Tên hoặc email..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500"
+                onChange={(event) => setSearchTerm(event.target.value)}
+                placeholder="Ten hoac email"
+                className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
               />
-            </div>
+            </label>
 
-            <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700">Lớp</label>
+            <label className="space-y-2 text-sm font-medium text-slate-700">
+              <span>Lop</span>
               <select
                 value={classFilter}
-                onChange={(e) => setClassFilter(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500"
+                onChange={(event) => setClassFilter(event.target.value)}
+                className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
               >
-                <option value="all">Tất cả lớp</option>
-                {classes.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
+                <option value="all">Tat ca lop</option>
+                {classes.map((classOption) => (
+                  <option key={classOption.id} value={String(classOption.id)}>
+                    {classOption.name}
                   </option>
                 ))}
               </select>
-            </div>
+            </label>
 
-            <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700">Điểm tối thiểu</label>
+            <label className="space-y-2 text-sm font-medium text-slate-700">
+              <span>Diem toi thieu</span>
               <input
                 type="number"
-                placeholder="0"
                 value={minPoints}
-                onChange={(e) => setMinPoints(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500"
+                onChange={(event) => setMinPoints(event.target.value)}
+                placeholder="0"
+                className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
               />
-            </div>
+            </label>
 
-            <div className="flex items-end">
+            <div className="flex flex-col justify-end gap-2">
               <button
+                type="button"
                 onClick={() => {
                   setSearchTerm('');
                   setClassFilter('all');
                   setMinPoints('');
                 }}
-                className="w-full rounded-lg border border-gray-300 px-4 py-2 text-gray-700 hover:bg-gray-50"
+                className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
               >
-                Xóa bộ lọc
+                Xoa bo loc
               </button>
+              <div className="text-xs text-slate-500">
+                Dang hien thi {filteredScores.length} / {scores.length} hoc vien
+              </div>
             </div>
           </div>
+        </section>
 
-          <div className="flex gap-2">
-            <button
-              onClick={() => setIsRecalculateConfirmOpen(true)}
-              className="flex items-center rounded-lg bg-purple-600 px-4 py-2 text-white hover:bg-purple-700"
-            >
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Tính lại điểm
-            </button>
-            <button
-              onClick={handleExport}
-              className="flex items-center rounded-lg bg-green-600 px-4 py-2 text-white hover:bg-green-700"
-            >
-              <Download className="mr-2 h-4 w-4" />
-              Export CSV
-            </button>
+        <section className="space-y-4">
+          <div className="grid gap-4 xl:hidden">
+            {filteredScores.length === 0 ? (
+              <div className="page-surface rounded-[1.75rem] px-5 py-8 text-center text-sm text-slate-500 sm:px-7">
+                Khong co hoc vien nao khop bo loc hien tai.
+              </div>
+            ) : (
+              filteredScores.map((score) => (
+                <article key={score.user_id} className="page-surface rounded-[1.75rem] border px-5 py-5 sm:px-7">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        Hang #{score.rank}
+                      </div>
+                      <div className="mt-2 text-lg font-semibold text-slate-900">{score.name}</div>
+                      <div className="mt-1 text-sm text-slate-500">{score.email}</div>
+                      <div className="mt-1 text-sm text-slate-500">
+                        {score.class_name || 'Chua gan lop'}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-2xl font-semibold text-blue-700">{score.total_points}</div>
+                      <div className="text-xs text-slate-500">diem</div>
+                    </div>
+                  </div>
+                  <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                    <div className="rounded-2xl bg-slate-50 px-3 py-3">
+                      <div className="text-xs uppercase tracking-wide text-slate-500">Thuong</div>
+                      <div className="mt-1 font-semibold text-emerald-700">{score.award_points}</div>
+                    </div>
+                    <div className="rounded-2xl bg-slate-50 px-3 py-3">
+                      <div className="text-xs uppercase tracking-wide text-slate-500">Cong them</div>
+                      <div className="mt-1 font-semibold text-cyan-700">
+                        {score.bonus_adjustment_points}
+                      </div>
+                    </div>
+                    <div className="rounded-2xl bg-slate-50 px-3 py-3">
+                      <div className="text-xs uppercase tracking-wide text-slate-500">Tru diem</div>
+                      <div className="mt-1 font-semibold text-rose-700">{score.penalty_points}</div>
+                    </div>
+                    <div className="rounded-2xl bg-slate-50 px-3 py-3">
+                      <div className="text-xs uppercase tracking-wide text-slate-500">Hoat dong</div>
+                      <div className="mt-1 font-semibold text-slate-900">{score.activities_count}</div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => router.push(`/admin/scores/${score.user_id}/adjust`)}
+                    className="mt-4 inline-flex items-center gap-2 rounded-xl border border-blue-200 px-4 py-2 text-sm font-semibold text-blue-700 transition hover:bg-blue-50"
+                  >
+                    <Edit2 className="h-4 w-4" />
+                    Dieu chinh
+                  </button>
+                </article>
+              ))
+            )}
           </div>
-        </div>
 
-        <div className="overflow-hidden rounded-lg bg-white shadow-lg">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+          <div className="page-surface hidden overflow-x-auto rounded-[1.75rem] border xl:block">
+            <table className="min-w-full divide-y divide-slate-200">
+              <thead className="bg-slate-50">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">
-                    Hạng
+                  <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Hang
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">
-                    Sinh viên
+                  <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Hoc vien
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">
-                    Lớp
+                  <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Lop
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">
-                    Tổng điểm
+                  <th className="px-5 py-4 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Tong diem
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">
-                    Điểm thưởng
+                  <th className="px-5 py-4 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Thuong
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">
-                    Điều chỉnh cộng
+                  <th className="px-5 py-4 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Cong them
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">
-                    Điều chỉnh trừ
+                  <th className="px-5 py-4 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Tru diem
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">
-                    Hoạt động
+                  <th className="px-5 py-4 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Hoat dong
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">
-                    Giải thưởng
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">
-                    Thao tác
+                  <th className="px-5 py-4 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Thao tac
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y divide-slate-200 bg-white">
                 {filteredScores.length === 0 ? (
                   <tr>
-                    <td colSpan={10} className="px-4 py-8 text-center text-gray-500">
-                      Không có dữ liệu
+                    <td colSpan={9} className="px-5 py-10 text-center text-sm text-slate-500">
+                      Khong co hoc vien nao khop bo loc hien tai.
                     </td>
                   </tr>
                 ) : (
                   filteredScores.map((score) => (
-                    <tr key={score.user_id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3">
-                        <span
-                          className={`inline-flex h-8 w-8 items-center justify-center rounded-full font-bold ${
-                            score.rank === 1
-                              ? 'bg-yellow-100 text-yellow-700'
-                              : score.rank === 2
-                                ? 'bg-gray-100 text-gray-700'
-                                : score.rank === 3
-                                  ? 'bg-orange-100 text-orange-700'
-                                  : 'bg-blue-50 text-blue-700'
-                          }`}
-                        >
-                          {score.rank}
-                        </span>
+                    <tr key={score.user_id} className="hover:bg-slate-50">
+                      <td className="px-5 py-4 text-sm font-semibold text-slate-900">#{score.rank}</td>
+                      <td className="px-5 py-4">
+                        <div className="text-sm font-semibold text-slate-900">{score.name}</div>
+                        <div className="mt-1 text-sm text-slate-500">{score.email}</div>
                       </td>
-                      <td className="px-4 py-3">
-                        <div className="font-medium text-gray-900">{score.name}</div>
-                        <div className="text-sm text-gray-500">{score.email}</div>
+                      <td className="px-5 py-4 text-sm text-slate-600">{score.class_name || 'Chua gan lop'}</td>
+                      <td className="px-5 py-4 text-right text-sm font-semibold text-blue-700">
+                        {score.total_points}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-600">{score.class_name || '-'}</td>
-                      <td className="px-4 py-3">
-                        <span className="text-lg font-bold text-blue-600">
-                          {score.total_points}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-sm font-medium text-emerald-700">
+                      <td className="px-5 py-4 text-right text-sm font-semibold text-emerald-700">
                         {score.award_points}
                       </td>
-                      <td className="px-4 py-3 text-sm font-medium text-emerald-700">
+                      <td className="px-5 py-4 text-right text-sm font-semibold text-cyan-700">
                         {score.bonus_adjustment_points}
                       </td>
-                      <td className="px-4 py-3 text-sm font-medium text-red-700">
+                      <td className="px-5 py-4 text-right text-sm font-semibold text-rose-700">
                         {score.penalty_points}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-600">{score.activities_count}</td>
-                      <td className="px-4 py-3">
-                        <span className="rounded-full bg-yellow-100 px-2 py-1 text-xs text-yellow-700">
-                          {score.awards_count}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
+                      <td className="px-5 py-4 text-right text-sm text-slate-600">{score.activities_count}</td>
+                      <td className="px-5 py-4 text-right">
                         <button
+                          type="button"
                           onClick={() => router.push(`/admin/scores/${score.user_id}/adjust`)}
-                          className="flex items-center text-blue-600 hover:text-blue-700"
+                          className="inline-flex items-center gap-2 rounded-xl border border-blue-200 px-3 py-2 text-sm font-semibold text-blue-700 transition hover:bg-blue-50"
                         >
-                          <Edit2 className="mr-1 h-4 w-4" />
-                          Điều chỉnh
+                          <Edit2 className="h-4 w-4" />
+                          Dieu chinh
                         </button>
                       </td>
                     </tr>
@@ -566,26 +695,17 @@ export default function AdminStudentScoresPage() {
               </tbody>
             </table>
           </div>
-
-          <div className="border-t border-gray-200 bg-gray-50 px-6 py-4">
-            <p className="text-sm text-gray-600">
-              Hiển thị {filteredScores.length} / {scores.length} sinh viên
-            </p>
-          </div>
-        </div>
+        </section>
 
         <ConfirmDialog
-          isOpen={isRecalculateConfirmOpen}
-          title="Tính lại điểm toàn bộ sinh viên"
-          message="Bạn có chắc chắn muốn tính lại điểm cho tất cả sinh viên không? Quá trình này có thể mất vài phút."
-          confirmText="Tính lại điểm"
-          cancelText="Hủy"
+          isOpen={recalculateOpen}
+          title="Tinh lai bang diem"
+          message="He thong se quet lai du lieu diem cho toan bo hoc vien. Ban chi nen chay buoc nay khi can doi soat sau mot dot cap nhat lon."
+          confirmText="Tinh lai ngay"
+          cancelText="Bo qua"
           variant="warning"
-          onCancel={() => setIsRecalculateConfirmOpen(false)}
-          onConfirm={async () => {
-            await handleRecalculate();
-            setIsRecalculateConfirmOpen(false);
-          }}
+          onCancel={() => setRecalculateOpen(false)}
+          onConfirm={handleRecalculate}
         />
       </div>
     </div>

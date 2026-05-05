@@ -23,12 +23,12 @@ export default function AchievementsTab({
     description: '',
   });
 
-  const handleEdit = (ach: AchievementMultiplierConfig) => {
-    setEditingLevel(ach.achievement_level);
+  const handleEdit = (achievement: AchievementMultiplierConfig) => {
+    setEditingLevel(achievement.achievement_level);
     setEditData({
-      achievement_level: ach.achievement_level,
-      multiplier: ach.multiplier,
-      description: ach.description,
+      achievement_level: achievement.achievement_level,
+      multiplier: achievement.multiplier,
+      description: achievement.description,
     });
   };
 
@@ -53,11 +53,11 @@ export default function AchievementsTab({
   const getLabel = (level: string) => {
     switch (level) {
       case 'excellent':
-        return 'Xuất Sắc';
+        return 'Xuat sac';
       case 'good':
-        return 'Tốt';
+        return 'Tot';
       case 'participated':
-        return 'Tham Gia';
+        return 'Tham gia';
       default:
         return level;
     }
@@ -65,89 +65,94 @@ export default function AchievementsTab({
 
   return (
     <div>
-      <h2 className="text-xl font-bold mb-4">Mức Đánh Giá - Hệ Số Thành Tích</h2>
-      <p className="text-gray-600 mb-6">
-        Hệ số dựa trên mức độ đóng góp của học viên trong hoạt động. Giảng viên sẽ đánh giá sau khi
-        điểm danh.
+      <h2 className="mb-4 text-xl font-bold">Muc danh gia va he so thanh tich</h2>
+      <p className="mb-6 text-gray-600">
+        He so nay duoc ap sau buoc cham danh gia cua giang vien, phan anh muc do dong gop cua hoc
+        vien trong hoat dong.
       </p>
 
-      <table className="w-full border-collapse">
-        <thead>
-          <tr className="bg-gray-100">
-            <th className="border px-4 py-2 text-left">Mức Độ</th>
-            <th className="border px-4 py-2 text-right">Hệ Số</th>
-            <th className="border px-4 py-2 text-left">Mô Tả</th>
-            <th className="border px-4 py-2 text-center">Thao Tác</th>
-          </tr>
-        </thead>
-        <tbody>
-          {achievements.map((ach) => (
-            <tr key={ach.achievement_level} className="hover:bg-gray-50">
-              <td className="border px-4 py-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-2xl">{getIcon(ach.achievement_level)}</span>
-                  <span className="font-medium">{getLabel(ach.achievement_level)}</span>
-                </div>
-              </td>
-              <td className="border px-4 py-2 text-right">
-                {editingLevel === ach.achievement_level ? (
-                  <input
-                    type="number"
-                    step="0.1"
-                    value={editData.multiplier}
-                    onChange={(e) =>
-                      setEditData({ ...editData, multiplier: parseFloat(e.target.value) })
-                    }
-                    className="w-20 px-2 py-1 border rounded text-right"
-                    min="0"
-                    max="5"
-                  />
-                ) : (
-                  <span className="font-bold text-purple-600">×{ach.multiplier}</span>
-                )}
-              </td>
-              <td className="border px-4 py-2">
-                {editingLevel === ach.achievement_level ? (
-                  <input
-                    type="text"
-                    value={editData.description}
-                    onChange={(e) => setEditData({ ...editData, description: e.target.value })}
-                    className="w-full px-2 py-1 border rounded"
-                  />
-                ) : (
-                  <span className="text-sm text-gray-600">{ach.description}</span>
-                )}
-              </td>
-              <td className="border px-4 py-2 text-center">
-                {editingLevel === ach.achievement_level ? (
-                  <div className="flex gap-2 justify-center">
-                    <button
-                      onClick={handleSave}
-                      disabled={saving}
-                      className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
-                    >
-                      Lưu
-                    </button>
-                    <button
-                      onClick={() => setEditingLevel(null)}
-                      className="px-3 py-1 bg-gray-400 text-white rounded hover:bg-gray-500"
-                    >
-                      Hủy
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => handleEdit(ach)}
-                    className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
-                  >
-                    Sửa
-                  </button>
-                )}
-              </td>
+      <div className="overflow-x-auto">
+        <table className="min-w-[720px] w-full border-collapse">
+          <thead>
+            <tr className="bg-gray-100">
+              <th className="border px-4 py-2 text-left">Muc do</th>
+              <th className="border px-4 py-2 text-right">He so</th>
+              <th className="border px-4 py-2 text-left">Mo ta</th>
+              <th className="border px-4 py-2 text-center">Thao tac</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {achievements.map((achievement) => (
+              <tr key={achievement.achievement_level} className="hover:bg-gray-50">
+                <td className="border px-4 py-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl">{getIcon(achievement.achievement_level)}</span>
+                    <span className="font-medium">{getLabel(achievement.achievement_level)}</span>
+                  </div>
+                </td>
+                <td className="border px-4 py-2 text-right">
+                  {editingLevel === achievement.achievement_level ? (
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={editData.multiplier}
+                      onChange={(event) =>
+                        setEditData({
+                          ...editData,
+                          multiplier: Number.parseFloat(event.target.value || '0') || 0,
+                        })
+                      }
+                      className="w-20 rounded border px-2 py-1 text-right"
+                      min="0"
+                      max="5"
+                    />
+                  ) : (
+                    <span className="font-bold text-purple-600">x{achievement.multiplier}</span>
+                  )}
+                </td>
+                <td className="border px-4 py-2">
+                  {editingLevel === achievement.achievement_level ? (
+                    <input
+                      type="text"
+                      value={editData.description}
+                      onChange={(event) => setEditData({ ...editData, description: event.target.value })}
+                      className="w-full rounded border px-2 py-1"
+                    />
+                  ) : (
+                    <span className="text-sm text-gray-600">{achievement.description}</span>
+                  )}
+                </td>
+                <td className="border px-4 py-2 text-center">
+                  {editingLevel === achievement.achievement_level ? (
+                    <div className="flex justify-center gap-2">
+                      <button
+                        onClick={handleSave}
+                        disabled={saving}
+                        className="rounded bg-green-600 px-3 py-1 text-white hover:bg-green-700 disabled:opacity-50"
+                      >
+                        Luu
+                      </button>
+                      <button
+                        onClick={() => setEditingLevel(null)}
+                        className="rounded bg-gray-400 px-3 py-1 text-white hover:bg-gray-500"
+                      >
+                        Huy
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => handleEdit(achievement)}
+                      className="rounded bg-blue-600 px-3 py-1 text-white hover:bg-blue-700"
+                    >
+                      Sua
+                    </button>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

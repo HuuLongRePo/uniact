@@ -1,10 +1,18 @@
 'use client';
 
+import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import { toast } from 'react-hot-toast';
-import { Calculator, Save, RotateCcw, Play, ArrowLeft, Info } from 'lucide-react';
+import toast from 'react-hot-toast';
+import {
+  ArrowLeft,
+  Calculator,
+  Info,
+  Play,
+  RotateCcw,
+  Save,
+} from 'lucide-react';
+import LoadingSpinner from '@/components/LoadingSpinner';
 
 interface FormulaVariable {
   id: string;
@@ -16,14 +24,6 @@ interface FormulaVariable {
   description: string;
 }
 
-interface TestScenario {
-  activityType: string;
-  orgLevel: string;
-  achievement: string;
-  bonus: number;
-  penalty: number;
-}
-
 interface FormulaVariableConfig {
   min: number;
   max: number;
@@ -31,441 +31,415 @@ interface FormulaVariableConfig {
   default: number;
 }
 
+interface TestScenario {
+  label: string;
+  base: number;
+  type: number;
+  level: number;
+  achievement: number;
+  bonus: number;
+  penalty: number;
+}
+
+const DEFAULT_FORMULA = '(base * type * level * achievement) + bonus - penalty';
+
+const DEFAULT_VARIABLES: FormulaVariable[] = [
+  {
+    id: 'base',
+    name: 'Diem co ban',
+    value: 10,
+    min: 0,
+    max: 100,
+    step: 1,
+    description: 'Diem co ban cua loai hoat dong',
+  },
+  {
+    id: 'type',
+    name: 'He so loai',
+    value: 1,
+    min: 0,
+    max: 5,
+    step: 0.1,
+    description: 'He so nhan theo nhom hoat dong',
+  },
+  {
+    id: 'level',
+    name: 'He so cap do',
+    value: 2,
+    min: 0,
+    max: 5,
+    step: 0.1,
+    description: 'He so nhan theo quy mo to chuc',
+  },
+  {
+    id: 'achievement',
+    name: 'He so danh gia',
+    value: 1.5,
+    min: 0,
+    max: 3,
+    step: 0.1,
+    description: 'He so thanh tich sau khi cham danh gia',
+  },
+  {
+    id: 'bonus',
+    name: 'Diem cong them',
+    value: 0,
+    min: 0,
+    max: 100,
+    step: 1,
+    description: 'Diem thuong bo sung',
+  },
+  {
+    id: 'penalty',
+    name: 'Diem tru',
+    value: 0,
+    min: 0,
+    max: 100,
+    step: 1,
+    description: 'Diem tru neu co vi pham',
+  },
+];
+
+const TEST_SCENARIOS: TestScenario[] = [
+  {
+    label: 'Hoat dong hoc thuat cap lop',
+    base: 10,
+    type: 1,
+    level: 1,
+    achievement: 1.5,
+    bonus: 0,
+    penalty: 0,
+  },
+  {
+    label: 'Hoat dong cap truong co thu hang',
+    base: 10,
+    type: 1,
+    level: 2,
+    achievement: 1.2,
+    bonus: 20,
+    penalty: 0,
+  },
+  {
+    label: 'Tham gia cap lien truong co tru diem',
+    base: 8,
+    type: 1,
+    level: 2.5,
+    achievement: 1,
+    bonus: 0,
+    penalty: 5,
+  },
+];
+
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error && error.message ? error.message : fallback;
+}
+
+function buildVariableMap(variables: FormulaVariable[]) {
+  return variables.reduce(
+    (accumulator, variable) => {
+      accumulator[variable.id] = variable.value;
+      return accumulator;
+    },
+    {} as Record<string, number>
+  );
+}
+
+function calculateFormulaResult(variableMap: Record<string, number>) {
+  const subtotal =
+    variableMap.base * variableMap.type * variableMap.level * variableMap.achievement;
+  return Math.max(0, subtotal + variableMap.bonus - variableMap.penalty);
+}
+
 export default function FormulaEditorPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-
-  // Formula variables
-  const [variables, setVariables] = useState<FormulaVariable[]>([
-    {
-      id: 'base',
-      name: 'Điểm cơ bản',
-      value: 10,
-      min: 0,
-      max: 100,
-      step: 1,
-      description: 'Điểm cơ bản của hoạt động',
-    },
-    {
-      id: 'type',
-      name: 'Hệ số loại',
-      value: 1.0,
-      min: 0,
-      max: 5,
-      step: 0.1,
-      description: 'Hệ số nhân theo loại hoạt động',
-    },
-    {
-      id: 'level',
-      name: 'Hệ số cấp độ',
-      value: 2.0,
-      min: 0,
-      max: 5,
-      step: 0.1,
-      description: 'Hệ số nhân theo cấp độ tổ chức',
-    },
-    {
-      id: 'achievement',
-      name: 'Hệ số đánh giá',
-      value: 1.5,
-      min: 0,
-      max: 3,
-      step: 0.1,
-      description: 'Hệ số theo mức đánh giá',
-    },
-    {
-      id: 'bonus',
-      name: 'Điểm thưởng',
-      value: 0,
-      min: 0,
-      max: 100,
-      step: 1,
-      description: 'Điểm thưởng thêm',
-    },
-    {
-      id: 'penalty',
-      name: 'Điểm phạt',
-      value: 0,
-      min: 0,
-      max: 100,
-      step: 1,
-      description: 'Điểm trừ (nếu có)',
-    },
-  ]);
-
-  const [formulaText, setFormulaText] = useState(
-    '(base × type × level × achievement) + bonus - penalty'
-  );
-  const [customFormula, setCustomFormula] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-
-  const getErrorMessage = (error: unknown, fallback: string) =>
-    error instanceof Error && error.message ? error.message : fallback;
-
-  // Test scenarios
-  const [testScenarios] = useState<TestScenario[]>([
-    { activityType: 'Học thuật', orgLevel: 'Lớp', achievement: 'Xuất sắc', bonus: 0, penalty: 0 },
-    { activityType: 'Thể thao', orgLevel: 'Trường', achievement: 'Tốt', bonus: 20, penalty: 0 },
-    {
-      activityType: 'Văn nghệ',
-      orgLevel: 'Quốc gia',
-      achievement: 'Tham gia',
-      bonus: 0,
-      penalty: 0,
-    },
-  ]);
+  const [formulaText, setFormulaText] = useState(DEFAULT_FORMULA);
+  const [variables, setVariables] = useState<FormulaVariable[]>(DEFAULT_VARIABLES);
 
   useEffect(() => {
     if (!authLoading && (!user || user.role !== 'admin')) {
       router.push('/login');
+      return;
     }
-  }, [user, authLoading, router]);
 
-  const calculateResult = (): number => {
-    const { base, type, level, achievement, bonus, penalty } = variables.reduce(
-      (acc, v) => {
-        acc[v.id] = v.value;
-        return acc;
-      },
-      {} as Record<string, number>
-    );
+    if (user?.role === 'admin') {
+      void loadFormula();
+    }
+  }, [authLoading, router, user]);
 
-    const subtotal = base * type * level * achievement;
-    const total = subtotal + bonus - penalty;
-    return Math.max(0, total);
+  const loadFormula = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/admin/scoring-config/formula');
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(
+          (payload && typeof payload === 'object' && 'error' in payload && String(payload.error)) ||
+            'Khong the tai formula hien tai'
+        );
+      }
+
+      const formula = payload?.formula;
+      if (formula?.formula) {
+        setFormulaText(String(formula.formula));
+      }
+
+      if (formula?.description) {
+        try {
+          const parsed = JSON.parse(String(formula.description)) as Record<string, FormulaVariableConfig>;
+          setVariables((current) =>
+            current.map((variable) => {
+              const config = parsed[variable.id];
+              if (!config) return variable;
+              return {
+                ...variable,
+                min: Number(config.min ?? variable.min),
+                max: Number(config.max ?? variable.max),
+                step: Number(config.step ?? variable.step),
+                value: Number(config.default ?? variable.value),
+              };
+            })
+          );
+        } catch {
+          // Ignore invalid legacy description payloads.
+        }
+      }
+    } catch (error) {
+      console.error('Load scoring formula error:', error);
+      toast.error(getErrorMessage(error, 'Khong the tai formula hien tai'));
+    } finally {
+      setLoading(false);
+    }
   };
 
+  const variableMap = useMemo(() => buildVariableMap(variables), [variables]);
+  const previewResult = useMemo(() => calculateFormulaResult(variableMap), [variableMap]);
+
   const handleVariableChange = (id: string, value: number) => {
-    setVariables((prev) => prev.map((v) => (v.id === id ? { ...v, value } : v)));
+    setVariables((current) =>
+      current.map((variable) => (variable.id === id ? { ...variable, value } : variable))
+    );
   };
 
   const handleReset = () => {
-    setVariables([
-      {
-        id: 'base',
-        name: 'Điểm cơ bản',
-        value: 10,
-        min: 0,
-        max: 100,
-        step: 1,
-        description: 'Điểm cơ bản của hoạt động',
-      },
-      {
-        id: 'type',
-        name: 'Hệ số loại',
-        value: 1.0,
-        min: 0,
-        max: 5,
-        step: 0.1,
-        description: 'Hệ số nhân theo loại hoạt động',
-      },
-      {
-        id: 'level',
-        name: 'Hệ số cấp độ',
-        value: 2.0,
-        min: 0,
-        max: 5,
-        step: 0.1,
-        description: 'Hệ số nhân theo cấp độ tổ chức',
-      },
-      {
-        id: 'achievement',
-        name: 'Hệ số đánh giá',
-        value: 1.5,
-        min: 0,
-        max: 3,
-        step: 0.1,
-        description: 'Hệ số theo mức đánh giá',
-      },
-      {
-        id: 'bonus',
-        name: 'Điểm thưởng',
-        value: 0,
-        min: 0,
-        max: 100,
-        step: 1,
-        description: 'Điểm thưởng thêm',
-      },
-      {
-        id: 'penalty',
-        name: 'Điểm phạt',
-        value: 0,
-        min: 0,
-        max: 100,
-        step: 1,
-        description: 'Điểm trừ (nếu có)',
-      },
-    ]);
-    setFormulaText('(base × type × level × achievement) + bonus - penalty');
-    setCustomFormula(false);
+    setFormulaText(DEFAULT_FORMULA);
+    setVariables(DEFAULT_VARIABLES);
   };
 
   const handleSave = async () => {
     try {
       setSaving(true);
+      const payload = {
+        formula: formulaText,
+        variables: variables.reduce(
+          (accumulator, variable) => {
+            accumulator[variable.id] = {
+              min: variable.min,
+              max: variable.max,
+              step: variable.step,
+              default: variable.value,
+            };
+            return accumulator;
+          },
+          {} as Record<string, FormulaVariableConfig>
+        ),
+      };
+
       const response = await fetch('/api/admin/scoring-config/formula', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          formula: formulaText,
-          variables: variables.reduce(
-            (acc, v) => {
-              acc[v.id] = { min: v.min, max: v.max, step: v.step, default: v.value };
-              return acc;
-            },
-            {} as Record<string, FormulaVariableConfig>
-          ),
-        }),
+        body: JSON.stringify(payload),
       });
 
-      if (!response.ok) throw new Error('Không thể lưu công thức');
+      const responsePayload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(
+          (responsePayload &&
+            typeof responsePayload === 'object' &&
+            'error' in responsePayload &&
+            String(responsePayload.error)) ||
+            'Khong the luu formula'
+        );
+      }
 
-      toast.success('Công thức đã được lưu!');
-    } catch (error: unknown) {
-      toast.error('Lỗi: ' + getErrorMessage(error, 'Không xác định'));
+      toast.success('Da luu formula scoring');
+    } catch (error) {
+      console.error('Save scoring formula error:', error);
+      toast.error(getErrorMessage(error, 'Khong the luu formula'));
     } finally {
       setSaving(false);
     }
   };
 
-  const getTestScenarioResult = (scenario: TestScenario): number => {
-    // Simple mapping for demo
-    const baseMap: Record<string, number> = { 'Học thuật': 10, 'Thể thao': 8, 'Văn nghệ': 10 };
-    const levelMap: Record<string, number> = { Lớp: 1.0, Trường: 2.0, 'Quốc gia': 3.0 };
-    const achMap: Record<string, number> = { 'Xuất sắc': 1.5, Tốt: 1.2, 'Tham gia': 1.0 };
-
-    const base = baseMap[scenario.activityType] || 10;
-    const level = levelMap[scenario.orgLevel] || 1.0;
-    const ach = achMap[scenario.achievement] || 1.0;
-    const type = 1.0;
-
-    return Math.max(0, base * type * level * ach + scenario.bonus - scenario.penalty);
-  };
-
-  if (authLoading)
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">Đang tải...</div>
-    );
-  if (!user || user.role !== 'admin') return null;
-
-  const result = calculateResult();
-  const vars = variables.reduce(
-    (acc, v) => ({ ...acc, [v.id]: v.value }),
-    {} as Record<string, number>
-  );
+  if (authLoading || loading) {
+    return <LoadingSpinner message="Dang tai formula editor..." />;
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="mb-8">
+    <div className="page-shell">
+      <div className="mx-auto max-w-7xl space-y-6">
+        <section className="page-surface rounded-[1.75rem] px-5 py-6 sm:px-7">
           <button
+            type="button"
             onClick={() => router.push('/admin/scoring-config')}
-            className="flex items-center text-gray-600 hover:text-gray-900 mb-4"
+            className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 transition hover:text-slate-900"
           >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Quay lại cấu hình điểm
+            <ArrowLeft className="h-4 w-4" />
+            Quay lai scoring config
           </button>
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center">
-            <Calculator className="w-8 h-8 mr-3 text-blue-600" />
-            Trình Soạn Công Thức Tính Điểm
-          </h1>
-          <p className="mt-2 text-gray-600">
-            Tùy chỉnh công thức tính điểm cho hệ thống với trình soạn thảo trực quan
-          </p>
-        </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column - Formula Builder */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Variables Panel */}
-            <div className="bg-white rounded-lg shadow-sm border p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Biến số công thức</h2>
-              <div className="space-y-4">
-                {variables.map((variable) => (
-                  <div key={variable.id} className="border-b pb-4 last:border-b-0">
-                    <div className="flex justify-between items-start mb-2">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">
-                          {variable.name}
-                        </label>
-                        <p className="text-xs text-gray-500">{variable.description}</p>
-                      </div>
-                      <span className="text-lg font-bold text-blue-600 min-w-[60px] text-right">
-                        {variable.value}
-                      </span>
+          <div className="mt-5 flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+            <div className="max-w-3xl">
+              <div className="inline-flex rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-blue-700">
+                Formula editor
+              </div>
+              <h1
+                className="mt-3 flex items-center gap-3 text-3xl font-bold text-slate-900"
+                data-testid="admin-scoring-formula-heading"
+              >
+                <Calculator className="h-8 w-8 text-blue-600" />
+                Trinh soan cong thuc tinh diem
+              </h1>
+              <p className="mt-2 text-sm text-slate-600">
+                Thu nghiem bien so scoring, preview ket qua va luu formula active truoc khi rollout
+                cho toan he thong.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <button
+                type="button"
+                onClick={handleReset}
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              >
+                <RotateCcw className="h-4 w-4" />
+                Dat lai
+              </button>
+              <button
+                type="button"
+                disabled={saving}
+                onClick={() => void handleSave()}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
+              >
+                <Save className="h-4 w-4" />
+                Luu cong thuc
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <section className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+          <article className="page-surface rounded-[1.75rem] px-5 py-5 sm:px-7">
+            <h2 className="text-lg font-semibold text-slate-900">Bien so su dung trong cong thuc</h2>
+            <p className="mt-1 text-sm text-slate-600">
+              Dieu chinh gia tri mac dinh va gioi han slider de doi soat impact scoring.
+            </p>
+
+            <div className="mt-5 grid gap-4 md:grid-cols-2">
+              {variables.map((variable) => (
+                <div key={variable.id} className="rounded-[1.5rem] border border-slate-200 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="font-semibold text-slate-900">{variable.name}</div>
+                      <div className="mt-1 text-xs text-slate-500">{variable.description}</div>
                     </div>
+                    <div className="rounded-full bg-blue-50 px-3 py-1 text-sm font-semibold text-blue-700">
+                      {variable.value}
+                    </div>
+                  </div>
+                  <input
+                    type="range"
+                    min={variable.min}
+                    max={variable.max}
+                    step={variable.step}
+                    value={variable.value}
+                    onChange={(event) =>
+                      handleVariableChange(variable.id, Number.parseFloat(event.target.value || '0') || 0)
+                    }
+                    className="mt-4 w-full accent-blue-600"
+                  />
+                  <div className="mt-3 flex items-center justify-between gap-3">
+                    <span className="text-xs text-slate-500">
+                      {variable.min} - {variable.max}
+                    </span>
                     <input
-                      type="range"
+                      aria-label={variable.name}
+                      type="number"
                       min={variable.min}
                       max={variable.max}
                       step={variable.step}
                       value={variable.value}
-                      onChange={(e) =>
-                        handleVariableChange(variable.id, parseFloat(e.target.value))
+                      onChange={(event) =>
+                        handleVariableChange(variable.id, Number.parseFloat(event.target.value || '0') || 0)
                       }
-                      className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                      className="w-28 rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
                     />
-                    <div className="flex justify-between text-xs text-gray-500 mt-1">
-                      <span>{variable.min}</span>
-                      <span>{variable.max}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Formula Display */}
-            <div className="bg-white rounded-lg shadow-sm border p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Công thức hiện tại</h2>
-
-              {!customFormula ? (
-                <div className="bg-gray-50 rounded-lg p-4 font-mono text-sm">
-                  <div className="text-gray-700 mb-2">Công thức chuẩn:</div>
-                  <div className="text-blue-600 font-semibold">
-                    ({vars.base} × {vars.type} × {vars.level} × {vars.achievement}) + {vars.bonus} -{' '}
-                    {vars.penalty}
                   </div>
                 </div>
-              ) : (
-                <div>
-                  <textarea
-                    value={formulaText}
-                    onChange={(e) => setFormulaText(e.target.value)}
-                    className="w-full px-3 py-2 border rounded-md font-mono text-sm"
-                    rows={3}
-                    placeholder="Nhập công thức tùy chỉnh..."
-                  />
-                  <p className="text-xs text-gray-500 mt-2">
-                    Biến khả dụng: base, type, level, achievement, bonus, penalty
-                  </p>
-                </div>
-              )}
-
-              <div className="mt-4 flex space-x-3">
-                <button
-                  onClick={() => setCustomFormula(!customFormula)}
-                  className="px-4 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50"
-                >
-                  {customFormula ? 'Dùng công thức chuẩn' : 'Tùy chỉnh công thức'}
-                </button>
-              </div>
+              ))}
             </div>
+          </article>
 
-            {/* Actions */}
-            <div className="bg-white rounded-lg shadow-sm border p-6">
-              <div className="flex space-x-3">
-                <button
-                  onClick={handleSave}
-                  disabled={saving}
-                  className="flex-1 flex items-center justify-center px-4 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
-                >
-                  <Save className="w-5 h-5 mr-2" />
-                  {saving ? 'Đang lưu...' : 'Lưu công thức'}
-                </button>
-                <button
-                  onClick={handleReset}
-                  className="px-4 py-3 border border-gray-300 rounded-md hover:bg-gray-50"
-                >
-                  <RotateCcw className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Right Column - Preview & Testing */}
-          <div className="space-y-6">
-            {/* Real-time Result */}
-            <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow-lg p-6 text-white sticky top-8">
-              <h3 className="text-sm font-medium mb-2 opacity-90">Kết quả tính được</h3>
-              <div className="text-5xl font-bold mb-4">{result.toFixed(2)}</div>
-              <div className="text-sm opacity-90">điểm</div>
-
-              <div className="mt-6 pt-6 border-t border-blue-400">
-                <div className="text-xs font-medium mb-3 opacity-90">Chi tiết tính toán:</div>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="opacity-75">Điểm phụ:</span>
-                    <span className="font-mono">
-                      {(vars.base * vars.type * vars.level * vars.achievement).toFixed(2)}
-                    </span>
-                  </div>
-                  {vars.bonus > 0 && (
-                    <div className="flex justify-between text-green-200">
-                      <span className="opacity-75">+ Thưởng:</span>
-                      <span className="font-mono">+{vars.bonus}</span>
-                    </div>
-                  )}
-                  {vars.penalty > 0 && (
-                    <div className="flex justify-between text-red-200">
-                      <span className="opacity-75">- Phạt:</span>
-                      <span className="font-mono">-{vars.penalty}</span>
-                    </div>
-                  )}
+          <article className="space-y-6">
+            <div className="page-surface rounded-[1.75rem] px-5 py-5 sm:px-7">
+              <h2 className="text-lg font-semibold text-slate-900">Cong thuc dang preview</h2>
+              <textarea
+                value={formulaText}
+                onChange={(event) => setFormulaText(event.target.value)}
+                className="mt-4 h-28 w-full rounded-[1.25rem] border border-slate-300 px-4 py-3 font-mono text-sm text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+              />
+              <div className="mt-4 rounded-[1.25rem] bg-blue-50 px-4 py-4 text-sm text-blue-900">
+                <div className="font-semibold">Preview ket qua</div>
+                <div className="mt-2 text-3xl font-bold text-blue-700">{previewResult.toFixed(2)}</div>
+                <div className="mt-2 text-blue-800">
+                  Subtotal = {variableMap.base} x {variableMap.type} x {variableMap.level} x{' '}
+                  {variableMap.achievement} + {variableMap.bonus} - {variableMap.penalty}
                 </div>
               </div>
             </div>
 
-            {/* Info Box */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <div className="flex items-start">
-                <Info className="w-5 h-5 text-blue-600 mr-2 flex-shrink-0 mt-0.5" />
-                <div className="text-sm text-blue-900">
-                  <div className="font-semibold mb-1">Hướng dẫn sử dụng</div>
-                  <ul className="list-disc list-inside space-y-1 text-blue-800">
-                    <li>Điều chỉnh thanh trượt để thay đổi giá trị</li>
-                    <li>Kết quả được tính tự động</li>
-                    <li>Nhấn &quot;Lưu&quot; để áp dụng công thức</li>
-                    <li>Nhấn ⟳ để về giá trị mặc định</li>
-                  </ul>
-                </div>
+            <div className="page-surface rounded-[1.75rem] px-5 py-5 sm:px-7">
+              <div className="flex items-center gap-2 text-slate-900">
+                <Info className="h-5 w-5 text-amber-500" />
+                <h2 className="text-lg font-semibold">Kich ban test nhanh</h2>
               </div>
-            </div>
+              <div className="mt-4 space-y-3">
+                {TEST_SCENARIOS.map((scenario) => {
+                  const result = calculateFormulaResult({
+                    base: scenario.base,
+                    type: scenario.type,
+                    level: scenario.level,
+                    achievement: scenario.achievement,
+                    bonus: scenario.bonus,
+                    penalty: scenario.penalty,
+                  });
 
-            {/* Test Scenarios */}
-            <div className="bg-white rounded-lg shadow-sm border p-6">
-              <h3 className="font-semibold text-gray-900 mb-4 flex items-center">
-                <Play className="w-5 h-5 mr-2 text-green-600" />
-                Kịch bản thử nghiệm
-              </h3>
-              <div className="space-y-3">
-                {testScenarios.map((scenario, idx) => {
-                  const scenarioResult = getTestScenarioResult(scenario);
                   return (
-                    <div
-                      key={idx}
-                      className="border rounded-lg p-3 hover:border-blue-300 transition-colors"
-                    >
-                      <div className="flex justify-between items-start mb-2">
-                        <div className="text-sm">
-                          <div className="font-medium text-gray-900">{scenario.activityType}</div>
-                          <div className="text-xs text-gray-500">
-                            {scenario.orgLevel} • {scenario.achievement}
+                    <div key={scenario.label} className="rounded-[1.25rem] border border-slate-200 p-4">
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <div className="font-semibold text-slate-900">{scenario.label}</div>
+                          <div className="mt-2 text-xs text-slate-500">
+                            {scenario.base} x {scenario.type} x {scenario.level} x {scenario.achievement} +{' '}
+                            {scenario.bonus} - {scenario.penalty}
                           </div>
-                          {(scenario.bonus > 0 || scenario.penalty > 0) && (
-                            <div className="text-xs text-gray-500 mt-1">
-                              {scenario.bonus > 0 && `+${scenario.bonus} thưởng `}
-                              {scenario.penalty > 0 && `-${scenario.penalty} phạt`}
-                            </div>
-                          )}
                         </div>
                         <div className="text-right">
-                          <div className="text-lg font-bold text-blue-600">
-                            {scenarioResult.toFixed(1)}
+                          <div className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-700">
+                            <Play className="h-4 w-4" />
+                            {result.toFixed(2)}
                           </div>
-                          <div className="text-xs text-gray-500">điểm</div>
                         </div>
                       </div>
                     </div>
                   );
                 })}
               </div>
-              <p className="text-xs text-gray-500 mt-3">
-                Kết quả dựa trên công thức hiện tại với giá trị ví dụ
-              </p>
             </div>
-          </div>
-        </div>
+          </article>
+        </section>
       </div>
     </div>
   );
