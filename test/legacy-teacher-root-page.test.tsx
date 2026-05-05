@@ -56,7 +56,7 @@ describe('LegacyTeacherRootPage', () => {
 
     render(<LegacyTeacherRootPage />);
 
-    expect(screen.getByText('Đang chuyển đến bảng điều khiển giảng viên...')).toBeInTheDocument();
+    expect(screen.getByText('Dang chuyen den bang dieu khien giang vien...')).toBeInTheDocument();
 
     await waitFor(() => {
       expect(replaceMock).toHaveBeenCalledWith('/teacher/dashboard');

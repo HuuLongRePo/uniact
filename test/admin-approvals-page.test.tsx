@@ -3,9 +3,25 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import AdminApprovalsPage from '@/app/admin/approvals/page';
 
+const router = {
+  push: vi.fn(),
+};
+const authState = {
+  user: { id: 1, role: 'admin', full_name: 'System Admin' },
+  loading: false,
+};
+
 const { toastErrorMock, toastSuccessMock } = vi.hoisted(() => ({
   toastErrorMock: vi.fn(),
   toastSuccessMock: vi.fn(),
+}));
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => router,
+}));
+
+vi.mock('@/contexts/AuthContext', () => ({
+  useAuth: () => authState,
 }));
 
 vi.mock('@/lib/toast', () => ({
@@ -159,7 +175,7 @@ describe('AdminApprovalsPage', () => {
 
     expect(await screen.findByText('Hoat dong cho duyet')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /phê duyệt/i }));
+    fireEvent.click(screen.getByRole('button', { name: /phe duyet/i }));
     expect(await screen.findByText('Approve modal')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Submit modal' }));

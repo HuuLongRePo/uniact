@@ -124,22 +124,37 @@ describe('Sidebar navigation coverage', () => {
     expect(container.querySelector('a[href="/admin/reports/teachers"]')).toBeTruthy();
   });
 
-  it('places notification routes early and keeps every sidebar route resolvable', async () => {
+  it('prioritizes high-frequency operational routes and keeps every sidebar route resolvable', async () => {
     const assertions: Array<{
       role: 'admin' | 'teacher' | 'student';
-      notificationPath: string;
-      anchorPath: string;
+      higherPriorityPath: string;
+      lowerPriorityPath: string;
     }> = [
-      { role: 'admin', notificationPath: '/admin/notifications', anchorPath: '/admin/users' },
+      { role: 'admin', higherPriorityPath: '/admin/activities', lowerPriorityPath: '/admin/settings' },
       {
         role: 'teacher',
-        notificationPath: '/teacher/notifications',
-        anchorPath: '/teacher/activities',
+        higherPriorityPath: '/teacher/attendance',
+        lowerPriorityPath: '/teacher/notifications/history',
       },
       {
         role: 'student',
-        notificationPath: '/student/notifications',
-        anchorPath: '/student/activities',
+        higherPriorityPath: '/student/check-in',
+        lowerPriorityPath: '/student/dashboard',
+      },
+      {
+        role: 'student',
+        higherPriorityPath: '/student/notifications',
+        lowerPriorityPath: '/student/profile',
+      },
+      {
+        role: 'student',
+        higherPriorityPath: '/student/alerts',
+        lowerPriorityPath: '/student/recommendations',
+      },
+      {
+        role: 'student',
+        higherPriorityPath: '/student/polls',
+        lowerPriorityPath: '/student/activities',
       },
     ];
 
@@ -148,18 +163,18 @@ describe('Sidebar navigation coverage', () => {
       const { container, unmount } = render(<Sidebar />);
 
       await waitFor(() => {
-        expect(container.querySelector(`a[href="${item.notificationPath}"]`)).toBeTruthy();
+        expect(container.querySelector(`a[href="${item.higherPriorityPath}"]`)).toBeTruthy();
       });
 
       const links = Array.from(container.querySelectorAll('a[href^="/"]')).map(
         (anchor) => anchor.getAttribute('href') || ''
       );
 
-      const notificationIndex = links.indexOf(item.notificationPath);
-      const anchorIndex = links.indexOf(item.anchorPath);
+      const higherPriorityIndex = links.indexOf(item.higherPriorityPath);
+      const lowerPriorityIndex = links.indexOf(item.lowerPriorityPath);
 
-      expect(notificationIndex).toBeGreaterThanOrEqual(0);
-      expect(anchorIndex).toBeGreaterThan(notificationIndex);
+      expect(higherPriorityIndex).toBeGreaterThanOrEqual(0);
+      expect(lowerPriorityIndex).toBeGreaterThan(higherPriorityIndex);
 
       const unresolved = links.filter((href) => !routeExists(href));
       expect(unresolved).toEqual([]);

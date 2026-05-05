@@ -135,17 +135,17 @@ describe('EditActivityPage participation preview', () => {
 
     render(React.createElement(EditActivityPage, { params: Promise.resolve({ id: '55' }) }));
 
-    expect(await screen.findByText('Hoạt động bị từ chối')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Xem trước danh sách tham gia' }));
+    expect(await screen.findByText('Hoat dong bi tu choi')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Xem truoc danh sach tham gia' }));
 
     await waitFor(() => {
-      expect(screen.getByText('Xem trước danh sách tham gia hiện tại')).toBeInTheDocument();
+      expect(screen.getByText('Xem truoc danh sach tham gia hien tai')).toBeInTheDocument();
     });
 
     expect(screen.getAllByText(/CNTT K18A/i).length).toBeGreaterThan(0);
     expect(screen.getByText('Student B')).toBeInTheDocument();
-    expect(screen.getByText(/Học viên chọn trực tiếp • 1 học viên/i)).toBeInTheDocument();
+    expect(screen.getByText(/Hoc vien chon truc tiep • 1 hoc vien/i)).toBeInTheDocument();
     expect(screen.getByText('Student Direct')).toBeInTheDocument();
-    expect(screen.getAllByText('Bắt buộc').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Bat buoc').length).toBeGreaterThan(0);
   });
 });

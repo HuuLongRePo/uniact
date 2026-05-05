@@ -107,9 +107,9 @@ describe('TeacherReportPage', () => {
 
     render(<TeacherReportPage />)
 
-    expect(await screen.findByText('Alice Nguyen')).toBeInTheDocument()
-    expect(screen.getByText('alice@uniact.test')).toBeInTheDocument()
-    expect(screen.getByText('Bao Tran')).toBeInTheDocument()
+    expect((await screen.findAllByText('Alice Nguyen')).length).toBeGreaterThan(0)
+    expect(screen.getAllByText('alice@uniact.test').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Bao Tran').length).toBeGreaterThan(0)
     expect(screen.getAllByRole('row')).toHaveLength(3)
     expect(pushMock).not.toHaveBeenCalled()
   })

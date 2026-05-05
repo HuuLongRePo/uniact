@@ -10,6 +10,7 @@ const { pushMock, toastMock } = vi.hoisted(() => ({
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: pushMock, replace: vi.fn(), prefetch: vi.fn(), back: vi.fn() }),
+  usePathname: () => '/student/my-activities',
 }));
 
 vi.mock('@/contexts/AuthContext', () => ({
@@ -91,6 +92,7 @@ describe('MyActivitiesPage', () => {
     render(React.createElement(MyActivitiesPage));
 
     expect(await screen.findByText('Upcoming Activity')).toBeInTheDocument();
+    expect(screen.getByText('Tác vụ nhanh')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Sắp diễn ra \(1\)/i })).toBeInTheDocument();
 
     await waitFor(() => {

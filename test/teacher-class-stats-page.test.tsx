@@ -5,9 +5,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const pushMock = vi.fn();
 const toastErrorMock = vi.fn();
 const toastSuccessMock = vi.fn();
+const router = { push: pushMock, back: vi.fn() };
 
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push: pushMock, back: vi.fn() }),
+  useRouter: () => router,
 }));
 
 vi.mock('@/contexts/AuthContext', () => ({
@@ -39,12 +40,26 @@ describe('ClassStatsPage', () => {
       if (url === '/api/teacher/reports/class-stats') {
         return {
           ok: true,
-          json: async () => ({ stats: [{ class_id: 1, class_name: 'CNTT K18A', total_students: 40, total_activities: 5, avg_participation_rate: 80, avg_score: 8, total_points: 320, attendance_trends: [], score_distribution: [] }] }),
+          json: async () => ({
+            stats: [
+              {
+                class_id: 1,
+                class_name: 'CNTT K18A',
+                total_students: 40,
+                total_activities: 5,
+                avg_participation_rate: 80,
+                avg_score: 8,
+                total_points: 320,
+                attendance_trends: [],
+                score_distribution: [],
+              },
+            ],
+          }),
         } as Response;
       }
 
       if (url === '/api/teacher/reports/class-stats/1') {
-        return { ok: false, json: async () => ({ error: 'Không thể tải chi tiết lớp' }) } as Response;
+        return { ok: false, json: async () => ({ error: 'Khong the tai chi tiet lop' }) } as Response;
       }
 
       throw new Error(`Unexpected fetch: ${url}`);
@@ -56,11 +71,11 @@ describe('ClassStatsPage', () => {
     const Page = (await import('../src/app/teacher/reports/class-stats/page')).default;
     render(<Page />);
 
-    expect(await screen.findByText('Thống kê lớp học')).toBeInTheDocument();
+    expect(await screen.findByText('Thong ke lop hoc')).toBeInTheDocument();
     fireEvent.change(screen.getByDisplayValue('CNTT K18A'), { target: { value: '1' } });
 
     await waitFor(() => {
-      expect(toastErrorMock).toHaveBeenCalledWith('Không thể tải chi tiết lớp');
+      expect(toastErrorMock).toHaveBeenCalledWith('Khong the tai chi tiet lop');
     });
   });
 });

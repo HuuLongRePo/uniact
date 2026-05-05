@@ -86,7 +86,7 @@ describe('PollDetailPage', () => {
 
     const { container } = render(<PollDetailPage />)
 
-    expect(await screen.findByText('Tổng số phản hồi:')).toBeInTheDocument()
+    expect(await screen.findByText(/Tổng số phản hồi/i)).toBeInTheDocument()
     expect(screen.getByText('Đã đóng')).toBeInTheDocument()
     expect(screen.getByText('Biểu đồ tròn')).toBeInTheDocument()
     expect(screen.getByText('phiếu')).toBeInTheDocument()

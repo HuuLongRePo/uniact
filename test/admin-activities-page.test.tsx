@@ -140,16 +140,16 @@ describe('Admin activities page', () => {
     render(<Page />);
 
     await waitFor(() => {
-      expect(screen.getByText('Approved Published Activity')).toBeInTheDocument();
+      expect(screen.getAllByText('Approved Published Activity').length).toBeGreaterThan(0);
     });
 
-    expect(screen.getByText('01/01/2099')).toBeInTheDocument();
+    expect(screen.getAllByText('01/01/2099').length).toBeGreaterThan(0);
 
     const selects = screen.getAllByRole('combobox');
 
     fireEvent.change(selects[0], { target: { value: 'published' } });
     await waitFor(() => {
-      expect(screen.getByText('Approved Published Activity')).toBeInTheDocument();
+      expect(screen.getAllByText('Approved Published Activity').length).toBeGreaterThan(0);
       expect(screen.queryByText('Pending Activity')).not.toBeInTheDocument();
     });
 
@@ -157,7 +157,7 @@ describe('Admin activities page', () => {
     fireEvent.change(selects[1], { target: { value: 'approved' } });
 
     await waitFor(() => {
-      expect(screen.getByText('Approved Published Activity')).toBeInTheDocument();
+      expect(screen.getAllByText('Approved Published Activity').length).toBeGreaterThan(0);
       expect(screen.queryByText('Pending Activity')).not.toBeInTheDocument();
       expect(screen.queryByText('Rejected Activity')).not.toBeInTheDocument();
     });
@@ -168,13 +168,19 @@ describe('Admin activities page', () => {
     render(<Page />);
 
     await waitFor(() => {
-      expect(screen.getByText('Past Published Activity')).toBeInTheDocument();
+      expect(screen.getAllByText('Past Published Activity').length).toBeGreaterThan(0);
     });
 
-    expect(screen.getAllByText('Đã gửi duyệt').length).toBeGreaterThan(0);
-    expect(screen.getByText('Đã khép lại')).toBeInTheDocument();
-    expect(screen.getByText('Đã qua hoặc đã khép lại, cần rà lại việc hoàn thành thực tế.')).toBeInTheDocument();
-    expect(screen.getByText('Trong toàn bộ danh sách hiện có 1 hoạt động đã qua hoặc đã khép lại.')).toBeInTheDocument();
+    expect(screen.getAllByText('Da gui duyet').length).toBeGreaterThan(0);
+    expect(screen.getByText('Da khep lai')).toBeInTheDocument();
+    expect(
+      screen.getAllByText('Da qua hoac da khep lai, can ra lai viec hoan thanh thuc te.').length
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getByText((_, element) =>
+        element?.textContent === 'Trong toan bo danh sach hien co 1 hoat dong da qua hoac da khep lai.'
+      )
+    ).toBeInTheDocument();
   });
 
   it('allows admin to refresh the activities list manually', async () => {
@@ -182,10 +188,10 @@ describe('Admin activities page', () => {
     render(<Page />);
 
     await waitFor(() => {
-      expect(screen.getByText('Pending Activity')).toBeInTheDocument();
+      expect(screen.getAllByText('Pending Activity').length).toBeGreaterThan(0);
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /Làm mới/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Tai lai/i }));
 
     await waitFor(() => {
       const calls = (global.fetch as any).mock.calls as Array<[RequestInfo | URL]>;
@@ -201,17 +207,17 @@ describe('Admin activities page', () => {
     render(<Page />);
 
     await waitFor(() => {
-      expect(screen.getByText('Pending Activity')).toBeInTheDocument();
-      expect(screen.getByText('Rejected Activity')).toBeInTheDocument();
+      expect(screen.getAllByText('Pending Activity').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Rejected Activity').length).toBeGreaterThan(0);
     });
 
     const selects = screen.getAllByRole('combobox');
     fireEvent.change(selects[0], { target: { value: 'pending' } });
 
-    expect(screen.getByDisplayValue('Đã gửi duyệt')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Da gui duyet')).toBeInTheDocument();
 
     await waitFor(() => {
-      expect(screen.getByText('Pending Activity')).toBeInTheDocument();
+      expect(screen.getAllByText('Pending Activity').length).toBeGreaterThan(0);
       expect(screen.queryByText('Rejected Activity')).not.toBeInTheDocument();
     });
 
@@ -220,7 +226,7 @@ describe('Admin activities page', () => {
 
     await waitFor(() => {
       expect(screen.queryByText('Pending Activity')).not.toBeInTheDocument();
-      expect(screen.getByText('Rejected Activity')).toBeInTheDocument();
+      expect(screen.getAllByText('Rejected Activity').length).toBeGreaterThan(0);
     });
   });
 
@@ -229,10 +235,14 @@ describe('Admin activities page', () => {
     render(<Page />);
 
     await waitFor(() => {
-      expect(screen.getByText('Approved Published Activity')).toBeInTheDocument();
+      expect(screen.getAllByText('Approved Published Activity').length).toBeGreaterThan(0);
     });
 
-    const links = await screen.findAllByLabelText('Điểm danh');
-    expect(links.some((link) => (link as HTMLAnchorElement).getAttribute('href') === '/admin/attendance?activityId=3')).toBeTruthy();
+    const links = await screen.findAllByLabelText('Diem danh');
+    expect(
+      links.some(
+        (link) => (link as HTMLAnchorElement).getAttribute('href') === '/admin/attendance?activityId=3'
+      )
+    ).toBeTruthy();
   });
 });

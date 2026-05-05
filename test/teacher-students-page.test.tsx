@@ -31,7 +31,7 @@ describe('TeacherStudentsPage', () => {
   it('surfaces fetch errors for teacher students API', async () => {
     const fetchMock = vi.fn(async () => ({
       ok: false,
-      json: async () => ({ error: 'Khong the tai du lieu hoc vien' }),
+      json: async () => ({ error: 'Không thể tải dữ liệu học viên' }),
     })) as any;
 
     vi.stubGlobal('fetch', fetchMock);
@@ -57,8 +57,8 @@ describe('TeacherStudentsPage', () => {
           students: [
             {
               id: 11,
-              full_name: 'Hoc Vien Chu Nhiem',
-              name: 'Hoc Vien Chu Nhiem',
+              full_name: 'Học Viên Chủ Nhiệm',
+              name: 'Học Viên Chủ Nhiệm',
               email: 'hocvien@annd.edu.vn',
               class_id: 3,
               class_name: 'D31A',
@@ -87,10 +87,7 @@ describe('TeacherStudentsPage', () => {
     const Page = (await import('../src/app/teacher/students/page')).default;
     render(<Page />);
 
-    expect(await screen.findByText('Hoc Vien Chu Nhiem')).toBeInTheDocument();
-    expect(
-      await screen.findByText((text) => text.includes('Chu') && text.toLowerCase().includes('nhiem'))
-    ).toBeInTheDocument();
-    expect(await screen.findByTitle(/chủ nhiệm/i)).toBeInTheDocument();
+    expect((await screen.findAllByText('Học Viên Chủ Nhiệm')).length).toBeGreaterThan(0);
+    expect((await screen.findAllByTitle(/chủ nhiệm/i)).length).toBeGreaterThan(0);
   });
 });

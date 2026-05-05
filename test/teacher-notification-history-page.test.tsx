@@ -44,9 +44,9 @@ describe('NotificationHistoryPage', () => {
                 {
                   id: 10,
                   notification_id: 20,
-                  notification_title: 'Nhắc điểm danh',
+                  notification_title: 'Nhac diem danh',
                   student_id: 3,
-                  student_name: 'Nguyễn Văn A',
+                  student_name: 'Nguyen Van A',
                   class_name: '12A1',
                   sent_at: '2026-04-22T07:00:00Z',
                   read_at: null,
@@ -76,7 +76,7 @@ describe('NotificationHistoryPage', () => {
     render(<Page />);
 
     expect(await screen.findByText('Lịch sử thông báo')).toBeInTheDocument();
-    expect(await screen.findByText('Nhắc điểm danh')).toBeInTheDocument();
-    expect(await screen.findByText('Nguyễn Văn A')).toBeInTheDocument();
+    expect(await screen.findByText('Nhac diem danh')).toBeInTheDocument();
+    expect(await screen.findByText('Nguyen Van A')).toBeInTheDocument();
   });
 });

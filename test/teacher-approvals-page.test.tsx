@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import ApprovalsPage from '@/app/teacher/approvals/page';
 
@@ -34,12 +34,10 @@ describe('ApprovalsPage', () => {
   });
 
   it('renders pending approvals with details action and allows rejected activities to resubmit', async () => {
-    let fetchCount = 0;
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
 
       if (url === '/api/teacher/activities/approvals?status=all' && !init?.method) {
-        fetchCount += 1;
         return jsonResponse({
           activities: [
             {
@@ -115,7 +113,6 @@ describe('ApprovalsPage', () => {
               },
             ],
           },
-          fetchCount,
         });
       }
 
@@ -137,26 +134,28 @@ describe('ApprovalsPage', () => {
     render(<ApprovalsPage />);
 
     expect(await screen.findByText('Hoat dong dang cho')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Chi tiết' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Chi tiet' })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Chi tiết' }));
-    expect(await screen.findByText('Chi tiết hoạt động')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Đóng' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Chi tiet' }));
+    const detailDialog = await screen.findByRole('dialog', { name: 'Chi tiet hoat dong' });
+    expect(within(detailDialog).getByText('Chi tiet hoat dong')).toBeInTheDocument();
+    fireEvent.click(within(detailDialog).getByRole('button', { name: 'Dong' }));
 
-    fireEvent.click(screen.getAllByRole('button', { name: 'Gửi lại' })[0] as HTMLButtonElement);
-    expect(await screen.findByText('Lý do từ chối')).toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Gui lai' })[0] as HTMLButtonElement);
+    const resubmitDialog = await screen.findByRole('dialog', { name: 'Gui lai de duyet' });
+    expect(within(resubmitDialog).getByText('Ly do tu choi')).toBeInTheDocument();
 
-    fireEvent.change(screen.getByRole('textbox'), {
+    fireEvent.change(within(resubmitDialog).getByRole('textbox'), {
       target: { value: 'Da cap nhat day du' },
     });
-    fireEvent.click(screen.getAllByRole('button', { name: 'Gửi lại' })[1] as HTMLButtonElement);
+    fireEvent.click(within(resubmitDialog).getByRole('button', { name: 'Gui lai' }));
 
     await waitFor(() => {
       expect(toastSuccessMock).toHaveBeenCalledWith('Gui duyet thanh cong');
     });
 
-    expect(screen.getAllByText('Đã gửi duyệt').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Bị từ chối').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Dang cho').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Bi tu choi').length).toBeGreaterThan(0);
 
     expect(
       fetchMock.mock.calls.some(

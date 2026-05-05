@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import StudentActivityDetailPage from '@/app/student/activities/[id]/page';
@@ -23,9 +23,26 @@ vi.mock('next/navigation', () => ({
     back: backMock,
     prefetch: vi.fn(),
   }),
+  usePathname: () => '/student/activities/20',
   useParams: () => ({
     id: '20',
   }),
+}));
+
+vi.mock('next/link', () => ({
+  default: ({
+    href,
+    children,
+    ...props
+  }: {
+    href: string;
+    children: React.ReactNode;
+    [key: string]: unknown;
+  }) => (
+    <a href={href} {...props}>
+      {children}
+    </a>
+  ),
 }));
 
 vi.mock('@/lib/toast', () => ({
@@ -90,10 +107,10 @@ describe('StudentActivityDetailPage registration conflict flow', () => {
           data: {
             activity: {
               id: 20,
-              title: 'Chi tiet hoat dong',
-              description: 'Mo ta chi tiet',
+              title: 'Chi tiết hoạt động',
+              description: 'Mô tả chi tiết',
               date_time: '2099-04-15T08:00:00.000Z',
-              location: 'Hoi truong C',
+              location: 'Hội trường C',
               max_participants: 30,
               participant_count: 10,
               available_slots: 20,
@@ -121,22 +138,22 @@ describe('StudentActivityDetailPage registration conflict flow', () => {
         const body = JSON.parse(String(init.body || '{}'));
 
         if (body.force_register === true) {
-          return jsonResponse({ message: 'Đăng ký thành công!', participation_id: 1001 }, true, 201);
+                return jsonResponse({ message: 'Đăng ký thành công!', participation_id: 1001 }, true, 201);
         }
 
         return jsonResponse(
           {
             success: false,
-            error: 'Ban da dang ky hoat dong khac trung gio bat dau. Xac nhan de tiep tuc.',
+            error: 'Bạn đã đăng ký hoạt động khác trùng giờ bắt đầu. Xác nhận để tiếp tục.',
             code: 'CONFLICT',
             details: {
               can_override: true,
               conflicts: [
                 {
                   id: 88,
-                  title: 'Hoat dong xung dot',
+                  title: 'Hoạt động xung đột',
                   date_time: '2099-04-15T08:00:00.000Z',
-                  location: 'Phong D',
+                  location: 'Phòng D',
                 },
               ],
             },
@@ -154,11 +171,19 @@ describe('StudentActivityDetailPage registration conflict flow', () => {
 
     render(<StudentActivityDetailPage />);
 
-    expect(await screen.findByText('Chi tiet hoat dong')).toBeInTheDocument();
-    fireEvent.click(screen.getByText(/Đăng ký ngay/i));
+    expect(await screen.findByText('Chi tiết hoạt động')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /^Quét mã QR$/i })).toHaveAttribute(
+      'href',
+      '/student/check-in'
+    );
+    expect(screen.getByRole('link', { name: /^Danh sách hoạt động$/i })).toHaveAttribute(
+      'href',
+      '/student/activities'
+    );
+    fireEvent.click(screen.getByRole('button', { name: /Đăng ký ngay/i }));
 
     expect(await screen.findByText('Xung đột giờ bắt đầu')).toBeInTheDocument();
-    expect(screen.getByText('Hoat dong xung dot')).toBeInTheDocument();
+    expect(screen.getByText('Hoạt động xung đột')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Vẫn đăng ký' }));
 
@@ -185,10 +210,10 @@ describe('StudentActivityDetailPage registration conflict flow', () => {
           data: {
             activity: {
               id: 20,
-              title: 'Hoat dong lop khac',
-              description: 'Mo ta chi tiet',
+              title: 'Hoạt động lớp khác',
+              description: 'Mô tả chi tiết',
               date_time: '2099-04-15T08:00:00.000Z',
-              location: 'Hoi truong C',
+              location: 'Hội trường C',
               max_participants: 30,
               participant_count: 10,
               available_slots: 20,
@@ -224,7 +249,7 @@ describe('StudentActivityDetailPage registration conflict flow', () => {
 
     render(<StudentActivityDetailPage />);
 
-    expect(await screen.findByText('Hoat dong lop khac')).toBeInTheDocument();
+    expect(await screen.findByText('Hoạt động lớp khác')).toBeInTheDocument();
     expect(screen.getByText('Không thuộc phạm vi của bạn')).toBeInTheDocument();
     expect(
       screen.getByText('Không thuộc phạm vi của bạn vì hoạt động đang dành riêng cho lớp khác.')
@@ -253,8 +278,8 @@ describe('StudentActivityDetailPage registration conflict flow', () => {
               qr_enabled: false,
               teacher_id: 9,
               teacher_name: 'Teacher Detail',
-              activity_type: 'Tình nguyện',
-              organization_level: 'Cấp trường',
+              activity_type: 'Tinh nguyen',
+              organization_level: 'Cap truong',
               class_ids: [],
               class_names: [],
               is_registered: false,
@@ -298,9 +323,9 @@ describe('StudentActivityDetailPage registration conflict flow', () => {
             activity: {
               id: 20,
               title: 'Mandatory Detail Activity',
-              description: 'Mo ta chi tiet',
+              description: 'Mô tả chi tiết',
               date_time: '2099-04-15T08:00:00.000Z',
-              location: 'Hoi truong C',
+              location: 'Hội trường C',
               max_participants: 30,
               participant_count: 10,
               available_slots: 20,
@@ -321,7 +346,7 @@ describe('StudentActivityDetailPage registration conflict flow', () => {
               is_mandatory: true,
               applies_to_student: true,
               applicability_scope: 'class_scope_match',
-              applicability_reason: 'Ap dung vi lop cua ban nam trong pham vi hoat dong.',
+              applicability_reason: 'Áp dụng vì lớp của bạn nằm trong phạm vi hoạt động.',
               base_points: 10,
               registration_deadline: '2099-04-14T08:00:00.000Z',
             },
@@ -339,8 +364,7 @@ describe('StudentActivityDetailPage registration conflict flow', () => {
 
     expect(await screen.findByText('Mandatory Detail Activity')).toBeInTheDocument();
     expect(screen.getAllByText('Bắt buộc với bạn').length).toBeGreaterThan(0);
-    expect(screen.getByText('Ap dung vi lop cua ban nam trong pham vi hoat dong.')).toBeInTheDocument();
+    expect(screen.getByText('Áp dụng vì lớp của bạn nằm trong phạm vi hoạt động.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Hủy đăng ký' })).not.toBeInTheDocument();
   });
 });
-

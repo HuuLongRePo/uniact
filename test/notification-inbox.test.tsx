@@ -37,7 +37,8 @@ describe('NotificationInbox', () => {
     vi.stubGlobal('fetch', fetchMock);
     window.fetch = fetchMock as typeof fetch;
 
-    const NotificationInbox = (await import('../src/components/notifications/NotificationInbox')).default;
+    const NotificationInbox = (await import('../src/components/notifications/NotificationInbox'))
+      .default;
     render(<NotificationInbox title="Thông báo giảng viên" />);
 
     expect(await screen.findByTestId('notifications-heading')).toBeInTheDocument();
@@ -71,7 +72,8 @@ describe('NotificationInbox', () => {
     vi.stubGlobal('fetch', fetchMock);
     window.fetch = fetchMock as typeof fetch;
 
-    const NotificationInbox = (await import('../src/components/notifications/NotificationInbox')).default;
+    const NotificationInbox = (await import('../src/components/notifications/NotificationInbox'))
+      .default;
     render(<NotificationInbox />);
 
     const unreadTab = await screen.findByRole('button', { name: /chưa đọc/i });
@@ -121,11 +123,59 @@ describe('NotificationInbox', () => {
     vi.stubGlobal('fetch', fetchMock);
     window.fetch = fetchMock as typeof fetch;
 
-    const NotificationInbox = (await import('../src/components/notifications/NotificationInbox')).default;
+    const NotificationInbox = (await import('../src/components/notifications/NotificationInbox'))
+      .default;
     render(<NotificationInbox />);
 
     expect(await screen.findByText('Đang mở điểm danh')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Điểm danh' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Xem chi tiết' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /QR/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Xem chi tiết/i })).toBeInTheDocument();
+  });
+
+  it('opens settings in an accessible dialog when enabled', async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+
+      if (url === '/api/notifications/settings') {
+        return {
+          ok: true,
+          json: async () => ({
+            data: {
+              settings: {
+                email_enabled: true,
+                new_activity_enabled: true,
+                reminder_enabled: true,
+                reminder_days: 2,
+              },
+            },
+          }),
+        };
+      }
+
+      return {
+        ok: true,
+        json: async () => ({
+          data: {
+            notifications: [],
+            meta: {
+              total_unread: 0,
+              total: 0,
+              page: 1,
+              per_page: 20,
+            },
+          },
+        }),
+      };
+    });
+
+    vi.stubGlobal('fetch', fetchMock);
+    window.fetch = fetchMock as typeof fetch;
+
+    const NotificationInbox = (await import('../src/components/notifications/NotificationInbox'))
+      .default;
+    render(<NotificationInbox showSettings />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Cài đặt' }));
+    expect(await screen.findByRole('dialog', { name: 'Cài đặt thông báo' })).toBeInTheDocument();
   });
 });

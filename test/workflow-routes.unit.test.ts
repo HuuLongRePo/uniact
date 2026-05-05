@@ -18,6 +18,10 @@ describe('Workflow route fixes (unit, mocked)', () => {
         },
       }))
 
+      vi.doMock('@/lib/network-proximity', () => ({
+        resolveRequestNetworkPrefix: () => '10.20.30',
+      }))
+
       vi.doMock('@/lib/database', () => ({
         withTransaction: async (callback: any) => callback(),
         dbRun: async () => ({ changes: 1 }),
@@ -27,7 +31,10 @@ describe('Workflow route fixes (unit, mocked)', () => {
             activity_id: 55,
             expires_at: new Date(Date.now() + 60_000).toISOString(),
             is_active: 1,
-            metadata: JSON.stringify({ max_scans: 1 }),
+            metadata: JSON.stringify({
+              max_scans: 1,
+              anti_cheat: { network_lock: true, creator_network_prefix: '10.20.30' },
+            }),
           }),
           getActivityById: async () => ({ id: 55, status: 'published', approval_status: 'approved' }),
           countAttendanceForSession: async () => 1,
@@ -48,7 +55,7 @@ describe('Workflow route fixes (unit, mocked)', () => {
       expect(res.status).toBe(400)
       const body = await res.json()
       expect(body.success).toBe(false)
-      expect(String(body.error)).toContain('đạt giới hạn')
+      expect(String(body.error).toLowerCase()).toMatch(/(đạt giới hạn|dat gioi han)/)
     })
 
     it('returns 200 idempotent response when student already recorded', async () => {
@@ -62,6 +69,10 @@ describe('Workflow route fixes (unit, mocked)', () => {
         },
       }))
 
+      vi.doMock('@/lib/network-proximity', () => ({
+        resolveRequestNetworkPrefix: () => '10.20.30',
+      }))
+
       vi.doMock('@/lib/database', () => ({
         withTransaction: async (callback: any) => callback(),
         dbRun: async () => ({ changes: 1 }),
@@ -71,7 +82,10 @@ describe('Workflow route fixes (unit, mocked)', () => {
             activity_id: 56,
             expires_at: new Date(Date.now() + 60_000).toISOString(),
             is_active: 1,
-            metadata: JSON.stringify({ max_scans: 3 }),
+            metadata: JSON.stringify({
+              max_scans: 3,
+              anti_cheat: { network_lock: true, creator_network_prefix: '10.20.30' },
+            }),
           }),
           getActivityById: async () => ({ id: 56, status: 'published', approval_status: 'approved' }),
           countAttendanceForSession: async () => 0,

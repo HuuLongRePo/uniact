@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const pushMock = vi.fn();
@@ -31,7 +31,7 @@ describe('ActivityStatisticsPage', () => {
   it('surfaces canonical API errors for statistics fetch', async () => {
     const fetchMock = vi.fn(async () => ({
       ok: false,
-      json: async () => ({ error: 'Không thể tải báo cáo thống kê hoạt động' }),
+      json: async () => ({ error: 'KhÃ´ng thá»ƒ táº£i bÃ¡o cÃ¡o thá»‘ng kÃª hoáº¡t Ä‘á»™ng' }),
     })) as any;
 
     vi.stubGlobal('fetch', fetchMock);
@@ -41,7 +41,7 @@ describe('ActivityStatisticsPage', () => {
     render(<Page />);
 
     await waitFor(() => {
-      expect(toastErrorMock).toHaveBeenCalledWith('Không thể tải báo cáo thống kê hoạt động');
+      expect(toastErrorMock).toHaveBeenCalledWith('KhÃ´ng thá»ƒ táº£i bÃ¡o cÃ¡o thá»‘ng kÃª hoáº¡t Ä‘á»™ng');
     });
   });
 
@@ -94,8 +94,8 @@ describe('ActivityStatisticsPage', () => {
     const Page = (await import('../src/app/admin/reports/activity-statistics/page')).default;
     render(<Page />);
 
-    expect(await screen.findByText('Thống kê hoạt động')).toBeInTheDocument();
-    expect(screen.getByText('Citizen Orientation')).toBeInTheDocument();
+    expect(await screen.findByText('Thong ke hoat dong')).toBeInTheDocument();
+    expect(screen.getAllByText('Citizen Orientation').length).toBeGreaterThan(0);
     expect(screen.getByTestId('admin-method-card-qr')).toBeInTheDocument();
     expect(screen.getByTestId('admin-method-card-face')).toHaveTextContent('1');
     expect(screen.getByTestId('admin-face-adoption-card')).toHaveTextContent('25.0%');
@@ -139,7 +139,7 @@ describe('ActivityStatisticsPage', () => {
     const Page = (await import('../src/app/admin/reports/activity-statistics/page')).default;
     render(<Page />);
 
-    expect(await screen.findByText('Hotspots chưa tham gia')).toBeInTheDocument();
+    expect(await screen.findByText('Hotspots chua tham gia')).toBeInTheDocument();
     expect(screen.getByText('Tech Talk')).toBeInTheDocument();
     expect(screen.getByTestId('admin-method-card-face')).toHaveTextContent('2');
   });

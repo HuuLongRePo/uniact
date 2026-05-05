@@ -8,6 +8,10 @@ const { toastErrorMock, toastSuccessMock } = vi.hoisted(() => ({
   toastSuccessMock: vi.fn(),
 }));
 
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn() }),
+}));
+
 vi.mock('react-hot-toast', () => ({
   default: {
     error: toastErrorMock,
@@ -102,16 +106,16 @@ describe('CreateActivityPage participation preview', () => {
     expect((await screen.findAllByText('CNTT K18A')).length).toBeGreaterThan(0);
 
     fireEvent.click(screen.getAllByRole('button', { name: 'Chọn tất cả đang lọc' })[0]);
-    fireEvent.click(screen.getByRole('button', { name: 'Xem trước danh sách tham gia' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Xem truoc danh sach tham gia' }));
 
     await waitFor(() => {
-      expect(screen.getByText('Xem trước danh sách tham gia hiện tại')).toBeInTheDocument();
+      expect(screen.getByText('Xem truoc danh sach tham gia hien tai')).toBeInTheDocument();
     });
 
     expect(screen.getAllByText(/CNTT K18A/i).length).toBeGreaterThan(0);
     expect(screen.getByText('Student A')).toBeInTheDocument();
-    expect(screen.getByText(/Học viên chọn trực tiếp/i)).toBeInTheDocument();
+    expect(screen.getByText(/Hoc vien chon truc tiep/i)).toBeInTheDocument();
     expect(screen.getByText('Student Direct')).toBeInTheDocument();
-    expect(screen.getAllByText('Tự nguyện').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Tu nguyen').length).toBeGreaterThan(0);
   });
 });

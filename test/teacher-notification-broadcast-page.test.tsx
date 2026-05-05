@@ -29,8 +29,8 @@ describe('BroadcastNotificationsPage', () => {
               notifications: [
                 {
                   id: 11,
-                  title: 'Nhắc nộp bài',
-                  message: 'Học viên nộp bài trước 20:00',
+                  title: 'Nhac nop bai',
+                  message: 'Hoc vien nop bai truoc 20:00',
                   target_type: 'class',
                   target_ids: [1],
                   recipient_count: 30,
@@ -58,8 +58,8 @@ describe('BroadcastNotificationsPage', () => {
     const Page = (await import('../src/app/teacher/notifications/broadcast/page')).default;
     render(<Page />);
 
-    expect(await screen.findByText('Thông báo quảng bá')).toBeInTheDocument();
-    expect(await screen.findByText('Nhắc nộp bài')).toBeInTheDocument();
-    expect(await screen.findByText('Học viên nộp bài trước 20:00')).toBeInTheDocument();
+    expect(await screen.findByText('Thông báo broadcast')).toBeInTheDocument();
+    expect(await screen.findByText('Nhac nop bai')).toBeInTheDocument();
+    expect(await screen.findByText('Hoc vien nop bai truoc 20:00')).toBeInTheDocument();
   });
 });

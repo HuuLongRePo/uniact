@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const toastErrorMock = vi.fn();
 
 vi.mock('@/contexts/AuthContext', () => ({
-  useAuth: () => ({ user: { id: 5, role: 'student' } }),
+  useAuth: () => ({ user: { id: 5, role: 'student' }, loading: false }),
 }));
 
 vi.mock('react-hot-toast', () => ({
@@ -69,12 +69,13 @@ describe('StudentNotifications', () => {
     const Page = (await import('../src/app/student/notifications/page')).default;
     render(<Page />);
 
+    expect(await screen.findByText('Tác vụ nhanh')).toBeInTheDocument();
     expect(await screen.findByTestId('notifications-heading')).toBeInTheDocument();
     expect(await screen.findByText('Có thông báo mới')).toBeInTheDocument();
     expect(await screen.findByText('1 thông báo chưa đọc')).toBeInTheDocument();
   });
 
-  it('shows success icon for face attendance notifications', async () => {
+  it('shows attendance notifications with matching action context', async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
       if (url === '/api/notifications') {
@@ -86,8 +87,8 @@ describe('StudentNotifications', () => {
                 {
                   id: 2,
                   type: 'success',
-                  title: 'Face attendance thành công',
-                  message: 'Bạn đã được ghi nhận tham gia bằng face attendance',
+                  title: 'Điểm danh khuôn mặt thành công',
+                  message: 'Bạn đã được ghi nhận tham gia bằng điểm danh khuôn mặt',
                   related_table: 'activities',
                   related_id: 9,
                   is_read: 0,
@@ -123,8 +124,8 @@ describe('StudentNotifications', () => {
     const Page = (await import('../src/app/student/notifications/page')).default;
     render(<Page />);
 
-    expect(await screen.findByText('Face attendance thành công')).toBeInTheDocument();
-    expect(screen.getByText('✅')).toBeInTheDocument();
+    expect(await screen.findByText('Điểm danh khuôn mặt thành công')).toBeInTheDocument();
+    expect(screen.getByText('Điểm danh')).toBeInTheDocument();
   });
 
   it('shows teacher-origin notification entries in student inbox', async () => {
@@ -178,7 +179,7 @@ describe('StudentNotifications', () => {
 
     expect(await screen.findByText('Nhắc điểm danh')).toBeInTheDocument();
     expect(screen.getByText('Các em nhớ có mặt đúng giờ')).toBeInTheDocument();
-    expect(screen.getByText('💬')).toBeInTheDocument();
+    expect(screen.getByText('Thông báo chung')).toBeInTheDocument();
   });
 
   it('surfaces notification fetch errors', async () => {

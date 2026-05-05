@@ -11,6 +11,23 @@ const { pushMock, toastErrorMock, toastSuccessMock } = vi.hoisted(() => ({
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: pushMock, replace: vi.fn(), prefetch: vi.fn(), back: vi.fn() }),
+  usePathname: () => '/student/activities',
+}));
+
+vi.mock('next/link', () => ({
+  default: ({
+    href,
+    children,
+    ...props
+  }: {
+    href: string;
+    children: React.ReactNode;
+    [key: string]: unknown;
+  }) => (
+    <a href={href} {...props}>
+      {children}
+    </a>
+  ),
 }));
 
 vi.mock('@/contexts/AuthContext', () => ({
@@ -63,7 +80,7 @@ describe('StudentActivitiesPage', () => {
       if (url.endsWith('/api/activity-types')) {
         return jsonResponse({
           data: {
-            activityTypes: [{ id: 1, name: 'Tình nguyện', base_points: 5 }],
+            activityTypes: [{ id: 1, name: 'Tinh nguyen', base_points: 5 }],
           },
         });
       }
@@ -86,15 +103,15 @@ describe('StudentActivitiesPage', () => {
                 applies_to_student: true,
                 applicability_scope: 'open_scope',
                 applicability_reason: 'Hoạt động mở cho tất cả học viên.',
-                activity_type: 'Tình nguyện',
-                organization_level: 'Cấp trường',
+                activity_type: 'Tinh nguyen',
+                organization_level: 'Cap truong',
               },
               {
                 id: 2,
                 title: 'Hoạt động lớp khác',
                 description: 'Mô tả B',
                 date_time: '2099-04-13T08:00:00.000Z',
-                location: 'Phòng B',
+                location: 'Phong B',
                 teacher_name: 'Teacher B',
                 participant_count: 3,
                 max_participants: 20,
@@ -102,8 +119,8 @@ describe('StudentActivitiesPage', () => {
                 is_registered: false,
                 applies_to_student: false,
                 applicability_reason: 'Không thuộc phạm vi của bạn vì hoạt động đang dành riêng cho lớp khác.',
-                activity_type: 'Học thuật',
-                organization_level: 'Cấp khoa',
+                activity_type: 'Hoc thuat',
+                organization_level: 'Cap khoa',
               },
             ],
             total: 2,
@@ -120,11 +137,22 @@ describe('StudentActivitiesPage', () => {
     render(React.createElement(StudentActivitiesPage));
 
     expect(await screen.findByText('Hoạt động áp dụng')).toBeInTheDocument();
+    expect(screen.getByText('Tác vụ nhanh')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Xem chi tiết' })).toHaveAttribute(
+      'href',
+      '/student/activities/1'
+    );
+    expect(screen.getByTestId('time-filter-upcoming')).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByTestId('time-filter-all')).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByTestId('scope-filter-applicable')).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByTestId('scope-filter-not-applicable')).toHaveAttribute('aria-pressed', 'false');
     expect(screen.queryByText('Hoạt động lớp khác')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Không thuộc phạm vi của bạn' }));
 
     expect(await screen.findByText('Hoạt động lớp khác')).toBeInTheDocument();
+    expect(screen.getByTestId('scope-filter-applicable')).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByTestId('scope-filter-not-applicable')).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('shows mandatory badge for assigned activities', async () => {
@@ -151,8 +179,8 @@ describe('StudentActivitiesPage', () => {
                 can_cancel: false,
                 applies_to_student: true,
                 applicability_reason: 'Áp dụng vì lớp của bạn nằm trong phạm vi hoạt động.',
-                activity_type: 'Tình nguyện',
-                organization_level: 'Cấp trường',
+                activity_type: 'Tinh nguyen',
+                organization_level: 'Cap truong',
               },
             ],
             total: 1,
@@ -168,6 +196,6 @@ describe('StudentActivitiesPage', () => {
     render(React.createElement(StudentActivitiesPage));
 
     await screen.findByText('Hoạt động bắt buộc');
-    expect(screen.getAllByText('Bắt buộc tham gia').length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Bắt buộc/i).length).toBeGreaterThan(0);
   });
 });

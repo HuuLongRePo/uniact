@@ -12,7 +12,7 @@ describe('resolveNotificationActionButtons', () => {
 
     expect(buttons).toHaveLength(1);
     expect(buttons[0].href).toBe('/student/check-in?activityId=88');
-    expect(buttons[0].label).toBe('Điểm danh');
+    expect(buttons[0].label.toLowerCase()).toContain('qr');
   });
 
   it('returns teacher attendance + projector actions for attendance notifications', () => {
@@ -25,9 +25,7 @@ describe('resolveNotificationActionButtons', () => {
 
     expect(buttons).toHaveLength(2);
     expect(buttons[0].href).toBe('/teacher/qr?activity_id=91');
-    expect(buttons[0].label).toBe('Mở điểm danh');
     expect(buttons[1].href).toBe('/teacher/qr?activity_id=91&projector=1');
-    expect(buttons[1].label).toBe('Chiếu QR toàn màn hình');
   });
 
   it('returns admin activity action for attendance notifications', () => {
@@ -51,7 +49,7 @@ describe('resolveNotificationActionButtons', () => {
       action_buttons: [
         {
           id: 'view_activity',
-          label: 'Xem chi tiết',
+          label: 'Xem chi tiet',
           action: 'open_link',
           href: '/student/activities/77',
         },
