@@ -156,17 +156,18 @@ describe('Admin dashboard page', () => {
   it('renders admin overview, attendance rollout summary and refresh actions', async () => {
     render(<DashboardAdminPage />);
 
-    expect(await screen.findByTestId('dashboard-heading')).toHaveTextContent('Tong quan admin');
+    expect(await screen.findByTestId('dashboard-heading')).toHaveTextContent(
+      /(Tong quan admin|Tổng quan quản trị)/i
+    );
     expect(await screen.findByTestId('admin-attendance-policy-overview')).toBeInTheDocument();
     expect(screen.getByText('rollout-v2')).toBeInTheDocument();
     expect(screen.getByText('strict-lan')).toBeInTheDocument();
     expect(screen.getAllByText('Nguyen An').length).toBeGreaterThan(0);
-    expect(screen.getByRole('link', { name: /Mo chinh sach diem danh/i })).toHaveAttribute(
-      'href',
-      '/admin/system-config/attendance-policy'
-    );
+    expect(
+      screen.getByRole('link', { name: /(Mo chinh sach diem danh|Mở chính sách điểm danh)/i })
+    ).toHaveAttribute('href', '/admin/system-config/attendance-policy');
 
-    fireEvent.click(screen.getByRole('button', { name: /Tai lai dashboard/i }));
+    fireEvent.click(screen.getByRole('button', { name: /(Tai lai dashboard|Làm mới)/i }));
     expect(refetchStatsMock).toHaveBeenCalledTimes(1);
     expect(refetchDashMock).toHaveBeenCalledTimes(1);
   });
