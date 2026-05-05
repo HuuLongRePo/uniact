@@ -294,7 +294,9 @@ export default function StudentCheckInPage() {
           )}
 
           <StudentQRScanner
-            onDebugChange={(patch) => updateDiagnostics(patch)}
+            onDebugChange={
+              shouldShowDiagnostics ? (patch) => updateDiagnostics(patch) : undefined
+            }
             onScan={async (rawValue) => {
               updateDiagnostics({
                 lastDecodedRaw: rawValue,

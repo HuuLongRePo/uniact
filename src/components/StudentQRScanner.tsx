@@ -29,8 +29,9 @@ import {
 
 type ScanState = 'idle' | 'scanning' | 'success' | 'error';
 const MAX_DECODE_DIMENSION = 1024;
-const DECODE_INTERVAL_MS = 20;
-const NO_RESULT_NOTICE_MS = 6000;
+const DECODE_INTERVAL_MS = 50;
+const NO_RESULT_NOTICE_MS = 4000;
+const FALLBACK_ARM_DELAY_MS = 1400;
 
 export type StudentQrScannerCameraState =
   | 'idle'
@@ -82,6 +83,8 @@ export function StudentQRScanner({ onScan, onDebugChange }: Props) {
   const autoStartAttemptedRef = useRef(false);
   const scanStartedAtRef = useRef(0);
   const lastNoResultNoticeAtRef = useRef(0);
+  const scanStateRef = useRef<ScanState>('idle');
+  const fallbackArmTimerRef = useRef<number | undefined>(undefined);
 
   const [scanState, setScanState] = useState<ScanState>('idle');
   const [needsPlaybackGesture, setNeedsPlaybackGesture] = useState(false);
@@ -95,6 +98,10 @@ export function StudentQRScanner({ onScan, onDebugChange }: Props) {
     onDebugChange?.(patch);
   }
 
+  useEffect(() => {
+    scanStateRef.current = scanState;
+  }, [scanState]);
+
   const scanStateLabel =
     scanState === 'scanning'
       ? 'Đang quét'
@@ -106,11 +113,11 @@ export function StudentQRScanner({ onScan, onDebugChange }: Props) {
 
   const scanStateHint =
     scanState === 'scanning'
-      ? 'Đưa QR vào giữa khung, giữ máy ổn định 1-2 giây để nhận dạng nhanh hơn.'
+      ? 'Đưa camera vào vùng mã QR ở khoảng cách gần, hệ thống sẽ tự nhận nhanh.'
       : scanState === 'success'
         ? 'Hệ thống đã ghi nhận điểm danh thành công cho mã vừa quét.'
         : scanState === 'error'
-          ? 'Đặt lại mã vào giữa khung và bấm Quét lại để thử lại.'
+          ? 'Giữ máy ổn định hơn hoặc lại gần mã QR rồi bấm Quét lại.'
           : 'Bấm Bật camera hoặc Quét lại để bắt đầu.';
 
   const cameraButtonDisabled = (() => {
@@ -167,6 +174,10 @@ export function StudentQRScanner({ onScan, onDebugChange }: Props) {
       cancelAnimationFrame(frameRequest.current);
       frameRequest.current = undefined;
     }
+    if (fallbackArmTimerRef.current) {
+      window.clearTimeout(fallbackArmTimerRef.current);
+      fallbackArmTimerRef.current = undefined;
+    }
 
     try {
       zxingControlsRef.current?.stop();
@@ -218,6 +229,22 @@ export function StudentQRScanner({ onScan, onDebugChange }: Props) {
             : 'Đang quét bằng jsQR dự phòng.',
     });
     frameRequest.current = requestAnimationFrame(tick);
+  }
+
+  function armFallbackLoop(preferredEngine: 'barcode-detector' | 'jsqr', delayMs = FALLBACK_ARM_DELAY_MS) {
+    if (frameRequest.current || (!detectorRef.current && !jsQrDecoderRef.current)) {
+      return;
+    }
+    if (fallbackArmTimerRef.current) {
+      window.clearTimeout(fallbackArmTimerRef.current);
+    }
+    fallbackArmTimerRef.current = window.setTimeout(() => {
+      fallbackArmTimerRef.current = undefined;
+      if (scanStateRef.current !== 'scanning' || submittingRef.current) {
+        return;
+      }
+      startFallbackLoop(preferredEngine);
+    }, delayMs);
   }
 
   async function ensureDecoderReady() {
@@ -377,7 +404,7 @@ export function StudentQRScanner({ onScan, onDebugChange }: Props) {
           });
 
           if (detectorRef.current || jsQrDecoderRef.current) {
-            startFallbackLoop(detectorRef.current ? 'barcode-detector' : 'jsqr');
+            armFallbackLoop(detectorRef.current ? 'barcode-detector' : 'jsqr');
           }
           return;
         } catch (runtimeErr: unknown) {
@@ -552,7 +579,7 @@ export function StudentQRScanner({ onScan, onDebugChange }: Props) {
         });
 
         if (detectorRef.current || jsQrDecoderRef.current) {
-          startFallbackLoop(detectorRef.current ? 'barcode-detector' : 'jsqr');
+          armFallbackLoop(detectorRef.current ? 'barcode-detector' : 'jsqr');
         }
         return;
       } catch (runtimeErr: unknown) {
@@ -626,11 +653,14 @@ export function StudentQRScanner({ onScan, onDebugChange }: Props) {
         now - lastNoResultNoticeAtRef.current >= NO_RESULT_NOTICE_MS &&
         !submittingRef.current
       ) {
+        if (!frameRequest.current && (detectorRef.current || jsQrDecoderRef.current)) {
+          startFallbackLoop(detectorRef.current ? 'barcode-detector' : 'jsqr');
+        }
         lastNoResultNoticeAtRef.current = now;
-        setError('Chưa nhận được mã QR. Đưa mã vào giữa khung, giữ ổn định và lại gần hơn.');
+        setError('Chưa nhận được mã QR. Hãy đưa camera vào mã QR ở khoảng cách gần hơn.');
         reportDebug({
           decoderState: 'timeout',
-          error: 'Chưa nhận được mã QR. Đưa mã vào giữa khung, giữ ổn định và lại gần hơn.',
+          error: 'Chưa nhận được mã QR. Hãy đưa camera vào mã QR ở khoảng cách gần hơn.',
           note: 'Đã quá vài giây nhưng chưa đọc được mã QR.',
         });
       }
@@ -654,15 +684,13 @@ export function StudentQRScanner({ onScan, onDebugChange }: Props) {
     }
 
     decodeCycleRef.current += 1;
-    const useFullFrame = decodeCycleRef.current % 4 === 0;
+    const useFullFrame = decodeCycleRef.current % 2 === 0;
     const cropZoom =
-      decodeCycleRef.current % 6 === 0
-        ? 0.72
-        : decodeCycleRef.current % 5 === 0
-          ? 0.84
-          : decodeCycleRef.current % 2 === 0
-            ? 0.96
-            : 1;
+      decodeCycleRef.current % 5 === 0
+        ? 0.8
+        : decodeCycleRef.current % 3 === 0
+          ? 0.9
+          : 1;
     const frameReady = useFullFrame
       ? drawFullFrame(video, canvas, context)
       : drawCenteredSquareFrame(video, canvas, context, cropZoom);
@@ -678,18 +706,9 @@ export function StudentQRScanner({ onScan, onDebugChange }: Props) {
       processingFrameRef.current = true;
       const elapsed = now - scanStartedAtRef.current;
       const shouldUseAggressiveMode =
-        elapsed <= 3000 || useFullFrame || decodeCycleRef.current % 4 === 0 || elapsed >= 8000;
+        elapsed <= 2500 || useFullFrame || decodeCycleRef.current % 3 === 0 || elapsed >= 6000;
 
       void (async () => {
-        if (runtimeQrScannerFactoryRef.current) {
-          const runtimeDecodedValue = await runtimeQrScannerFactoryRef.current.scanImage(canvas, {
-            alsoTryWithoutScanRegion: shouldUseAggressiveMode,
-          });
-          if (runtimeDecodedValue) {
-            return runtimeDecodedValue;
-          }
-        }
-
         return decodeQrValueFromSource({
           source: canvas,
           barcodeDetector: detectorRef.current,
@@ -712,17 +731,11 @@ export function StudentQRScanner({ onScan, onDebugChange }: Props) {
 
           lastScannedRawRef.current = firstValue;
           reportDebug({
-            decoderEngine: runtimeQrScannerFactoryRef.current
-              ? 'qr-scanner'
-              : detectorRef.current
-                ? 'barcode-detector'
-                : 'jsqr',
+            decoderEngine: detectorRef.current ? 'barcode-detector' : 'jsqr',
             decoderState: 'decoded',
             lastDecodedRaw: firstValue,
             error: null,
-            note: runtimeQrScannerFactoryRef.current
-              ? 'qr-scanner tăng lực đã giải mã QR.'
-              : 'Bộ quét dự phòng đã giải mã QR.',
+            note: 'Bộ quét dự phòng đã giải mã QR.',
           });
           await submitRawValue(firstValue);
         })

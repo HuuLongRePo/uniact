@@ -73,24 +73,22 @@ export async function loadRuntimeQrScannerFactory(): Promise<RuntimeQrScannerFac
               },
               {
                 preferredCamera: 'environment',
-                maxScansPerSecond: 60,
+                maxScansPerSecond: 30,
                 calculateScanRegion: (sourceVideo: HTMLVideoElement) => {
                   const sourceWidth = sourceVideo.videoWidth || sourceVideo.clientWidth || 720;
                   const sourceHeight = sourceVideo.videoHeight || sourceVideo.clientHeight || 720;
-                  const side = Math.max(
-                    220,
-                    Math.floor(Math.min(sourceWidth, sourceHeight) * 0.99)
-                  );
-                  const x = Math.max(0, Math.floor((sourceWidth - side) / 2));
-                  const y = Math.max(0, Math.floor((sourceHeight - side) / 2));
+                  const x = 0;
+                  const y = 0;
+                  const width = Math.max(1, Math.floor(sourceWidth));
+                  const height = Math.max(1, Math.floor(sourceHeight));
 
                   return {
                     x,
                     y,
-                    width: side,
-                    height: side,
-                    downScaledWidth: 1080,
-                    downScaledHeight: 1080,
+                    width,
+                    height,
+                    downScaledWidth: 960,
+                    downScaledHeight: 960,
                   };
                 },
                 returnDetailedScanResult: true,
