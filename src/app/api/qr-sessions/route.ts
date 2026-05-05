@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { dbHelpers, dbAll, dbGet } from '@/lib/database';
+import { dbHelpers, dbAll, dbGet, dbRun } from '@/lib/database';
 import { requireApiRole } from '@/lib/guards';
 import { rateLimit } from '@/lib/rateLimit';
 import { User } from '@/types/database';
@@ -7,6 +7,7 @@ import crypto from 'crypto';
 import { ApiError, errorResponse, successResponse } from '@/lib/api-response';
 import { teacherCanAccessActivity } from '@/lib/activity-access';
 import { sendBulkDatabaseNotifications } from '@/lib/notifications';
+import { resolveRequestNetworkPrefix } from '@/lib/network-proximity';
 
 const MIN_EXPIRES_MINUTES = 1;
 const MAX_EXPIRES_MINUTES = 60;
@@ -16,7 +17,19 @@ const MAX_ALLOWED_SCANS = 5000;
 type SessionOptions = {
   single_use: boolean;
   max_scans: number | null;
+  anti_cheat?: {
+    network_lock: boolean;
+    creator_network_prefix: string | null;
+  };
 };
+
+function generateQrSessionToken() {
+  // Shorter token keeps the displayed QR less dense while still providing
+  // ample entropy for short-lived attendance sessions.
+  const randomHex = crypto.randomBytes(8).toString('hex');
+  const tokenValue = BigInt(`0x${randomHex}`).toString(36).toUpperCase();
+  return tokenValue.padStart(13, '0');
+}
 
 function parseStoredSessionOptions(rawMetadata: unknown): SessionOptions {
   if (!rawMetadata || typeof rawMetadata !== 'string') {
@@ -31,6 +44,13 @@ function parseStoredSessionOptions(rawMetadata: unknown): SessionOptions {
         typeof parsed?.max_scans === 'number' && Number.isFinite(parsed.max_scans)
           ? parsed.max_scans
           : null,
+      anti_cheat: {
+        network_lock: parsed?.anti_cheat?.network_lock !== false,
+        creator_network_prefix:
+          typeof parsed?.anti_cheat?.creator_network_prefix === 'string'
+            ? parsed.anti_cheat.creator_network_prefix
+            : null,
+      },
     };
   } catch {
     return { single_use: false, max_scans: null };
@@ -48,7 +68,7 @@ function parseSessionOptions(body: any): {
 
   if (expiresMinutes < MIN_EXPIRES_MINUTES || expiresMinutes > MAX_EXPIRES_MINUTES) {
     throw ApiError.validation(
-      `expires_minutes phải trong khoảng ${MIN_EXPIRES_MINUTES}-${MAX_EXPIRES_MINUTES}`
+      `expires_minutes phai trong khoang ${MIN_EXPIRES_MINUTES}-${MAX_EXPIRES_MINUTES}`
     );
   }
 
@@ -58,12 +78,12 @@ function parseSessionOptions(body: any): {
   if (body?.max_scans !== undefined && body?.max_scans !== null) {
     const parsedMaxScans = Number(body.max_scans);
     if (!Number.isFinite(parsedMaxScans)) {
-      throw ApiError.validation('max_scans không hợp lệ');
+      throw ApiError.validation('max_scans khong hop le');
     }
 
     maxScans = Math.floor(parsedMaxScans);
     if (maxScans <= 0 || maxScans > MAX_ALLOWED_SCANS) {
-      throw ApiError.validation(`max_scans phải trong khoảng 1-${MAX_ALLOWED_SCANS}`);
+      throw ApiError.validation(`max_scans phai trong khoang 1-${MAX_ALLOWED_SCANS}`);
     }
   }
 
@@ -84,7 +104,6 @@ function parseSessionOptions(body: any): {
 // body: { activity_id: number, expires_minutes?: number }
 export async function POST(request: NextRequest) {
   try {
-    // SECURITY: Rate limit QR session creation (20 per minute per IP)
     const rl = rateLimit(request, 20, 60 * 1000);
     if (!rl.allowed) {
       return errorResponse(new ApiError('RATE_LIMITED', 'Too many QR session requests', 429));
@@ -97,12 +116,28 @@ export async function POST(request: NextRequest) {
       return errorResponse(ApiError.validation('activity_id is required'));
     }
 
-    // Auth + RBAC: require teacher OR admin
     const user = await requireApiRole(request, ['teacher', 'admin']);
 
     const activityId = Number(activity_id);
     if (!Number.isFinite(activityId)) {
-      return errorResponse(ApiError.validation('activity_id không hợp lệ'));
+      return errorResponse(ApiError.validation('activity_id khong hop le'));
+    }
+
+    const creatorNetworkPrefix = resolveRequestNetworkPrefix(request);
+    if (!creatorNetworkPrefix) {
+      return errorResponse(
+        ApiError.validation(
+          'Khong the xac dinh mang lop hoc. Vui long bat lai mang/Wi-Fi roi tao lai phien QR.'
+        )
+      );
+    }
+
+    if (creatorNetworkPrefix === '127.0.0') {
+      return errorResponse(
+        ApiError.validation(
+          'Ban dang tao QR tu localhost/127.0.0.1. De hoc vien cung mang co the diem danh, hay mo he thong bang IP LAN cua may chu (vi du: https://192.168.x.x:3000) roi tao lai phien QR.'
+        )
+      );
     }
 
     const activity = (await dbGet(
@@ -115,22 +150,20 @@ export async function POST(request: NextRequest) {
       | undefined;
 
     if (!activity) {
-      return errorResponse(ApiError.notFound('Không tìm thấy hoạt động'));
+      return errorResponse(ApiError.notFound('Khong tim thay hoat dong'));
     }
 
     if (
       (user as User).role === 'teacher' &&
       !(await teacherCanAccessActivity(Number((user as User).id), activityId))
     ) {
-      return errorResponse(
-        ApiError.forbidden('Bạn chỉ có thể tạo phiên QR cho hoạt động của mình')
-      );
+      return errorResponse(ApiError.forbidden('Ban chi co the tao phien QR cho hoat dong cua minh'));
     }
 
     if (activity.approval_status !== 'approved' || activity.status !== 'published') {
       return errorResponse(
         ApiError.validation(
-          'Chỉ có thể tạo phiên QR cho hoạt động đã được phê duyệt và đang published'
+          'Chi co the tao phien QR cho hoat dong da duoc phe duyet va dang published'
         )
       );
     }
@@ -149,23 +182,42 @@ export async function POST(request: NextRequest) {
       | undefined;
 
     if (existingActiveSession) {
-      return successResponse(
-        {
-          id: existingActiveSession.id,
-          token: existingActiveSession.session_token,
-          session_id: existingActiveSession.id,
-          session_token: existingActiveSession.session_token,
-          expires_at: existingActiveSession.expires_at,
-          options: parseStoredSessionOptions(existingActiveSession.metadata),
-          reused: true,
-        },
-        'Da co phien QR con hieu luc, su dung lai phien hien tai'
+      const existingOptions = parseStoredSessionOptions(existingActiveSession.metadata);
+      const canReuseByNetwork =
+        existingOptions.anti_cheat?.network_lock !== false &&
+        existingOptions.anti_cheat?.creator_network_prefix === creatorNetworkPrefix;
+
+      if (canReuseByNetwork) {
+        return successResponse(
+          {
+            id: existingActiveSession.id,
+            token: existingActiveSession.session_token,
+            session_id: existingActiveSession.id,
+            session_token: existingActiveSession.session_token,
+            expires_at: existingActiveSession.expires_at,
+            options: existingOptions,
+            reused: true,
+          },
+          'Da co phien QR con hieu luc, su dung lai phien hien tai'
+        );
+      }
+
+      // Existing active session from another network is deactivated to prevent remote reuse.
+      await dbRun(
+        `UPDATE qr_sessions
+         SET is_active = 0
+         WHERE id = ?`,
+        [existingActiveSession.id]
       );
     }
 
     const { expiresMinutes, metadata } = parseSessionOptions(body);
+    metadata.anti_cheat = {
+      network_lock: true,
+      creator_network_prefix: creatorNetworkPrefix,
+    };
 
-    const token = crypto.randomBytes(24).toString('hex');
+    const token = generateQrSessionToken();
     const expiresAt = new Date(Date.now() + expiresMinutes * 60 * 1000).toISOString();
 
     const result = await dbHelpers.createQRSession(
@@ -247,23 +299,21 @@ export async function POST(request: NextRequest) {
     );
   } catch (error: any) {
     console.error('QR session creation error:', error);
-    return errorResponse(ApiError.internalError('Lỗi máy chủ nội bộ'));
+    return errorResponse(ApiError.internalError('Loi may chu noi bo'));
   }
 }
 
 // GET /api/qr-sessions - Retrieve QR session history
 export async function GET(request: NextRequest) {
   try {
-    // Auth: require teacher OR admin
     const user = await requireApiRole(request, ['teacher', 'admin']);
 
-    // For teachers, include sessions from activities they can operate on.
     const teacherId = (user as User).id;
     const isAdmin = (user as User).role === 'admin';
 
     const sessions = await dbAll(
       `
-      SELECT 
+      SELECT
         qs.id,
         qs.activity_id,
         qs.session_token,
@@ -316,6 +366,6 @@ export async function GET(request: NextRequest) {
     return successResponse({ sessions: sessionsWithParsedMetadata });
   } catch (error: any) {
     console.error('QR session history error:', error);
-    return errorResponse(ApiError.internalError('Lỗi máy chủ nội bộ'));
+    return errorResponse(ApiError.internalError('Loi may chu noi bo'));
   }
 }

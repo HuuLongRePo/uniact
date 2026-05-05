@@ -1,16 +1,24 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import {
+  ArrowLeft,
+  CheckCircle2,
+  Clock3,
+  Play,
+  QrCode,
+  StopCircle,
+  Users,
+} from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { ArrowLeft, CheckCircle2, Clock, Play, QrCode, StopCircle, Users } from 'lucide-react';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatVietnamDateTime } from '@/lib/timezone';
 
-interface QRSession {
+type QrSession = {
   id: number;
   session_code: string;
   date_time: string;
@@ -18,36 +26,67 @@ interface QRSession {
   status: 'active' | 'ended';
   attendance_count: number;
   duration_minutes: number | null;
-}
+};
 
-interface Activity {
+type Activity = {
   id: number;
   title: string;
   date_time: string;
   location: string;
-}
+};
 
-async function requestQRSessionsData(activityId: string) {
+async function requestQrSessionsData(activityId: string) {
   const [activityRes, sessionsRes] = await Promise.all([
     fetch(`/api/activities/${activityId}`),
     fetch(`/api/activities/${activityId}/qr-sessions`),
   ]);
 
   if (!activityRes.ok) {
-    throw new Error('Không tìm thấy hoạt động');
+    throw new Error('Khong tim thay hoat dong');
   }
 
-  const activityData = await activityRes.json();
-  const sessionsData = sessionsRes.ok ? await sessionsRes.json() : null;
+  const activityJson = await activityRes.json();
+  const sessionsJson = sessionsRes.ok ? await sessionsRes.json() : null;
 
   return {
     activity:
-      activityData.activity ?? activityData.data?.activity ?? activityData.data ?? activityData,
-    sessions: sessionsData?.sessions ?? sessionsData?.data?.sessions ?? [],
+      activityJson?.activity ??
+      activityJson?.data?.activity ??
+      activityJson?.data ??
+      activityJson,
+    sessions: sessionsJson?.sessions ?? sessionsJson?.data?.sessions ?? [],
   };
 }
 
-export default function QRSessionsPage() {
+function formatDuration(minutes: number | null) {
+  if (!minutes) return 'Chua dong phien';
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  if (hours > 0) {
+    return `${hours}h ${mins}m`;
+  }
+  return `${mins} phut`;
+}
+
+function getStatusBadge(status: QrSession['status']) {
+  if (status === 'active') {
+    return (
+      <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+        <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" />
+        Dang hoat dong
+      </span>
+    );
+  }
+
+  return (
+    <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700">
+      <StopCircle className="h-3.5 w-3.5" />
+      Da ket thuc
+    </span>
+  );
+}
+
+export default function TeacherQrSessionsPage() {
   const router = useRouter();
   const params = useParams();
   const activityId = params.id as string;
@@ -55,8 +94,8 @@ export default function QRSessionsPage() {
 
   const [loading, setLoading] = useState(true);
   const [activity, setActivity] = useState<Activity | null>(null);
-  const [sessions, setSessions] = useState<QRSession[]>([]);
-  const [sessionToEnd, setSessionToEnd] = useState<QRSession | null>(null);
+  const [sessions, setSessions] = useState<QrSession[]>([]);
+  const [sessionToEnd, setSessionToEnd] = useState<QrSession | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -64,90 +103,48 @@ export default function QRSessionsPage() {
       return;
     }
 
-    if (user?.role !== 'teacher' && user?.role !== 'admin') {
-      toast.error('Chỉ giảng viên mới có quyền xem trang này');
+    if (user && user.role !== 'teacher' && user.role !== 'admin') {
+      toast.error('Chi giang vien moi co quyen quan ly QR');
       router.push('/teacher/dashboard');
       return;
     }
 
-    if (!user) return;
-
-    void (async () => {
-      try {
-        setLoading(true);
-        const data = await requestQRSessionsData(activityId);
-        setActivity(data.activity);
-        setSessions(data.sessions);
-      } catch (error: unknown) {
-        console.error('Error fetching QR sessions data:', error);
-        toast.error(error instanceof Error ? error.message : 'Không thể tải dữ liệu');
-      } finally {
-        setLoading(false);
-      }
-    })();
+    if (user && activityId) {
+      void fetchData();
+    }
   }, [activityId, authLoading, router, user]);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await requestQRSessionsData(activityId);
+      const data = await requestQrSessionsData(activityId);
       setActivity(data.activity);
       setSessions(data.sessions);
     } catch (error: unknown) {
-      console.error('Error fetching data:', error);
-      toast.error(error instanceof Error ? error.message : 'Không thể tải dữ liệu');
+      console.error('Error fetching QR sessions data:', error);
+      toast.error(error instanceof Error ? error.message : 'Khong the tai du lieu QR');
+      setActivity(null);
     } finally {
       setLoading(false);
     }
-  };
+  }, [activityId]);
 
   const handleEndSession = async (sessionId: number) => {
     try {
       const response = await fetch(`/api/qr-sessions/${sessionId}/end`, {
         method: 'POST',
       });
-
+      const payload = await response.json().catch(() => null);
       if (!response.ok) {
-        throw new Error('Không thể kết thúc phiên QR');
+        throw new Error(payload?.error || payload?.message || 'Khong the ket thuc phien QR');
       }
 
-      toast.success('Đã kết thúc phiên QR');
+      toast.success(payload?.message || 'Da ket thuc phien QR');
       await fetchData();
-    } catch (error) {
-      console.error('Error ending session:', error);
-      toast.error('Không thể kết thúc phiên QR');
+    } catch (error: unknown) {
+      console.error('Error ending QR session:', error);
+      toast.error(error instanceof Error ? error.message : 'Khong the ket thuc phien QR');
     }
-  };
-
-  const formatDuration = (minutes: number | null) => {
-    if (!minutes) return '-';
-
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-
-    if (hours > 0) {
-      return `${hours}h ${mins}m`;
-    }
-
-    return `${mins} phút`;
-  };
-
-  const getStatusBadge = (status: 'active' | 'ended') => {
-    if (status === 'active') {
-      return (
-        <span className="flex w-fit items-center gap-1 rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-800 animate-pulse">
-          <span className="h-2 w-2 rounded-full bg-green-600"></span>
-          Đang hoạt động
-        </span>
-      );
-    }
-
-    return (
-      <span className="flex w-fit items-center gap-1 rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-800">
-        <StopCircle className="h-3 w-3" />
-        Đã kết thúc
-      </span>
-    );
   };
 
   if (authLoading || loading) {
@@ -156,8 +153,12 @@ export default function QRSessionsPage() {
 
   if (!activity) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50">
-        <p className="text-gray-600">Không tìm thấy hoạt động</p>
+      <div className="page-shell">
+        <div className="mx-auto max-w-6xl p-6">
+          <div className="rounded-[1.5rem] border border-rose-200 bg-rose-50 p-5 text-rose-900">
+            Khong tim thay hoat dong de quan ly phien QR.
+          </div>
+        </div>
       </div>
     );
   }
@@ -166,220 +167,209 @@ export default function QRSessionsPage() {
   const totalAttendance = sessions.reduce((sum, session) => sum + session.attendance_count, 0);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mb-6">
-          <button
-            onClick={() => router.back()}
-            className="mb-4 flex items-center text-blue-600 hover:text-blue-700"
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Quay lại
-          </button>
-
-          <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="flex items-center gap-2 text-2xl font-bold text-gray-900">
-                  <QrCode className="h-6 w-6 text-purple-600" />
-                  Lịch sử phiên QR
-                </h1>
-                <p className="mt-2 text-gray-600">{activity.title}</p>
-                <div className="mt-2 flex items-center gap-4 text-sm text-gray-500">
-                  <span>📅 {formatVietnamDateTime(activity.date_time, 'date')}</span>
-                  <span>📍 {activity.location || 'Chưa cập nhật'}</span>
-                </div>
-              </div>
-
+    <div className="page-shell">
+      <div className="mx-auto max-w-7xl space-y-6">
+        <section className="page-surface rounded-[1.75rem] px-5 py-6 sm:px-7">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+            <div className="max-w-3xl">
               <Link
-                href={`/teacher/qr?activity_id=${activityId}`}
-                className="flex items-center gap-2 rounded-lg bg-purple-600 px-6 py-3 text-white transition-colors hover:bg-purple-700"
+                href={`/teacher/activities/${activityId}`}
+                className="mb-4 inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-700"
               >
-                <Play className="h-5 w-5" />
-                Tạo phiên mới
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Quay lai hub hoat dong
               </Link>
+
+              <div className="inline-flex rounded-full bg-violet-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-violet-700">
+                QR sessions
+              </div>
+              <h1 className="mt-3 text-3xl font-bold text-slate-900">Lich su phien QR</h1>
+              <p className="mt-2 text-sm text-slate-600">
+                Theo doi cac dot mo QR, luot check-in va dong phien ngay tai hoat dong hien tai.
+              </p>
+              <div className="mt-4 flex flex-wrap gap-3 text-sm text-slate-600">
+                <span>{activity.title}</span>
+                <span>{formatVietnamDateTime(activity.date_time, 'date')}</span>
+                <span>{activity.location || 'Chua cap nhat dia diem'}</span>
+              </div>
+            </div>
+
+            <Link
+              href={`/teacher/qr?activity_id=${activityId}`}
+              className="inline-flex items-center justify-center gap-2 rounded-[1rem] bg-violet-600 px-5 py-3 text-sm font-semibold text-white hover:bg-violet-700"
+            >
+              <Play className="h-4 w-4" />
+              Tao phien moi
+            </Link>
+          </div>
+        </section>
+
+        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="page-surface rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Tong phien</div>
+            <div className="mt-2 text-2xl font-bold text-slate-900">{sessions.length}</div>
+          </div>
+          <div className="page-surface rounded-[1.5rem] border border-emerald-200 bg-emerald-50 p-4 shadow-sm">
+            <div className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Dang mo</div>
+            <div className="mt-2 text-2xl font-bold text-slate-900">{activeSessions.length}</div>
+          </div>
+          <div className="page-surface rounded-[1.5rem] border border-violet-200 bg-violet-50 p-4 shadow-sm">
+            <div className="text-xs font-semibold uppercase tracking-wide text-violet-700">Tong check-in</div>
+            <div className="mt-2 text-2xl font-bold text-slate-900">{totalAttendance}</div>
+          </div>
+          <div className="page-surface rounded-[1.5rem] border border-sky-200 bg-sky-50 p-4 shadow-sm">
+            <div className="text-xs font-semibold uppercase tracking-wide text-sky-700">Trang thai hub</div>
+            <div className="mt-2 text-2xl font-bold text-slate-900">
+              {activeSessions.length > 0 ? 'Live' : 'Idle'}
             </div>
           </div>
-        </div>
+        </section>
 
-        <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
-          <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-            <div className="mb-1 text-sm text-gray-600">Tổng số phiên</div>
-            <div className="text-3xl font-bold text-blue-600">{sessions.length}</div>
+        <section className="page-surface rounded-[1.75rem] px-5 py-6 sm:px-7">
+          <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-xl font-semibold text-slate-900">Danh sach phien QR</h2>
+              <p className="mt-1 text-sm text-slate-600">
+                Moi phien chi nen mo khi dang diem danh va dong lai ngay sau khi ket thuc.
+              </p>
+            </div>
+            <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-700">
+              {sessions.length} phien
+            </div>
           </div>
-          <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-            <div className="mb-1 text-sm text-gray-600">Phiên đang hoạt động</div>
-            <div className="text-3xl font-bold text-green-600">{activeSessions.length}</div>
-          </div>
-          <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-            <div className="mb-1 text-sm text-gray-600">Tổng lượt điểm danh</div>
-            <div className="text-3xl font-bold text-purple-600">{totalAttendance}</div>
-          </div>
-        </div>
 
-        <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
-          <div className="p-6">
-            <h3 className="mb-4 text-lg font-semibold text-gray-900">
-              Danh sách phiên QR ({sessions.length})
-            </h3>
-
-            {sessions.length === 0 ? (
-              <div className="py-12 text-center">
-                <QrCode className="mx-auto mb-4 h-16 w-16 text-gray-400" />
-                <p className="mb-2 text-lg text-gray-600">Chưa có phiên QR nào</p>
-                <p className="mb-6 text-sm text-gray-500">
-                  Tạo phiên QR mới để bắt đầu điểm danh bằng mã QR.
-                </p>
-                <Link
-                  href={`/teacher/qr?activity_id=${activityId}`}
-                  className="inline-flex items-center gap-2 rounded-lg bg-purple-600 px-6 py-3 text-white transition-colors hover:bg-purple-700"
+          {sessions.length === 0 ? (
+            <div className="rounded-[1.5rem] border border-dashed border-slate-300 bg-slate-50 px-4 py-10 text-center">
+              <QrCode className="mx-auto h-12 w-12 text-slate-400" />
+              <div className="mt-4 text-lg font-semibold text-slate-700">Chua co phien QR nao</div>
+              <p className="mt-2 text-sm text-slate-500">
+                Tao phien dau tien de bat dau check-in bang camera web hoac dien thoai.
+              </p>
+              <Link
+                href={`/teacher/qr?activity_id=${activityId}`}
+                className="mt-5 inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700"
+              >
+                <Play className="h-4 w-4" />
+                Tao phien QR dau tien
+              </Link>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {sessions.map((session) => (
+                <article
+                  key={session.id}
+                  className={`rounded-[1.5rem] border p-4 transition ${
+                    session.status === 'active'
+                      ? 'border-emerald-300 bg-emerald-50'
+                      : 'border-slate-200 bg-white hover:bg-slate-50'
+                  }`}
                 >
-                  <Play className="h-5 w-5" />
-                  Tạo phiên QR đầu tiên
-                </Link>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {sessions.map((session) => (
-                  <div
-                    key={session.id}
-                    className={`rounded-lg border p-5 transition-all ${
-                      session.status === 'active'
-                        ? 'border-green-300 bg-green-50'
-                        : 'border-gray-200 bg-white'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="mb-3 flex items-center gap-3">
-                          <div
-                            className={`rounded-lg p-3 ${
-                              session.status === 'active' ? 'bg-green-100' : 'bg-gray-100'
-                            }`}
-                          >
-                            <QrCode
-                              className={`h-6 w-6 ${
-                                session.status === 'active' ? 'text-green-600' : 'text-gray-600'
-                              }`}
-                            />
-                          </div>
-                          <div>
-                            <div className="mb-1 flex items-center gap-3">
-                              <h4 className="text-lg font-semibold text-gray-900">
-                                Mã phiên: {session.session_code}
-                              </h4>
-                              {getStatusBadge(session.status)}
-                            </div>
-                            <p className="text-sm text-gray-600">Phiên #{session.id}</p>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-                          <div className="flex items-center gap-2">
-                            <Play className="h-4 w-4 text-gray-500" />
-                            <div>
-                              <div className="text-xs text-gray-500">Bắt đầu</div>
-                              <div className="text-sm font-medium text-gray-900">
-                                {formatVietnamDateTime(session.date_time)}
-                              </div>
-                            </div>
-                          </div>
-
-                          {session.end_time && (
-                            <div className="flex items-center gap-2">
-                              <StopCircle className="h-4 w-4 text-gray-500" />
-                              <div>
-                                <div className="text-xs text-gray-500">Kết thúc</div>
-                                <div className="text-sm font-medium text-gray-900">
-                                  {formatVietnamDateTime(session.end_time)}
-                                </div>
-                              </div>
-                            </div>
-                          )}
-
-                          <div className="flex items-center gap-2">
-                            <Clock className="h-4 w-4 text-gray-500" />
-                            <div>
-                              <div className="text-xs text-gray-500">Thời lượng</div>
-                              <div className="text-sm font-medium text-gray-900">
-                                {formatDuration(session.duration_minutes)}
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-2">
-                            <Users className="h-4 w-4 text-gray-500" />
-                            <div>
-                              <div className="text-xs text-gray-500">Lượt điểm danh</div>
-                              <div className="text-sm font-medium text-purple-600">
-                                {session.attendance_count}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
+                  <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                    <div className="flex items-start gap-3">
+                      <div
+                        className={`rounded-2xl p-3 ${
+                          session.status === 'active' ? 'bg-emerald-100' : 'bg-slate-100'
+                        }`}
+                      >
+                        <QrCode
+                          className={`h-5 w-5 ${
+                            session.status === 'active' ? 'text-emerald-700' : 'text-slate-700'
+                          }`}
+                        />
                       </div>
 
-                      <div className="ml-4 flex flex-col gap-2">
-                        {session.status === 'active' ? (
-                          <>
-                            <Link
-                              href={`/teacher/qr?activity_id=${activityId}&tab=history`}
-                              className="flex items-center gap-2 whitespace-nowrap rounded-lg bg-green-600 px-4 py-2 text-sm text-white transition-colors hover:bg-green-700"
-                            >
-                              <QrCode className="h-4 w-4" />
-                              Xem QR
-                            </Link>
-                            <button
-                              onClick={() => setSessionToEnd(session)}
-                              className="flex items-center gap-2 whitespace-nowrap rounded-lg bg-red-600 px-4 py-2 text-sm text-white transition-colors hover:bg-red-700"
-                            >
-                              <StopCircle className="h-4 w-4" />
-                              Kết thúc
-                            </button>
-                          </>
-                        ) : (
-                          <div className="flex items-center gap-2 rounded-lg bg-gray-100 px-4 py-2 text-sm text-gray-600">
-                            <CheckCircle2 className="h-4 w-4" />
-                            Hoàn thành
+                      <div>
+                        <div className="flex flex-wrap items-center gap-3">
+                          <h3 className="text-lg font-semibold text-slate-900">
+                            Ma phien: {session.session_code}
+                          </h3>
+                          {getStatusBadge(session.status)}
+                        </div>
+                        <p className="mt-1 text-sm text-slate-500">Session #{session.id}</p>
+                        <div className="mt-3 grid gap-3 text-sm text-slate-600 sm:grid-cols-2 xl:grid-cols-4">
+                          <div className="rounded-xl bg-white/80 px-4 py-3">
+                            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                              Bat dau
+                            </div>
+                            <div className="mt-2 font-medium text-slate-800">
+                              {formatVietnamDateTime(session.date_time)}
+                            </div>
                           </div>
-                        )}
+                          <div className="rounded-xl bg-white/80 px-4 py-3">
+                            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                              Ket thuc
+                            </div>
+                            <div className="mt-2 font-medium text-slate-800">
+                              {session.end_time
+                                ? formatVietnamDateTime(session.end_time)
+                                : 'Dang mo phien'}
+                            </div>
+                          </div>
+                          <div className="rounded-xl bg-white/80 px-4 py-3">
+                            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                              Thoi luong
+                            </div>
+                            <div className="mt-2 inline-flex items-center gap-2 font-medium text-slate-800">
+                              <Clock3 className="h-4 w-4" />
+                              {formatDuration(session.duration_minutes)}
+                            </div>
+                          </div>
+                          <div className="rounded-xl bg-white/80 px-4 py-3">
+                            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                              Luot check-in
+                            </div>
+                            <div className="mt-2 inline-flex items-center gap-2 font-medium text-slate-800">
+                              <Users className="h-4 w-4" />
+                              {session.attendance_count}
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
 
-        {sessions.length > 0 && (
-          <div className="mt-6 rounded-lg border border-blue-200 bg-blue-50 p-4">
-            <h4 className="mb-2 flex items-center gap-2 font-semibold text-blue-900">
-              <QrCode className="h-5 w-5" />
-              Thông tin về phiên QR
-            </h4>
-            <ul className="space-y-1 text-sm text-blue-800">
-              <li>• Mỗi phiên QR có mã duy nhất để học viên quét và điểm danh.</li>
-              <li>
-                • Phiên đang hoạt động sẽ hiển thị mã QR động và cập nhật theo thời gian thực.
-              </li>
-              <li>• Kết thúc phiên khi hoàn tất điểm danh để tránh ghi nhận nhầm.</li>
-              <li>• Có thể tạo nhiều phiên cho cùng một hoạt động nếu cần chia đợt.</li>
-            </ul>
-          </div>
-        )}
+                    <div className="flex flex-wrap gap-2 xl:w-[17rem] xl:justify-end">
+                      {session.status === 'active' ? (
+                        <>
+                          <Link
+                            href={`/teacher/qr?activity_id=${activityId}&tab=history`}
+                            className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
+                          >
+                            <QrCode className="h-4 w-4" />
+                            Xem man QR
+                          </Link>
+                          <button
+                            onClick={() => setSessionToEnd(session)}
+                            className="inline-flex items-center gap-2 rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700"
+                          >
+                            <StopCircle className="h-4 w-4" />
+                            Dong phien
+                          </button>
+                        </>
+                      ) : (
+                        <div className="inline-flex items-center gap-2 rounded-xl bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700">
+                          <CheckCircle2 className="h-4 w-4" />
+                          Phien da hoan tat
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
       </div>
 
       <ConfirmDialog
         isOpen={sessionToEnd !== null}
-        title="Kết thúc phiên QR"
+        title="Ket thuc phien QR"
         message={
           sessionToEnd
-            ? `Bạn có chắc chắn muốn kết thúc phiên QR "${sessionToEnd.session_code}"? Sau khi kết thúc, học viên sẽ không thể tiếp tục điểm danh vào phiên này.`
+            ? `Ban co chac chan muon ket thuc phien QR "${sessionToEnd.session_code}"? Sau khi dong phien, hoc vien se khong the tiep tuc check-in vao ma nay.`
             : ''
         }
-        confirmText="Kết thúc phiên"
-        cancelText="Hủy"
+        confirmText="Ket thuc phien"
+        cancelText="Huy"
         variant="danger"
         onCancel={() => setSessionToEnd(null)}
         onConfirm={async () => {

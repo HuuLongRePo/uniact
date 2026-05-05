@@ -1,27 +1,25 @@
 'use client';
 
+import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
-import { useRouter, useParams } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
-import LoadingSpinner from '@/components/LoadingSpinner';
-import { toast } from 'react-hot-toast';
+import { useParams, useRouter } from 'next/navigation';
 import {
   ArrowLeft,
-  Calendar,
-  Filter,
+  CalendarClock,
   Download,
-  CheckCircle2,
-  XCircle,
-  Clock,
-  AlertCircle,
+  Filter,
+  Search,
 } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import LoadingSpinner from '@/components/LoadingSpinner';
+import toast from 'react-hot-toast';
 import { formatDate } from '@/lib/formatters';
 import { resolveDownloadFilename } from '@/lib/download-filename';
 import { parseVietnamDate, toVietnamDateStamp } from '@/lib/timezone';
 
 type AttendanceStatus = 'present' | 'absent' | 'late' | 'excused';
 
-interface AttendanceRecord {
+type AttendanceRecord = {
   id: number;
   student_id: number;
   student_name: string;
@@ -31,16 +29,30 @@ interface AttendanceRecord {
   status: AttendanceStatus;
   check_in_time: string;
   notes: string | null;
-}
+};
 
-interface Activity {
+type Activity = {
   id: number;
   title: string;
   date_time: string;
   location: string;
+};
+
+function getStatusLabel(status: AttendanceStatus) {
+  if (status === 'present') return 'Có mặt';
+  if (status === 'absent') return 'Vắng mặt';
+  if (status === 'late') return 'Đi muộn';
+  return 'Có phép';
 }
 
-export default function AttendanceHistoryPage() {
+function getStatusClasses(status: AttendanceStatus) {
+  if (status === 'present') return 'border-emerald-200 bg-emerald-50 text-emerald-800';
+  if (status === 'absent') return 'border-rose-200 bg-rose-50 text-rose-800';
+  if (status === 'late') return 'border-amber-200 bg-amber-50 text-amber-800';
+  return 'border-sky-200 bg-sky-50 text-sky-800';
+}
+
+export default function TeacherAttendanceHistoryPage() {
   const router = useRouter();
   const params = useParams();
   const activityId = params.id as string;
@@ -49,8 +61,6 @@ export default function AttendanceHistoryPage() {
   const [loading, setLoading] = useState(true);
   const [activity, setActivity] = useState<Activity | null>(null);
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
-  const [filteredRecords, setFilteredRecords] = useState<AttendanceRecord[]>([]);
-
   const [filterStatus, setFilterStatus] = useState<'all' | AttendanceStatus>('all');
   const [filterClass, setFilterClass] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -63,148 +73,116 @@ export default function AttendanceHistoryPage() {
       return;
     }
 
-    if (user?.role !== 'teacher' && user?.role !== 'admin') {
-      toast.error('Chỉ giảng viên mới có quyền xem trang này');
+    if (user && user.role !== 'teacher' && user.role !== 'admin') {
+      toast.error('Chỉ giảng viên mới có quyền xem lịch sử điểm danh');
       router.push('/teacher/dashboard');
       return;
     }
 
-    if (user) {
-      fetchData();
+    if (user && activityId) {
+      void fetchData();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, authLoading, activityId, router]);
-
-  useEffect(() => {
-    applyFilters();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [records, filterStatus, filterClass, searchTerm, sortBy, sortOrder]);
+  }, [activityId, authLoading, router, user]);
 
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
 
-      // Fetch activity
       const activityRes = await fetch(`/api/activities/${activityId}`);
-      if (!activityRes.ok) throw new Error('Activity not found');
-      const activityData = await activityRes.json();
-      setActivity(activityData?.activity ?? activityData?.data?.activity ?? activityData);
-
-      // Fetch attendance records
-      const attendanceRes = await fetch(`/api/activities/${activityId}/attendance`);
-      if (attendanceRes.ok) {
-        const data = await attendanceRes.json();
-        setRecords(data.records || []);
+      if (!activityRes.ok) {
+        throw new Error('Không thể tải hoạt động');
       }
-    } catch (caught: unknown) {
-      const error = caught as { message?: string };
-      console.error('Error fetching data:', caught);
-      toast.error(error.message || 'Không thể tải dữ liệu');
+      const activityJson = await activityRes.json();
+      setActivity(activityJson?.activity ?? activityJson?.data?.activity ?? activityJson);
+
+      const attendanceRes = await fetch(`/api/activities/${activityId}/attendance`);
+      if (!attendanceRes.ok) {
+        throw new Error('Không thể tải lịch sử điểm danh');
+      }
+
+      const attendanceJson = await attendanceRes.json();
+      setRecords(attendanceJson?.records ?? attendanceJson?.data?.records ?? []);
+    } catch (error: unknown) {
+      console.error('Error fetching attendance history:', error);
+      toast.error(error instanceof Error ? error.message : 'Không thể tải lịch sử điểm danh');
+      setActivity(null);
     } finally {
       setLoading(false);
     }
   }, [activityId]);
 
-  const applyFilters = () => {
-    let filtered = [...records];
+  const filteredRecords = [...records]
+    .filter((record) => {
+      if (filterStatus !== 'all' && record.status !== filterStatus) {
+        return false;
+      }
 
-    // Filter by status
-    if (filterStatus !== 'all') {
-      filtered = filtered.filter((r) => r.status === filterStatus);
-    }
+      if (filterClass && record.class_name !== filterClass) {
+        return false;
+      }
 
-    // Filter by class
-    if (filterClass) {
-      filtered = filtered.filter((r) => r.class_name === filterClass);
-    }
+      if (searchTerm) {
+        const query = searchTerm.toLowerCase();
+        const matchesSearch =
+          record.student_name.toLowerCase().includes(query) ||
+          record.student_email.toLowerCase().includes(query) ||
+          (record.student_code || '').toLowerCase().includes(query);
 
-    // Filter by search term
-    if (searchTerm) {
-      filtered = filtered.filter(
-        (r) =>
-          r.student_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          r.student_email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          (r.student_code && r.student_code.toLowerCase().includes(searchTerm.toLowerCase()))
-      );
-    }
+        if (!matchesSearch) return false;
+      }
 
-    // Sort
-    filtered.sort((a, b) => {
-      let aVal: string | number = '';
-      let bVal: string | number = '';
+      return true;
+    })
+    .sort((left, right) => {
+      let leftValue: string | number = '';
+      let rightValue: string | number = '';
 
       if (sortBy === 'name') {
-        aVal = a.student_name.toLowerCase();
-        bVal = b.student_name.toLowerCase();
-      } else if (sortBy === 'time') {
-        aVal = parseVietnamDate(a.check_in_time)?.getTime() ?? 0;
-        bVal = parseVietnamDate(b.check_in_time)?.getTime() ?? 0;
+        leftValue = left.student_name.toLowerCase();
+        rightValue = right.student_name.toLowerCase();
+      } else if (sortBy === 'status') {
+        leftValue = left.status;
+        rightValue = right.status;
       } else {
-        aVal = a.status;
-        bVal = b.status;
+        leftValue = parseVietnamDate(left.check_in_time)?.getTime() ?? 0;
+        rightValue = parseVietnamDate(right.check_in_time)?.getTime() ?? 0;
       }
 
       if (sortOrder === 'asc') {
-        return aVal > bVal ? 1 : -1;
+        return leftValue > rightValue ? 1 : -1;
       }
-      return aVal < bVal ? 1 : -1;
+
+      return leftValue < rightValue ? 1 : -1;
     });
 
-    setFilteredRecords(filtered);
-  };
+  const presentCount = records.filter((record) => record.status === 'present').length;
+  const absentCount = records.filter((record) => record.status === 'absent').length;
+  const lateCount = records.filter((record) => record.status === 'late').length;
+  const excusedCount = records.filter((record) => record.status === 'excused').length;
+  const availableClasses = Array.from(new Set(records.map((record) => record.class_name).filter(Boolean)));
 
   const handleExport = async () => {
     try {
       const response = await fetch(`/api/activities/${activityId}/attendance/export`);
-      if (!response.ok) throw new Error('Export failed');
+      if (!response.ok) {
+        throw new Error('Không thể xuất tệp điểm danh');
+      }
 
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = resolveDownloadFilename(
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = resolveDownloadFilename(
         response.headers.get('Content-Disposition'),
-        `dau-danh-${activityId}-${toVietnamDateStamp(new Date())}.xlsx`
+        `attendance-history-${activityId}-${toVietnamDateStamp(new Date())}.xlsx`
       );
-      a.click();
+      anchor.click();
       window.URL.revokeObjectURL(url);
-      toast.success('Đã xuất file thành công');
-    } catch (error) {
-      console.error('Error exporting:', error);
-      toast.error('Không thể xuất file');
+      toast.success('Đã xuất tệp điểm danh');
+    } catch (error: unknown) {
+      console.error('Error exporting attendance history:', error);
+      toast.error(error instanceof Error ? error.message : 'Không thể xuất tệp');
     }
-  };
-
-  const getStatusBadge = (status: AttendanceStatus) => {
-    const styles = {
-      present: 'bg-green-100 text-green-800 border-green-300',
-      absent: 'bg-red-100 text-red-800 border-red-300',
-      late: 'bg-yellow-100 text-yellow-800 border-yellow-300',
-      excused: 'bg-blue-100 text-blue-800 border-blue-300',
-    };
-
-    const icons = {
-      present: <CheckCircle2 className="w-4 h-4" />,
-      absent: <XCircle className="w-4 h-4" />,
-      late: <Clock className="w-4 h-4" />,
-      excused: <AlertCircle className="w-4 h-4" />,
-    };
-
-    const labels = {
-      present: 'Có mặt',
-      absent: 'Vắng',
-      late: 'Muộn',
-      excused: 'Có phép',
-    };
-
-    return (
-      <span
-        className={`px-3 py-1 rounded-full text-xs font-medium border flex items-center gap-1 w-fit ${styles[status]}`}
-      >
-        {icons[status]}
-        {labels[status]}
-      </span>
-    );
   };
 
   if (authLoading || loading) {
@@ -213,100 +191,102 @@ export default function AttendanceHistoryPage() {
 
   if (!activity) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <p className="text-gray-600">Không tìm thấy hoạt động</p>
+      <div className="page-shell">
+        <div className="mx-auto max-w-6xl p-6">
+          <div className="rounded-[1.5rem] border border-rose-200 bg-rose-50 p-5 text-rose-900">
+            Không tìm thấy hoạt động để xem lịch sử điểm danh.
+          </div>
+        </div>
       </div>
     );
   }
 
-  const presentCount = records.filter((r) => r.status === 'present').length;
-  const absentCount = records.filter((r) => r.status === 'absent').length;
-  const lateCount = records.filter((r) => r.status === 'late').length;
-  const excusedCount = records.filter((r) => r.status === 'excused').length;
-
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="mb-6">
-          <button
-            onClick={() => router.back()}
-            className="flex items-center text-blue-600 hover:text-blue-700 mb-4"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Quay lại
-          </button>
-
-          <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                  <Calendar className="w-6 h-6 text-blue-600" />
-                  Lịch sử điểm danh
-                </h1>
-                <p className="text-gray-600 mt-2">{activity.title}</p>
-                <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
-                  <span>📅 {formatDate(activity.date_time, 'date')}</span>
-                  <span>📍 {activity.location}</span>
-                </div>
-              </div>
-              <button
-                onClick={handleExport}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+    <div className="page-shell">
+      <div className="mx-auto max-w-7xl space-y-6">
+        <section className="page-surface rounded-[1.75rem] px-5 py-6 sm:px-7">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+            <div className="max-w-3xl">
+              <Link
+                href={`/teacher/activities/${activityId}`}
+                className="mb-4 inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-700"
               >
-                <Download className="w-4 h-4" />
-                Xuất CSV
-              </button>
-            </div>
-          </div>
-        </div>
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Quay lại hub hoạt động
+              </Link>
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-          <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
-            <div className="text-sm text-gray-600 mb-1">Tổng số</div>
-            <div className="text-3xl font-bold text-blue-600">{records.length}</div>
-          </div>
-          <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
-            <div className="text-sm text-gray-600 mb-1">Có mặt</div>
-            <div className="text-3xl font-bold text-green-600">{presentCount}</div>
-          </div>
-          <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
-            <div className="text-sm text-gray-600 mb-1">Vắng</div>
-            <div className="text-3xl font-bold text-red-600">{absentCount}</div>
-          </div>
-          <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
-            <div className="text-sm text-gray-600 mb-1">Muộn</div>
-            <div className="text-3xl font-bold text-yellow-600">{lateCount}</div>
-          </div>
-          <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
-            <div className="text-sm text-gray-600 mb-1">Có phép</div>
-            <div className="text-3xl font-bold text-blue-600">{excusedCount}</div>
-          </div>
-        </div>
-
-        {/* Filters */}
-        <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Tìm kiếm</label>
-              <input
-                type="text"
-                placeholder="Tên, email, mã SV..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
+              <div className="inline-flex rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-700">
+                Lịch sử điểm danh
+              </div>
+              <h1 className="mt-3 text-3xl font-bold text-slate-900">Lịch sử điểm danh</h1>
+              <p className="mt-2 text-sm text-slate-600">
+                Theo dõi nhật ký điểm danh, lọc theo danh sách và xuất tệp tổng hợp khi cần.
+              </p>
+              <div className="mt-4 flex flex-wrap gap-3 text-sm text-slate-600">
+                <span>{activity.title}</span>
+                <span>{formatDate(activity.date_time)}</span>
+                <span>{activity.location}</span>
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <Filter className="inline w-4 h-4 mr-1" />
+
+            <button
+              onClick={handleExport}
+              className="inline-flex items-center justify-center gap-2 rounded-[1rem] bg-emerald-600 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-700"
+            >
+              <Download className="h-4 w-4" />
+              Xuất tệp
+            </button>
+          </div>
+        </section>
+
+        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+          <div className="page-surface rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Tổng bản ghi</div>
+            <div className="mt-2 text-2xl font-bold text-slate-900">{records.length}</div>
+          </div>
+          <div className="page-surface rounded-[1.5rem] border border-emerald-200 bg-emerald-50 p-4 shadow-sm">
+            <div className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Có mặt</div>
+            <div className="mt-2 text-2xl font-bold text-slate-900">{presentCount}</div>
+          </div>
+          <div className="page-surface rounded-[1.5rem] border border-rose-200 bg-rose-50 p-4 shadow-sm">
+            <div className="text-xs font-semibold uppercase tracking-wide text-rose-700">Vắng mặt</div>
+            <div className="mt-2 text-2xl font-bold text-slate-900">{absentCount}</div>
+          </div>
+          <div className="page-surface rounded-[1.5rem] border border-amber-200 bg-amber-50 p-4 shadow-sm">
+            <div className="text-xs font-semibold uppercase tracking-wide text-amber-700">Đi muộn</div>
+            <div className="mt-2 text-2xl font-bold text-slate-900">{lateCount}</div>
+          </div>
+          <div className="page-surface rounded-[1.5rem] border border-sky-200 bg-sky-50 p-4 shadow-sm">
+            <div className="text-xs font-semibold uppercase tracking-wide text-sky-700">Có phép</div>
+            <div className="mt-2 text-2xl font-bold text-slate-900">{excusedCount}</div>
+          </div>
+        </section>
+
+        <section className="page-surface rounded-[1.75rem] px-5 py-6 sm:px-7">
+          <div className="grid gap-4 xl:grid-cols-4">
+            <label className="block">
+              <span className="mb-2 block text-sm font-medium text-slate-700">Tìm kiếm</span>
+              <span className="relative block">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(event) => setSearchTerm(event.target.value)}
+                  placeholder="Tên, email, mã học viên"
+                  className="w-full rounded-xl border border-slate-300 bg-white px-10 py-2.5 text-sm text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                />
+              </span>
+            </label>
+
+            <label className="block">
+              <span className="mb-2 block text-sm font-medium text-slate-700">
+                <Filter className="mr-1 inline h-4 w-4" />
                 Trạng thái
-              </label>
+              </span>
               <select
                 value={filterStatus}
-                onChange={(e) => {
-                  const value = e.target.value;
+                onChange={(event) => {
+                  const value = event.target.value;
                   if (
                     value === 'all' ||
                     value === 'present' ||
@@ -317,119 +297,131 @@ export default function AttendanceHistoryPage() {
                     setFilterStatus(value);
                   }
                 }}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
               >
                 <option value="all">Tất cả ({records.length})</option>
                 <option value="present">Có mặt ({presentCount})</option>
-                <option value="absent">Vắng ({absentCount})</option>
-                <option value="late">Muộn ({lateCount})</option>
+                <option value="absent">Vắng mặt ({absentCount})</option>
+                <option value="late">Đi muộn ({lateCount})</option>
                 <option value="excused">Có phép ({excusedCount})</option>
               </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Lớp học</label>
+            </label>
+
+            <label className="block">
+              <span className="mb-2 block text-sm font-medium text-slate-700">Lớp học</span>
               <select
                 value={filterClass}
-                onChange={(e) => setFilterClass(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                onChange={(event) => setFilterClass(event.target.value)}
+                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
               >
                 <option value="">Tất cả lớp</option>
-                {Array.from(new Set(records.map((r) => r.class_name).filter(Boolean))).map(
-                  (className) => (
-                    <option key={className} value={className!}>
-                      {className}
-                    </option>
-                  )
-                )}
+                {availableClasses.map((className) => (
+                  <option key={className} value={className || ''}>
+                    {className}
+                  </option>
+                ))}
               </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Sắp xếp</label>
+            </label>
+
+            <label className="block">
+              <span className="mb-2 block text-sm font-medium text-slate-700">Sắp xếp</span>
               <select
                 value={`${sortBy}-${sortOrder}`}
-                onChange={(e) => {
-                  const [col, order] = e.target.value.split('-');
-                  if (col === 'name' || col === 'time' || col === 'status') {
-                    setSortBy(col);
+                onChange={(event) => {
+                  const [nextSortBy, nextSortOrder] = event.target.value.split('-');
+                  if (nextSortBy === 'name' || nextSortBy === 'time' || nextSortBy === 'status') {
+                    setSortBy(nextSortBy);
                   }
-                  if (order === 'asc' || order === 'desc') {
-                    setSortOrder(order);
+                  if (nextSortOrder === 'asc' || nextSortOrder === 'desc') {
+                    setSortOrder(nextSortOrder);
                   }
                 }}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
               >
-                <option value="time-desc">Thời gian (mới nhất)</option>
-                <option value="time-asc">Thời gian (cũ nhất)</option>
+                <option value="time-desc">Thời gian mới nhất</option>
+                <option value="time-asc">Thời gian cũ nhất</option>
                 <option value="name-asc">Tên A-Z</option>
                 <option value="name-desc">Tên Z-A</option>
-                <option value="status-asc">Trạng thái</option>
+                <option value="status-asc">Trạng thái A-Z</option>
               </select>
+            </label>
+          </div>
+        </section>
+
+        <section className="page-surface rounded-[1.75rem] px-5 py-6 sm:px-7">
+          <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-xl font-semibold text-slate-900">Bản ghi điểm danh</h2>
+              <p className="mt-1 text-sm text-slate-600">
+                Xem từng lần ghi nhận, ghi chú và thông tin liên quan.
+              </p>
+            </div>
+            <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-700">
+              {filteredRecords.length} bản ghi sau bộ lọc
             </div>
           </div>
-        </div>
 
-        {/* Records Table */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-          <div className="p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Bản ghi điểm danh ({filteredRecords.length})
-            </h3>
+          {filteredRecords.length === 0 ? (
+            <div className="rounded-[1.5rem] border border-dashed border-slate-300 bg-slate-50 px-4 py-10 text-center text-sm text-slate-500">
+              Không có bản ghi điểm danh phù hợp với bộ lọc hiện tại.
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {filteredRecords.map((record) => (
+                <article
+                  key={record.id}
+                  className="rounded-[1.5rem] border border-slate-200 bg-white p-4 transition hover:bg-slate-50"
+                >
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                    <div>
+                      <div className="text-base font-semibold text-slate-900">{record.student_name}</div>
+                      <div className="mt-1 text-sm text-slate-600">{record.student_email}</div>
+                      <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                        {record.class_name ? (
+                          <span className="rounded-full bg-slate-100 px-3 py-1 font-semibold text-slate-700">
+                            {record.class_name}
+                          </span>
+                        ) : null}
+                        {record.student_code ? (
+                          <span className="rounded-full bg-slate-100 px-3 py-1 font-semibold text-slate-700">
+                            {record.student_code}
+                          </span>
+                        ) : null}
+                        <span
+                          className={`rounded-full border px-3 py-1 font-semibold ${getStatusClasses(
+                            record.status
+                          )}`}
+                        >
+                          {getStatusLabel(record.status)}
+                        </span>
+                      </div>
+                    </div>
 
-            {filteredRecords.length === 0 ? (
-              <div className="text-center py-12">
-                <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                <p className="text-gray-500">Không có bản ghi nào</p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gray-50 border-b border-gray-200">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
-                        Học viên
-                      </th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
-                        Lớp
-                      </th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
-                        Trạng thái
-                      </th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
-                        Thời gian check-in
-                      </th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
-                        Ghi chú
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {filteredRecords.map((record) => (
-                      <tr key={record.id} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-4 py-4">
-                          <div className="text-sm font-medium text-gray-900">
-                            {record.student_name}
-                          </div>
-                          <div className="text-xs text-gray-500">{record.student_email}</div>
-                          {record.student_code && (
-                            <div className="text-xs text-gray-400">MSV: {record.student_code}</div>
-                          )}
-                        </td>
-                        <td className="px-4 py-4 text-sm text-gray-600">
-                          {record.class_name || '-'}
-                        </td>
-                        <td className="px-4 py-4">{getStatusBadge(record.status)}</td>
-                        <td className="px-4 py-4 text-sm text-gray-600">
+                    <div className="grid gap-3 text-sm text-slate-600 sm:grid-cols-2 lg:w-[28rem]">
+                      <div className="rounded-xl bg-slate-50 px-4 py-3">
+                        <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                          Thời gian ghi nhận
+                        </div>
+                        <div className="mt-2 inline-flex items-center gap-2 font-medium text-slate-800">
+                          <CalendarClock className="h-4 w-4" />
                           {formatDate(record.check_in_time)}
-                        </td>
-                        <td className="px-4 py-4 text-sm text-gray-600">{record.notes || '-'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        </div>
+                        </div>
+                      </div>
+                      <div className="rounded-xl bg-slate-50 px-4 py-3">
+                        <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                          Ghi chú
+                        </div>
+                        <div className="mt-2 font-medium text-slate-800">
+                          {record.notes || 'Không có ghi chú'}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
       </div>
     </div>
   );

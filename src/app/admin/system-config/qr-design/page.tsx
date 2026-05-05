@@ -1,16 +1,17 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
-import LoadingSpinner from '@/components/LoadingSpinner';
-import toast from 'react-hot-toast';
-import { QrCode, Palette, Upload, Eye, ArrowLeft, Copy, Download } from 'lucide-react';
+import Link from 'next/link';
 import dynamic from 'next/dynamic';
+import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import toast from 'react-hot-toast';
+import { Download, Eye, ImageIcon, Palette, QrCode, RefreshCw, SlidersHorizontal } from 'lucide-react';
+import LoadingSpinner from '@/components/LoadingSpinner';
+import { useAuth } from '@/contexts/AuthContext';
 
 const QRCodeComponent = dynamic(() => import('react-qr-code'), { ssr: false });
 
-interface QRDesign {
+type QRDesign = {
   bgColor: string;
   textColor: string;
   cornerRadius: number;
@@ -18,10 +19,67 @@ interface QRDesign {
   eyeColor: string;
   logoEnabled: boolean;
   logoUrl: string | null;
-  logoSize: number; // 0-40 (percentage of QR size)
+  logoSize: number;
   errorCorrection: 'L' | 'M' | 'Q' | 'H';
   expirationTime: number;
   customText: string;
+};
+
+const DEFAULT_DESIGN: QRDesign = {
+  bgColor: '#ffffff',
+  textColor: '#000000',
+  cornerRadius: 0,
+  dotRadius: 0,
+  eyeColor: '#000000',
+  logoEnabled: false,
+  logoUrl: null,
+  logoSize: 25,
+  errorCorrection: 'H',
+  expirationTime: 5,
+  customText: '',
+};
+
+const PRESETS: Record<string, Partial<QRDesign>> = {
+  default: {
+    bgColor: '#ffffff',
+    textColor: '#000000',
+    eyeColor: '#000000',
+    cornerRadius: 0,
+    dotRadius: 0,
+  },
+  projector: {
+    bgColor: '#ffffff',
+    textColor: '#0f172a',
+    eyeColor: '#0369a1',
+    cornerRadius: 1,
+    dotRadius: 0,
+  },
+  vibrant: {
+    bgColor: '#fef3c7',
+    textColor: '#92400e',
+    eyeColor: '#dc2626',
+    cornerRadius: 2,
+    dotRadius: 1,
+  },
+  elegant: {
+    bgColor: '#f8fafc',
+    textColor: '#312e81',
+    eyeColor: '#7c3aed',
+    cornerRadius: 1,
+    dotRadius: 0,
+  },
+};
+
+function parseDesignPayload(payload: any): QRDesign {
+  const source = payload?.data || payload || {};
+  return {
+    ...DEFAULT_DESIGN,
+    ...source,
+  };
+}
+
+function isValidHexColor(value: string) {
+  return /^#[0-9a-fA-F]{6}$/.test(value);
 }
 
 export default function QRDesignCustomizationPage() {
@@ -29,71 +87,82 @@ export default function QRDesignCustomizationPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-
-  const [design, setDesign] = useState<QRDesign>({
-    bgColor: '#ffffff',
-    textColor: '#000000',
-    cornerRadius: 0,
-    dotRadius: 0,
-    eyeColor: '#000000',
-    logoEnabled: false,
-    logoUrl: null,
-    logoSize: 25,
-    errorCorrection: 'H',
-    expirationTime: 5,
-    customText: '',
-  });
-
+  const [design, setDesign] = useState<QRDesign>(DEFAULT_DESIGN);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [activeTab, setActiveTab] = useState<'colors' | 'logo' | 'advanced'>('colors');
-  const [presetLoaded, setPresetLoaded] = useState(false);
 
   useEffect(() => {
     if (!authLoading && (!user || user.role !== 'admin')) {
       router.push('/login');
       return;
     }
-    if (user) fetchDesign();
-  }, [user, authLoading, router]);
 
-  const fetchDesign = async () => {
+    if (user?.role === 'admin') {
+      void fetchDesign();
+    }
+  }, [authLoading, router, user]);
+
+  async function fetchDesign() {
     try {
+      setLoading(true);
       const response = await fetch('/api/admin/qr-design');
-      if (response.ok) {
-        const data = await response.json();
-        setDesign((prev) => ({ ...prev, ...data }));
-        setPresetLoaded(true);
+      const body = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(body?.error || body?.message || 'Khong the tai QR design');
       }
-    } catch (e) {
-      console.error('Fetch design error:', e);
-      setPresetLoaded(true);
+
+      setDesign(parseDesignPayload(body));
+      setLogoFile(null);
+    } catch (error) {
+      console.error('Fetch QR design error:', error);
+      toast.error(error instanceof Error ? error.message : 'Khong the tai QR design');
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (!file.type.startsWith('image/')) {
-        toast.error('Vui lòng chọn tệp hình ảnh');
-        return;
-      }
-      if (file.size > 2 * 1024 * 1024) {
-        toast.error('Kích thước hình ảnh không được vượt quá 2MB');
-        return;
-      }
-      setLogoFile(file);
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setDesign((prev) => ({ ...prev, logoUrl: e.target?.result as string }));
-      };
-      reader.readAsDataURL(file);
+  function applyPreset(preset: string) {
+    if (!PRESETS[preset]) return;
+    setDesign((current) => ({ ...current, ...PRESETS[preset] }));
+    toast.success(`Da ap dung preset ${preset}`);
+  }
+
+  function handleLogoChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Chi nhan tep hinh anh cho QR logo');
+      return;
     }
-  };
 
-  const handleSave = async () => {
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('Logo QR design khong duoc vuot qua 2MB');
+      return;
+    }
+
+    setLogoFile(file);
+    const reader = new FileReader();
+    reader.onload = () => {
+      setDesign((current) => ({ ...current, logoUrl: String(reader.result || '') }));
+    };
+    reader.readAsDataURL(file);
+  }
+
+  async function handleSave() {
+    if (!isValidHexColor(design.bgColor) || !isValidHexColor(design.textColor) || !isValidHexColor(design.eyeColor)) {
+      toast.error('Tat ca mau trong QR design phai dung dinh dang hex');
+      return;
+    }
+
+    if (design.expirationTime < 1 || design.expirationTime > 1440) {
+      toast.error('Thoi han trong QR design phai tu 1 den 1440 phut');
+      return;
+    }
+
     setSaving(true);
+
     try {
       const formData = new FormData();
       formData.append(
@@ -111,6 +180,7 @@ export default function QRDesignCustomizationPage() {
           customText: design.customText,
         })
       );
+
       if (logoFile) {
         formData.append('logo', logoFile);
       }
@@ -119,477 +189,439 @@ export default function QRDesignCustomizationPage() {
         method: 'PUT',
         body: formData,
       });
+      const body = await response.json().catch(() => null);
 
-      if (response.ok) {
-        toast.success('Cấu hình QR design đã lưu!');
-        setLogoFile(null);
-      } else {
-        toast.error('Lỗi khi lưu cấu hình');
+      if (!response.ok) {
+        throw new Error(body?.error || body?.message || 'Khong luu duoc QR design');
       }
-    } catch (error: any) {
-      toast.error('Lỗi: ' + error.message);
+
+      toast.success('Da luu QR design');
+      await fetchDesign();
+    } catch (error) {
+      console.error('Save QR design error:', error);
+      toast.error(error instanceof Error ? error.message : 'Khong luu duoc QR design');
     } finally {
       setSaving(false);
     }
-  };
+  }
 
-  const downloadQRCode = () => {
-    const svg = document.querySelector('#qr-preview svg');
+  function downloadQRCode() {
+    const svg = document.querySelector('#admin-qr-design-preview svg');
     if (!svg) return;
 
-    const svgData = new XMLSerializer().serializeToString(svg);
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    const img = new Image();
+    const serialized = new XMLSerializer().serializeToString(svg);
+    const blob = new Blob([serialized], { type: 'image/svg+xml;charset=utf-8' });
+    const url = window.URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = 'uniact-qr-preview.svg';
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    window.URL.revokeObjectURL(url);
+    toast.success('Da tai preview QR');
+  }
 
-    img.onload = () => {
-      canvas.width = img.width;
-      canvas.height = img.height;
-      ctx?.drawImage(img, 0, 0);
-      const link = document.createElement('a');
-      link.href = canvas.toDataURL('image/png');
-      link.download = 'uniact-qr.png';
-      link.click();
-      toast.success('QR code đã tải xuống');
-    };
+  const summary = useMemo(
+    () => ({
+      expiration: `${design.expirationTime} phut`,
+      correction: design.errorCorrection,
+      logo: design.logoEnabled ? 'Bat' : 'Tat',
+    }),
+    [design]
+  );
 
-    img.src = 'data:image/svg+xml;base64,' + btoa(svgData);
-  };
+  if (authLoading || loading) {
+    return <LoadingSpinner message="Dang tai QR design..." />;
+  }
 
-  const applyPreset = (preset: string) => {
-    const presets: Record<string, Partial<QRDesign>> = {
-      default: {
-        bgColor: '#ffffff',
-        textColor: '#000000',
-        eyeColor: '#000000',
-        cornerRadius: 0,
-        dotRadius: 0,
-      },
-      modern: {
-        bgColor: '#f8f9fa',
-        textColor: '#1a202c',
-        eyeColor: '#3b82f6',
-        cornerRadius: 2,
-        dotRadius: 1,
-      },
-      vibrant: {
-        bgColor: '#fef3c7',
-        textColor: '#92400e',
-        eyeColor: '#dc2626',
-        cornerRadius: 3,
-        dotRadius: 1,
-      },
-      elegant: {
-        bgColor: '#f3e8ff',
-        textColor: '#5b21b6',
-        eyeColor: '#a855f7',
-        cornerRadius: 1,
-        dotRadius: 0,
-      },
-    };
-
-    if (presets[preset]) {
-      setDesign((prev) => ({ ...prev, ...presets[preset] }));
-      toast.success(`Áp dụng style "${preset}"`);
-    }
-  };
-
-  if (authLoading || loading || !presetLoaded) return <LoadingSpinner />;
+  if (!user || user.role !== 'admin') {
+    return null;
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-7xl mx-auto px-4">
-        {/* Header */}
-        <div className="mb-8">
-          <button
-            onClick={() => router.push('/admin/dashboard')}
-            className="flex items-center text-gray-600 hover:text-gray-900 mb-4"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Quay lại Dashboard
-          </button>
-          <h1 className="text-3xl font-bold flex items-center">
-            <QrCode className="w-8 h-8 mr-3 text-purple-600" />
-            QR Code Design Customization
-          </h1>
-          <p className="text-gray-600 mt-2">
-            Tùy chỉnh giao diện mã QR điểm danh với độ chân thực cao
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left: Settings */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Tabs */}
-            <div className="bg-white rounded-lg shadow-sm border">
-              <div className="flex border-b">
-                <button
-                  onClick={() => setActiveTab('colors')}
-                  className={`flex-1 px-6 py-3 text-center font-medium transition ${
-                    activeTab === 'colors'
-                      ? 'text-purple-600 border-b-2 border-purple-600'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  <Palette className="w-4 h-4 inline mr-2" />
-                  Màu sắc
-                </button>
-                <button
-                  onClick={() => setActiveTab('logo')}
-                  className={`flex-1 px-6 py-3 text-center font-medium transition ${
-                    activeTab === 'logo'
-                      ? 'text-purple-600 border-b-2 border-purple-600'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  <Upload className="w-4 h-4 inline mr-2" />
-                  Logo
-                </button>
-                <button
-                  onClick={() => setActiveTab('advanced')}
-                  className={`flex-1 px-6 py-3 text-center font-medium transition ${
-                    activeTab === 'advanced'
-                      ? 'text-purple-600 border-b-2 border-purple-600'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  ⚙️ Nâng cao
-                </button>
-              </div>
-
-              {/* Tab Content */}
-              <div className="p-6 space-y-6">
-                {/* Colors Tab */}
-                {activeTab === 'colors' && (
-                  <div className="space-y-6">
-                    {/* Presets */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-3">
-                        Style Presets
-                      </label>
-                      <div className="grid grid-cols-2 gap-2">
-                        {['default', 'modern', 'vibrant', 'elegant'].map((preset) => (
-                          <button
-                            key={preset}
-                            onClick={() => applyPreset(preset)}
-                            className="px-3 py-2 border rounded-lg hover:bg-gray-50 capitalize text-sm font-medium"
-                          >
-                            {preset}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Background Color */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Màu nền
-                      </label>
-                      <div className="flex items-center gap-3">
-                        <input
-                          type="color"
-                          value={design.bgColor}
-                          onChange={(e) => setDesign({ ...design, bgColor: e.target.value })}
-                          className="w-12 h-12 rounded border cursor-pointer"
-                        />
-                        <input
-                          type="text"
-                          value={design.bgColor}
-                          onChange={(e) => setDesign({ ...design, bgColor: e.target.value })}
-                          className="flex-1 px-3 py-2 border rounded font-mono text-sm"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Text Color */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Màu ký tự (modules)
-                      </label>
-                      <div className="flex items-center gap-3">
-                        <input
-                          type="color"
-                          value={design.textColor}
-                          onChange={(e) => setDesign({ ...design, textColor: e.target.value })}
-                          className="w-12 h-12 rounded border cursor-pointer"
-                        />
-                        <input
-                          type="text"
-                          value={design.textColor}
-                          onChange={(e) => setDesign({ ...design, textColor: e.target.value })}
-                          className="flex-1 px-3 py-2 border rounded font-mono text-sm"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Eye Color */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Màu mắt (corner patterns)
-                      </label>
-                      <div className="flex items-center gap-3">
-                        <input
-                          type="color"
-                          value={design.eyeColor}
-                          onChange={(e) => setDesign({ ...design, eyeColor: e.target.value })}
-                          className="w-12 h-12 rounded border cursor-pointer"
-                        />
-                        <input
-                          type="text"
-                          value={design.eyeColor}
-                          onChange={(e) => setDesign({ ...design, eyeColor: e.target.value })}
-                          className="flex-1 px-3 py-2 border rounded font-mono text-sm"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Contrast Check */}
-                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                      <p className="text-sm text-blue-800">
-                        💡 Độ tương phản:{' '}
-                        {Math.abs(
-                          parseInt(design.bgColor.slice(1), 16) -
-                            parseInt(design.textColor.slice(1), 16)
-                        ) > 8355711
-                          ? '✓ Tốt'
-                          : '⚠ Có thể khó quét'}
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Logo Tab */}
-                {activeTab === 'logo' && (
-                  <div className="space-y-6">
-                    <div>
-                      <label className="flex items-center space-x-2 mb-4">
-                        <input
-                          type="checkbox"
-                          checked={design.logoEnabled}
-                          onChange={(e) => setDesign({ ...design, logoEnabled: e.target.checked })}
-                          className="rounded"
-                        />
-                        <span className="text-sm font-medium">Sử dụng logo</span>
-                      </label>
-                    </div>
-
-                    {design.logoEnabled && (
-                      <>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-3">
-                            Upload Logo
-                          </label>
-                          <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-                            <input
-                              type="file"
-                              accept="image/*"
-                              onChange={handleLogoChange}
-                              className="hidden"
-                              id="logo-input"
-                            />
-                            <label htmlFor="logo-input" className="cursor-pointer block">
-                              <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                              <p className="text-sm text-gray-600">Nhấp để chọn hoặc kéo thả</p>
-                              <p className="text-xs text-gray-500 mt-1">Max 2MB, PNG/JPG</p>
-                            </label>
-                          </div>
-                        </div>
-
-                        {design.logoUrl && (
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                              Kích thước logo: {design.logoSize}%
-                            </label>
-                            <input
-                              type="range"
-                              min="15"
-                              max="40"
-                              value={design.logoSize}
-                              onChange={(e) =>
-                                setDesign({ ...design, logoSize: parseInt(e.target.value) })
-                              }
-                              className="w-full"
-                            />
-                          </div>
-                        )}
-
-                        {design.logoUrl && (
-                          <div className="p-4 bg-gray-50 rounded-lg">
-                            <p className="text-xs text-gray-600 mb-2">Logo xem trước:</p>
-                            <img
-                              src={design.logoUrl}
-                              alt="Logo"
-                              className="max-h-32 mx-auto rounded"
-                            />
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </div>
-                )}
-
-                {/* Advanced Tab */}
-                {activeTab === 'advanced' && (
-                  <div className="space-y-6">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Error Correction Level
-                      </label>
-                      <select
-                        value={design.errorCorrection}
-                        onChange={(e) =>
-                          setDesign({ ...design, errorCorrection: e.target.value as any })
-                        }
-                        className="w-full px-3 py-2 border rounded"
-                      >
-                        <option value="L">L (7% - Thấp)</option>
-                        <option value="M">M (15% - Trung bình)</option>
-                        <option value="Q">Q (25% - Cao)</option>
-                        <option value="H">H (30% - Rất cao)</option>
-                      </select>
-                      <p className="text-xs text-gray-500 mt-1">
-                        Khả năng phục hồi nếu QR code bị hư hỏng. Khuyên: H
-                      </p>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Hết hạn (phút)
-                      </label>
-                      <input
-                        type="number"
-                        min="1"
-                        max="1440"
-                        value={design.expirationTime}
-                        onChange={(e) =>
-                          setDesign({ ...design, expirationTime: parseInt(e.target.value) })
-                        }
-                        className="w-full px-3 py-2 border rounded"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Góc bo tròn
-                      </label>
-                      <input
-                        type="range"
-                        min="0"
-                        max="5"
-                        value={design.cornerRadius}
-                        onChange={(e) =>
-                          setDesign({ ...design, cornerRadius: parseInt(e.target.value) })
-                        }
-                        className="w-full"
-                      />
-                      <p className="text-xs text-gray-500 mt-1">{design.cornerRadius} pixel</p>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Độ tròn của modules
-                      </label>
-                      <input
-                        type="range"
-                        min="0"
-                        max="2"
-                        value={design.dotRadius}
-                        onChange={(e) =>
-                          setDesign({ ...design, dotRadius: parseInt(e.target.value) })
-                        }
-                        className="w-full"
-                      />
-                      <p className="text-xs text-gray-500 mt-1">
-                        {design.dotRadius} (0=vuông, 1=tròn)
-                      </p>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Ghi chú tùy chỉnh (không bắt buộc)
-                      </label>
-                      <textarea
-                        value={design.customText}
-                        onChange={(e) => setDesign({ ...design, customText: e.target.value })}
-                        placeholder="VD: UniAct | Điểm danh"
-                        className="w-full px-3 py-2 border rounded resize-none"
-                        rows={2}
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
+    <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
+      <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-3xl">
+            <div className="flex items-center gap-3">
+              <QrCode className="h-8 w-8 text-cyan-700" />
+              <h1 className="text-3xl font-semibold text-slate-950">QR design</h1>
             </div>
-
-            {/* Save Button */}
-            <div className="flex gap-3">
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                className="flex-1 flex items-center justify-center px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50"
-              >
-                💾 {saving ? 'Đang lưu...' : 'Lưu cấu hình'}
-              </button>
-            </div>
+            <p className="mt-3 text-sm leading-6 text-slate-600 sm:text-base">
+              Tinh chinh giao dien QR theo projector, logo va doi tuong quet thuc te ma khong doi
+              luong van hanh chinh.
+            </p>
           </div>
 
-          {/* Right: Preview */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow-sm border p-6 sticky top-8 space-y-4">
-              <h3 className="text-lg font-semibold flex items-center">
-                <Eye className="w-5 h-5 mr-2" />
-                Xem trước
-              </h3>
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href="/admin/settings"
+              className="rounded-2xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            >
+              Ve settings
+            </Link>
+            <button
+              type="button"
+              onClick={() => void fetchDesign()}
+              className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Tai lai
+            </button>
+          </div>
+        </div>
+      </section>
 
-              <div
-                id="qr-preview"
-                className="flex items-center justify-center p-6 rounded-lg border-2 border-gray-200"
-                style={{ backgroundColor: design.bgColor }}
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_360px]">
+        <section className="space-y-6">
+          <article className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="flex flex-wrap gap-2">
+              {[
+                { key: 'colors', label: 'Mau sac', icon: Palette },
+                { key: 'logo', label: 'Logo', icon: ImageIcon },
+                { key: 'advanced', label: 'Nang cao', icon: SlidersHorizontal },
+              ].map((tab) => {
+                const Icon = tab.icon;
+                const active = activeTab === tab.key;
+                return (
+                  <button
+                    key={tab.key}
+                    type="button"
+                    onClick={() => setActiveTab(tab.key as 'colors' | 'logo' | 'advanced')}
+                    className={`inline-flex items-center gap-2 rounded-2xl px-4 py-2 text-sm font-medium ${
+                      active
+                        ? 'bg-cyan-700 text-white'
+                        : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                    }`}
+                  >
+                    <Icon className="h-4 w-4" />
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {activeTab === 'colors' ? (
+              <div className="mt-6 space-y-6">
+                <div>
+                  <div className="text-sm font-medium text-slate-700">Preset nhanh</div>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                    {Object.keys(PRESETS).map((preset) => (
+                      <button
+                        key={preset}
+                        type="button"
+                        onClick={() => applyPreset(preset)}
+                        className="rounded-3xl border border-slate-200 bg-slate-50 px-4 py-4 text-left text-sm font-medium text-slate-800 hover:border-cyan-200 hover:bg-cyan-50"
+                      >
+                        {preset}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <label className="block rounded-3xl border border-slate-200 bg-slate-50 p-4 text-sm font-medium text-slate-700">
+                    Mau nen
+                    <div className="mt-3 flex items-center gap-3">
+                      <input
+                        type="color"
+                        value={design.bgColor}
+                        onChange={(event) =>
+                          setDesign((current) => ({ ...current, bgColor: event.target.value }))
+                        }
+                        className="h-12 w-12 rounded-xl border border-slate-200"
+                      />
+                      <input
+                        type="text"
+                        value={design.bgColor}
+                        onChange={(event) =>
+                          setDesign((current) => ({ ...current, bgColor: event.target.value }))
+                        }
+                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 font-mono text-sm outline-none focus:border-cyan-300"
+                        placeholder="#ffffff"
+                      />
+                    </div>
+                  </label>
+
+                  <label className="block rounded-3xl border border-slate-200 bg-slate-50 p-4 text-sm font-medium text-slate-700">
+                    Mau ky tu
+                    <div className="mt-3 flex items-center gap-3">
+                      <input
+                        type="color"
+                        value={design.textColor}
+                        onChange={(event) =>
+                          setDesign((current) => ({ ...current, textColor: event.target.value }))
+                        }
+                        className="h-12 w-12 rounded-xl border border-slate-200"
+                      />
+                      <input
+                        type="text"
+                        value={design.textColor}
+                        onChange={(event) =>
+                          setDesign((current) => ({ ...current, textColor: event.target.value }))
+                        }
+                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 font-mono text-sm outline-none focus:border-cyan-300"
+                        placeholder="#000000"
+                      />
+                    </div>
+                  </label>
+                </div>
+
+                <label className="block rounded-3xl border border-slate-200 bg-slate-50 p-4 text-sm font-medium text-slate-700">
+                  Mau mat QR
+                  <div className="mt-3 flex items-center gap-3">
+                    <input
+                      type="color"
+                      value={design.eyeColor}
+                      onChange={(event) =>
+                        setDesign((current) => ({ ...current, eyeColor: event.target.value }))
+                      }
+                      className="h-12 w-12 rounded-xl border border-slate-200"
+                    />
+                    <input
+                      type="text"
+                      value={design.eyeColor}
+                      onChange={(event) =>
+                        setDesign((current) => ({ ...current, eyeColor: event.target.value }))
+                      }
+                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 font-mono text-sm outline-none focus:border-cyan-300"
+                      placeholder="#000000"
+                    />
+                  </div>
+                </label>
+              </div>
+            ) : null}
+
+            {activeTab === 'logo' ? (
+              <div className="mt-6 space-y-6">
+                <label className="flex items-center gap-3 rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                  <input
+                    type="checkbox"
+                    checked={design.logoEnabled}
+                    onChange={(event) =>
+                      setDesign((current) => ({ ...current, logoEnabled: event.target.checked }))
+                    }
+                    className="h-4 w-4 text-cyan-700"
+                  />
+                  <div>
+                    <div className="font-medium text-slate-950">Bat logo trong QR</div>
+                    <div className="mt-1 text-sm text-slate-500">
+                      Chi bat khi da test projector va camera web van quet nhanh.
+                    </div>
+                  </div>
+                </label>
+
+                {design.logoEnabled ? (
+                  <>
+                    <label className="block rounded-3xl border border-dashed border-slate-300 bg-slate-50 p-5">
+                      <div className="text-sm font-medium text-slate-700">Tai logo QR</div>
+                      <div className="mt-2 text-sm text-slate-500">
+                        Chap nhan PNG, JPG. Kich thuoc toi da 2MB.
+                      </div>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleLogoChange}
+                        className="mt-4 block w-full text-sm text-slate-600"
+                      />
+                    </label>
+
+                    <label className="block text-sm font-medium text-slate-700">
+                      Kich thuoc logo (%)
+                      <input
+                        type="range"
+                        min="15"
+                        max="40"
+                        value={design.logoSize}
+                        onChange={(event) =>
+                          setDesign((current) => ({
+                            ...current,
+                            logoSize: Number.parseInt(event.target.value, 10),
+                          }))
+                        }
+                        className="mt-3 w-full"
+                      />
+                      <span className="mt-2 block text-xs text-slate-500">{design.logoSize}% kich thuoc QR</span>
+                    </label>
+                  </>
+                ) : null}
+              </div>
+            ) : null}
+
+            {activeTab === 'advanced' ? (
+              <div className="mt-6 grid gap-4">
+                <label className="block text-sm font-medium text-slate-700">
+                  Error correction
+                  <select
+                    value={design.errorCorrection}
+                    onChange={(event) =>
+                      setDesign((current) => ({
+                        ...current,
+                        errorCorrection: event.target.value as 'L' | 'M' | 'Q' | 'H',
+                      }))
+                    }
+                    className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-cyan-300"
+                  >
+                    <option value="L">L - nhe nhat</option>
+                    <option value="M">M - can bang</option>
+                    <option value="Q">Q - uu tien chong loi</option>
+                    <option value="H">H - rat cao</option>
+                  </select>
+                </label>
+
+                <label className="block text-sm font-medium text-slate-700">
+                  Thoi han preview (phut)
+                  <input
+                    type="number"
+                    min="1"
+                    max="1440"
+                    value={design.expirationTime}
+                    onChange={(event) =>
+                      setDesign((current) => ({
+                        ...current,
+                        expirationTime: Number.parseInt(event.target.value || '0', 10),
+                      }))
+                    }
+                    className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-cyan-300"
+                  />
+                </label>
+
+                <label className="block text-sm font-medium text-slate-700">
+                  Corner radius
+                  <input
+                    type="range"
+                    min="0"
+                    max="5"
+                    value={design.cornerRadius}
+                    onChange={(event) =>
+                      setDesign((current) => ({
+                        ...current,
+                        cornerRadius: Number.parseInt(event.target.value, 10),
+                      }))
+                    }
+                    className="mt-3 w-full"
+                  />
+                  <span className="mt-2 block text-xs text-slate-500">{design.cornerRadius} px</span>
+                </label>
+
+                <label className="block text-sm font-medium text-slate-700">
+                  Dot radius
+                  <input
+                    type="range"
+                    min="0"
+                    max="2"
+                    value={design.dotRadius}
+                    onChange={(event) =>
+                      setDesign((current) => ({
+                        ...current,
+                        dotRadius: Number.parseInt(event.target.value, 10),
+                      }))
+                    }
+                    className="mt-3 w-full"
+                  />
+                  <span className="mt-2 block text-xs text-slate-500">{design.dotRadius} muc bo goc</span>
+                </label>
+
+                <label className="block text-sm font-medium text-slate-700">
+                  Ghi chu tuy chinh
+                  <textarea
+                    value={design.customText}
+                    onChange={(event) =>
+                      setDesign((current) => ({ ...current, customText: event.target.value }))
+                    }
+                    className="mt-2 min-h-24 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-cyan-300"
+                    placeholder="VD: UniAct | Check-in"
+                  />
+                </label>
+              </div>
+            ) : null}
+
+            <div className="mt-6 flex flex-wrap justify-end gap-3">
+              <button
+                type="button"
+                onClick={downloadQRCode}
+                className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50"
               >
+                <Download className="h-4 w-4" />
+                Tai preview
+              </button>
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={saving}
+                className="rounded-2xl bg-cyan-700 px-5 py-3 text-sm font-medium text-white hover:bg-cyan-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+              >
+                {saving ? 'Dang luu...' : 'Luu QR design'}
+              </button>
+            </div>
+          </article>
+        </section>
+
+        <aside className="space-y-6">
+          <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm xl:sticky xl:top-6">
+            <div className="flex items-center gap-2 text-slate-950">
+              <Eye className="h-5 w-5 text-cyan-700" />
+              <h2 className="text-lg font-semibold">Preview</h2>
+            </div>
+
+            <div
+              id="admin-qr-design-preview"
+              className="relative mt-5 rounded-[1.5rem] border border-slate-200 p-5"
+              style={{ backgroundColor: design.bgColor }}
+            >
+              <div className="flex justify-center">
                 <QRCodeComponent
-                  value={`https://uniact.local/qr?exp=${design.expirationTime}`}
+                  value={`preview:${design.expirationTime}:${design.customText || 'session'}`}
                   size={220}
                   level={design.errorCorrection}
-                  fgColor={design.textColor}
                   bgColor={design.bgColor}
+                  fgColor={design.textColor}
                 />
               </div>
 
-              <div className="space-y-2 p-4 bg-gray-50 rounded-lg border text-sm">
-                <p>
-                  <strong>Nền:</strong> {design.bgColor}
-                </p>
-                <p>
-                  <strong>Ký tự:</strong> {design.textColor}
-                </p>
-                <p>
-                  <strong>Mắt:</strong> {design.eyeColor}
-                </p>
-                <p>
-                  <strong>Hết hạn:</strong> {design.expirationTime} phút
-                </p>
-                <p>
-                  <strong>Error:</strong> {design.errorCorrection}
-                </p>
-                {design.logoEnabled && design.logoUrl && (
-                  <p className="text-green-700">✓ Logo: {design.logoSize}%</p>
-                )}
+              {design.logoEnabled ? (
+                <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                  <div
+                    className="flex items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+                    style={{ width: `${design.logoSize + 18}px`, height: `${design.logoSize + 18}px` }}
+                  >
+                    {design.logoUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={design.logoUrl} alt="QR design logo preview" className="h-full w-full object-cover" />
+                    ) : (
+                      <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+                        Logo
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+
+            <div className="mt-5 space-y-3 rounded-3xl bg-slate-50 p-4 text-sm text-slate-700">
+              <div className="flex items-center justify-between gap-4">
+                <span>Thoi han</span>
+                <strong className="text-slate-950">{summary.expiration}</strong>
               </div>
-
-              <button
-                onClick={downloadQRCode}
-                className="w-full flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              >
-                <Download className="w-4 h-4 mr-2" />
-                Tải QR code
-              </button>
-
-              <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
-                ⚠️ Kiểm tra tương phản và khả năng quét trước khi sử dụng
+              <div className="flex items-center justify-between gap-4">
+                <span>Error correction</span>
+                <strong className="text-slate-950">{summary.correction}</strong>
+              </div>
+              <div className="flex items-center justify-between gap-4">
+                <span>Logo</span>
+                <strong className="text-slate-950">{summary.logo}</strong>
               </div>
             </div>
-          </div>
-        </div>
+
+            {design.customText ? (
+              <div className="mt-4 rounded-3xl border border-cyan-200 bg-cyan-50 p-4 text-sm text-cyan-900">
+                <div className="font-medium">Custom text</div>
+                <div className="mt-2 break-words">{design.customText}</div>
+              </div>
+            ) : null}
+          </section>
+        </aside>
       </div>
     </div>
   );

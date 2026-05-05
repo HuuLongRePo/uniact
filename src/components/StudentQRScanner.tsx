@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
-import { CheckCircle2, CircleAlert, Info, Pause, RotateCcw } from 'lucide-react';
+import { CheckCircle2, CircleAlert, Info, Pause, RotateCcw, ScanLine } from 'lucide-react';
 import {
   getCameraAccessErrorMessage,
   getCameraTroubleshootingSteps,
@@ -15,85 +15,170 @@ import {
   type BarcodeDetectorInstance,
   type JsQrDecoder,
 } from '@/lib/qr-scan-decoder';
+import {
+  getZxingResultText,
+  loadZxingBrowserQrReader,
+  type ZxingBrowserQrReader,
+  type ZxingScanControls,
+} from '@/lib/zxing-qr-scanner';
+import {
+  loadRuntimeQrScannerFactory,
+  type RuntimeQrScanner,
+  type RuntimeQrScannerFactory,
+} from '@/lib/qr-scanner-runtime';
 
 type ScanState = 'idle' | 'scanning' | 'success' | 'error';
+const MAX_DECODE_DIMENSION = 1024;
+const DECODE_INTERVAL_MS = 20;
+const NO_RESULT_NOTICE_MS = 6000;
+
+export type StudentQrScannerCameraState =
+  | 'idle'
+  | 'requesting'
+  | 'ready'
+  | 'playback_blocked'
+  | 'error'
+  | 'stopped';
+export type StudentQrScannerDecoderEngine =
+  | 'initializing'
+  | 'qr-scanner'
+  | 'zxing'
+  | 'barcode-detector'
+  | 'jsqr'
+  | 'none';
+export type StudentQrScannerDecoderState = 'idle' | 'scanning' | 'decoded' | 'timeout' | 'error';
+
+export interface StudentQrScannerDebugState {
+  scanState: ScanState;
+  cameraState: StudentQrScannerCameraState;
+  decoderEngine: StudentQrScannerDecoderEngine;
+  decoderState: StudentQrScannerDecoderState;
+  lastDecodedRaw: string | null;
+  error: string | null;
+  note: string | null;
+}
 
 interface Props {
   onScan: (rawValue: string) => Promise<void>;
+  onDebugChange?: (patch: Partial<StudentQrScannerDebugState>) => void;
 }
 
-type LoadedQrImageSource = {
-  source: ImageBitmapSource;
-  width: number;
-  height: number;
-  dispose: () => void;
-};
-
-async function loadQrImageSource(file: File): Promise<LoadedQrImageSource> {
-  if (typeof window.createImageBitmap === 'function') {
-    const bitmap = await window.createImageBitmap(file);
-    return {
-      source: bitmap,
-      width: bitmap.width,
-      height: bitmap.height,
-      dispose: () => bitmap.close(),
-    };
-  }
-
-  const objectUrl = URL.createObjectURL(file);
-
-  try {
-    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
-      const nextImage = new Image();
-      nextImage.onload = () => resolve(nextImage);
-      nextImage.onerror = () => reject(new Error('Không thể mở ảnh QR từ tệp đã chọn.'));
-      nextImage.src = objectUrl;
-    });
-
-    return {
-      source: image,
-      width: image.naturalWidth || image.width,
-      height: image.naturalHeight || image.height,
-      dispose: () => URL.revokeObjectURL(objectUrl),
-    };
-  } catch (error) {
-    URL.revokeObjectURL(objectUrl);
-    throw error;
-  }
-}
-
-export function StudentQRScanner({ onScan }: Props) {
+export function StudentQRScanner({ onScan, onDebugChange }: Props) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const frameRequest = useRef<number | undefined>(undefined);
   const detectorRef = useRef<BarcodeDetectorInstance | null>(null);
   const jsQrDecoderRef = useRef<JsQrDecoder | null>(null);
+  const runtimeQrScannerFactoryRef = useRef<RuntimeQrScannerFactory | null>(null);
+  const runtimeQrScannerRef = useRef<RuntimeQrScanner | null>(null);
+  const zxingReaderRef = useRef<ZxingBrowserQrReader | null>(null);
+  const zxingControlsRef = useRef<ZxingScanControls | null>(null);
   const decoderInitPromiseRef = useRef<Promise<void> | null>(null);
   const submittingRef = useRef(false);
   const processingFrameRef = useRef(false);
   const lastDecodeAtRef = useRef(0);
   const lastScannedRawRef = useRef('');
+  const decodeCycleRef = useRef(0);
+  const autoStartAttemptedRef = useRef(false);
+  const scanStartedAtRef = useRef(0);
+  const lastNoResultNoticeAtRef = useRef(0);
 
   const [scanState, setScanState] = useState<ScanState>('idle');
   const [needsPlaybackGesture, setNeedsPlaybackGesture] = useState(false);
-  const [manualToken, setManualToken] = useState('');
   const [lastResult, setLastResult] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [cameraTips, setCameraTips] = useState<string[]>(() => getCameraTroubleshootingSteps());
   const [autoScanSupported, setAutoScanSupported] = useState(false);
   const [insecureContext, setInsecureContext] = useState(false);
-  const insecureContextSteps = [
-    'Giảng viên mở mã QR hoặc đường link điểm danh trên màn hình lớp.',
-    'Học viên dùng app camera/QR bất kỳ để quét mã nếu trình duyệt web không bật được camera.',
-    'Mở link /student/check-in?s=...&t=... vừa quét được và đăng nhập đúng tài khoản học viên.',
-    'Hệ thống sẽ tự xác thực và điểm danh, không cần quét lại trong web.',
-  ];
+
+  function reportDebug(patch: Partial<StudentQrScannerDebugState>) {
+    onDebugChange?.(patch);
+  }
+
+  const scanStateLabel =
+    scanState === 'scanning'
+      ? 'Đang quét'
+      : scanState === 'success'
+        ? 'Đã ghi nhận'
+        : scanState === 'error'
+          ? 'Cần thử lại'
+          : 'Sẵn sàng';
+
+  const scanStateHint =
+    scanState === 'scanning'
+      ? 'Đưa QR vào giữa khung, giữ máy ổn định 1-2 giây để nhận dạng nhanh hơn.'
+      : scanState === 'success'
+        ? 'Hệ thống đã ghi nhận điểm danh thành công cho mã vừa quét.'
+        : scanState === 'error'
+          ? 'Đặt lại mã vào giữa khung và bấm Quét lại để thử lại.'
+          : 'Bấm Bật camera hoặc Quét lại để bắt đầu.';
+
+  const cameraButtonDisabled = (() => {
+    if (!insecureContext || typeof window === 'undefined') return false;
+    const host = window.location.hostname;
+    return !(host === 'localhost' || host === '127.0.0.1' || host === '::1' || host.endsWith('.localhost'));
+  })();
+
+  function drawCenteredSquareFrame(
+    video: HTMLVideoElement,
+    canvas: HTMLCanvasElement,
+    context: CanvasRenderingContext2D,
+    zoom = 1
+  ) {
+    const sourceWidth = video.videoWidth;
+    const sourceHeight = video.videoHeight;
+    if (!sourceWidth || !sourceHeight) {
+      return false;
+    }
+
+    const boundedZoom = Math.min(1, Math.max(0.45, zoom));
+    const side = Math.floor(Math.min(sourceWidth, sourceHeight) * boundedZoom);
+    const sx = Math.floor((sourceWidth - side) / 2);
+    const sy = Math.floor((sourceHeight - side) / 2);
+    const targetSide = Math.min(side, MAX_DECODE_DIMENSION);
+    canvas.width = targetSide;
+    canvas.height = targetSide;
+    context.drawImage(video, sx, sy, side, side, 0, 0, targetSide, targetSide);
+    return true;
+  }
+
+  function drawFullFrame(
+    video: HTMLVideoElement,
+    canvas: HTMLCanvasElement,
+    context: CanvasRenderingContext2D
+  ) {
+    const sourceWidth = video.videoWidth;
+    const sourceHeight = video.videoHeight;
+    if (!sourceWidth || !sourceHeight) {
+      return false;
+    }
+
+    const scale = Math.min(1, MAX_DECODE_DIMENSION / Math.max(sourceWidth, sourceHeight));
+    const targetWidth = Math.max(1, Math.round(sourceWidth * scale));
+    const targetHeight = Math.max(1, Math.round(sourceHeight * scale));
+    canvas.width = targetWidth;
+    canvas.height = targetHeight;
+    context.drawImage(video, 0, 0, sourceWidth, sourceHeight, 0, 0, targetWidth, targetHeight);
+    return true;
+  }
 
   function stopScan(nextState: ScanState = 'idle') {
     if (frameRequest.current) {
       cancelAnimationFrame(frameRequest.current);
       frameRequest.current = undefined;
     }
+
+    try {
+      zxingControlsRef.current?.stop();
+    } catch {}
+    zxingControlsRef.current = null;
+    try {
+      runtimeQrScannerRef.current?.stop();
+    } catch {}
+    try {
+      runtimeQrScannerRef.current?.destroy();
+    } catch {}
+    runtimeQrScannerRef.current = null;
 
     const stream = videoRef.current?.srcObject as MediaStream | undefined;
     stream?.getTracks().forEach((track) => track.stop());
@@ -104,17 +189,75 @@ export function StudentQRScanner({ onScan }: Props) {
 
     setNeedsPlaybackGesture(false);
     setScanState(nextState);
+    reportDebug({
+      scanState: nextState,
+      cameraState: 'stopped',
+      decoderState: nextState === 'success' ? 'decoded' : 'idle',
+      note:
+        nextState === 'success'
+          ? 'Đã dừng camera sau khi điểm danh thành công.'
+          : 'Đã dừng camera.',
+    });
+  }
+
+  function startFallbackLoop(preferredEngine: 'barcode-detector' | 'jsqr') {
+    if (frameRequest.current || (!detectorRef.current && !jsQrDecoderRef.current)) {
+      return;
+    }
+
+    reportDebug({
+      decoderEngine: runtimeQrScannerRef.current ? 'qr-scanner' : preferredEngine,
+      decoderState: 'scanning',
+      note:
+        runtimeQrScannerRef.current
+          ? preferredEngine === 'barcode-detector'
+            ? 'qr-scanner dang chay, BarcodeDetector/jsQR dang ho tro song song.'
+            : 'qr-scanner dang chay, jsQR dang ho tro song song.'
+          : preferredEngine === 'barcode-detector'
+            ? 'Đang quét bằng BarcodeDetector, có jsQR dự phòng song song.'
+            : 'Đang quét bằng jsQR dự phòng.',
+    });
+    frameRequest.current = requestAnimationFrame(tick);
   }
 
   async function ensureDecoderReady() {
     if (!decoderInitPromiseRef.current) {
       decoderInitPromiseRef.current = (async () => {
+        reportDebug({
+          decoderEngine: 'initializing',
+          decoderState: 'idle',
+          note: 'Đang khởi tạo bộ quét QR.',
+        });
         detectorRef.current = createBarcodeDetectorInstance();
-        if (!detectorRef.current) {
-          jsQrDecoderRef.current = await loadJsQrDecoder();
-        }
+        // Always preload jsQR as fallback because BarcodeDetector can be present but flaky
+        // (especially on some iOS/Safari builds).
+        jsQrDecoderRef.current = await loadJsQrDecoder();
+        runtimeQrScannerFactoryRef.current = await loadRuntimeQrScannerFactory();
+        zxingReaderRef.current = await loadZxingBrowserQrReader();
 
-        setAutoScanSupported(Boolean(detectorRef.current || jsQrDecoderRef.current));
+        const preferredEngine = runtimeQrScannerFactoryRef.current
+          ? 'qr-scanner'
+          : zxingReaderRef.current
+          ? 'zxing'
+          : detectorRef.current
+            ? 'barcode-detector'
+            : jsQrDecoderRef.current
+              ? 'jsqr'
+              : 'none';
+        const supported = Boolean(
+          runtimeQrScannerFactoryRef.current ||
+            zxingReaderRef.current ||
+            detectorRef.current ||
+            jsQrDecoderRef.current
+        );
+        setAutoScanSupported(supported);
+        reportDebug({
+          decoderEngine: preferredEngine,
+          decoderState: supported ? 'idle' : 'error',
+          note: supported
+            ? `Bộ quét sẵn sàng (${preferredEngine}).`
+            : 'Trình duyệt không hỗ trợ bộ quét QR.',
+        });
       })();
     }
 
@@ -124,11 +267,22 @@ export function StudentQRScanner({ onScan }: Props) {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     setInsecureContext(!window.isSecureContext);
+    reportDebug({
+      scanState: 'idle',
+      cameraState: 'idle',
+      decoderEngine: 'initializing',
+      decoderState: 'idle',
+      lastDecodedRaw: null,
+      error: null,
+      note: 'Chờ khởi tạo camera và bộ quét.',
+    });
   }, []);
 
   useEffect(() => {
-    let mounted = true;
+    if (autoStartAttemptedRef.current) return;
+    autoStartAttemptedRef.current = true;
 
+    let mounted = true;
     void ensureDecoderReady().then(() => {
       if (mounted) {
         void startScan();
@@ -150,33 +304,183 @@ export function StudentQRScanner({ onScan }: Props) {
     setError(null);
     setScanState('scanning');
     lastScannedRawRef.current = '';
+    decodeCycleRef.current = 0;
+    scanStartedAtRef.current = Date.now();
+    lastNoResultNoticeAtRef.current = 0;
+    reportDebug({
+      scanState: 'scanning',
+      cameraState: 'requesting',
+      decoderState: 'idle',
+      lastDecodedRaw: null,
+      error: null,
+      note: 'Đang yêu cầu quyền camera.',
+    });
 
     try {
+      if (videoRef.current && runtimeQrScannerFactoryRef.current) {
+        try {
+          reportDebug({
+            decoderEngine: 'qr-scanner',
+            cameraState: 'requesting',
+            decoderState: 'scanning',
+            note: 'Đang bật camera và quét bằng qr-scanner.',
+          });
+          runtimeQrScannerRef.current = runtimeQrScannerFactoryRef.current.create({
+            video: videoRef.current,
+            onDecode: (decodedValue) => {
+              if (!decodedValue || decodedValue === lastScannedRawRef.current) {
+                return;
+              }
+
+              lastScannedRawRef.current = decodedValue;
+              reportDebug({
+                decoderEngine: 'qr-scanner',
+                decoderState: 'decoded',
+                lastDecodedRaw: decodedValue,
+                error: null,
+                note: 'qr-scanner đã giải mã QR.',
+              });
+              void submitRawValue(decodedValue);
+            },
+            onDecodeError: (decodeError) => {
+              const message =
+                decodeError instanceof Error ? decodeError.message : String(decodeError || '');
+              if (!message) {
+                return;
+              }
+
+              reportDebug({
+                decoderEngine: 'qr-scanner',
+                decoderState: 'scanning',
+                note: `qr-scanner đang bỏ qua lỗi tạm thời: ${message}`,
+              });
+            },
+          });
+          await runtimeQrScannerRef.current.start();
+
+          const runtimeStream = videoRef.current.srcObject as MediaStream | undefined;
+          const firstRuntimeTrack = runtimeStream?.getVideoTracks?.()[0];
+          if (firstRuntimeTrack && typeof firstRuntimeTrack.applyConstraints === 'function') {
+            void firstRuntimeTrack
+              .applyConstraints({
+                advanced: [{ focusMode: 'continuous' as ConstrainDOMString }],
+              })
+              .catch(() => undefined);
+          }
+
+          setCameraTips(getCameraTroubleshootingSteps());
+          reportDebug({
+            cameraState: 'ready',
+            decoderEngine: 'qr-scanner',
+            decoderState: 'scanning',
+            note: 'Camera đã sẵn sàng, qr-scanner đang quét liên tục.',
+          });
+
+          if (detectorRef.current || jsQrDecoderRef.current) {
+            startFallbackLoop(detectorRef.current ? 'barcode-detector' : 'jsqr');
+          }
+          return;
+        } catch (runtimeErr: unknown) {
+          try {
+            runtimeQrScannerRef.current?.destroy();
+          } catch {}
+          runtimeQrScannerRef.current = null;
+          reportDebug({
+            decoderEngine: 'qr-scanner',
+            decoderState: 'error',
+            note: `qr-scanner không khởi động được, chuyển sang luồng dự phòng. ${
+              runtimeErr instanceof Error ? runtimeErr.message : ''
+            }`.trim(),
+          });
+        }
+      }
+
       const mediaStream = await requestPreferredCameraStream({
         facingMode: 'environment',
+        width: 2560,
+        height: 1440,
       });
+      const firstVideoTrack = mediaStream.getVideoTracks()[0];
+      if (firstVideoTrack && typeof firstVideoTrack.applyConstraints === 'function') {
+        void firstVideoTrack.applyConstraints({
+          advanced: [{ focusMode: 'continuous' as ConstrainDOMString }],
+        }).catch(() => undefined);
+      }
       setCameraTips(getCameraTroubleshootingSteps());
+      reportDebug({
+        cameraState: 'ready',
+        decoderState: 'scanning',
+        note: 'Camera đã sẵn sàng, bắt đầu quét.',
+      });
 
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream;
         try {
           await videoRef.current.play();
         } catch {
-          // Mobile Safari / embedded browsers may block autoplay even with muted + playsInline.
-          // Keep the stream and ask the user to tap once to start playback.
           setNeedsPlaybackGesture(true);
           setScanState('idle');
+          reportDebug({
+            scanState: 'idle',
+            cameraState: 'playback_blocked',
+            decoderState: 'idle',
+            note: 'Trình duyệt yêu cầu thao tác tay để bật camera.',
+          });
           return;
         }
 
+        if (zxingReaderRef.current) {
+          try {
+            reportDebug({
+              decoderEngine: 'zxing',
+              decoderState: 'scanning',
+            note: 'Đang quét bằng ZXing. Hệ thống sẽ mở thêm dự phòng nếu cần.',
+            });
+            zxingControlsRef.current = await zxingReaderRef.current.decodeFromVideoElement(
+              videoRef.current,
+              (result) => {
+                const decodedValue = getZxingResultText(result);
+                if (!decodedValue || decodedValue === lastScannedRawRef.current) {
+                  return;
+                }
+
+                lastScannedRawRef.current = decodedValue;
+                reportDebug({
+                  decoderEngine: 'zxing',
+                  decoderState: 'decoded',
+                  lastDecodedRaw: decodedValue,
+                  error: null,
+                  note: 'ZXing đã giải mã QR.',
+                });
+                void submitRawValue(decodedValue);
+              }
+            );
+          } catch {
+            zxingControlsRef.current = null;
+            reportDebug({
+              decoderEngine: 'zxing',
+              decoderState: 'error',
+              note: 'ZXing không khởi động được, chuyển sang dự phòng.',
+            });
+          }
+        }
+
         if (detectorRef.current || jsQrDecoderRef.current) {
-          frameRequest.current = requestAnimationFrame(tick);
+          startFallbackLoop(detectorRef.current ? 'barcode-detector' : 'jsqr');
         }
       }
     } catch (err: unknown) {
-      setError(getCameraAccessErrorMessage(err));
+      const cameraError = getCameraAccessErrorMessage(err);
+      setError(cameraError);
       setCameraTips(getCameraTroubleshootingSteps(err));
       setScanState('error');
+      reportDebug({
+        scanState: 'error',
+        cameraState: 'error',
+        decoderState: 'error',
+        error: cameraError,
+        note: 'Không mở được camera.',
+      });
     }
   }
 
@@ -190,17 +494,150 @@ export function StudentQRScanner({ onScan }: Props) {
     try {
       await videoRef.current.play();
     } catch (err: unknown) {
-      setError(getCameraAccessErrorMessage(err));
+      const playbackError = getCameraAccessErrorMessage(err);
+      setError(playbackError);
       setCameraTips(getCameraTroubleshootingSteps(err));
       setNeedsPlaybackGesture(true);
       setScanState('error');
+      reportDebug({
+        scanState: 'error',
+        cameraState: 'error',
+        decoderState: 'error',
+        error: playbackError,
+        note: 'Bật camera thất bại sau khi người dùng đã thao tác tay.',
+      });
       return;
     }
 
+    if (runtimeQrScannerFactoryRef.current) {
+      try {
+        runtimeQrScannerRef.current = runtimeQrScannerFactoryRef.current.create({
+          video: videoRef.current,
+          onDecode: (decodedValue) => {
+            if (!decodedValue || decodedValue === lastScannedRawRef.current) {
+              return;
+            }
+
+            lastScannedRawRef.current = decodedValue;
+            reportDebug({
+              decoderEngine: 'qr-scanner',
+              decoderState: 'decoded',
+              lastDecodedRaw: decodedValue,
+              error: null,
+              note: 'qr-scanner đã giải mã QR.',
+            });
+            void submitRawValue(decodedValue);
+          },
+          onDecodeError: (decodeError) => {
+            const message =
+              decodeError instanceof Error ? decodeError.message : String(decodeError || '');
+            if (!message) {
+              return;
+            }
+
+            reportDebug({
+              decoderEngine: 'qr-scanner',
+              decoderState: 'scanning',
+              note: `qr-scanner đang bỏ qua lỗi tạm thời: ${message}`,
+            });
+          },
+        });
+        await runtimeQrScannerRef.current.start();
+        reportDebug({
+          decoderEngine: 'qr-scanner',
+          cameraState: 'ready',
+          decoderState: 'scanning',
+          error: null,
+          note: 'Đã bật camera bằng thao tác tay, qr-scanner đang quét liên tục.',
+        });
+
+        if (detectorRef.current || jsQrDecoderRef.current) {
+          startFallbackLoop(detectorRef.current ? 'barcode-detector' : 'jsqr');
+        }
+        return;
+      } catch (runtimeErr: unknown) {
+        try {
+          runtimeQrScannerRef.current?.destroy();
+        } catch {}
+        runtimeQrScannerRef.current = null;
+        reportDebug({
+          decoderEngine: 'qr-scanner',
+          decoderState: 'error',
+          note: `qr-scanner không khởi động được sau thao tác tay, chuyển sang dự phòng. ${
+            runtimeErr instanceof Error ? runtimeErr.message : ''
+          }`.trim(),
+        });
+      }
+    }
+
+    if (zxingReaderRef.current) {
+      try {
+        reportDebug({
+          decoderEngine: 'zxing',
+          cameraState: 'ready',
+          decoderState: 'scanning',
+          error: null,
+          note: 'Đã bật camera bằng thao tác tay, đang quét bằng ZXing và sẽ mở dự phòng nếu cần.',
+        });
+        zxingControlsRef.current = await zxingReaderRef.current.decodeFromVideoElement(
+          videoRef.current,
+          (result) => {
+            const decodedValue = getZxingResultText(result);
+            if (!decodedValue || decodedValue === lastScannedRawRef.current) {
+              return;
+            }
+
+            lastScannedRawRef.current = decodedValue;
+            reportDebug({
+              decoderEngine: 'zxing',
+              decoderState: 'decoded',
+              lastDecodedRaw: decodedValue,
+              error: null,
+              note: 'ZXing đã giải mã QR.',
+            });
+            void submitRawValue(decodedValue);
+          }
+        );
+      } catch {
+        zxingControlsRef.current = null;
+        reportDebug({
+          decoderEngine: 'zxing',
+          decoderState: 'error',
+          note: 'ZXing không khởi động được sau thao tác tay, chuyển sang dự phòng.',
+        });
+      }
+    }
+
     if (detectorRef.current || jsQrDecoderRef.current) {
-      frameRequest.current = requestAnimationFrame(tick);
+      startFallbackLoop(detectorRef.current ? 'barcode-detector' : 'jsqr');
     }
   }
+
+  useEffect(() => {
+    if (scanState !== 'scanning') {
+      return;
+    }
+
+    const interval = window.setInterval(() => {
+      const now = Date.now();
+      if (
+        scanStartedAtRef.current > 0 &&
+        now - scanStartedAtRef.current >= NO_RESULT_NOTICE_MS &&
+        now - lastNoResultNoticeAtRef.current >= NO_RESULT_NOTICE_MS &&
+        !submittingRef.current
+      ) {
+        lastNoResultNoticeAtRef.current = now;
+        setError('Chưa nhận được mã QR. Đưa mã vào giữa khung, giữ ổn định và lại gần hơn.');
+        reportDebug({
+          decoderState: 'timeout',
+          error: 'Chưa nhận được mã QR. Đưa mã vào giữa khung, giữ ổn định và lại gần hơn.',
+          note: 'Đã quá vài giây nhưng chưa đọc được mã QR.',
+        });
+      }
+    }, 1000);
+
+    return () => window.clearInterval(interval);
+  }, [scanState]);
 
   function tick() {
     if (!videoRef.current || !canvasRef.current) {
@@ -216,29 +653,57 @@ export function StudentQRScanner({ onScan }: Props) {
       return;
     }
 
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    decodeCycleRef.current += 1;
+    const useFullFrame = decodeCycleRef.current % 4 === 0;
+    const cropZoom =
+      decodeCycleRef.current % 6 === 0
+        ? 0.72
+        : decodeCycleRef.current % 5 === 0
+          ? 0.84
+          : decodeCycleRef.current % 2 === 0
+            ? 0.96
+            : 1;
+    const frameReady = useFullFrame
+      ? drawFullFrame(video, canvas, context)
+      : drawCenteredSquareFrame(video, canvas, context, cropZoom);
+    if (!frameReady) {
+      frameRequest.current = requestAnimationFrame(tick);
+      return;
+    }
 
     const now = Date.now();
-    const shouldDecode = now - lastDecodeAtRef.current >= 240;
-
+    const shouldDecode = now - lastDecodeAtRef.current >= DECODE_INTERVAL_MS;
     if (shouldDecode && !submittingRef.current && !processingFrameRef.current) {
       lastDecodeAtRef.current = now;
       processingFrameRef.current = true;
+      const elapsed = now - scanStartedAtRef.current;
+      const shouldUseAggressiveMode =
+        elapsed <= 3000 || useFullFrame || decodeCycleRef.current % 4 === 0 || elapsed >= 8000;
 
-      void decodeQrValueFromSource({
-        source: canvas,
-        barcodeDetector: detectorRef.current,
-        jsQrDecoder: jsQrDecoderRef.current,
-        getFallbackImageData: () => {
-          try {
-            return context.getImageData(0, 0, canvas.width, canvas.height);
-          } catch {
-            return null;
+      void (async () => {
+        if (runtimeQrScannerFactoryRef.current) {
+          const runtimeDecodedValue = await runtimeQrScannerFactoryRef.current.scanImage(canvas, {
+            alsoTryWithoutScanRegion: shouldUseAggressiveMode,
+          });
+          if (runtimeDecodedValue) {
+            return runtimeDecodedValue;
           }
-        },
-      })
+        }
+
+        return decodeQrValueFromSource({
+          source: canvas,
+          barcodeDetector: detectorRef.current,
+          jsQrDecoder: jsQrDecoderRef.current,
+          aggressive: shouldUseAggressiveMode,
+          getFallbackImageData: () => {
+            try {
+              return context.getImageData(0, 0, canvas.width, canvas.height);
+            } catch {
+              return null;
+            }
+          },
+        });
+      })()
         .then(async (decodedValue) => {
           const firstValue = String(decodedValue || '').trim();
           if (!firstValue || firstValue === lastScannedRawRef.current) {
@@ -246,6 +711,19 @@ export function StudentQRScanner({ onScan }: Props) {
           }
 
           lastScannedRawRef.current = firstValue;
+          reportDebug({
+            decoderEngine: runtimeQrScannerFactoryRef.current
+              ? 'qr-scanner'
+              : detectorRef.current
+                ? 'barcode-detector'
+                : 'jsqr',
+            decoderState: 'decoded',
+            lastDecodedRaw: firstValue,
+            error: null,
+            note: runtimeQrScannerFactoryRef.current
+              ? 'qr-scanner tăng lực đã giải mã QR.'
+              : 'Bộ quét dự phòng đã giải mã QR.',
+          });
           await submitRawValue(firstValue);
         })
         .catch(() => undefined)
@@ -257,84 +735,6 @@ export function StudentQRScanner({ onScan }: Props) {
     frameRequest.current = requestAnimationFrame(tick);
   }
 
-  async function handleManualSubmit(event: React.FormEvent) {
-    event.preventDefault();
-    if (!manualToken.trim()) {
-      toast.error('Nhập dữ liệu mã QR');
-      return;
-    }
-
-    await submitRawValue(manualToken.trim());
-  }
-
-  async function handleImageUpload(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    event.target.value = '';
-
-    if (!file) {
-      return;
-    }
-
-    await ensureDecoderReady();
-
-    if (!detectorRef.current && !jsQrDecoderRef.current) {
-      toast.error('Trình duyệt không hỗ trợ quét QR từ ảnh. Hãy dùng nhập thủ công.');
-      return;
-    }
-
-    let loadedImage: LoadedQrImageSource | null = null;
-
-    try {
-      setError(null);
-      setScanState('scanning');
-
-      loadedImage = await loadQrImageSource(file);
-      const decodedValue = await decodeQrValueFromSource({
-        source: loadedImage.source,
-        barcodeDetector: detectorRef.current,
-        jsQrDecoder: jsQrDecoderRef.current,
-        aggressive: true,
-        getFallbackImageData: () => {
-          if (!loadedImage) {
-            return null;
-          }
-
-          const canvas = document.createElement('canvas');
-          canvas.width = loadedImage.width;
-          canvas.height = loadedImage.height;
-
-          const context = canvas.getContext('2d');
-          if (!context) {
-            return null;
-          }
-
-          context.drawImage(loadedImage.source as CanvasImageSource, 0, 0, canvas.width, canvas.height);
-
-          try {
-            return context.getImageData(0, 0, canvas.width, canvas.height);
-          } catch {
-            return null;
-          }
-        },
-      });
-
-      const firstValue = String(decodedValue || '').trim();
-      if (!firstValue) {
-        throw new Error(
-          'Không đọc được mã QR từ ảnh. Hãy chọn ảnh rõ nét hơn hoặc dán link/mã QR vào ô nhập thủ công.'
-        );
-      }
-
-      await submitRawValue(firstValue);
-    } catch (err) {
-      setScanState('error');
-      setError(err instanceof Error ? err.message : 'Không thể quét mã QR từ ảnh');
-      toast.error('Không thể quét mã QR từ ảnh');
-    } finally {
-      loadedImage?.dispose();
-    }
-  }
-
   async function submitRawValue(rawValue: string) {
     if (submittingRef.current) return;
     submittingRef.current = true;
@@ -342,14 +742,29 @@ export function StudentQRScanner({ onScan }: Props) {
     try {
       setScanState('scanning');
       setError(null);
+      reportDebug({
+        scanState: 'scanning',
+        decoderState: 'decoded',
+        lastDecodedRaw: rawValue,
+        error: null,
+        note: 'Đã đọc được mã QR, đang gửi yêu cầu điểm danh.',
+      });
       await onScan(rawValue);
       setLastResult(rawValue);
       stopScan('success');
       toast.success('Điểm danh thành công');
     } catch (err: unknown) {
+      const submitError = err instanceof Error ? err.message : 'Xác thực thất bại';
       setScanState('error');
-      setError(err instanceof Error ? err.message : 'Xác thực thất bại');
-      toast.error('Mã QR không hợp lệ hoặc đã hết hạn');
+      lastScannedRawRef.current = '';
+      setError(submitError);
+      reportDebug({
+        scanState: 'error',
+        decoderState: 'error',
+        error: submitError,
+        note: 'Đã đọc được mã QR nhưng xác thực điểm danh thất bại.',
+      });
+      toast.error('Không thể điểm danh. Vui lòng quét lại mã QR tại lớp.');
     } finally {
       submittingRef.current = false;
     }
@@ -357,29 +772,50 @@ export function StudentQRScanner({ onScan }: Props) {
 
   return (
     <div className="space-y-5">
-      <section className="content-card overflow-hidden">
-        <div className="border-b border-gray-200 px-4 py-3 sm:px-5">
-          <h2 className="text-base font-semibold text-gray-900 sm:text-lg">Quét mã QR điểm danh</h2>
-          <p className="mt-1 text-sm text-gray-600">
-            Học viên dùng camera sau để quét mã QR do giảng viên mở tại lớp.
+      <section className="content-card overflow-hidden pb-[calc(env(safe-area-inset-bottom)+0.25rem)] dark:border-slate-700 dark:bg-slate-900/70">
+        <div className="border-b border-slate-200 px-4 py-3 dark:border-slate-700 sm:px-5">
+          <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100 sm:text-lg">
+            Quét mã QR điểm danh
+          </h2>
+          <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+            Theo quy định, học viên bắt buộc dùng camera web để quét lại mã QR tại lớp mới được điểm
+            danh.
           </p>
         </div>
 
         <div className="space-y-4 p-4 sm:p-5">
-          <div className="relative overflow-hidden rounded-2xl border border-gray-200 bg-black/95">
-            <video ref={videoRef} className="aspect-video w-full object-cover" muted playsInline />
+          <div className="grid gap-2 rounded-2xl border border-blue-200 bg-blue-50/70 p-3 text-xs text-blue-900 dark:border-blue-500/40 dark:bg-blue-500/10 dark:text-blue-100 sm:grid-cols-2 sm:items-center sm:px-4">
+            <div className="inline-flex items-center gap-2 font-semibold">
+              <ScanLine className="h-4 w-4" />
+              Trạng thái: {scanStateLabel}
+            </div>
+            <div className="text-[11px] leading-5 text-blue-800 dark:text-blue-200 sm:text-right">
+              {scanStateHint}
+            </div>
+          </div>
+
+          <div className="relative mx-auto aspect-square w-full max-w-[25rem] overflow-hidden rounded-2xl border border-slate-200 bg-black/95 shadow-inner shadow-black/40 dark:border-slate-600">
+            <video ref={videoRef} className="h-full w-full object-cover" muted playsInline />
+            <div className="pointer-events-none absolute inset-0 p-4 sm:p-5">
+              <div className="relative h-full w-full">
+                <div className="absolute left-0 top-0 h-9 w-9 rounded-tl-2xl border-l-4 border-t-4 border-cyan-300/95" />
+                <div className="absolute right-0 top-0 h-9 w-9 rounded-tr-2xl border-r-4 border-t-4 border-cyan-300/95" />
+                <div className="absolute bottom-0 left-0 h-9 w-9 rounded-bl-2xl border-b-4 border-l-4 border-cyan-300/95" />
+                <div className="absolute bottom-0 right-0 h-9 w-9 rounded-br-2xl border-b-4 border-r-4 border-cyan-300/95" />
+              </div>
+            </div>
             {needsPlaybackGesture && (
               <div className="absolute inset-0 flex items-center justify-center bg-black/50 px-4">
                 <div className="w-full max-w-sm rounded-2xl border border-white/15 bg-slate-950/85 p-4 text-white shadow-xl backdrop-blur">
                   <div className="text-sm font-semibold">Trình duyệt đang chặn bật camera tự động</div>
                   <div className="mt-1 text-xs text-slate-200">
-                    Nhấn nút bên dưới để bật camera. Nếu vẫn lỗi, dùng mục "Không dùng được camera?"
-                    để tải ảnh QR hoặc nhập thủ công.
+                    Nhấn nút bên dưới để bật camera. Hệ thống chỉ chấp nhận điểm danh sau khi quét QR
+                    bằng camera web.
                   </div>
                   <button
                     type="button"
                     onClick={() => void enablePlayback()}
-                    className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+                    className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
                     data-testid="qr-enable-camera"
                   >
                     Bật camera
@@ -391,35 +827,27 @@ export function StudentQRScanner({ onScan }: Props) {
           <canvas ref={canvasRef} className="hidden" />
 
           {!autoScanSupported && (
-            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-              Trình duyệt hiện tại chưa hỗ trợ quét QR tự động. Bạn vẫn có thể nhập dữ liệu QR thủ
-              công ở bên dưới.
+            <div className="rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-200">
+              Trình duyệt hiện tại không hỗ trợ quét QR bằng camera web. Vui lòng dùng Chrome, Edge
+              hoặc Safari mới nhất.
             </div>
           )}
 
           {insecureContext && (
             <div
-              className="rounded-2xl border border-amber-300 bg-amber-50 px-3 py-3 text-sm text-amber-900"
+              className="rounded-2xl border border-amber-300 bg-amber-50 px-3 py-3 text-sm text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200"
               data-testid="qr-insecure-context-guide"
             >
-              <div className="font-semibold">Camera web có thể bị chặn trên HTTP/LAN</div>
+              <div className="font-semibold">Camera web bị chặn trên kết nối không bảo mật</div>
               <p className="mt-1 text-xs leading-5">
-                Nếu địa chỉ đang là <code>http://10.x</code>, <code>http://192.168.x.x</code> hoặc
-                trình duyệt nhúng, hãy ưu tiên quét QR bằng app camera khác rồi mở đường link điểm
-                danh. Link này hỗ trợ tự điểm danh sau khi đăng nhập đúng tài khoản.
+                Hãy mở hệ thống bằng <code>https://</code> hoặc <code>http://localhost</code>, sau đó
+                bật camera và quét lại mã QR trong trang này.
               </p>
-              <ol className="mt-2 space-y-1 text-xs leading-5">
-                {insecureContextSteps.map((step, index) => (
-                  <li key={step}>
-                    {index + 1}. {step}
-                  </li>
-                ))}
-              </ol>
             </div>
           )}
 
           {scanState === 'success' && (
-            <div className="rounded-2xl border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800">
+            <div className="rounded-2xl border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800 dark:border-green-500/40 dark:bg-green-500/10 dark:text-green-200" aria-live="polite">
               <div className="inline-flex items-center gap-2 font-medium">
                 <CheckCircle2 className="h-4 w-4" />
                 Đã xác thực
@@ -428,90 +856,56 @@ export function StudentQRScanner({ onScan }: Props) {
             </div>
           )}
 
-          {scanState === 'error' && error && (
-            <div className="rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          {error && (
+            <div className="rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-200" aria-live="polite">
               <div className="inline-flex items-center gap-2 font-medium">
                 <CircleAlert className="h-4 w-4" />
-                Lỗi camera hoặc xác thực
+                Lỗi camera hoặc quét QR
               </div>
               <div className="mt-1">{error}</div>
             </div>
           )}
 
-          <div className="flex flex-wrap gap-2">
+          <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap">
             <button
               type="button"
               onClick={() => void startScan()}
-              className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+              disabled={cameraButtonDisabled}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-blue-300 dark:focus-visible:ring-offset-slate-900 disabled:cursor-not-allowed disabled:bg-blue-300 sm:w-auto"
             >
               <RotateCcw className="h-4 w-4" />
-              Quét lại
+              {scanState === 'idle' ? 'Bật camera' : 'Quét lại'}
             </button>
             <button
               type="button"
               onClick={() => stopScan('idle')}
-              className="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-gray-100 px-3.5 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-200"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-300 bg-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 dark:focus-visible:ring-slate-500 dark:focus-visible:ring-offset-slate-900 sm:w-auto"
             >
               <Pause className="h-4 w-4" />
               Tạm dừng
             </button>
           </div>
 
-          <div className="rounded-2xl border border-indigo-200 bg-indigo-50 px-3 py-3 text-sm text-indigo-900">
-            <div className="font-semibold">Không dùng được camera?</div>
-            <p className="mt-1 text-xs leading-5">
-              Bạn có thể tải ảnh chứa mã QR để hệ thống đọc thay cho camera, hoặc dán dữ liệu QR ở
-              khung nhập thủ công. Nếu quét bằng app bên ngoài, dán nguyên link cũng được.
-            </p>
-            <label className="mt-2 inline-flex cursor-pointer items-center gap-2 rounded-xl border border-indigo-300 bg-white px-3.5 py-2 text-sm font-semibold text-indigo-700 transition-colors hover:bg-indigo-100">
-              Tải ảnh QR
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(event) => void handleImageUpload(event)}
-              />
-            </label>
-          </div>
-
-          <div className="rounded-2xl border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-900">
+          <div className="rounded-2xl border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-900 dark:border-sky-500/40 dark:bg-sky-500/10 dark:text-sky-100">
             <div className="inline-flex items-center gap-2 font-semibold">
               <Info className="h-4 w-4" />
-              Hướng dẫn nhanh khi lỗi camera
+              Hướng dẫn nhanh
             </div>
-            <ul className="mt-2 space-y-1">
+            <ul className="sr-only">
               {cameraTips.map((tip) => (
                 <li key={tip} className="leading-5">
                   • {tip}
                 </li>
               ))}
             </ul>
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              {cameraTips.map((tip) => (
+                <li key={`${tip}-clean`} className="leading-5">
+                  {tip}
+                </li>
+              ))}
+            </ul>
           </div>
-        </div>
-      </section>
-
-      <section className="content-card p-4 sm:p-5">
-        <form onSubmit={handleManualSubmit} className="space-y-3">
-          <label className="block text-sm font-medium text-gray-700">
-            Nhập dữ liệu thô hoặc link từ mã QR
-          </label>
-          <textarea
-            className="min-h-24 w-full rounded-2xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-transparent focus:ring-2 focus:ring-blue-500"
-            placeholder='Ví dụ: {"s":123,"t":"qr_token"} hoặc /student/check-in?s=123&t=qr_token'
-            value={manualToken}
-            onChange={(event) => setManualToken(event.target.value)}
-          />
-          <button
-            type="submit"
-            className="inline-flex items-center rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-700"
-          >
-            Điểm danh thủ công
-          </button>
-        </form>
-        <div className="mt-4 rounded-2xl border border-gray-200 bg-gray-50 px-3 py-3 text-xs text-gray-700">
-          QR hợp lệ có thể là JSON ngắn, query string hoặc nguyên đường link
-          <code className="mx-1">/student/check-in?s=...&t=...</code>. Nếu giảng viên chiếu QR ở
-          chế độ link, học viên chỉ cần mở đúng link đó là đủ.
         </div>
       </section>
     </div>

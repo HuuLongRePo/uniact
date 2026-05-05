@@ -22,7 +22,7 @@ export class StudentHelper {
       const normalizedToken = typeof token === 'string' ? token.trim() : ''
       const normalizedSessionId = Number(sessionId)
 
-      if (!normalizedToken || !Number.isFinite(normalizedSessionId)) {
+      if (!normalizedToken || !Number.isInteger(normalizedSessionId) || normalizedSessionId <= 0) {
         return null
       }
 

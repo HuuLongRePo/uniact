@@ -3,7 +3,7 @@
 ## 1) Muc tieu va vai tro
 
 - Giang vien la nguoi mo phien diem danh, tao ma QR va dieu phoi diem danh.
-- Hoc vien la nguoi quet ma QR hoac mo duong link check-in de tu diem danh.
+- Hoc vien bat buoc quet ma QR bang camera web trong trang check-in de diem danh.
 - FaceID la kenh bo sung de giang vien diem danh tai diem, khong thay the luong QR cho toan bo lop.
 
 ## 2) Luong QR tu A-Z
@@ -18,15 +18,14 @@
 
 ### Hoc vien
 
-1. Mo trang `Hoc vien -> Diem danh QR` neu camera web hoat dong binh thuong.
-2. Quet ma QR do giang vien dang chieu.
-3. Neu trinh duyet web khong mo duoc camera:
-   - Dung app camera/QR bat ky tren dien thoai.
-   - Quet ma QR dang duoc giang vien chieu.
-   - Mo duong link `/student/check-in?s=...&t=...`.
-   - Dang nhap dung tai khoan hoc vien nam trong pham vi phien QR.
-   - He thong se tu dong diem danh, khong can quet lai trong web.
-4. Neu co anh chup ma QR, co the tai anh len trong scanner hoac dan nguyen du lieu/link vao o nhap thu cong.
+1. Mo trang `Hoc vien -> Diem danh QR`.
+2. Bat camera web trong trang.
+3. Quet ma QR do giang vien dang chieu.
+4. Neu hoc vien quet QR bang app camera ngoai va mo link `/student/check-in?s=...&t=...`:
+   - Neu chua dang nhap: he thong chi dieu huong sang dang nhap.
+   - Neu da dang nhap: he thong chi mo dung trang check-in.
+   - Ca hai truong hop deu phai bat camera web va quet lai QR de diem danh.
+5. He thong khong chap nhan diem danh bang upload anh QR hoac nhap tay payload.
 
 ## 3) Luong FaceID tu A-Z
 
@@ -67,7 +66,8 @@
 - He thong khong the bypass chinh sach nay o phia web.
 - Cach di dung:
   - Uu tien HTTPS hoac localhost neu test tren may.
-  - Neu dang hoc trong LAN/noi bo, hoc vien quet QR bang app camera ngoai va mo deep link check-in.
+  - Dang nhap hoc vien.
+  - Bat camera web trong trang check-in va quet lai QR.
 
 ### Truong hop trinh duyet nhung/in-app browser
 
@@ -77,6 +77,6 @@
 
 - Giang vien chi mo **mot phien QR active** cho mot hoat dong tai mot thoi diem.
 - Chieu ma QR du lon, uu tien che do projector/toan man hinh.
-- Neu camera hoc vien loi, chuyen sang deep-link check-in ngay, khong doi sua browser qua lau.
+- Neu camera hoc vien loi, xu ly quyen camera/secure context (HTTPS, browser he thong) de mo lai camera web, khong dung luong auto-checkin qua link.
 - Khi dung FaceID, xu ly tung nguoi mot.
 - Sau moi dot diem danh, xem roster chua diem danh theo lop de goi bo sung.

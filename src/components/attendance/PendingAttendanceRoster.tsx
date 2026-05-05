@@ -20,7 +20,7 @@ export function PendingAttendanceRoster({
   participants,
   loading = false,
   error = null,
-  title = 'Học viên chưa điểm danh',
+  title = 'Hoc vien chua diem danh',
 }: PendingAttendanceRosterProps) {
   const pendingParticipants = participants.filter(
     (participant) => participant.attendance_status === 'registered'
@@ -29,7 +29,7 @@ export function PendingAttendanceRoster({
   const groupedByClass = pendingParticipants.reduce<
     Array<{ className: string; students: AttendanceParticipant[] }>
   >((groups, participant) => {
-    const className = participant.class_name?.trim() || 'Chưa gán lớp';
+    const className = participant.class_name?.trim() || 'Chua gan lop';
     const existing = groups.find((group) => group.className === className);
 
     if (existing) {
@@ -50,56 +50,53 @@ export function PendingAttendanceRoster({
   );
 
   return (
-    <section
-      className="content-card space-y-4 p-5 sm:p-6"
-      data-testid="pending-attendance-roster"
-    >
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <section className="page-surface rounded-[1.75rem] px-5 py-6 sm:px-7" data-testid="pending-attendance-roster">
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
-          <p className="mt-1 text-sm text-gray-600">
-            Cập nhật danh sách học viên còn trạng thái đăng ký để giảng viên đọc tên và gọi điểm
-            danh bổ sung.
+          <h2 className="text-2xl font-bold text-slate-900">{title}</h2>
+          <p className="mt-2 max-w-3xl text-sm text-slate-600">
+            Danh sach nay giup giang vien doc ten va xu ly bo sung cho cac hoc vien van con trang
+            thai dang ky.
           </p>
         </div>
-        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-right">
-          <div className="text-xs uppercase tracking-wide text-amber-700">Chưa điểm danh</div>
-          <div
-            className="mt-1 text-2xl font-bold text-amber-900"
-            data-testid="pending-attendance-count"
-          >
+
+        <div className="rounded-[1.5rem] border border-amber-200 bg-amber-50 px-4 py-4 text-right">
+          <div className="text-xs font-semibold uppercase tracking-wide text-amber-700">
+            Chua diem danh
+          </div>
+          <div className="mt-1 text-3xl font-bold text-amber-900" data-testid="pending-attendance-count">
             {pendingParticipants.length}
           </div>
-          <div className="text-xs text-amber-700">{groupedByClass.length} lớp còn thiếu</div>
+          <div className="text-xs text-amber-700">{groupedByClass.length} lop can xu ly</div>
         </div>
       </div>
 
       {loading ? (
-        <div className="rounded-xl border border-dashed border-gray-300 p-8 text-sm text-gray-500">
-          Đang tải danh sách chưa điểm danh...
+        <div className="mt-5 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-sm text-slate-500">
+          Dang tai danh sach chua diem danh...
         </div>
       ) : error ? (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="mt-5 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-700">
           {error}
         </div>
       ) : pendingParticipants.length === 0 ? (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-4 text-sm text-emerald-800">
-          Tất cả học viên trong phạm vi hoạt động đã được điểm danh.
+        <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-4 text-sm text-emerald-800">
+          Tat ca hoc vien trong pham vi hoat dong da duoc diem danh.
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <div className="mt-5 grid gap-4 xl:grid-cols-2">
           {groupedByClass.map((group) => (
             <section
               key={group.className}
-              className="rounded-2xl border border-gray-200 bg-white/80 p-4"
+              className="rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-sm"
             >
-              <div className="flex items-center justify-between gap-3 border-b border-gray-100 pb-3">
+              <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-3">
                 <div>
-                  <h3 className="text-base font-semibold text-gray-900">{group.className}</h3>
-                  <p className="text-xs text-gray-500">Danh sách chưa điểm danh theo lớp</p>
+                  <h3 className="text-base font-semibold text-slate-900">{group.className}</h3>
+                  <p className="text-xs text-slate-500">Danh sach hoc vien cho diem danh theo lop</p>
                 </div>
-                <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-700">
-                  {group.students.length} học viên
+                <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
+                  {group.students.length} hoc vien
                 </span>
               </div>
 
@@ -107,18 +104,18 @@ export function PendingAttendanceRoster({
                 {group.students.map((student) => (
                   <div
                     key={student.id}
-                    className="flex items-center justify-between gap-3 rounded-xl border border-gray-100 bg-gray-50 px-3 py-2"
+                    className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 bg-slate-50 px-3 py-3"
                   >
                     <div className="min-w-0">
-                      <div className="truncate text-sm font-semibold text-gray-900">
+                      <div className="truncate text-sm font-semibold text-slate-900">
                         {student.student_name}
                       </div>
-                      <div className="text-xs text-gray-500">
-                        Mã học viên: {student.student_code || 'Chưa cập nhật'}
+                      <div className="text-xs text-slate-500">
+                        Ma hoc vien: {student.student_code || 'Chua cap nhat'}
                       </div>
                     </div>
                     <span className="shrink-0 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-800">
-                      Chờ điểm danh
+                      Cho diem danh
                     </span>
                   </div>
                 ))}

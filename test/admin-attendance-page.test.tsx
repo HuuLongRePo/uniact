@@ -3,13 +3,24 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const router = {
   back: vi.fn(),
+  push: vi.fn(),
 };
+const authState = {
+  user: { id: 1, role: 'admin', full_name: 'System Admin' },
+  loading: false,
+};
+let currentActivityId: string | null = null;
 
 vi.mock('next/navigation', () => ({
   useRouter: () => router,
   useSearchParams: () => ({
-    get: () => null,
+    get: (key: string) =>
+      key === 'activityId' || key === 'activity_id' ? currentActivityId : null,
   }),
+}));
+
+vi.mock('@/contexts/AuthContext', () => ({
+  useAuth: () => authState,
 }));
 
 vi.mock('react-hot-toast', () => ({
@@ -22,6 +33,7 @@ vi.mock('react-hot-toast', () => ({
 describe('Admin attendance page timezone rendering', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    currentActivityId = null;
     global.fetch = vi.fn(async () => {
       return {
         ok: true,
@@ -49,9 +61,19 @@ describe('Admin attendance page timezone rendering', () => {
     render(<Page />);
 
     await waitFor(() => {
-      expect(screen.getByText('Sinh hoat dau tuan')).toBeInTheDocument();
+      expect(screen.getAllByText('Sinh hoat dau tuan').length).toBeGreaterThan(0);
     });
 
-    expect(screen.getByText('21/04/2026')).toBeInTheDocument();
+    expect(screen.getAllByText('21/04/2026').length).toBeGreaterThan(0);
+  });
+
+  it('prefills the activity filter from search params', async () => {
+    currentActivityId = '77';
+    const Page = (await import('../src/app/admin/attendance/page')).default;
+    render(<Page />);
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('77')).toBeInTheDocument();
+    });
   });
 });

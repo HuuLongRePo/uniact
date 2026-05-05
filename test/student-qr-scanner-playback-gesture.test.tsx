@@ -6,6 +6,11 @@ import { StudentQRScanner } from '@/components/StudentQRScanner';
 
 vi.mock('@/lib/camera-stream', () => ({
   requestPreferredCameraStream: vi.fn(async () => ({
+    getVideoTracks: () => [
+      {
+        applyConstraints: vi.fn(async () => undefined),
+      },
+    ],
     getTracks: () => [],
   })),
   getCameraAccessErrorMessage: (err: unknown) =>
@@ -17,6 +22,15 @@ vi.mock('@/lib/qr-scan-decoder', () => ({
   createBarcodeDetectorInstance: () => null,
   decodeQrValueFromSource: vi.fn(async () => null),
   loadJsQrDecoder: vi.fn(async () => null),
+}));
+
+vi.mock('@/lib/zxing-qr-scanner', () => ({
+  loadZxingBrowserQrReader: vi.fn(async () => null),
+  getZxingResultText: vi.fn(() => null),
+}));
+
+vi.mock('@/lib/qr-scanner-runtime', () => ({
+  loadRuntimeQrScannerFactory: vi.fn(async () => null),
 }));
 
 describe('StudentQRScanner mobile playback fallback', () => {
@@ -31,11 +45,14 @@ describe('StudentQRScanner mobile playback fallback', () => {
     try {
       render(<StudentQRScanner onScan={vi.fn(async () => undefined)} />);
 
+      await act(async () => {
+        screen.getByRole('button', { name: /camera/i }).click();
+      });
+
       await waitFor(() => {
         expect(screen.getByTestId('qr-enable-camera')).toBeInTheDocument();
       });
 
-      // Second attempt should clear the overlay.
       await act(async () => {
         screen.getByTestId('qr-enable-camera').click();
       });
@@ -48,7 +65,7 @@ describe('StudentQRScanner mobile playback fallback', () => {
     }
   });
 
-  it('shows deep-link guidance when running in an insecure context', async () => {
+  it('shows secure-context guidance when running in an insecure context', async () => {
     const originalDescriptor = Object.getOwnPropertyDescriptor(window, 'isSecureContext');
     Object.defineProperty(window, 'isSecureContext', {
       configurable: true,
@@ -62,8 +79,9 @@ describe('StudentQRScanner mobile playback fallback', () => {
         expect(screen.getByTestId('qr-insecure-context-guide')).toBeInTheDocument();
       });
 
-      expect(screen.getByText(/camera web có thể bị chặn trên HTTP\/LAN/i)).toBeInTheDocument();
-      expect(screen.getAllByText(/\/student\/check-in\?s=\.\.\.&t=\.\.\./i).length).toBeGreaterThan(0);
+      expect(screen.getByText(/camera web bị chặn trên kết nối không bảo mật/i)).toBeInTheDocument();
+      expect(screen.getByText(/hãy mở hệ thống bằng/i)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /quét lại|bật camera|camera/i })).toBeEnabled();
     } finally {
       if (originalDescriptor) {
         Object.defineProperty(window, 'isSecureContext', originalDescriptor);

@@ -3,6 +3,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 beforeEach(() => {
   vi.resetModules();
   vi.clearAllMocks();
+  vi.doMock('@/lib/network-proximity', () => ({
+    resolveRequestNetworkPrefix: () => '10.20.30',
+  }));
 });
 
 describe('qr access routes', () => {
@@ -57,6 +60,7 @@ describe('qr access routes', () => {
     vi.doMock('@/lib/database', () => ({
       dbAll: mockDbAll,
       dbGet: vi.fn(),
+      dbRun: vi.fn(async () => ({ changes: 1 })),
       dbHelpers: {},
     }));
 
@@ -103,6 +107,7 @@ describe('qr access routes', () => {
 
     vi.doMock('@/lib/database', () => ({
       dbGet: mockDbGet,
+      dbRun: vi.fn(async () => ({ changes: 1 })),
       dbAll: vi.fn(async () => []),
       dbHelpers: {
         createQRSession: vi.fn(async () => ({ lastID: 123 })),

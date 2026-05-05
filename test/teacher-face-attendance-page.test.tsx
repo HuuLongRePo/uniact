@@ -11,10 +11,10 @@ vi.mock('@/lib/biometrics/face-runtime', () => ({
   performLivenessCheck: performLivenessCheckMock,
   FaceBiometricUnavailableError: class FaceBiometricUnavailableError extends Error {},
   FaceDetectionError: class FaceDetectionError extends Error {
-    code: string
+    code: string;
     constructor(code: string, message: string) {
-      super(message)
-      this.code = code
+      super(message);
+      this.code = code;
     }
   },
   FACE_BIOMETRIC_RUNTIME_ENABLED: true,
@@ -33,7 +33,7 @@ vi.mock('react-hot-toast', () => ({
 vi.mock('@/lib/camera-stream', () => ({
   requestPreferredCameraStream: requestPreferredCameraStreamMock,
   getCameraAccessErrorMessage: (error: unknown) =>
-    error instanceof Error && error.message ? error.message : 'Không truy cập được camera.',
+    error instanceof Error && error.message ? error.message : 'Khong truy cap duoc camera.',
 }));
 
 describe('TeacherFaceAttendancePage', () => {
@@ -58,7 +58,7 @@ describe('TeacherFaceAttendancePage', () => {
   it('surfaces secure-context camera error before preview submission', async () => {
     requestPreferredCameraStreamMock.mockRejectedValue(
       new Error(
-        'Camera chỉ hoạt động trên kết nối bảo mật (HTTPS hoặc localhost). Hãy mở lại bằng trình duyệt ngoài ứng dụng nhúng.'
+        'Camera chi hoat dong tren ket noi bao mat (HTTPS hoac localhost). Hay mo lai bang trinh duyet ngoai ung dung nhung.'
       )
     );
 
@@ -69,11 +69,11 @@ describe('TeacherFaceAttendancePage', () => {
     const Page = (await import('../src/app/teacher/attendance/face/page')).default;
     render(<Page />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Lấy candidate từ camera' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Lay candidate tu camera' }));
 
     await waitFor(() => {
       expect(toastErrorMock).toHaveBeenCalledWith(
-        'Camera chỉ hoạt động trên kết nối bảo mật (HTTPS hoặc localhost). Hãy mở lại bằng trình duyệt ngoài ứng dụng nhúng.'
+        'Camera chi hoat dong tren ket noi bao mat (HTTPS hoac localhost). Hay mo lai bang trinh duyet ngoai ung dung nhung.'
       );
     });
     expect(fetchMock).not.toHaveBeenCalled();
@@ -101,14 +101,17 @@ describe('TeacherFaceAttendancePage', () => {
     const Page = (await import('../src/app/teacher/attendance/face/page')).default;
     render(<Page />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Tạo candidate preview' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Tao candidate preview' }));
 
     await waitFor(() => {
-      expect(toastSuccessMock).toHaveBeenCalledWith('Đã tạo candidate preview');
+      expect(toastSuccessMock).toHaveBeenCalledWith('Da tao candidate preview');
     });
 
     expect(screen.getAllByText(/candidate_embedding/i).length).toBeGreaterThan(0);
-    expect(fetchMock).toHaveBeenCalledWith('/api/biometric/candidate-preview', expect.objectContaining({ method: 'POST' }));
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/biometric/candidate-preview',
+      expect.objectContaining({ method: 'POST' })
+    );
   });
 
   it('captures candidate embedding from camera and pushes it into the form', async () => {
@@ -122,10 +125,10 @@ describe('TeacherFaceAttendancePage', () => {
     const Page = (await import('../src/app/teacher/attendance/face/page')).default;
     render(<Page />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Lấy candidate từ camera' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Lay candidate tu camera' }));
 
     await waitFor(() => {
-      expect(toastSuccessMock).toHaveBeenCalledWith('Đã lấy candidate embedding từ camera');
+      expect(toastSuccessMock).toHaveBeenCalledWith('Da lay candidate embedding tu camera');
     });
 
     expect(screen.getByDisplayValue(/0.4, 0.5, 0.6/)).toBeInTheDocument();
@@ -142,10 +145,10 @@ describe('TeacherFaceAttendancePage', () => {
     const Page = (await import('../src/app/teacher/attendance/face/page')).default;
     render(<Page />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Lấy candidate từ camera' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Lay candidate tu camera' }));
 
     await waitFor(() => {
-      expect(toastErrorMock).toHaveBeenCalledWith('Ảnh từ camera chưa đủ rõ để tạo candidate embedding');
+      expect(toastErrorMock).toHaveBeenCalledWith('Anh tu camera chua du ro de tao candidate embedding');
     });
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -161,10 +164,12 @@ describe('TeacherFaceAttendancePage', () => {
     const Page = (await import('../src/app/teacher/attendance/face/page')).default;
     render(<Page />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Lấy candidate từ camera' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Lay candidate tu camera' }));
 
     await waitFor(() => {
-      expect(toastErrorMock).toHaveBeenCalledWith('Không phát hiện được khuôn mặt nào để tạo candidate embedding');
+      expect(toastErrorMock).toHaveBeenCalledWith(
+        'Khong phat hien duoc khuon mat nao de tao candidate embedding'
+      );
     });
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -185,10 +190,12 @@ describe('TeacherFaceAttendancePage', () => {
     const Page = (await import('../src/app/teacher/attendance/face/page')).default;
     render(<Page />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Lấy candidate từ camera' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Lay candidate tu camera' }));
 
     await waitFor(() => {
-      expect(toastErrorMock).toHaveBeenCalledWith('Phát hiện nhiều khuôn mặt, hãy chỉ giữ một người trong khung hình');
+      expect(toastErrorMock).toHaveBeenCalledWith(
+        'Phat hien nhieu khuon mat, hay chi giu mot nguoi trong khung hinh'
+      );
     });
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -203,7 +210,7 @@ describe('TeacherFaceAttendancePage', () => {
     performLivenessCheckMock.mockResolvedValue({
       score: 0.62,
       passed: false,
-      details: ['Cần chớp mắt hoặc xoay đầu rõ hơn để vượt qua liveness check'],
+      details: ['Can chop mat hoac xoay dau ro hon de vuot qua liveness check'],
     });
 
     const fetchMock = vi.fn() as any;
@@ -213,10 +220,12 @@ describe('TeacherFaceAttendancePage', () => {
     const Page = (await import('../src/app/teacher/attendance/face/page')).default;
     render(<Page />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Lấy candidate từ camera' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Lay candidate tu camera' }));
 
     await waitFor(() => {
-      expect(toastErrorMock).toHaveBeenCalledWith('Cần chớp mắt hoặc xoay đầu rõ hơn để vượt qua liveness check');
+      expect(toastErrorMock).toHaveBeenCalledWith(
+        'Can chop mat hoac xoay dau ro hon de vuot qua liveness check'
+      );
     });
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -242,7 +251,7 @@ describe('TeacherFaceAttendancePage', () => {
     const Page = (await import('../src/app/teacher/attendance/face/page')).default;
     render(<Page />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Lấy candidate từ camera' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Lay candidate tu camera' }));
 
     await waitFor(() => {
       expect(toastErrorMock).toHaveBeenCalledWith('Face biometric runtime unavailable');
@@ -251,24 +260,55 @@ describe('TeacherFaceAttendancePage', () => {
   });
 
   it('surfaces verification failure state on the face attendance page', async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          data: {
-            candidate_embedding: [0.1, 0.2, 0.3],
-            quality_score: 75,
-            liveness_score: 0.91,
-            verification_method: 'candidate_embedding',
-            upstream_verified: false,
-          },
-        }),
-      })
-      .mockResolvedValueOnce({
-        ok: false,
-        json: async () => ({ error: 'Biometric template không khớp để tự động xác nhận face attendance' }),
-      }) as any;
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+
+      if (url === '/api/activities/94/participants') {
+        return {
+          ok: true,
+          json: async () => ({
+            data: {
+              participations: [
+                {
+                  id: 201,
+                  student_id: 3004,
+                  student_name: 'Nguyen Van C',
+                  student_code: 'HV004',
+                  class_name: 'B2',
+                  attendance_status: 'registered',
+                },
+              ],
+            },
+          }),
+        } as Response;
+      }
+
+      if (url === '/api/biometric/candidate-preview') {
+        return {
+          ok: true,
+          json: async () => ({
+            data: {
+              candidate_embedding: [0.1, 0.2, 0.3],
+              quality_score: 75,
+              liveness_score: 0.91,
+              verification_method: 'candidate_embedding',
+              upstream_verified: false,
+            },
+          }),
+        } as Response;
+      }
+
+      if (url === '/api/attendance/face') {
+        return {
+          ok: false,
+          json: async () => ({
+            error: 'Biometric template khong khop de tu dong xac nhan face attendance',
+          }),
+        } as Response;
+      }
+
+      throw new Error(`Unexpected fetch: ${url}`);
+    }) as any;
 
     vi.stubGlobal('fetch', fetchMock);
     window.fetch = fetchMock as typeof fetch;
@@ -276,18 +316,80 @@ describe('TeacherFaceAttendancePage', () => {
     const Page = (await import('../src/app/teacher/attendance/face/page')).default;
     render(<Page />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Tạo candidate preview' }));
+    fireEvent.change(screen.getByLabelText('Activity ID'), { target: { value: '94' } });
     await waitFor(() => {
-      expect(toastSuccessMock).toHaveBeenCalledWith('Đã tạo candidate preview');
+      expect(screen.getByLabelText('Student ID')).toHaveValue('3004');
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Gửi face attendance' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Tao candidate preview' }));
     await waitFor(() => {
-      expect(toastErrorMock).toHaveBeenCalledWith('Biometric template không khớp để tự động xác nhận face attendance');
+      expect(toastSuccessMock).toHaveBeenCalledWith('Da tao candidate preview');
     });
 
-    expect(screen.getByText('Verify thất bại')).toBeInTheDocument();
-    expect(screen.getByText('Biometric template không khớp để tự động xác nhận face attendance')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Gui face attendance' }));
+    await waitFor(() => {
+      expect(toastErrorMock).toHaveBeenCalledWith(
+        'Biometric template khong khop de tu dong xac nhan face attendance'
+      );
+    });
+
+    expect(screen.getAllByText('Verify that bai').length).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText('Biometric template khong khop de tu dong xac nhan face attendance')
+        .length
+    ).toBeGreaterThan(0);
+  });
+
+  it('loads roster after entering a valid activity id and preselects the first student', async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+
+      if (url === '/api/activities/94/participants') {
+        return {
+          ok: true,
+          json: async () => ({
+            data: {
+              participations: [
+                {
+                  id: 301,
+                  student_id: 4001,
+                  student_name: 'Tran Thi D',
+                  student_code: 'HV401',
+                  class_name: 'C1',
+                  attendance_status: 'registered',
+                },
+                {
+                  id: 302,
+                  student_id: 4002,
+                  student_name: 'Le Van E',
+                  student_code: 'HV402',
+                  class_name: 'C1',
+                  attendance_status: 'attended',
+                },
+              ],
+            },
+          }),
+        } as Response;
+      }
+
+      throw new Error(`Unexpected fetch: ${url}`);
+    }) as any;
+
+    vi.stubGlobal('fetch', fetchMock);
+    window.fetch = fetchMock as typeof fetch;
+
+    const Page = (await import('../src/app/teacher/attendance/face/page')).default;
+    render(<Page />);
+
+    fireEvent.change(screen.getByLabelText('Activity ID'), { target: { value: '94' } });
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Student ID')).toHaveValue('4001');
+    });
+
+    expect(await screen.findByTestId('pending-attendance-count')).toHaveTextContent('1');
+    expect(screen.getAllByText('Tran Thi D').length).toBeGreaterThan(0);
+    expect(screen.getByRole('option', { name: /Le Van E - HV402/i })).toBeInTheDocument();
   });
 
   it('submits face attendance after candidate preview is ready', async () => {
@@ -332,7 +434,7 @@ describe('TeacherFaceAttendancePage', () => {
                 {
                   id: 201,
                   student_id: 3004,
-                  student_name: 'Nguyễn Văn C',
+                  student_name: 'Nguyen Van C',
                   student_code: 'HV004',
                   class_name: 'B2',
                   attendance_status: 'registered',
@@ -352,20 +454,25 @@ describe('TeacherFaceAttendancePage', () => {
     const Page = (await import('../src/app/teacher/attendance/face/page')).default;
     render(<Page />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Tạo candidate preview' }));
+    fireEvent.change(screen.getByLabelText('Activity ID'), { target: { value: '94' } });
     await waitFor(() => {
-      expect(toastSuccessMock).toHaveBeenCalledWith('Đã tạo candidate preview');
+      expect(screen.getByLabelText('Student ID')).toHaveValue('3004');
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Gửi face attendance' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Tao candidate preview' }));
     await waitFor(() => {
-      expect(toastSuccessMock).toHaveBeenCalledWith('Đã gửi face attendance thành công');
+      expect(toastSuccessMock).toHaveBeenCalledWith('Da tao candidate preview');
     });
 
-    expect(screen.getByText(/verification_source/i)).toBeInTheDocument();
-    expect(screen.getByText('Đã verify')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Gui face attendance' }));
+    await waitFor(() => {
+      expect(toastSuccessMock).toHaveBeenCalledWith('Da gui face attendance thanh cong');
+    });
+
+    expect(screen.getByText(/verification source/i)).toBeInTheDocument();
+    expect(screen.getAllByText('Da verify').length).toBeGreaterThan(0);
     expect(await screen.findByTestId('pending-attendance-count')).toHaveTextContent('1');
-    expect(screen.getByText('Nguyễn Văn C')).toBeInTheDocument();
+    expect(screen.getAllByText('Nguyen Van C').length).toBeGreaterThan(0);
     expect(fetchMock).toHaveBeenCalledWith(
       '/api/attendance/face',
       expect.objectContaining({ method: 'POST' })

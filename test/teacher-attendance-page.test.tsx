@@ -6,9 +6,10 @@ const pushMock = vi.fn();
 const toastErrorMock = vi.fn();
 const toastSuccessMock = vi.fn();
 const createObjectURLMock = vi.fn(() => 'blob:mock');
+const router = { push: pushMock, back: vi.fn() };
 
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push: pushMock, back: vi.fn() }),
+  useRouter: () => router,
 }));
 
 vi.mock('@/contexts/AuthContext', () => ({
@@ -54,10 +55,10 @@ describe('AttendanceReportsPage', () => {
               records: [
                 {
                   student_id: 1,
-                  student_name: 'Nguyễn Văn A',
+                  student_name: 'Nguyen Van A',
                   student_code: 'SV001',
                   class_name: 'CNTT K18A',
-                  activity_name: 'Sinh hoạt công dân',
+                  activity_name: 'Sinh hoat cong dan',
                   activity_date: '2026-04-20T00:00:00.000Z',
                   status: 'present',
                   method: 'face',
@@ -87,9 +88,9 @@ describe('AttendanceReportsPage', () => {
 
     expect(await screen.findByText('Báo cáo điểm danh')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Chi tiết' }));
-    expect(await screen.findByText('Nguyễn Văn A')).toBeInTheDocument();
-    expect(screen.getAllByText('Face').length).toBeGreaterThan(0);
-    expect(screen.getByText('Sinh hoạt công dân')).toBeInTheDocument();
+    expect((await screen.findAllByText('Nguyen Van A')).length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Khuôn mặt').length).toBeGreaterThan(0);
+    expect(screen.getByText('Sinh hoat cong dan')).toBeInTheDocument();
   });
 
   it('surfaces canonical export failure message', async () => {

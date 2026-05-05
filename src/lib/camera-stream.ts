@@ -126,7 +126,7 @@ export function getCameraTroubleshootingSteps(error?: unknown) {
   if (insecureContext) {
     tips.push(getInsecureContextHint());
     tips.push(
-      'Nếu không mở được camera, quét mã bằng app QR khác rồi mở link /student/check-in?s=...&t=... để hệ thống tự điểm danh sau khi đăng nhập.'
+      'Nếu không mở được camera ngay, hãy đăng nhập vào /student/check-in trước, sau đó bật camera web và quét lại mã QR tại lớp.'
     );
   }
 
@@ -189,8 +189,8 @@ export async function requestPreferredCameraStream(options?: {
   }
 
   const facingMode = options?.facingMode || 'environment';
-  const width = options?.width || 1280;
-  const height = options?.height || 720;
+  const width = options?.width || 1920;
+  const height = options?.height || 1080;
 
   const attempts: MediaStreamConstraints[] = [
     {

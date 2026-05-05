@@ -1,11 +1,12 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import toast from 'react-hot-toast';
-import { Sliders, ShieldCheck, QrCode } from 'lucide-react';
+import { QrCode, ShieldCheck, Sliders } from 'lucide-react';
 
 type ConfigItem = {
   id: number;
@@ -30,117 +31,116 @@ type FieldMeta = {
 const FIELD_ORDER: FieldMeta[] = [
   {
     key: 'attendance_policy_version',
-    label: 'Phiên bản policy',
+    label: 'Phien ban policy',
     type: 'text',
     section: 'qr',
-    description: 'Phiên bản đang dùng để theo dõi policy rollout hiện tại.',
+    description: 'Phien ban dang dung de theo doi rollout hien tai.',
   },
   {
     key: 'attendance_qr_fallback_preset',
-    label: 'Tên preset QR fallback',
+    label: 'Ten preset QR fallback',
     type: 'text',
     section: 'qr',
-    description: 'Tên preset hiển thị trong các route và UI policy.',
+    description: 'Ten preset duoc hien thi trong route va UI policy.',
   },
   {
     key: 'attendance_qr_fallback_p95_ms',
-    label: 'Ngưỡng p95 response time (ms)',
+    label: 'Nguong p95 response time (ms)',
     type: 'number',
     section: 'qr',
-    description: 'Nếu p95 response time vượt ngưỡng này và đủ mẫu, hệ thống sẽ đề xuất fallback.',
+    description: 'Neu p95 response time vuot nguong nay va du mau, he thong de xuat fallback.',
   },
   {
     key: 'attendance_qr_fallback_queue_backlog',
-    label: 'Ngưỡng queue backlog',
+    label: 'Nguong queue backlog',
     type: 'number',
     section: 'qr',
-    description: 'Nếu backlog quét vượt ngưỡng này, QR fallback sẽ được khuyến nghị.',
+    description: 'Neu backlog quet vuot nguong nay, QR fallback duoc khuyen nghi.',
   },
   {
     key: 'attendance_qr_fallback_scan_failure_rate',
-    label: 'Ngưỡng scan failure rate (0-1)',
+    label: 'Nguong scan failure rate (0-1)',
     type: 'number',
     section: 'qr',
-    description: 'Ví dụ 0.12 tương đương 12% lỗi quét.',
+    description: 'Vi du 0.12 tuong duong 12% loi quet.',
   },
   {
     key: 'attendance_qr_fallback_min_sample_size',
-    label: 'Số mẫu tối thiểu trước khi auto fallback',
+    label: 'So mau toi thieu truoc khi auto fallback',
     type: 'number',
     section: 'qr',
-    description: 'Tránh fallback sớm khi số mẫu quét chưa đủ tin cậy.',
+    description: 'Tranh fallback som khi so mau quet chua du tin cay.',
   },
   {
     key: 'attendance_qr_fallback_teacher_manual_override',
-    label: 'Cho phép teacher manual override QR fallback',
+    label: 'Cho phep teacher manual override QR fallback',
     type: 'boolean',
     section: 'qr',
-    description: 'Cho phép giảng viên tự chuyển chế độ mà không bị khóa cứng theo threshold.',
+    description: 'Cho phep giang vien tu chuyen che do ma khong bi khoa cung theo threshold.',
   },
   {
     key: 'attendance_face_pilot_selection_mode',
-    label: 'Cách chọn activity cho face pilot',
+    label: 'Cach chon activity cho face pilot',
     type: 'select',
     section: 'face',
-    description: 'Chọn heuristic, chỉ danh sách đã chọn, hoặc kết hợp cả hai.',
+    description: 'Chon heuristic, danh sach da chon, hoac ket hop ca hai.',
     options: [
       {
         value: 'selected_or_heuristic',
-        label: 'selected_or_heuristic — danh sách chọn hoặc heuristic',
+        label: 'selected_or_heuristic - danh sach chon hoac heuristic',
       },
-      { value: 'selected_only', label: 'selected_only — chỉ activity nằm trong danh sách chọn' },
-      { value: 'heuristic_only', label: 'heuristic_only — chỉ theo ngưỡng heuristic' },
+      { value: 'selected_only', label: 'selected_only - chi activity nam trong danh sach chon' },
+      { value: 'heuristic_only', label: 'heuristic_only - chi theo nguong heuristic' },
     ],
   },
   {
     key: 'attendance_face_pilot_activity_ids',
-    label: 'Danh sách activity pilot (JSON array)',
+    label: 'Danh sach activity pilot (JSON array)',
     type: 'textarea',
     section: 'face',
-    description: 'Nhập mảng JSON, ví dụ [101, 205, 309].',
+    description: 'Nhap mang JSON, vi du [101, 205, 309].',
   },
   {
     key: 'attendance_face_pilot_min_participation_count',
-    label: 'Ngưỡng participation tối thiểu',
+    label: 'Nguong participation toi thieu',
     type: 'number',
     section: 'face',
-    description: 'Nếu số participation đạt ngưỡng này, heuristic xem activity là high-volume.',
+    description: 'Neu so participation dat nguong nay, heuristic xem activity la high-volume.',
   },
   {
     key: 'attendance_face_pilot_min_max_participants',
-    label: 'Ngưỡng max_participants tối thiểu',
+    label: 'Nguong max_participants toi thieu',
     type: 'number',
     section: 'face',
-    description: 'Fallback heuristic dựa trên quy mô dự kiến của activity.',
+    description: 'Fallback heuristic dua tren quy mo du kien cua activity.',
   },
   {
     key: 'attendance_face_pilot_require_mandatory_scope',
-    label: 'Yêu cầu mandatory scope',
+    label: 'Yeu cau mandatory scope',
     type: 'boolean',
     section: 'face',
-    description: 'Nếu bật, face pilot chỉ áp dụng cho activity có lớp bắt buộc.',
+    description: 'Neu bat, face pilot chi ap dung cho activity co lop bat buoc.',
   },
   {
     key: 'attendance_face_pilot_require_approved_or_published',
-    label: 'Yêu cầu approved/published',
+    label: 'Yeu cau approved/published',
     type: 'boolean',
     section: 'face',
-    description: 'Nếu bật, activity phải approved/published trước khi được xét pilot.',
+    description: 'Neu bat, activity phai approved/published truoc khi duoc xet pilot.',
   },
   {
     key: 'attendance_face_pilot_teacher_manual_override',
-    label: 'Cho phép teacher manual override face flow',
+    label: 'Cho phep teacher manual override face flow',
     type: 'boolean',
     section: 'face',
-    description: 'Cho phép teacher chuyển sang manual confirmation/manual attendance khi cần.',
+    description: 'Cho phep teacher chuyen sang manual confirmation/manual attendance khi can.',
   },
   {
     key: 'attendance_face_pilot_min_confidence_score',
-    label: 'Ngưỡng confidence tối thiểu',
+    label: 'Nguong confidence toi thieu',
     type: 'number',
     section: 'face',
-    description:
-      'Nếu confidence thấp hơn ngưỡng này, route face attendance sẽ trả fallback guidance.',
+    description: 'Neu confidence thap hon nguong nay, route face attendance tra fallback guidance.',
   },
 ];
 
@@ -150,6 +150,64 @@ function getInitialFormValues(items: ConfigItem[]) {
     next[item.config_key] = item.config_value ?? '';
   });
   return next;
+}
+
+function FieldCard({
+  item,
+  field,
+  value,
+  onChange,
+}: {
+  item: ConfigItem;
+  field: FieldMeta;
+  value: string;
+  onChange: (next: string) => void;
+}) {
+  const inputClassName =
+    'mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-cyan-300';
+
+  return (
+    <article className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="mb-2">
+        <label className="text-sm font-semibold text-slate-900">{field.label}</label>
+        <p className="mt-1 text-xs text-slate-500">{field.description}</p>
+        {item.description ? <p className="mt-1 text-xs text-slate-400">DB: {item.description}</p> : null}
+      </div>
+
+      {field.type === 'number' ? (
+        <input type="number" value={value} onChange={(event) => onChange(event.target.value)} className={inputClassName} />
+      ) : null}
+
+      {field.type === 'text' ? (
+        <input type="text" value={value} onChange={(event) => onChange(event.target.value)} className={inputClassName} />
+      ) : null}
+
+      {field.type === 'boolean' ? (
+        <select value={value || 'false'} onChange={(event) => onChange(event.target.value)} className={inputClassName}>
+          <option value="true">true</option>
+          <option value="false">false</option>
+        </select>
+      ) : null}
+
+      {field.type === 'textarea' ? (
+        <textarea
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          className={`${inputClassName} min-h-28 font-mono`}
+        />
+      ) : null}
+
+      {field.type === 'select' ? (
+        <select value={value} onChange={(event) => onChange(event.target.value)} className={inputClassName}>
+          {(field.options || []).map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      ) : null}
+    </article>
+  );
 }
 
 export default function AttendancePolicySystemConfigPage() {
@@ -176,7 +234,7 @@ export default function AttendancePolicySystemConfigPage() {
       const response = await fetch('/api/system-config?category=attendance');
       const body = await response.json();
       if (!response.ok) {
-        throw new Error(body?.error || 'Không tải được attendance policy config');
+        throw new Error(body?.error || 'Khong tai duoc attendance policy config');
       }
 
       const items = (body?.configs || [])
@@ -191,7 +249,7 @@ export default function AttendancePolicySystemConfigPage() {
       setFormValues(getInitialFormValues(items));
     } catch (error) {
       console.error('Fetch attendance policy config error:', error);
-      toast.error(error instanceof Error ? error.message : 'Không tải được cấu hình policy');
+      toast.error(error instanceof Error ? error.message : 'Khong tai duoc cau hinh policy');
     } finally {
       setLoading(false);
     }
@@ -217,162 +275,132 @@ export default function AttendancePolicySystemConfigPage() {
       });
       const body = await response.json();
       if (!response.ok) {
-        throw new Error(body?.error || 'Không lưu được attendance policy config');
+        throw new Error(body?.error || 'Khong luu duoc attendance policy config');
       }
 
-      toast.success('Đã lưu attendance policy config');
+      toast.success('Da luu attendance policy config');
       await fetchConfigs();
     } catch (error) {
       console.error('Save attendance policy config error:', error);
-      toast.error(error instanceof Error ? error.message : 'Không lưu được cấu hình');
+      toast.error(error instanceof Error ? error.message : 'Khong luu duoc cau hinh');
     } finally {
       setSaving(false);
     }
   };
 
-  const renderField = (item: ConfigItem) => {
-    const field = fieldLookup.get(item.config_key);
-    if (!field) return null;
-
-    const value = formValues[item.config_key] ?? '';
-
-    return (
-      <div key={item.id} className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-        <div className="mb-2">
-          <label className="text-sm font-semibold text-gray-900">{field.label}</label>
-          <p className="mt-1 text-xs text-gray-500">{field.description}</p>
-          {item.description ? (
-            <p className="mt-1 text-xs text-gray-400">DB: {item.description}</p>
-          ) : null}
-        </div>
-
-        {field.type === 'number' ? (
-          <input
-            type="number"
-            value={value}
-            onChange={(e) =>
-              setFormValues((prev) => ({ ...prev, [item.config_key]: e.target.value }))
-            }
-            className="w-full rounded-lg border border-gray-300 px-3 py-2"
-          />
-        ) : null}
-
-        {field.type === 'text' ? (
-          <input
-            type="text"
-            value={value}
-            onChange={(e) =>
-              setFormValues((prev) => ({ ...prev, [item.config_key]: e.target.value }))
-            }
-            className="w-full rounded-lg border border-gray-300 px-3 py-2"
-          />
-        ) : null}
-
-        {field.type === 'boolean' ? (
-          <select
-            value={value || 'false'}
-            onChange={(e) =>
-              setFormValues((prev) => ({ ...prev, [item.config_key]: e.target.value }))
-            }
-            className="w-full rounded-lg border border-gray-300 px-3 py-2"
-          >
-            <option value="true">true</option>
-            <option value="false">false</option>
-          </select>
-        ) : null}
-
-        {field.type === 'textarea' ? (
-          <textarea
-            value={value}
-            onChange={(e) =>
-              setFormValues((prev) => ({ ...prev, [item.config_key]: e.target.value }))
-            }
-            className="min-h-28 w-full rounded-lg border border-gray-300 px-3 py-2 font-mono text-sm"
-          />
-        ) : null}
-
-        {field.type === 'select' ? (
-          <select
-            value={value}
-            onChange={(e) =>
-              setFormValues((prev) => ({ ...prev, [item.config_key]: e.target.value }))
-            }
-            className="w-full rounded-lg border border-gray-300 px-3 py-2"
-          >
-            {(field.options || []).map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        ) : null}
-      </div>
-    );
-  };
-
   if (authLoading || loading) {
-    return <LoadingSpinner />;
+    return <LoadingSpinner message="Dang tai attendance policy..." />;
+  }
+
+  if (!user || user.role !== 'admin') {
+    return null;
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8">
-      <div className="mb-8">
-        <div className="flex items-center gap-3">
-          <Sliders className="h-8 w-8 text-blue-600" />
-          <h1
-            className="text-3xl font-bold text-gray-900"
-            data-testid="admin-attendance-policy-heading"
-          >
-            Chính sách điểm danh
-          </h1>
+    <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
+      <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-3xl">
+            <div className="flex items-center gap-3">
+              <Sliders className="h-8 w-8 text-cyan-700" />
+              <h1
+                className="text-3xl font-semibold text-slate-950"
+                data-testid="admin-attendance-policy-heading"
+              >
+                Chinh sach diem danh
+              </h1>
+            </div>
+            <p className="mt-3 text-sm leading-6 text-slate-600 sm:text-base">
+              Cau hinh nguong QR fallback va face pilot ma khong can sua code helper hoac route logic.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href="/admin/settings"
+              className="rounded-2xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            >
+              Ve settings
+            </Link>
+            <Link
+              href="/admin/dashboard"
+              className="rounded-2xl bg-cyan-700 px-4 py-2 text-sm font-medium text-white hover:bg-cyan-800"
+            >
+              Ve dashboard
+            </Link>
+          </div>
         </div>
-        <p className="mt-2 text-sm text-gray-600">
-          Cấu hình ngưỡng QR fallback và pilot face attendance mà không cần sửa code helper.
-        </p>
-      </div>
+      </section>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <section className="space-y-4">
           <div className="flex items-center gap-2">
-            <QrCode className="h-5 w-5 text-purple-600" />
-            <h2 className="text-xl font-semibold text-gray-900">QR fallback policy</h2>
+            <QrCode className="h-5 w-5 text-violet-600" />
+            <h2 className="text-xl font-semibold text-slate-950">QR fallback policy</h2>
           </div>
-          <div className="space-y-4">{qrFields.map(renderField)}</div>
+          <div className="space-y-4">
+            {qrFields.map((item) => {
+              const field = fieldLookup.get(item.config_key);
+              if (!field) return null;
+
+              return (
+                <FieldCard
+                  key={item.id}
+                  item={item}
+                  field={field}
+                  value={formValues[item.config_key] ?? ''}
+                  onChange={(next) =>
+                    setFormValues((prev) => ({ ...prev, [item.config_key]: next }))
+                  }
+                />
+              );
+            })}
+          </div>
         </section>
 
         <section className="space-y-4">
           <div className="flex items-center gap-2">
             <ShieldCheck className="h-5 w-5 text-emerald-600" />
-            <h2 className="text-xl font-semibold text-gray-900">Face pilot policy</h2>
+            <h2 className="text-xl font-semibold text-slate-950">Face pilot policy</h2>
           </div>
-          <div className="space-y-4">{faceFields.map(renderField)}</div>
+          <div className="space-y-4">
+            {faceFields.map((item) => {
+              const field = fieldLookup.get(item.config_key);
+              if (!field) return null;
+
+              return (
+                <FieldCard
+                  key={item.id}
+                  item={item}
+                  field={field}
+                  value={formValues[item.config_key] ?? ''}
+                  onChange={(next) =>
+                    setFormValues((prev) => ({ ...prev, [item.config_key]: next }))
+                  }
+                />
+              );
+            })}
+          </div>
         </section>
       </div>
 
-      <div className="mt-8 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-        <p className="font-medium">Lưu ý vận hành</p>
-        <ul className="mt-2 list-disc space-y-1 pl-5">
-          <li>
-            `selected_only` sẽ chỉ cho phép face pilot trên activity id nằm trong danh sách JSON.
-          </li>
-          <li>
-            `selected_or_heuristic` giữ khả năng pilot theo activity được chọn hoặc theo heuristic
-            quy mô.
-          </li>
-          <li>
-            Sau khi lưu, các route attendance policy / face attendance sẽ đọc lại config mới từ DB.
-          </li>
+      <section className="rounded-[2rem] border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900 shadow-sm">
+        <div className="font-medium">Luu y van hanh</div>
+        <ul className="mt-3 list-disc space-y-2 pl-5">
+          <li>`selected_only` chi cho phep face pilot tren activity id nam trong danh sach JSON.</li>
+          <li>`selected_or_heuristic` giu kha nang pilot theo activity duoc chon hoac theo heuristic quy mo.</li>
+          <li>Sau khi luu, cac route attendance policy va face attendance se doc lai config moi tu DB.</li>
         </ul>
-      </div>
+      </section>
 
-      <div className="mt-6 flex justify-end">
+      <div className="flex justify-end">
         <button
           type="button"
           onClick={handleSave}
           disabled={saving}
-          className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-400"
+          className="rounded-2xl bg-cyan-700 px-5 py-3 text-sm font-medium text-white hover:bg-cyan-800 disabled:cursor-not-allowed disabled:bg-slate-400"
         >
-          {saving ? 'Đang lưu...' : 'Lưu chính sách điểm danh'}
+          {saving ? 'Dang luu...' : 'Luu chinh sach diem danh'}
         </button>
       </div>
     </div>

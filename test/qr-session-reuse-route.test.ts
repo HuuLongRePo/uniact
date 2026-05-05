@@ -4,6 +4,9 @@ describe('qr session reuse routes', () => {
   beforeEach(() => {
     vi.resetModules();
     vi.clearAllMocks();
+    vi.doMock('@/lib/network-proximity', () => ({
+      resolveRequestNetworkPrefix: () => '10.20.30',
+    }));
   });
 
   it('POST /api/qr-sessions returns reusable active session instead of conflict', async () => {
@@ -23,7 +26,14 @@ describe('qr session reuse routes', () => {
           id: 321,
           session_token: 'active-token-321',
           expires_at: '2026-04-21T12:30:00.000Z',
-          metadata: JSON.stringify({ single_use: true, max_scans: 1 }),
+          metadata: JSON.stringify({
+            single_use: true,
+            max_scans: 1,
+            anti_cheat: {
+              network_lock: true,
+              creator_network_prefix: '10.20.30',
+            },
+          }),
         };
       }
 
@@ -44,6 +54,7 @@ describe('qr session reuse routes', () => {
 
     vi.doMock('@/lib/database', () => ({
       dbGet,
+      dbRun: vi.fn(async () => ({ changes: 1 })),
       dbAll: vi.fn(async () => []),
       dbHelpers: {
         createQRSession,
@@ -109,6 +120,7 @@ describe('qr session reuse routes', () => {
 
       vi.doMock('@/lib/database', () => ({
         dbGet,
+        dbRun: vi.fn(async () => ({ changes: 1 })),
         dbAll: vi.fn(async () => []),
         dbHelpers: {
           createQRSession,
@@ -227,6 +239,7 @@ describe('qr session reuse routes', () => {
 
     vi.doMock('@/lib/database', () => ({
       dbGet,
+      dbRun: vi.fn(async () => ({ changes: 1 })),
       dbAll,
       dbHelpers: {
         createQRSession,

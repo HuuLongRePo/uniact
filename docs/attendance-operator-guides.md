@@ -9,7 +9,8 @@ Pham vi: huong dan van hanh thuc te cho giang vien, hoc vien va QA theo luong ba
 
 - Giang vien la nguoi tao/mo phien QR.
 - Hoc vien la nguoi quet QR.
-- QR hien tai duoc phat theo dang link `/student/check-in?s=<sessionId>&t=<token>` de giam phu thuoc vao camera web.
+- QR hien tai van co the mo link `/student/check-in?s=<sessionId>&t=<token>`, nhung link chi dung de vao dung trang va kiem tra dang nhap.
+- He thong chi ghi nhan diem danh sau khi hoc vien bat camera web trong trang check-in va quet lai QR.
 
 ### Luong A-Z cho giang vien
 
@@ -25,21 +26,19 @@ Pham vi: huong dan van hanh thuc te cho giang vien, hoc vien va QA theo luong ba
 
 1. Dang nhap dung tai khoan hoc vien co quyen tham gia hoat dong.
 2. Vao `Quet QR diem danh`.
-3. Quet QR bang:
-   - camera web trong trang,
-   - tai anh QR,
-   - nhap tay payload,
-   - hoac quet bang app camera/QR khac de mo link diem danh.
-4. Neu mo bang link QR va chua dang nhap, he thong se dua ve `login?next=...`, sau dang nhap se tu quay lai va tu dong diem danh.
-5. Nhan thong bao/thong tin thanh cong tren trang check-in.
+3. Bat camera web trong trang va quet QR do giang vien dang chieu.
+4. Neu mo bang link QR va chua dang nhap, he thong dua ve `login?next=...`; dang nhap xong quay lai trang check-in.
+5. Sau khi dang nhap, hoc vien van phai bat camera web va quet lai QR moi duoc ghi nhan diem danh.
+6. Nhan thong bao/thong tin thanh cong tren trang check-in.
 
 ### Fallback khi camera web khong dung duoc
 
 - Tren LAN `http://10.x`/`http://192.168.x.x`, trinh duyet se chan `getUserMedia` do khong phai secure context.
-- Fallback uu tien:
-  - dung app camera/QR khac de mo link trong QR,
-  - tai anh QR vao trang hoc vien,
-  - nhap payload thu cong.
+- Khong co fallback diem danh bang upload anh hoac nhap tay payload.
+- Cach dung dung quy trinh:
+  - mo he thong bang `https://` (hoac `http://localhost` khi test tren may local),
+  - dang nhap hoc vien,
+  - bat camera web trong trang va quet lai QR tai lop.
 
 ## 2) Diem danh bang nhan dien khuon mat
 
@@ -92,4 +91,3 @@ Pham vi: huong dan van hanh thuc te cho giang vien, hoc vien va QA theo luong ba
 - Viet roster realtime `chua diem danh` theo lop sau moi luot QR/Face.
 - Bo sung huong dan UI trong app, khong chi docs.
 - Nghien cuu batch rieng cho `multi-face attendance` neu Product muon mo rong.
-

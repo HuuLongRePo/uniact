@@ -44,6 +44,7 @@ interface CreatedQrSession {
   sessionId: number;
   token: string;
   payload: string;
+  checkInLink: string;
   expiresAt?: string | null;
 }
 
@@ -91,14 +92,22 @@ function parseQrSessionOptions(raw: unknown): { single_use?: boolean; max_scans?
 
 function buildStudentCheckInLink(sessionId: number, token: string) {
   // Embed a clickable URL in the QR so students can scan using any camera app,
-  // then open the page and auto-check-in after logging in.
+  // then open the check-in page. Attendance is only recorded after re-scanning via web camera.
   if (typeof window === 'undefined') {
     return JSON.stringify({ s: sessionId, t: token });
   }
 
-  const origin = window.location.origin;
+  const url = new URL(window.location.href);
+  const origin =
+    url.hostname === '0.0.0.0'
+      ? `${url.protocol}//localhost${url.port ? `:${url.port}` : ''}`
+      : url.origin;
   const safeToken = encodeURIComponent(token);
   return `${origin}/student/check-in?s=${sessionId}&t=${safeToken}`;
+}
+
+function buildCameraScanPayload(sessionId: number, token: string) {
+  return `${sessionId}:${token}`;
 }
 
 function formatCountdown(totalSeconds: number) {
@@ -150,12 +159,18 @@ export default function TeacherQRPage() {
   const projectorRef = useRef<HTMLDivElement | null>(null);
   const projectorAutoOpenedRef = useRef(false);
   const [nowMs, setNowMs] = useState(() => Date.now());
+  const [usesInvalidBindHost, setUsesInvalidBindHost] = useState(false);
 
   const activeBulkSessionId = selectedBulkSession ?? history[0]?.id ?? null;
   const autoProjectorRequested =
     searchParams.get('projector') === '1' || searchParams.get('fullscreen') === '1';
   const selectedActivityTitle =
     activities.find((activity) => activity.id === selectedActivity)?.title || 'Hoạt động đang chọn';
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    setUsesInvalidBindHost(window.location.hostname === '0.0.0.0');
+  }, []);
 
   const getFullscreenElement = () => {
     const fullscreenDocument = document as FullscreenCapableDocument;
@@ -278,7 +293,8 @@ export default function TeacherQRPage() {
         setCreatedSession({
           sessionId: nextSessionId,
           token: nextToken,
-          payload: buildStudentCheckInLink(nextSessionId, nextToken),
+          payload: buildCameraScanPayload(nextSessionId, nextToken),
+          checkInLink: buildStudentCheckInLink(nextSessionId, nextToken),
           expiresAt: session?.expires_at ? String(session.expires_at) : null,
         });
         setOptions(session?.options || null);
@@ -499,7 +515,7 @@ export default function TeacherQRPage() {
         throw new Error('Clipboard API not available');
       }
 
-      await navigator.clipboard.writeText(createdSession.payload);
+      await navigator.clipboard.writeText(createdSession.checkInLink);
       toast.success('Đã sao chép liên kết điểm danh');
     } catch {
       toast.error('Không thể sao chép tự động. Hãy sao chép liên kết ở phần bên dưới.');
@@ -508,7 +524,7 @@ export default function TeacherQRPage() {
 
   const handleOpenCheckInLink = () => {
     if (!createdSession) return;
-    window.open(createdSession.payload, '_blank', 'noopener,noreferrer');
+    window.open(createdSession.checkInLink, '_blank', 'noopener,noreferrer');
   };
 
   const closeQrProjector = () => {
@@ -568,7 +584,8 @@ export default function TeacherQRPage() {
       setCreatedSession({
         sessionId: nextSessionId,
         token: nextToken,
-        payload: buildStudentCheckInLink(nextSessionId, nextToken),
+        payload: buildCameraScanPayload(nextSessionId, nextToken),
+        checkInLink: buildStudentCheckInLink(nextSessionId, nextToken),
         expiresAt: data?.expires_at ? String(data.expires_at) : null,
       });
       setOptions(data?.options || null);
@@ -795,8 +812,14 @@ export default function TeacherQRPage() {
                         {createdSession.token}
                       </code>
                     </div>
-                    <div className="rounded-xl bg-white p-4">
-                      <QrCodeSvg value={createdSession.payload} />
+                    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                      <QrCodeSvg
+                        value={createdSession.payload}
+                        level="L"
+                        size={512}
+                        bgColor="#FFFFFF"
+                        fgColor="#111827"
+                      />
                     </div>
                     <button
                       type="button"
@@ -830,6 +853,17 @@ export default function TeacherQRPage() {
                         {createdSession.payload}
                       </code>
                     </div>
+                    <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                      Link QR chỉ dùng để mở trang check-in và đăng nhập. Học viên vẫn bắt buộc bật
+                      camera web trong <code>/student/check-in</code> và quét lại QR để được ghi nhận
+                      điểm danh.
+                    </div>
+                    {usesInvalidBindHost && (
+                      <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                        Ban dang mo he thong bang 0.0.0.0 (dia chi bind server), khong phai dia chi
+                        truy cap cho trinh duyet. Hay mo lai bang localhost hoac IP LAN cua may chu.
+                      </div>
+                    )}
                     <div className="text-xs text-gray-500">
                       Tùy chọn phiên: {JSON.stringify(options || {})}
                     </div>
@@ -1145,9 +1179,17 @@ export default function TeacherQRPage() {
             )}
 
             <div className="mt-5 flex flex-1 items-center justify-center overflow-hidden">
-              <div className="flex h-[95vh] w-[95vw] items-center justify-center rounded-3xl bg-white p-3 shadow-2xl sm:p-4">
-                <div className="h-full w-full [&_svg]:h-full [&_svg]:w-full">
-                  <QrCodeSvg value={createdSession.payload} size={2048} />
+              <div className="flex h-[95vh] w-[95vw] items-center justify-center rounded-3xl bg-white p-8 shadow-2xl sm:p-12">
+                <div className="aspect-square w-[min(82vw,82vh)] max-w-[1180px] rounded-[2rem] bg-white p-10 shadow-inner shadow-slate-200">
+                  <div className="h-full w-full [&_svg]:h-full [&_svg]:w-full">
+                    <QrCodeSvg
+                      value={createdSession.payload}
+                      size={2048}
+                      level="L"
+                      bgColor="#FFFFFF"
+                      fgColor="#111827"
+                    />
+                  </div>
                 </div>
               </div>
             </div>

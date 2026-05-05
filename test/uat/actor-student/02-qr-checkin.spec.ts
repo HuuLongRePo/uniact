@@ -170,4 +170,57 @@ test.describe('Student - QR check-in backbone', () => {
     await adminContext.close()
     await teacherContext.close()
   })
+
+  test('deep-link check-in never auto-attends (must rescan in web camera)', async ({ browser }) => {
+    test.setTimeout(120_000)
+    const teacherContext = await browser.newContext()
+    const teacherPage = await teacherContext.newPage()
+    const teacher = new TeacherHelper(teacherPage)
+    await teacher.login()
+
+    const adminContext = await browser.newContext()
+    const adminPage = await adminContext.newPage()
+    const admin = new AdminHelper(adminPage)
+    await admin.login()
+
+    const setupStudentContext = await browser.newContext()
+    const setupStudentPage = await setupStudentContext.newPage()
+    const setupStudent = new StudentHelper(setupStudentPage)
+    await setupStudent.login()
+
+    const { sessionId, sessionToken } = await createApprovedRegisteredQrSession(
+      setupStudentPage,
+      teacherPage,
+      adminPage
+    )
+    const checkInLink = `http://127.0.0.1:3000/student/check-in?s=${sessionId}&t=${encodeURIComponent(sessionToken)}`
+
+    const anonymousContext = await browser.newContext()
+    const anonymousPage = await anonymousContext.newPage()
+    await anonymousPage.goto(checkInLink)
+    await expect(anonymousPage).toHaveURL(/\/login\?/)
+    await expect(anonymousPage).toHaveURL(/redirect=%2Fstudent%2Fcheck-in/)
+
+    const studentContext = await browser.newContext()
+    const studentPage = await studentContext.newPage()
+    const student = new StudentHelper(studentPage)
+    await student.login()
+
+    await studentPage.goto(checkInLink)
+    await expect(studentPage.getByText(/phat hien du lieu tu duong link qr/i)).toBeVisible({
+      timeout: 10_000,
+    })
+
+    const scansRes = await teacherPage.request.get(`http://127.0.0.1:3000/api/qr-sessions/${sessionId}/scans`)
+    expect(scansRes.ok()).toBeTruthy()
+    const scansData = await scansRes.json()
+    const scans = scansData?.data?.scans ?? scansData?.scans ?? []
+    expect(scans.length).toBe(0)
+
+    await studentContext.close()
+    await anonymousContext.close()
+    await setupStudentContext.close()
+    await adminContext.close()
+    await teacherContext.close()
+  })
 })

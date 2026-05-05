@@ -3,6 +3,12 @@ import { vi, describe, it, expect } from 'vitest'
 vi.mock('@/lib/guards', () => ({
   requireApiRole: async () => ({ id: 2, role: 'teacher' }),
 }))
+vi.mock('@/lib/rateLimit', () => ({
+  rateLimit: () => ({ allowed: true }),
+}))
+vi.mock('@/lib/network-proximity', () => ({
+  resolveRequestNetworkPrefix: () => '10.20.30',
+}))
 
 vi.mock('@/lib/database', () => ({
   dbGet: async (query: string) => {
@@ -17,6 +23,7 @@ vi.mock('@/lib/database', () => ({
 
     return undefined
   },
+  dbRun: async () => ({ changes: 1 }),
   dbAll: async () => [],
   dbHelpers: {
     createQRSession: async (
