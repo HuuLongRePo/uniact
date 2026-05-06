@@ -1065,16 +1065,16 @@ export default function CreateActivityPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="teacher-create-activity min-h-screen bg-gray-50 py-8 dark:bg-slate-950 dark:[&_label]:text-slate-200 dark:[&_input]:border-slate-600 dark:[&_input]:bg-slate-950 dark:[&_input]:text-slate-100 dark:[&_select]:border-slate-600 dark:[&_select]:bg-slate-950 dark:[&_select]:text-slate-100 dark:[&_textarea]:border-slate-600 dark:[&_textarea]:bg-slate-950 dark:[&_textarea]:text-slate-100">
       <div className="max-w-5xl mx-auto">
-        <div className="bg-white rounded-lg shadow-lg border border-gray-200">
+        <div className="rounded-lg border border-gray-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-900">
           {/* Header */}
-          <div className="border-b border-gray-200 p-6 bg-gradient-to-r from-blue-50 to-indigo-50">
-            <h1 className="text-3xl font-bold text-blue-700 flex items-center gap-2">
-              <Plus className="w-7 h-7 text-blue-600" />
+          <div className="border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50 p-6 dark:border-slate-700 dark:from-slate-900 dark:to-slate-800">
+            <h1 className="flex items-center gap-2 text-3xl font-bold text-blue-700 dark:text-blue-300">
+              <Plus className="w-7 h-7 text-blue-600 dark:text-blue-300" />
               Tạo hoạt động mới
             </h1>
-            <p className="mt-2 text-gray-600">
+            <p className="mt-2 text-gray-600 dark:text-slate-300">
               Điền thông tin chi tiết, chọn lớp và đính kèm tài liệu nếu cần.
             </p>
 
